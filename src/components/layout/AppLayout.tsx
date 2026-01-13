@@ -1,29 +1,49 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
   FolderKanban, 
   FileBarChart, 
   Settings,
-  Clock
+  Clock,
+  LogOut,
+  UsersRound
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/clients', icon: Users, label: 'Clientes' },
-  { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-  { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
-  { path: '/settings', icon: Settings, label: 'Configurações' },
-];
-
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut, isAdmin, isClient, userRole } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
+  // Admin nav items
+  const adminNavItems = [
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/clients', icon: Users, label: 'Clientes' },
+    { path: '/projects', icon: FolderKanban, label: 'Projetos' },
+    { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
+    { path: '/users', icon: UsersRound, label: 'Usuários' },
+    { path: '/settings', icon: Settings, label: 'Configurações' },
+  ];
+
+  // Client nav items (only reports)
+  const clientNavItems = [
+    { path: '/my-reports', icon: FileBarChart, label: 'Meus Relatórios' },
+  ];
+
+  const navItems = isAdmin ? adminNavItems : clientNavItems;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -62,7 +82,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </ul>
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-3">
+          {user && (
+            <div className="px-3 py-2">
+              <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+              <p className="text-xs text-muted-foreground">
+                {isAdmin ? 'Administrador' : isClient ? 'Cliente' : 'Usuário'}
+              </p>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground hover:text-foreground"
+            onClick={handleSignOut}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sair
+          </Button>
           <div className="px-3 py-2 text-xs text-muted-foreground">
             Versão MVP 1.0
           </div>

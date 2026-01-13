@@ -2,13 +2,21 @@ import React from 'react';
 import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FolderKanban, ListTodo, Clock } from 'lucide-react';
+import { Users, FolderKanban, ListTodo, Clock, Loader2 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { data, getClientHours } = useData();
+  const { data, loading, getClientHours } = useData();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   const totalHours = data.clients.reduce((sum, client) => sum + getClientHours(client.id), 0);
-  const totalContractedHours = data.clients.reduce((sum, client) => sum + client.contractedHours, 0);
+  const totalContractedHours = data.clients.reduce((sum, client) => sum + client.contracted_hours, 0);
 
   const stats = [
     {
@@ -37,7 +45,7 @@ export const Dashboard: React.FC = () => {
     },
   ];
 
-  const recentProjects = data.projects.slice(-5).reverse();
+  const recentProjects = data.projects.slice(0, 5);
 
   return (
     <div>
@@ -74,7 +82,7 @@ export const Dashboard: React.FC = () => {
             ) : (
               <ul className="space-y-3">
                 {recentProjects.map((project) => {
-                  const client = data.clients.find(c => c.id === project.clientId);
+                  const client = data.clients.find(c => c.id === project.client_id);
                   return (
                     <li key={project.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                       <div>
@@ -108,15 +116,15 @@ export const Dashboard: React.FC = () => {
               <ul className="space-y-3">
                 {data.clients.map((client) => {
                   const usedHours = getClientHours(client.id);
-                  const percentage = client.contractedHours > 0 
-                    ? Math.min((usedHours / client.contractedHours) * 100, 100)
+                  const percentage = client.contracted_hours > 0 
+                    ? Math.min((usedHours / client.contracted_hours) * 100, 100)
                     : 0;
                   return (
                     <li key={client.id} className="py-2 border-b border-border last:border-0">
                       <div className="flex justify-between mb-1">
                         <span className="font-medium text-foreground">{client.name}</span>
                         <span className="text-sm text-muted-foreground">
-                          {usedHours}h / {client.contractedHours}h
+                          {usedHours}h / {client.contracted_hours}h
                         </span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
