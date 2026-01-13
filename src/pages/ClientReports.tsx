@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useData } from '@/contexts/DataContext';
+import React, { useState, useMemo, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -19,13 +20,101 @@ import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export const Reports: React.FC = () => {
-  const { data, loading, getProjectHours, getTaskHours } = useData();
+interface Project {
+  id: string;
+  name: string;
+  client_id: string;
+}
+
+interface Task {
+  id: string;
+  name: string;
+  description: string | null;
+  project_id: string;
+}
+
+interface TimeEntry {
+  id: string;
+  task_id: string;
+  hours: number;
+  date: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  contracted_hours: number;
+}
+
+export const ClientReports: React.FC = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [client, setClient] = useState<Client | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [selectedClientId, setSelectedClientId] = useState<string>('all');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        // Fetch client associated with user
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (clientData) {
+          setClient(clientData);
+
+          // Fetch projects for this client
+          const { data: projectsData } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('client_id', clientData.id);
+
+          setProjects(projectsData || []);
+
+          if (projectsData && projectsData.length > 0) {
+            const projectIds = projectsData.map(p => p.id);
+
+            // Fetch tasks
+            const { data: tasksData } = await supabase
+              .from('tasks')
+              .select('*')
+              .in('project_id', projectIds);
+
+            setTasks(tasksData || []);
+
+            if (tasksData && tasksData.length > 0) {
+              const taskIds = tasksData.map(t => t.id);
+
+              // Fetch time entries
+              const { data: entriesData } = await supabase
+                .from('time_entries')
+                .select('*')
+                .in('task_id', taskIds);
+
+              setTimeEntries(entriesData || []);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
 
   // Generate month options (last 12 months)
   const monthOptions = useMemo(() => {
@@ -47,44 +136,39 @@ export const Reports: React.FC = () => {
     const monthStart = startOfMonth(new Date(year, month - 1));
     const monthEnd = endOfMonth(new Date(year, month - 1));
 
-    const filteredProjects = data.projects.filter(p => 
-      selectedClientId === 'all' || p.client_id === selectedClientId
-    );
-
-    return filteredProjects.map(project => {
-      const client = data.clients.find(c => c.id === project.client_id);
-      const projectTasks = data.tasks.filter(t => t.project_id === project.id);
+    return projects.map(project => {
+      const projectTasks = tasks.filter(t => t.project_id === project.id);
       
       const tasksWithHours = projectTasks.map(task => {
-        const taskEntries = data.timeEntries.filter(te => {
+        const taskEntries = timeEntries.filter(te => {
           if (te.task_id !== task.id) return false;
           const entryDate = parseISO(te.date);
           return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
         });
         
         const monthHours = taskEntries.reduce((sum, te) => sum + Number(te.hours), 0);
-        const totalHours = getTaskHours(task.id);
+        const totalHours = timeEntries
+          .filter(te => te.task_id === task.id)
+          .reduce((sum, te) => sum + Number(te.hours), 0);
         
         return {
           ...task,
           monthHours,
           totalHours,
-          entries: taskEntries,
         };
       }).filter(t => t.monthHours > 0 || t.totalHours > 0);
 
       const monthHours = tasksWithHours.reduce((sum, t) => sum + t.monthHours, 0);
-      const totalHours = getProjectHours(project.id);
+      const totalHours = tasksWithHours.reduce((sum, t) => sum + t.totalHours, 0);
 
       return {
         ...project,
-        client,
         tasks: tasksWithHours,
         monthHours,
         totalHours,
       };
     }).filter(p => p.monthHours > 0 || p.tasks.length > 0);
-  }, [data, selectedMonth, selectedClientId, getProjectHours, getTaskHours]);
+  }, [projects, tasks, timeEntries, selectedMonth]);
 
   const toggleProject = (projectId: string) => {
     const newExpanded = new Set(expandedProjects);
@@ -97,6 +181,7 @@ export const Reports: React.FC = () => {
   };
 
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
+  const totalAllHours = timeEntries.reduce((sum, te) => sum + Number(te.hours), 0);
 
   if (loading) {
     return (
@@ -106,49 +191,83 @@ export const Reports: React.FC = () => {
     );
   }
 
+  if (!client) {
+    return (
+      <div>
+        <PageHeader
+          title="Meus Relatórios"
+          description="Visualize as horas dos seus projetos"
+        />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              Sua conta não está vinculada a um cliente. Entre em contato com o administrador.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader
-        title="Relatórios"
-        description="Visualize as horas registradas por projeto e período"
+        title="Meus Relatórios"
+        description={`Relatórios de horas - ${client.name}`}
       />
+
+      {/* Client Info */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Resumo do Contrato</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Horas Contratadas</p>
+              <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas Utilizadas</p>
+              <p className="text-2xl font-bold text-foreground">{totalAllHours}h</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas Restantes</p>
+              <p className="text-2xl font-bold text-foreground">
+                {Math.max(0, client.contracted_hours - totalAllHours)}h
+              </p>
+            </div>
+          </div>
+          <div className="w-full bg-muted rounded-full h-3 mt-4">
+            <div
+              className="bg-primary h-3 rounded-full transition-all"
+              style={{ 
+                width: `${client.contracted_hours > 0 
+                  ? Math.min((totalAllHours / client.contracted_hours) * 100, 100) 
+                  : 0}%` 
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card className="mb-6">
         <CardContent className="py-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="w-64">
-              <Label className="mb-2 block">Mês</Label>
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="w-64">
-              <Label className="mb-2 block">Cliente</Label>
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os clientes</SelectItem>
-                  {data.clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="w-64">
+            <Label className="mb-2 block">Mês</Label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -159,7 +278,7 @@ export const Reports: React.FC = () => {
           <CardTitle>Resumo do Período</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <p className="text-sm text-muted-foreground">Projetos com atividade</p>
               <p className="text-2xl font-bold text-foreground">{reportData.length}</p>
@@ -167,12 +286,6 @@ export const Reports: React.FC = () => {
             <div>
               <p className="text-sm text-muted-foreground">Horas no período</p>
               <p className="text-2xl font-bold text-foreground">{totalMonthHours}h</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Média por projeto</p>
-              <p className="text-2xl font-bold text-foreground">
-                {reportData.length > 0 ? (totalMonthHours / reportData.length).toFixed(1) : 0}h
-              </p>
             </div>
           </div>
         </CardContent>
@@ -204,10 +317,7 @@ export const Reports: React.FC = () => {
                           ) : (
                             <ChevronRight className="w-5 h-5 text-muted-foreground" />
                           )}
-                          <div>
-                            <CardTitle className="text-base">{project.name}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{project.client?.name}</p>
-                          </div>
+                          <CardTitle className="text-base">{project.name}</CardTitle>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-foreground">{project.monthHours}h</p>

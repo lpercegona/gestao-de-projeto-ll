@@ -22,20 +22,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Link, Copy } from 'lucide-react';
-import { Client } from '@/types';
+import { Plus, Pencil, Trash2, Link, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  contracted_hours: number;
+  access_token: string;
+}
+
 export const Clients: React.FC = () => {
-  const { data, createClient, updateClient, deleteClient, getClientHours } = useData();
+  const { data, loading, createClient, updateClient, deleteClient, getClientHours } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    contractedHours: 0,
+    contracted_hours: 0,
   });
 
   const handleOpenDialog = (client?: Client) => {
@@ -44,30 +52,34 @@ export const Clients: React.FC = () => {
       setFormData({
         name: client.name,
         email: client.email,
-        contractedHours: client.contractedHours,
+        contracted_hours: client.contracted_hours,
       });
     } else {
       setEditingClient(null);
-      setFormData({ name: '', email: '', contractedHours: 0 });
+      setFormData({ name: '', email: '', contracted_hours: 0 });
     }
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    
     if (editingClient) {
-      updateClient(editingClient.id, formData);
+      await updateClient(editingClient.id, formData);
       toast.success('Cliente atualizado com sucesso!');
     } else {
-      createClient(formData);
+      await createClient(formData);
       toast.success('Cliente criado com sucesso!');
     }
+    
+    setSubmitting(false);
     setIsDialogOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingClient) {
-      deleteClient(deletingClient.id);
+      await deleteClient(deletingClient.id);
       toast.success('Cliente excluído com sucesso!');
       setIsDeleteDialogOpen(false);
       setDeletingClient(null);
@@ -75,10 +87,18 @@ export const Clients: React.FC = () => {
   };
 
   const copyAccessLink = (client: Client) => {
-    const link = `${window.location.origin}/portal/${client.accessToken}`;
+    const link = `${window.location.origin}/portal/${client.access_token}`;
     navigator.clipboard.writeText(link);
     toast.success('Link de acesso copiado!');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -107,7 +127,7 @@ export const Clients: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {data.clients.map((client) => {
             const usedHours = getClientHours(client.id);
-            const projectCount = data.projects.filter(p => p.clientId === client.id).length;
+            const projectCount = data.projects.filter(p => p.client_id === client.id).length;
             return (
               <Card key={client.id}>
                 <CardContent className="p-6">
@@ -152,14 +172,14 @@ export const Clients: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Horas usadas:</span>
-                      <span className="font-medium text-foreground">{usedHours}h / {client.contractedHours}h</span>
+                      <span className="font-medium text-foreground">{usedHours}h / {client.contracted_hours}h</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2 mt-2">
                       <div
                         className="bg-primary h-2 rounded-full transition-all"
                         style={{ 
-                          width: `${client.contractedHours > 0 
-                            ? Math.min((usedHours / client.contractedHours) * 100, 100) 
+                          width: `${client.contracted_hours > 0 
+                            ? Math.min((usedHours / client.contracted_hours) * 100, 100) 
                             : 0}%` 
                         }}
                       />
@@ -188,6 +208,7 @@ export const Clients: React.FC = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  disabled={submitting}
                 />
               </div>
               <div className="space-y-2">
@@ -198,25 +219,30 @@ export const Clients: React.FC = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
+                  disabled={submitting}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contractedHours">Horas Contratadas</Label>
+                <Label htmlFor="contracted_hours">Horas Contratadas</Label>
                 <Input
-                  id="contractedHours"
+                  id="contracted_hours"
                   type="number"
                   min="0"
-                  value={formData.contractedHours}
-                  onChange={(e) => setFormData({ ...formData, contractedHours: Number(e.target.value) })}
+                  value={formData.contracted_hours}
+                  onChange={(e) => setFormData({ ...formData, contracted_hours: Number(e.target.value) })}
                   required
+                  disabled={submitting}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
                 {editingClient ? 'Salvar' : 'Criar'}
               </Button>
             </DialogFooter>

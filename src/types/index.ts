@@ -2,44 +2,45 @@ export interface Client {
   id: string;
   name: string;
   email: string;
-  contractedHours: number;
-  accessToken: string;
-  createdAt: string;
+  contracted_hours: number;
+  access_token: string;
+  user_id: string | null;
+  created_at: string;
 }
 
 export interface ProjectColumn {
   id: string;
   name: string;
   type: 'text' | 'select';
-  options?: string[];
+  options?: string[] | null;
 }
 
 export interface Project {
   id: string;
-  clientId: string;
+  client_id: string;
   name: string;
-  description: string;
-  status: 'active' | 'paused' | 'completed';
-  customFields: Record<string, string>;
-  createdAt: string;
+  description: string | null;
+  status: string;
+  custom_fields: Record<string, string>;
+  created_at: string;
 }
 
 export interface Task {
   id: string;
-  projectId: string;
+  project_id: string;
   name: string;
-  description: string;
-  status: 'pending' | 'in_progress' | 'completed';
-  createdAt: string;
+  description: string | null;
+  status: string;
+  created_at: string;
 }
 
 export interface TimeEntry {
   id: string;
-  taskId: string;
+  task_id: string;
   hours: number;
-  description: string;
+  description: string | null;
   date: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface AppData {
