@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'client';
+type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
 
 interface AuthContextType {
   user: User | null;
@@ -10,8 +10,12 @@ interface AuthContextType {
   loading: boolean;
   roleLoading: boolean;
   userRole: AppRole | null;
+  isMasterAdmin: boolean;
   isAdmin: boolean;
+  isCollaborator: boolean;
   isClient: boolean;
+  isAdminOrMaster: boolean;
+  ownerId: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -26,26 +30,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
 
   const fetchUserRole = async (userId: string) => {
     setRoleLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Fetch role and owner_id in parallel
+      const [roleRes, profileRes] = await Promise.all([
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('owner_id')
+          .eq('user_id', userId)
+          .maybeSingle()
+      ]);
 
-      if (error) {
-        console.error('Error fetching user role:', error);
+      if (roleRes.error) {
+        console.error('Error fetching user role:', roleRes.error);
         setUserRole(null);
-        return;
+      } else {
+        setUserRole(roleRes.data?.role as AppRole || null);
       }
 
-      setUserRole(data?.role as AppRole || null);
+      if (profileRes.error) {
+        console.error('Error fetching profile:', profileRes.error);
+        setOwnerId(null);
+      } else {
+        setOwnerId(profileRes.data?.owner_id || null);
+      }
     } catch (error) {
       console.error('Error fetching user role:', error);
       setUserRole(null);
+      setOwnerId(null);
     } finally {
       setRoleLoading(false);
     }
@@ -69,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => fetchUserRole(session.user.id), 0);
         } else {
           setUserRole(null);
+          setOwnerId(null);
         }
         
         setLoading(false);
@@ -110,7 +131,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     await supabase.auth.signOut();
     setUserRole(null);
+    setOwnerId(null);
   };
+
+  const isMasterAdmin = userRole === 'master_admin';
+  const isAdmin = userRole === 'admin';
+  const isCollaborator = userRole === 'collaborator';
+  const isClient = userRole === 'client';
+  const isAdminOrMaster = isMasterAdmin || isAdmin;
 
   return (
     <AuthContext.Provider
@@ -120,8 +148,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         roleLoading,
         userRole,
-        isAdmin: userRole === 'admin',
-        isClient: userRole === 'client',
+        isMasterAdmin,
+        isAdmin,
+        isCollaborator,
+        isClient,
+        isAdminOrMaster,
+        ownerId,
         signIn,
         signUp,
         signOut,

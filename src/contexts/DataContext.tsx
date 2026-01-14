@@ -9,6 +9,8 @@ interface Client {
   contracted_hours: number;
   access_token: string;
   user_id: string | null;
+  owner_id: string | null;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -26,6 +28,8 @@ interface Project {
   description: string | null;
   status: string;
   custom_fields: Record<string, string>;
+  owner_id: string | null;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -35,6 +39,7 @@ interface Task {
   name: string;
   description: string | null;
   status: string;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -44,6 +49,16 @@ interface TimeEntry {
   hours: number;
   description: string | null;
   date: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+interface UserProjectAccess {
+  id: string;
+  user_id: string;
+  project_id: string;
+  granted_by: string;
+  can_edit: boolean;
   created_at: string;
 }
 
@@ -53,6 +68,7 @@ interface AppData {
   tasks: Task[];
   timeEntries: TimeEntry[];
   projectColumns: ProjectColumn[];
+  projectAccess: UserProjectAccess[];
 }
 
 interface DataContextType {
@@ -60,28 +76,32 @@ interface DataContextType {
   loading: boolean;
   refreshData: () => Promise<void>;
   // Clients
-  createClient: (client: Omit<Client, 'id' | 'access_token' | 'created_at' | 'user_id'>) => Promise<Client | null>;
+  createClient: (client: Omit<Client, 'id' | 'access_token' | 'created_at' | 'user_id' | 'owner_id' | 'created_by'>) => Promise<Client | null>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<Client | null>;
   deleteClient: (id: string) => Promise<boolean>;
   // Projects
-  createProject: (project: Omit<Project, 'id' | 'created_at'>) => Promise<Project | null>;
+  createProject: (project: Omit<Project, 'id' | 'created_at' | 'owner_id' | 'created_by'>) => Promise<Project | null>;
   updateProject: (id: string, updates: Partial<Project>) => Promise<Project | null>;
   deleteProject: (id: string) => Promise<boolean>;
   // Tasks
-  createTask: (task: Omit<Task, 'id' | 'created_at'>) => Promise<Task | null>;
+  createTask: (task: Omit<Task, 'id' | 'created_at' | 'created_by'>) => Promise<Task | null>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<Task | null>;
   deleteTask: (id: string) => Promise<boolean>;
   // Time Entries
-  createTimeEntry: (entry: Omit<TimeEntry, 'id' | 'created_at'>) => Promise<TimeEntry | null>;
+  createTimeEntry: (entry: Omit<TimeEntry, 'id' | 'created_at' | 'created_by'>) => Promise<TimeEntry | null>;
   deleteTimeEntry: (id: string) => Promise<boolean>;
   // Columns
   createColumn: (column: Omit<ProjectColumn, 'id'>) => Promise<ProjectColumn | null>;
   updateColumn: (id: string, updates: Partial<ProjectColumn>) => Promise<ProjectColumn | null>;
   deleteColumn: (id: string) => Promise<boolean>;
+  // Project Access
+  grantProjectAccess: (userId: string, projectId: string, canEdit: boolean) => Promise<UserProjectAccess | null>;
+  revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
   // Utilities
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
   getTaskHours: (taskId: string) => number;
+  getCreatorName: (userId: string | null) => string;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -92,12 +112,14 @@ const emptyData: AppData = {
   tasks: [],
   timeEntries: [],
   projectColumns: [],
+  projectAccess: [],
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isMasterAdmin, isAdmin, isCollaborator, isAdminOrMaster } = useAuth();
   const [data, setData] = useState<AppData>(emptyData);
   const [loading, setLoading] = useState(true);
+  const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
 
   const refreshData = useCallback(async () => {
     if (!user) {
@@ -109,13 +131,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       // Fetch all data in parallel
-      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes] = await Promise.all([
+      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes] = await Promise.all([
         supabase.from('clients').select('*').order('created_at', { ascending: false }),
         supabase.from('projects').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
         supabase.from('time_entries').select('*').order('created_at', { ascending: false }),
         supabase.from('project_columns').select('*').order('created_at', { ascending: true }),
+        supabase.from('user_project_access').select('*'),
+        supabase.from('profiles').select('user_id, full_name'),
       ]);
+
+      // Build profiles map for creator names
+      const profiles: Record<string, string> = {};
+      (profilesRes.data || []).forEach(p => {
+        if (p.user_id && p.full_name) {
+          profiles[p.user_id] = p.full_name;
+        }
+      });
+      setProfilesMap(profiles);
 
       setData({
         clients: (clientsRes.data || []) as Client[],
@@ -129,6 +162,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hours: Number(e.hours),
         })) as TimeEntry[],
         projectColumns: (columnsRes.data || []) as ProjectColumn[],
+        projectAccess: (accessRes.data || []) as UserProjectAccess[],
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -141,11 +175,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshData();
   }, [refreshData]);
 
+  // Get creator name from user ID
+  const getCreatorName = (userId: string | null): string => {
+    if (!userId) return 'Sistema';
+    return profilesMap[userId] || 'Desconhecido';
+  };
+
   // Client operations
-  const createClient = async (client: Omit<Client, 'id' | 'access_token' | 'created_at' | 'user_id'>) => {
+  const createClient = async (client: Omit<Client, 'id' | 'access_token' | 'created_at' | 'user_id' | 'owner_id' | 'created_by'>) => {
+    if (!user) return null;
+
     const { data: newClient, error } = await supabase
       .from('clients')
-      .insert([client])
+      .insert([{
+        ...client,
+        owner_id: user.id,
+        created_by: user.id,
+      }])
       .select()
       .single();
 
@@ -186,10 +232,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Project operations
-  const createProject = async (project: Omit<Project, 'id' | 'created_at'>) => {
+  const createProject = async (project: Omit<Project, 'id' | 'created_at' | 'owner_id' | 'created_by'>) => {
+    if (!user) return null;
+
+    // Get owner_id - for collaborators, use the project's client's owner
+    let ownerId = user.id;
+    if (isCollaborator && !isAdminOrMaster) {
+      const client = data.clients.find(c => c.id === project.client_id);
+      if (client?.owner_id) {
+        ownerId = client.owner_id;
+      }
+    }
+
     const { data: newProject, error } = await supabase
       .from('projects')
-      .insert([project])
+      .insert([{
+        ...project,
+        owner_id: ownerId,
+        created_by: user.id,
+      }])
       .select()
       .single();
 
@@ -236,10 +297,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Task operations
-  const createTask = async (task: Omit<Task, 'id' | 'created_at'>) => {
+  const createTask = async (task: Omit<Task, 'id' | 'created_at' | 'created_by'>) => {
+    if (!user) return null;
+
     const { data: newTask, error } = await supabase
       .from('tasks')
-      .insert([task])
+      .insert([{
+        ...task,
+        created_by: user.id,
+      }])
       .select()
       .single();
 
@@ -280,10 +346,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Time entry operations
-  const createTimeEntry = async (entry: Omit<TimeEntry, 'id' | 'created_at'>) => {
+  const createTimeEntry = async (entry: Omit<TimeEntry, 'id' | 'created_at' | 'created_by'>) => {
+    if (!user) return null;
+
     const { data: newEntry, error } = await supabase
       .from('time_entries')
-      .insert([entry])
+      .insert([{
+        ...entry,
+        created_by: user.id,
+      }])
       .select()
       .single();
 
@@ -350,6 +421,48 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  // Project access operations
+  const grantProjectAccess = async (userId: string, projectId: string, canEdit: boolean) => {
+    if (!user) return null;
+
+    const { data: access, error } = await supabase
+      .from('user_project_access')
+      .upsert({
+        user_id: userId,
+        project_id: projectId,
+        granted_by: user.id,
+        can_edit: canEdit,
+      }, {
+        onConflict: 'user_id,project_id',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error granting project access:', error);
+      return null;
+    }
+
+    await refreshData();
+    return access as UserProjectAccess;
+  };
+
+  const revokeProjectAccess = async (userId: string, projectId: string) => {
+    const { error } = await supabase
+      .from('user_project_access')
+      .delete()
+      .eq('user_id', userId)
+      .eq('project_id', projectId);
+
+    if (error) {
+      console.error('Error revoking project access:', error);
+      return false;
+    }
+
+    await refreshData();
+    return true;
+  };
+
   // Utility functions
   const getTaskHours = (taskId: string): number => {
     return data.timeEntries
@@ -387,9 +500,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createColumn,
         updateColumn,
         deleteColumn,
+        grantProjectAccess,
+        revokeProjectAccess,
         getProjectHours,
         getClientHours,
         getTaskHours,
+        getCreatorName,
       }}
     >
       {children}
