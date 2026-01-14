@@ -40,7 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Shield, User, UserCog, Users as UsersIcon, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Shield, User, UserCog, Users as UsersIcon, Pencil, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
@@ -60,11 +60,27 @@ interface EditFormData {
   role: AppRole | 'none';
 }
 
+interface CreateFormData {
+  full_name: string;
+  email: string;
+  password: string;
+  role: AppRole | 'none';
+}
+
 export const Users: React.FC = () => {
   const { user, isMasterAdmin, isAdmin } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  
+  // Create dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateFormData>({ 
+    full_name: '', 
+    email: '', 
+    password: '',
+    role: 'none' 
+  });
+  const [creating, setCreating] = useState(false);
   
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -123,6 +139,80 @@ export const Users: React.FC = () => {
     fetchUsers();
   }, [isMasterAdmin, isAdmin, user]);
 
+  // Create user handlers
+  const openCreateDialog = () => {
+    setCreateForm({ full_name: '', email: '', password: '', role: 'none' });
+    setCreateDialogOpen(true);
+  };
+
+  const handleCreateUser = async () => {
+    if (!createForm.full_name.trim()) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+    if (!createForm.email.trim()) {
+      toast.error('Email é obrigatório');
+      return;
+    }
+    if (!createForm.password || createForm.password.length < 6) {
+      toast.error('Senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      // Create user via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: createForm.email.trim(),
+        password: createForm.password,
+        options: {
+          data: { full_name: createForm.full_name.trim() }
+        }
+      });
+
+      if (authError) throw authError;
+
+      if (!authData.user) {
+        throw new Error('Falha ao criar usuário');
+      }
+
+      const newUserId = authData.user.id;
+
+      // Update profile with owner_id
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ owner_id: user.id })
+          .eq('user_id', newUserId);
+      }
+
+      // Assign role if selected
+      if (createForm.role !== 'none') {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: newUserId, role: createForm.role });
+
+        if (roleError) {
+          console.error('Error assigning role:', roleError);
+        }
+      }
+
+      toast.success('Usuário criado com sucesso!');
+      setCreateDialogOpen(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      if (error.message?.includes('already registered')) {
+        toast.error('Este email já está cadastrado');
+      } else {
+        toast.error('Erro ao criar usuário: ' + (error.message || 'Erro desconhecido'));
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Edit user handlers
   const openEditDialog = (userProfile: UserProfile) => {
     setEditingUser(userProfile);
     setEditForm({
@@ -136,7 +226,6 @@ export const Users: React.FC = () => {
   const handleSaveUser = async () => {
     if (!editingUser) return;
 
-    // Validate
     if (!editForm.full_name.trim()) {
       toast.error('Nome é obrigatório');
       return;
@@ -148,7 +237,6 @@ export const Users: React.FC = () => {
 
     setSaving(true);
     try {
-      // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -159,7 +247,6 @@ export const Users: React.FC = () => {
 
       if (profileError) throw profileError;
 
-      // Update role
       if (editForm.role !== (editingUser.role || 'none')) {
         if (editForm.role === 'none') {
           const { error } = await supabase
@@ -201,6 +288,7 @@ export const Users: React.FC = () => {
     }
   };
 
+  // Delete user handlers
   const openDeleteDialog = (userProfile: UserProfile) => {
     setDeletingUser(userProfile);
     setDeleteDialogOpen(true);
@@ -211,13 +299,11 @@ export const Users: React.FC = () => {
 
     setDeleting(true);
     try {
-      // Delete role first
       await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', deletingUser.user_id);
 
-      // Delete profile
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -252,7 +338,7 @@ export const Users: React.FC = () => {
     }
   };
 
-  const getAvailableRoles = (): Array<{ value: string; label: string }> => {
+  const getAvailableRoles = (forCreate = false): Array<{ value: string; label: string }> => {
     const baseRoles = [
       { value: 'none', label: 'Sem função' },
       { value: 'client', label: 'Cliente' },
@@ -263,17 +349,21 @@ export const Users: React.FC = () => {
       return [
         ...baseRoles,
         { value: 'admin', label: 'Admin' },
-        { value: 'master_admin', label: 'Master Admin' },
+        ...(forCreate ? [] : [{ value: 'master_admin', label: 'Master Admin' }]),
       ];
     }
 
     return baseRoles;
   };
 
+  const canCreateUser = (): boolean => {
+    return isMasterAdmin || isAdmin;
+  };
+
   const canEditUser = (targetUser: UserProfile): boolean => {
     if (!user) return false;
     const isCurrentUser = targetUser.user_id === user.id;
-    if (isCurrentUser) return true; // Can edit own profile
+    if (isCurrentUser) return true;
     
     if (isMasterAdmin) return true;
     if (isAdmin && targetUser.owner_id === user.id) return true;
@@ -284,9 +374,9 @@ export const Users: React.FC = () => {
   const canDeleteUser = (targetUser: UserProfile): boolean => {
     if (!user) return false;
     const isCurrentUser = targetUser.user_id === user.id;
-    if (isCurrentUser) return false; // Cannot delete self
+    if (isCurrentUser) return false;
     
-    if (targetUser.role === 'master_admin') return false; // Cannot delete master_admin
+    if (targetUser.role === 'master_admin') return false;
     
     if (isMasterAdmin) return true;
     if (isAdmin && targetUser.owner_id === user.id) return true;
@@ -297,7 +387,7 @@ export const Users: React.FC = () => {
   const canChangeRole = (targetUser: UserProfile): boolean => {
     if (!user) return false;
     const isCurrentUser = targetUser.user_id === user.id;
-    if (isCurrentUser) return false; // Cannot change own role
+    if (isCurrentUser) return false;
     
     if (targetUser.role === 'master_admin' && !isMasterAdmin) return false;
     
@@ -322,14 +412,28 @@ export const Users: React.FC = () => {
         description={isMasterAdmin 
           ? "Gerencie todos os usuários e suas permissões" 
           : "Gerencie usuários da sua equipe"}
+        actions={
+          canCreateUser() && (
+            <Button onClick={openCreateDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Usuário
+            </Button>
+          )
+        }
       />
 
       {users.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Nenhum usuário cadastrado ainda.
             </p>
+            {canCreateUser() && (
+              <Button onClick={openCreateDialog}>
+                <Plus className="w-4 h-4 mr-2" />
+                Criar primeiro usuário
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -395,6 +499,91 @@ export const Users: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Create User Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Usuário</DialogTitle>
+            <DialogDescription>
+              Crie um novo usuário preenchendo as informações abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-name">Nome Completo *</Label>
+              <Input
+                id="create-name"
+                value={createForm.full_name}
+                onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
+                placeholder="Nome do usuário"
+                disabled={creating}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-email">Email *</Label>
+              <Input
+                id="create-email"
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                placeholder="email@exemplo.com"
+                disabled={creating}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-password">Senha *</Label>
+              <Input
+                id="create-password"
+                type="password"
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                placeholder="Mínimo 6 caracteres"
+                disabled={creating}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-role">Função</Label>
+              <Select
+                value={createForm.role}
+                onValueChange={(value) => setCreateForm({ ...createForm, role: value as AppRole | 'none' })}
+                disabled={creating}
+              >
+                <SelectTrigger id="create-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableRoles(true).map(role => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={creating}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateUser} disabled={creating}>
+              {creating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                'Criar Usuário'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
