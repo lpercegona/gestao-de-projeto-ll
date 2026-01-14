@@ -25,7 +25,11 @@ export const Settings: React.FC = () => {
 
   const handleOpenDialog = (column?: ProjectColumn) => {
     if (column) {
-      setEditingColumn(column);
+      const typedColumn: ProjectColumn = {
+        ...column,
+        type: column.type as 'text' | 'select'
+      };
+      setEditingColumn(typedColumn);
       setFormData({ name: column.name, type: column.type as 'text' | 'select', options: column.options || [] });
     } else {
       setEditingColumn(null);
@@ -65,14 +69,16 @@ export const Settings: React.FC = () => {
       <PageHeader title="Configurações" description="Personalize os campos de projetos" />
       <Card><CardHeader><div className="flex items-center justify-between"><div><CardTitle>Campos de Projeto</CardTitle><CardDescription>Configure campos personalizados para categorizar seus projetos</CardDescription></div><Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Novo Campo</Button></div></CardHeader>
         <CardContent>{data.projectColumns.length === 0 ? <p className="text-muted-foreground text-center py-8">Nenhum campo personalizado criado ainda.</p> : (
-          <div className="space-y-4">{data.projectColumns.map((column) => (
+          <div className="space-y-4">{data.projectColumns.map((column) => {
+            const typedColumn: ProjectColumn = { ...column, type: column.type as 'text' | 'select' };
+            return (
             <div key={column.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
               <div><div className="flex items-center gap-2"><h4 className="font-medium text-foreground">{column.name}</h4><Badge variant="secondary">{column.type === 'text' ? 'Texto' : 'Seleção'}</Badge></div>
                 {column.options && column.options.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{column.options.map((o) => <Badge key={o} variant="outline">{o}</Badge>)}</div>}
               </div>
-              <div className="flex gap-1"><Button variant="ghost" size="icon" onClick={() => handleOpenDialog(column)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => { setDeletingColumn(column); setIsDeleteDialogOpen(true); }}><Trash2 className="w-4 h-4" /></Button></div>
+              <div className="flex gap-1"><Button variant="ghost" size="icon" onClick={() => handleOpenDialog(typedColumn)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => { setDeletingColumn(typedColumn); setIsDeleteDialogOpen(true); }}><Trash2 className="w-4 h-4" /></Button></div>
             </div>
-          ))}</div>
+          )})}</div>
         )}</CardContent>
       </Card>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}><DialogContent><DialogHeader><DialogTitle>{editingColumn ? 'Editar Campo' : 'Novo Campo'}</DialogTitle></DialogHeader>

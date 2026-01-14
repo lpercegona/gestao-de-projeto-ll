@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getClientByToken, getData, getProjectHours, getTaskHours } from '@/lib/storage';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
@@ -15,18 +15,81 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Clock, FolderKanban, ListTodo } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, FolderKanban, ListTodo, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Client, Project, Task, TimeEntry } from '@/types';
 
 export const ClientPortal: React.FC = () => {
   const { token } = useParams<{ token: string }>();
-  const client = token ? getClientByToken(token) : undefined;
-  const data = getData();
+  const [client, setClient] = useState<Client | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchClientData = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('access_token', token)
+        .maybeSingle();
+
+      if (!clientData) {
+        setLoading(false);
+        return;
+      }
+
+      setClient(clientData);
+
+      const { data: projectsData } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('client_id', clientData.id);
+
+      const mappedProjects: Project[] = (projectsData || []).map(p => ({
+        ...p,
+        custom_fields: (p.custom_fields as Record<string, string>) || {}
+      }));
+      setProjects(mappedProjects);
+
+      if (projectsData && projectsData.length > 0) {
+        const projectIds = projectsData.map(p => p.id);
+        
+        const { data: tasksData } = await supabase
+          .from('tasks')
+          .select('*')
+          .in('project_id', projectIds);
+
+        setTasks(tasksData || []);
+
+        if (tasksData && tasksData.length > 0) {
+          const taskIds = tasksData.map(t => t.id);
+          
+          const { data: entriesData } = await supabase
+            .from('time_entries')
+            .select('*')
+            .in('task_id', taskIds);
+
+          setTimeEntries(entriesData || []);
+        }
+      }
+
+      setLoading(false);
+    };
+
+    fetchClientData();
+  }, [token]);
 
   const monthOptions = useMemo(() => {
     const options = [];
@@ -41,6 +104,19 @@ export const ClientPortal: React.FC = () => {
     return options;
   }, []);
 
+  const getTaskHours = (taskId: string): number => {
+    return timeEntries
+      .filter(te => te.task_id === taskId)
+      .reduce((sum, te) => sum + te.hours, 0);
+  };
+
+  const getProjectHours = (projectId: string): number => {
+    const projectTaskIds = tasks.filter(t => t.project_id === projectId).map(t => t.id);
+    return timeEntries
+      .filter(te => projectTaskIds.includes(te.task_id))
+      .reduce((sum, te) => sum + te.hours, 0);
+  };
+
   const reportData = useMemo(() => {
     if (!client) return [];
     
@@ -48,14 +124,14 @@ export const ClientPortal: React.FC = () => {
     const monthStart = startOfMonth(new Date(year, month - 1));
     const monthEnd = endOfMonth(new Date(year, month - 1));
 
-    const clientProjects = data.projects.filter(p => p.clientId === client.id);
+    const clientProjects = projects.filter(p => p.client_id === client.id);
 
     return clientProjects.map(project => {
-      const projectTasks = data.tasks.filter(t => t.projectId === project.id);
+      const projectTasks = tasks.filter(t => t.project_id === project.id);
       
       const tasksWithHours = projectTasks.map(task => {
-        const taskEntries = data.timeEntries.filter(te => {
-          if (te.taskId !== task.id) return false;
+        const taskEntries = timeEntries.filter(te => {
+          if (te.task_id !== task.id) return false;
           const entryDate = parseISO(te.date);
           return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
         });
@@ -80,7 +156,7 @@ export const ClientPortal: React.FC = () => {
         totalHours,
       };
     });
-  }, [client, data, selectedMonth]);
+  }, [client, projects, tasks, timeEntries, selectedMonth]);
 
   const toggleProject = (projectId: string) => {
     const newExpanded = new Set(expandedProjects);
@@ -91,6 +167,14 @@ export const ClientPortal: React.FC = () => {
     }
     setExpandedProjects(newExpanded);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!client) {
     return (
@@ -107,14 +191,14 @@ export const ClientPortal: React.FC = () => {
     );
   }
 
-  const totalUsedHours = data.projects
-    .filter(p => p.clientId === client.id)
+  const totalUsedHours = projects
+    .filter(p => p.client_id === client.id)
     .reduce((sum, p) => sum + getProjectHours(p.id), 0);
   
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
-  const projectCount = data.projects.filter(p => p.clientId === client.id).length;
-  const taskCount = data.tasks.filter(t => 
-    data.projects.find(p => p.id === t.projectId && p.clientId === client.id)
+  const projectCount = projects.filter(p => p.client_id === client.id).length;
+  const taskCount = tasks.filter(t => 
+    projects.find(p => p.id === t.project_id && p.client_id === client.id)
   ).length;
 
   return (
@@ -144,7 +228,7 @@ export const ClientPortal: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-foreground">{client.contractedHours}h</p>
+              <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
             </CardContent>
           </Card>
           
@@ -161,8 +245,8 @@ export const ClientPortal: React.FC = () => {
                 <div
                   className="bg-primary h-2 rounded-full transition-all"
                   style={{ 
-                    width: `${client.contractedHours > 0 
-                      ? Math.min((totalUsedHours / client.contractedHours) * 100, 100) 
+                    width: `${client.contracted_hours > 0 
+                      ? Math.min((totalUsedHours / client.contracted_hours) * 100, 100) 
                       : 0}%` 
                   }}
                 />
