@@ -347,6 +347,50 @@ export type Database = {
           has_password: boolean
         }[]
       }
+      get_client_access_token: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
+      get_client_portal_data: {
+        Args: { p_token: string }
+        Returns: {
+          client_email: string
+          client_id: string
+          client_name: string
+          contracted_hours: number
+          password_set: boolean
+        }[]
+      }
+      get_client_portal_projects: {
+        Args: { p_token: string }
+        Returns: {
+          custom_fields: Json
+          project_description: string
+          project_id: string
+          project_name: string
+          project_status: string
+        }[]
+      }
+      get_client_portal_tasks: {
+        Args: { p_token: string }
+        Returns: {
+          project_id: string
+          task_description: string
+          task_id: string
+          task_name: string
+          task_status: string
+        }[]
+      }
+      get_client_portal_time_entries: {
+        Args: { p_token: string }
+        Returns: {
+          description: string
+          entry_date: string
+          entry_id: string
+          hours: number
+          task_id: string
+        }[]
+      }
       get_shared_report: {
         Args: { p_token: string }
         Returns: {
