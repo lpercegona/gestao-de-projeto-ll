@@ -187,14 +187,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 "flex items-center",
                 isCollapsed && "lg:justify-center lg:w-full"
               )}>
-                {isCollapsed ? (
-                  // When collapsed, show first letter as logo on desktop
-                  <span className="hidden lg:block text-xl font-bold text-primary">O</span>
-                ) : (
-                  // When expanded, show full text
-                  <span className="text-xl font-bold text-primary">ORAS</span>
-                )}
-                {/* Mobile always shows full text */}
+                {/* Desktop: show "O" when collapsed, "ORAS" when expanded */}
+                <span className={cn(
+                  "hidden lg:block text-xl font-bold text-primary",
+                  isCollapsed ? "" : ""
+                )}>
+                  {isCollapsed ? "O" : "ORAS"}
+                </span>
+                {/* Mobile: always show full text */}
                 <span className="lg:hidden text-xl font-bold text-primary">ORAS</span>
               </div>
 
