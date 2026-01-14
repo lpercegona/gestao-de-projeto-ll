@@ -5,6 +5,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -20,7 +22,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Shield, User, UserCog, Users as UsersIcon } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, Shield, User, UserCog, Users as UsersIcon, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
@@ -34,30 +54,44 @@ interface UserProfile {
   owner_name?: string | null;
 }
 
+interface EditFormData {
+  full_name: string;
+  email: string;
+  role: AppRole | 'none';
+}
+
 export const Users: React.FC = () => {
   const { user, isMasterAdmin, isAdmin } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editForm, setEditForm] = useState<EditFormData>({ full_name: '', email: '', role: 'none' });
+  const [saving, setSaving] = useState(false);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, full_name, email, owner_id');
 
       if (profilesError) throw profilesError;
 
-      // Fetch roles
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Combine data
       const combinedUsers = profiles?.map(profile => {
         const userRole = roles?.find(r => r.user_id === profile.user_id);
         const owner = profiles?.find(p => p.user_id === profile.owner_id);
@@ -68,11 +102,9 @@ export const Users: React.FC = () => {
         };
       }) || [];
 
-      // Filter based on role
       let filteredUsers = combinedUsers;
       
       if (!isMasterAdmin && isAdmin && user) {
-        // Admin can only see users they own + themselves
         filteredUsers = combinedUsers.filter(
           u => u.owner_id === user.id || u.user_id === user.id
         );
@@ -91,63 +123,117 @@ export const Users: React.FC = () => {
     fetchUsers();
   }, [isMasterAdmin, isAdmin, user]);
 
-  const handleRoleChange = async (userId: string, newRole: AppRole | 'none') => {
-    // Prevent changing master_admin role (except by master_admin)
-    const targetUser = users.find(u => u.user_id === userId);
-    if (targetUser?.role === 'master_admin' && !isMasterAdmin) {
-      toast.error('Apenas o Master Admin pode alterar essa função');
+  const openEditDialog = (userProfile: UserProfile) => {
+    setEditingUser(userProfile);
+    setEditForm({
+      full_name: userProfile.full_name || '',
+      email: userProfile.email || '',
+      role: userProfile.role || 'none',
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+
+    // Validate
+    if (!editForm.full_name.trim()) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+    if (!editForm.email.trim()) {
+      toast.error('Email é obrigatório');
       return;
     }
 
-    // Admin can only assign collaborator or client roles
-    if (isAdmin && !isMasterAdmin && (newRole === 'admin' || newRole === 'master_admin')) {
-      toast.error('Você não pode atribuir essa função');
-      return;
-    }
-
-    setUpdating(userId);
+    setSaving(true);
     try {
-      if (newRole === 'none') {
-        // Remove role
-        const { error } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId);
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editForm.full_name.trim(),
+          email: editForm.email.trim(),
+        })
+        .eq('user_id', editingUser.user_id);
 
-        if (error) throw error;
-      } else {
-        // Check if role exists
-        const { data: existingRole } = await supabase
-          .from('user_roles')
-          .select('id')
-          .eq('user_id', userId)
-          .maybeSingle();
+      if (profileError) throw profileError;
 
-        if (existingRole) {
-          // Update existing role
+      // Update role
+      if (editForm.role !== (editingUser.role || 'none')) {
+        if (editForm.role === 'none') {
           const { error } = await supabase
             .from('user_roles')
-            .update({ role: newRole })
-            .eq('user_id', userId);
-
+            .delete()
+            .eq('user_id', editingUser.user_id);
           if (error) throw error;
         } else {
-          // Insert new role
-          const { error } = await supabase
+          const { data: existingRole } = await supabase
             .from('user_roles')
-            .insert({ user_id: userId, role: newRole });
+            .select('id')
+            .eq('user_id', editingUser.user_id)
+            .maybeSingle();
 
-          if (error) throw error;
+          if (existingRole) {
+            const { error } = await supabase
+              .from('user_roles')
+              .update({ role: editForm.role })
+              .eq('user_id', editingUser.user_id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .from('user_roles')
+              .insert({ user_id: editingUser.user_id, role: editForm.role });
+            if (error) throw error;
+          }
         }
       }
 
-      toast.success('Função atualizada com sucesso!');
+      toast.success('Usuário atualizado com sucesso!');
+      setEditDialogOpen(false);
+      setEditingUser(null);
       fetchUsers();
     } catch (error) {
-      console.error('Error updating role:', error);
-      toast.error('Erro ao atualizar função');
+      console.error('Error updating user:', error);
+      toast.error('Erro ao atualizar usuário');
     } finally {
-      setUpdating(null);
+      setSaving(false);
+    }
+  };
+
+  const openDeleteDialog = (userProfile: UserProfile) => {
+    setDeletingUser(userProfile);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+
+    setDeleting(true);
+    try {
+      // Delete role first
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', deletingUser.user_id);
+
+      // Delete profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', deletingUser.user_id);
+
+      if (profileError) throw profileError;
+
+      toast.success('Usuário removido com sucesso!');
+      setDeleteDialogOpen(false);
+      setDeletingUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Erro ao remover usuário. O usuário pode ter dados associados.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -166,8 +252,7 @@ export const Users: React.FC = () => {
     }
   };
 
-  // Get available roles based on current user's role
-  const getAvailableRoles = (targetRole: AppRole | null): Array<{ value: string; label: string }> => {
+  const getAvailableRoles = (): Array<{ value: string; label: string }> => {
     const baseRoles = [
       { value: 'none', label: 'Sem função' },
       { value: 'client', label: 'Cliente' },
@@ -182,8 +267,44 @@ export const Users: React.FC = () => {
       ];
     }
 
-    // Admin can only manage collaborator and client
     return baseRoles;
+  };
+
+  const canEditUser = (targetUser: UserProfile): boolean => {
+    if (!user) return false;
+    const isCurrentUser = targetUser.user_id === user.id;
+    if (isCurrentUser) return true; // Can edit own profile
+    
+    if (isMasterAdmin) return true;
+    if (isAdmin && targetUser.owner_id === user.id) return true;
+    
+    return false;
+  };
+
+  const canDeleteUser = (targetUser: UserProfile): boolean => {
+    if (!user) return false;
+    const isCurrentUser = targetUser.user_id === user.id;
+    if (isCurrentUser) return false; // Cannot delete self
+    
+    if (targetUser.role === 'master_admin') return false; // Cannot delete master_admin
+    
+    if (isMasterAdmin) return true;
+    if (isAdmin && targetUser.owner_id === user.id) return true;
+    
+    return false;
+  };
+
+  const canChangeRole = (targetUser: UserProfile): boolean => {
+    if (!user) return false;
+    const isCurrentUser = targetUser.user_id === user.id;
+    if (isCurrentUser) return false; // Cannot change own role
+    
+    if (targetUser.role === 'master_admin' && !isMasterAdmin) return false;
+    
+    if (isMasterAdmin) return true;
+    if (isAdmin && targetUser.owner_id === user.id) return true;
+    
+    return false;
   };
 
   if (loading) {
@@ -219,16 +340,14 @@ export const Users: React.FC = () => {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Função Atual</TableHead>
+                  <TableHead>Função</TableHead>
                   {isMasterAdmin && <TableHead>Proprietário</TableHead>}
-                  <TableHead>Alterar Função</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((u) => {
                   const isCurrentUser = u.user_id === user?.id;
-                  const canEdit = isMasterAdmin || 
-                    (isAdmin && u.owner_id === user?.id && u.role !== 'master_admin' && u.role !== 'admin');
                   
                   return (
                     <TableRow key={u.user_id}>
@@ -245,35 +364,28 @@ export const Users: React.FC = () => {
                           {u.owner_name || (u.role === 'master_admin' ? '-' : 'Sistema')}
                         </TableCell>
                       )}
-                      <TableCell>
-                        {canEdit && !isCurrentUser ? (
-                          <Select
-                            value={u.role || 'none'}
-                            onValueChange={(value) => 
-                              handleRoleChange(u.user_id, value as AppRole | 'none')
-                            }
-                            disabled={updating === u.user_id}
-                          >
-                            <SelectTrigger className="w-40">
-                              {updating === u.user_id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <SelectValue />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getAvailableRoles(u.role).map(role => (
-                                <SelectItem key={role.value} value={role.value}>
-                                  {role.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            {isCurrentUser ? 'Próprio usuário' : 'Sem permissão'}
-                          </span>
-                        )}
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {canEditUser(u) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditDialog(u)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {canDeleteUser(u) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(u)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -283,6 +395,108 @@ export const Users: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do usuário abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nome Completo</Label>
+              <Input
+                id="edit-name"
+                value={editForm.full_name}
+                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                placeholder="Nome do usuário"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            
+            {editingUser && canChangeRole(editingUser) && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Função</Label>
+                <Select
+                  value={editForm.role}
+                  onValueChange={(value) => setEditForm({ ...editForm, role: value as AppRole | 'none' })}
+                >
+                  <SelectTrigger id="edit-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableRoles().map(role => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveUser} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover o usuário <strong>{deletingUser?.full_name || deletingUser?.email}</strong>? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteUser} 
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Removendo...
+                </>
+              ) : (
+                'Remover'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
