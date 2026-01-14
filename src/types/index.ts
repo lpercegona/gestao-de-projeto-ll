@@ -21,8 +21,9 @@ export interface Project {
   name: string;
   description: string | null;
   status: string;
-  custom_fields: Record<string, string>;
+  custom_fields: Record<string, string> | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Task {
