@@ -297,8 +297,8 @@ export const Login: React.FC = () => {
               <Clock className="w-7 h-7 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl">HorasPro</CardTitle>
-          <CardDescription>Sistema de Gestão de Projetos e Horas</CardDescription>
+          <CardTitle className="text-2xl">ORAS</CardTitle>
+          <CardDescription>Gestão de Projetos e Horas</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="admin" className="w-full">

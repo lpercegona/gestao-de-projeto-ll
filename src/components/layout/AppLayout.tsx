@@ -106,20 +106,44 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
   };
 
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-card flex flex-col">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Clock className="w-5 h-5 text-primary-foreground" />
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-4 sm:p-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <Clock className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-semibold text-foreground">ORAS</span>
             </div>
-            <span className="text-xl font-semibold text-foreground">HorasPro</span>
+            <button 
+              className="lg:hidden p-2 rounded-md hover:bg-accent"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <span className="sr-only">Fechar menu</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
         
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -127,6 +151,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <li key={item.path}>
                   <Link
                     to={item.path}
+                    onClick={() => setSidebarOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
                       isActive
@@ -156,6 +181,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           )}
           <Link
             to="/profile"
+            onClick={() => setSidebarOpen(false)}
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
               location.pathname === '/profile'
@@ -175,14 +201,33 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             Sair
           </Button>
           <div className="px-3 py-2 text-xs text-muted-foreground">
-            Versão MVP 1.0
+            Versão 1.0
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-8">
+        {/* Mobile header */}
+        <div className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-background px-4 py-3 lg:hidden">
+          <button 
+            className="p-2 rounded-md hover:bg-accent"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <span className="sr-only">Abrir menu</span>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+              <Clock className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-foreground">ORAS</span>
+          </div>
+        </div>
+        
+        <div className="p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>
