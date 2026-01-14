@@ -321,6 +321,10 @@ export type Database = {
       is_admin_or_master: { Args: { check_user_id: string }; Returns: boolean }
       is_collaborator: { Args: { check_user_id: string }; Returns: boolean }
       is_master_admin: { Args: { check_user_id: string }; Returns: boolean }
+      setup_client_account: {
+        Args: { p_client_id: string; p_email: string; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "client" | "master_admin" | "collaborator"

@@ -164,30 +164,19 @@ export const Login: React.FC = () => {
       }
       
       if (signUpData.user) {
-        // Update client record with user_id and mark password as set
-        await supabase
-          .from('clients')
-          .update({ 
-            user_id: signUpData.user.id,
-            password_set: true 
-          })
-          .eq('id', clientId);
+        // Use the secure function to set up client account
+        const { error: setupError } = await supabase.rpc('setup_client_account', {
+          p_user_id: signUpData.user.id,
+          p_client_id: clientId,
+          p_email: clientEmail.toLowerCase().trim()
+        });
         
-        // Create user_role for client
-        await supabase
-          .from('user_roles')
-          .insert({
-            user_id: signUpData.user.id,
-            role: 'client'
-          });
-        
-        // Create profile for client
-        await supabase
-          .from('profiles')
-          .insert({
-            user_id: signUpData.user.id,
-            email: clientEmail.toLowerCase().trim(),
-          });
+        if (setupError) {
+          console.error('Error setting up client account:', setupError);
+          toast.error('Erro ao configurar conta. Tente novamente.');
+          setLoading(false);
+          return;
+        }
         
         toast.success('Senha definida com sucesso! Você já está logado.');
         // The auth state change will trigger redirect
