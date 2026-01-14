@@ -16,6 +16,7 @@ import { Settings } from "@/pages/Settings";
 import { Users } from "@/pages/Users";
 import { ClientReports } from "@/pages/ClientReports";
 import { ClientPortal } from "@/pages/ClientPortal";
+import { SharedReport } from "@/pages/SharedReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/portal/:token" element={<ClientPortal />} />
+              <Route path="/report/:token" element={<SharedReport />} />
               
               {/* Dashboard - accessible by admin, master_admin, and collaborator */}
               <Route path="/" element={
