@@ -24,6 +24,7 @@ export type Database = {
           id: string
           name: string
           owner_id: string | null
+          password_set: boolean
           updated_at: string
           user_id: string | null
         }
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           name: string
           owner_id?: string | null
+          password_set?: boolean
           updated_at?: string
           user_id?: string | null
         }
@@ -48,6 +50,7 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string | null
+          password_set?: boolean
           updated_at?: string
           user_id?: string | null
         }
@@ -298,6 +301,13 @@ export type Database = {
       can_edit_project: {
         Args: { check_project_id: string; check_user_id: string }
         Returns: boolean
+      }
+      check_client_email: {
+        Args: { check_email: string }
+        Returns: {
+          client_id: string
+          has_password: boolean
+        }[]
       }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
       get_user_owner_id: { Args: { check_user_id: string }; Returns: string }
