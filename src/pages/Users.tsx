@@ -96,27 +96,46 @@ export const Users: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email, owner_id');
+      // Fetch profiles, roles, and clients in parallel
+      const [profilesRes, rolesRes, clientsRes] = await Promise.all([
+        supabase.from('profiles').select('user_id, full_name, email, owner_id'),
+        supabase.from('user_roles').select('user_id, role'),
+        supabase.from('clients').select('email, created_by'),
+      ]);
 
-      if (profilesError) throw profilesError;
+      if (profilesRes.error) throw profilesRes.error;
+      if (rolesRes.error) throw rolesRes.error;
+      // clients query may fail for non-admin users, that's ok
+      
+      const profiles = profilesRes.data || [];
+      const roles = rolesRes.data || [];
+      const clients = clientsRes.data || [];
 
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) throw rolesError;
-
-      const combinedUsers = profiles?.map(profile => {
-        const userRole = roles?.find(r => r.user_id === profile.user_id);
-        const owner = profiles?.find(p => p.user_id === profile.owner_id);
+      const combinedUsers = profiles.map(profile => {
+        const userRole = roles.find(r => r.user_id === profile.user_id);
+        const role = userRole?.role as AppRole | null || null;
+        
+        let owner_name: string | null = null;
+        
+        if (role === 'client') {
+          // For clients, find the admin who created the client record (by email match)
+          const clientRecord = clients.find(c => c.email?.toLowerCase() === profile.email?.toLowerCase());
+          if (clientRecord?.created_by) {
+            const creator = profiles.find(p => p.user_id === clientRecord.created_by);
+            owner_name = creator?.full_name || null;
+          }
+        } else {
+          // For other roles, use the profile's owner_id
+          const owner = profiles.find(p => p.user_id === profile.owner_id);
+          owner_name = owner?.full_name || null;
+        }
+        
         return {
           ...profile,
-          role: userRole?.role as AppRole | null || null,
-          owner_name: owner?.full_name || null,
+          role,
+          owner_name,
         };
-      }) || [];
+      });
 
       let filteredUsers = combinedUsers;
       
