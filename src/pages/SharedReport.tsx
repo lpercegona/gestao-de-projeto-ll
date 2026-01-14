@@ -67,10 +67,17 @@ export const SharedReport: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
+  // UUID validation regex
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Validate token format
+  const isValidToken = token && uuidRegex.test(token);
+
   // Check if report requires password
   useEffect(() => {
     const checkPassword = async () => {
-      if (!token) {
+      // Validate token format before making any requests
+      if (!token || !isValidToken) {
         setLoading(false);
         return;
       }
@@ -112,7 +119,7 @@ export const SharedReport: React.FC = () => {
     };
 
     checkPassword();
-  }, [token]);
+  }, [token, isValidToken]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,7 +154,8 @@ export const SharedReport: React.FC = () => {
   // Fetch report data once authenticated
   useEffect(() => {
     const fetchData = async () => {
-      if (!token || !authenticated) return;
+      // Validate token format before fetching data
+      if (!token || !authenticated || !isValidToken) return;
       
       setLoading(true);
       try {
