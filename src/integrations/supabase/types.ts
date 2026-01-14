@@ -157,6 +157,44 @@ export type Database = {
           },
         ]
       }
+      report_shares: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_public: boolean
+          share_token: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_public?: boolean
+          share_token?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_public?: boolean
+          share_token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           created_at: string
@@ -307,6 +345,41 @@ export type Database = {
         Returns: {
           client_id: string
           has_password: boolean
+        }[]
+      }
+      get_shared_report: {
+        Args: { p_token: string }
+        Returns: {
+          client_id: string
+          client_name: string
+          contracted_hours: number
+          is_public: boolean
+        }[]
+      }
+      get_shared_report_projects: {
+        Args: { p_token: string }
+        Returns: {
+          project_id: string
+          project_name: string
+          project_status: string
+        }[]
+      }
+      get_shared_report_tasks: {
+        Args: { p_token: string }
+        Returns: {
+          project_id: string
+          task_description: string
+          task_id: string
+          task_name: string
+        }[]
+      }
+      get_shared_report_time_entries: {
+        Args: { p_token: string }
+        Returns: {
+          entry_date: string
+          entry_id: string
+          hours: number
+          task_id: string
         }[]
       }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }

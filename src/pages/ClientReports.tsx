@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -16,9 +18,18 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { ChevronDown, ChevronRight, Loader2, Share2, Copy, Check, Globe, Lock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface Project {
   id: string;
@@ -46,6 +57,12 @@ interface Client {
   contracted_hours: number;
 }
 
+interface ReportShare {
+  id: string;
+  share_token: string;
+  is_public: boolean;
+}
+
 export const ClientReports: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -53,6 +70,9 @@ export const ClientReports: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [reportShare, setReportShare] = useState<ReportShare | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -105,6 +125,15 @@ export const ClientReports: React.FC = () => {
               setTimeEntries(entriesData || []);
             }
           }
+
+          // Fetch existing share settings
+          const { data: shareData } = await supabase
+            .from('report_shares')
+            .select('*')
+            .eq('client_id', clientData.id)
+            .maybeSingle();
+
+          setReportShare(shareData);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -130,7 +159,7 @@ export const ClientReports: React.FC = () => {
     return options;
   }, []);
 
-  // Filter and calculate report data
+  // Filter and calculate report data - only show projects with hours > 0 in period
   const reportData = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
     const monthStart = startOfMonth(new Date(year, month - 1));
@@ -156,7 +185,7 @@ export const ClientReports: React.FC = () => {
           monthHours,
           totalHours,
         };
-      }).filter(t => t.monthHours > 0 || t.totalHours > 0);
+      }).filter(t => t.monthHours > 0); // Only tasks with hours in period
 
       const monthHours = tasksWithHours.reduce((sum, t) => sum + t.monthHours, 0);
       const totalHours = tasksWithHours.reduce((sum, t) => sum + t.totalHours, 0);
@@ -167,7 +196,7 @@ export const ClientReports: React.FC = () => {
         monthHours,
         totalHours,
       };
-    }).filter(p => p.monthHours > 0 || p.tasks.length > 0);
+    }).filter(p => p.monthHours > 0); // Only projects with hours in period
   }, [projects, tasks, timeEntries, selectedMonth]);
 
   const toggleProject = (projectId: string) => {
@@ -178,6 +207,65 @@ export const ClientReports: React.FC = () => {
       newExpanded.add(projectId);
     }
     setExpandedProjects(newExpanded);
+  };
+
+  const handleCreateShare = async () => {
+    if (!client || !user) return;
+    
+    setShareLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('report_shares')
+        .insert({
+          client_id: client.id,
+          created_by: user.id,
+          is_public: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setReportShare(data);
+      toast.success('Link de compartilhamento criado!');
+    } catch (error) {
+      console.error('Error creating share:', error);
+      toast.error('Erro ao criar link de compartilhamento');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleTogglePublic = async () => {
+    if (!reportShare) return;
+    
+    setShareLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('report_shares')
+        .update({ is_public: !reportShare.is_public })
+        .eq('id', reportShare.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setReportShare(data);
+      toast.success(data.is_public ? 'Relatório agora é público' : 'Relatório agora é privado');
+    } catch (error) {
+      console.error('Error updating share:', error);
+      toast.error('Erro ao atualizar configuração');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!reportShare) return;
+    
+    const shareUrl = `${window.location.origin}/report/${reportShare.share_token}`;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    toast.success('Link copiado!');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
@@ -214,6 +302,95 @@ export const ClientReports: React.FC = () => {
       <PageHeader
         title="Meus Relatórios"
         description={`Relatórios de horas - ${client.name}`}
+        actions={
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Share2 className="w-4 h-4" />
+                Compartilhar
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Compartilhar Relatório</DialogTitle>
+                <DialogDescription>
+                  Gere um link público para compartilhar este relatório com terceiros.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 pt-4">
+                {!reportShare ? (
+                  <Button 
+                    onClick={handleCreateShare} 
+                    disabled={shareLoading}
+                    className="w-full"
+                  >
+                    {shareLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      'Criar Link de Compartilhamento'
+                    )}
+                  </Button>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {reportShare.is_public ? (
+                          <Globe className="w-5 h-5 text-primary" />
+                        ) : (
+                          <Lock className="w-5 h-5 text-muted-foreground" />
+                        )}
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {reportShare.is_public ? 'Público' : 'Privado'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {reportShare.is_public 
+                              ? 'Qualquer pessoa com o link pode ver' 
+                              : 'Apenas você pode ver'}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={reportShare.is_public}
+                        onCheckedChange={handleTogglePublic}
+                        disabled={shareLoading}
+                      />
+                    </div>
+
+                    {reportShare.is_public && (
+                      <div className="flex gap-2">
+                        <div className="flex-1 p-3 bg-muted rounded-lg text-sm text-muted-foreground truncate">
+                          {`${window.location.origin}/report/${reportShare.share_token}`}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={handleCopyLink}
+                        >
+                          {copied ? (
+                            <Check className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
+                    {!reportShare.is_public && (
+                      <p className="text-sm text-muted-foreground text-center">
+                        Ative o modo público para compartilhar o link do relatório.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        }
       />
 
       {/* Client Info */}
@@ -296,7 +473,7 @@ export const ClientReports: React.FC = () => {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              Nenhum registro de horas encontrado para o período selecionado.
+              Nenhum projeto com horas registradas no período selecionado.
             </p>
           </CardContent>
         </Card>
