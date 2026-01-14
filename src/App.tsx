@@ -35,9 +35,9 @@ const App = () => (
               <Route path="/portal/:token" element={<ClientPortal />} />
               <Route path="/report/:token" element={<SharedReport />} />
               
-              {/* Dashboard - accessible by admin, master_admin, and collaborator */}
+              {/* Dashboard - accessible by admin and master_admin only */}
               <Route path="/" element={
-                <ProtectedRoute requiredRole="collaborator">
+                <ProtectedRoute requiredRole="admin">
                   <Dashboard />
                 </ProtectedRoute>
               } />
@@ -61,9 +61,9 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Reports - accessible by collaborator and above */}
+              {/* Reports - admin only */}
               <Route path="/reports" element={
-                <ProtectedRoute requiredRole="collaborator">
+                <ProtectedRoute requiredRole="admin">
                   <Reports />
                 </ProtectedRoute>
               } />
