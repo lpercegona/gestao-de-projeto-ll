@@ -15,7 +15,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Clock, Loader2, Lock } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, Loader2, Lock, KeyRound } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -54,19 +56,101 @@ export const SharedReport: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   
+  // Password protection states
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
+  // Check if report requires password
   useEffect(() => {
-    const fetchData = async () => {
+    const checkPassword = async () => {
       if (!token) {
         setLoading(false);
         return;
       }
-      
+
+      // Check sessionStorage for previous authentication
+      const storedAuth = sessionStorage.getItem(`report_auth_${token}`);
+      if (storedAuth === 'true') {
+        setAuthenticated(true);
+        return;
+      }
+
       try {
-        // Fetch client info
+        const { data: checkData, error } = await supabase.rpc('check_report_has_password', {
+          p_token: token
+        });
+
+        if (error || !checkData || checkData.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        const { has_password, is_public } = checkData[0];
+
+        if (!is_public) {
+          setLoading(false);
+          return;
+        }
+
+        if (has_password) {
+          setNeedsPassword(true);
+          setLoading(false);
+        } else {
+          setAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Error checking password:', error);
+        setLoading(false);
+      }
+    };
+
+    checkPassword();
+  }, [token]);
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !passwordInput.trim()) return;
+
+    setVerifying(true);
+    setPasswordError(false);
+
+    try {
+      const { data: isValid, error } = await supabase.rpc('verify_report_password', {
+        p_token: token,
+        p_password: passwordInput.trim()
+      });
+
+      if (error) throw error;
+
+      if (isValid) {
+        sessionStorage.setItem(`report_auth_${token}`, 'true');
+        setAuthenticated(true);
+        setNeedsPassword(false);
+      } else {
+        setPasswordError(true);
+      }
+    } catch (error) {
+      console.error('Error verifying password:', error);
+      setPasswordError(true);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  // Fetch report data once authenticated
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!token || !authenticated) return;
+      
+      setLoading(true);
+      try {
         const { data: reportData, error: reportError } = await supabase.rpc('get_shared_report', {
           p_token: token
         });
@@ -78,7 +162,6 @@ export const SharedReport: React.FC = () => {
         
         setClientInfo(reportData[0]);
         
-        // Fetch projects
         const { data: projectsData } = await supabase.rpc('get_shared_report_projects', {
           p_token: token
         });
@@ -90,7 +173,6 @@ export const SharedReport: React.FC = () => {
         }));
         setProjects(mappedProjects);
         
-        // Fetch tasks
         const { data: tasksData } = await supabase.rpc('get_shared_report_tasks', {
           p_token: token
         });
@@ -103,7 +185,6 @@ export const SharedReport: React.FC = () => {
         }));
         setTasks(mappedTasks);
         
-        // Fetch time entries
         const { data: entriesData } = await supabase.rpc('get_shared_report_time_entries', {
           p_token: token
         });
@@ -124,7 +205,7 @@ export const SharedReport: React.FC = () => {
     };
 
     fetchData();
-  }, [token]);
+  }, [token, authenticated]);
 
   // Generate month options (last 12 months)
   const monthOptions = useMemo(() => {
@@ -197,6 +278,42 @@ export const SharedReport: React.FC = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Password entry screen
+  if (needsPassword && !authenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="py-8">
+            <div className="text-center mb-6">
+              <KeyRound className="w-12 h-12 mx-auto mb-4 text-primary" />
+              <h1 className="text-xl font-semibold text-foreground mb-2">Relatório Protegido</h1>
+              <p className="text-muted-foreground">
+                Digite a senha para acessar este relatório.
+              </p>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Digite a senha"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                disabled={verifying}
+                className={passwordError ? 'border-destructive' : ''}
+              />
+              {passwordError && (
+                <p className="text-sm text-destructive">Senha incorreta. Tente novamente.</p>
+              )}
+              <Button type="submit" className="w-full" disabled={verifying || !passwordInput.trim()}>
+                {verifying && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Acessar Relatório
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }

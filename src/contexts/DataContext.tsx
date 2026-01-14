@@ -53,6 +53,14 @@ interface TimeEntry {
   created_at: string;
 }
 
+interface TaskTimer {
+  id: string;
+  task_id: string;
+  user_id: string;
+  started_at: string;
+  created_at: string;
+}
+
 interface UserProjectAccess {
   id: string;
   user_id: string;
@@ -69,6 +77,7 @@ interface AppData {
   timeEntries: TimeEntry[];
   projectColumns: ProjectColumn[];
   projectAccess: UserProjectAccess[];
+  taskTimers: TaskTimer[];
 }
 
 interface DataContextType {
@@ -97,6 +106,11 @@ interface DataContextType {
   // Project Access
   grantProjectAccess: (userId: string, projectId: string, canEdit: boolean) => Promise<UserProjectAccess | null>;
   revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
+  // Task Timer
+  startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
+  stopTaskTimer: (taskId: string) => Promise<{ hours: number } | null>;
+  getActiveTimer: (taskId: string) => TaskTimer | null;
+  completeTask: (taskId: string) => Promise<boolean>;
   // Utilities
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
@@ -113,6 +127,7 @@ const emptyData: AppData = {
   timeEntries: [],
   projectColumns: [],
   projectAccess: [],
+  taskTimers: [],
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -131,7 +146,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       // Fetch all data in parallel
-      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes] = await Promise.all([
+      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes] = await Promise.all([
         supabase.from('clients').select('*').order('created_at', { ascending: false }),
         supabase.from('projects').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
@@ -139,6 +154,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('project_columns').select('*').order('created_at', { ascending: true }),
         supabase.from('user_project_access').select('*'),
         supabase.from('profiles').select('user_id, full_name'),
+        supabase.from('task_timers').select('*'),
       ]);
 
       // Build profiles map for creator names
@@ -163,6 +179,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })) as TimeEntry[],
         projectColumns: (columnsRes.data || []) as ProjectColumn[],
         projectAccess: (accessRes.data || []) as UserProjectAccess[],
+        taskTimers: (timersRes.data || []) as TaskTimer[],
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -463,6 +480,89 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  // Task Timer operations
+  const startTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
+    if (!user) return null;
+
+    // First update task status to in_progress if it's pending
+    const task = data.tasks.find(t => t.id === taskId);
+    if (task?.status === 'pending') {
+      await updateTask(taskId, { status: 'in_progress' });
+    }
+
+    const { data: timer, error } = await supabase
+      .from('task_timers')
+      .insert({
+        task_id: taskId,
+        user_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error starting timer:', error);
+      return null;
+    }
+
+    await refreshData();
+    return timer as TaskTimer;
+  };
+
+  const stopTaskTimer = async (taskId: string): Promise<{ hours: number } | null> => {
+    if (!user) return null;
+
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer) return null;
+
+    // Calculate elapsed time
+    const startTime = new Date(timer.started_at).getTime();
+    const now = Date.now();
+    const elapsedMs = now - startTime;
+    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+    
+    // Round to nearest 0.25 hours (15 minutes)
+    const roundedHours = Math.round(elapsedHours * 4) / 4;
+    const finalHours = Math.max(0.25, roundedHours); // Minimum 15 minutes
+
+    // Create time entry
+    await createTimeEntry({
+      task_id: taskId,
+      hours: finalHours,
+      description: 'Timer automático',
+      date: new Date().toISOString().split('T')[0],
+    });
+
+    // Delete the timer
+    const { error } = await supabase
+      .from('task_timers')
+      .delete()
+      .eq('id', timer.id);
+
+    if (error) {
+      console.error('Error stopping timer:', error);
+      return null;
+    }
+
+    await refreshData();
+    return { hours: finalHours };
+  };
+
+  const getActiveTimer = (taskId: string): TaskTimer | null => {
+    return data.taskTimers.find(t => t.task_id === taskId) || null;
+  };
+
+  const completeTask = async (taskId: string): Promise<boolean> => {
+    // If there's an active timer, stop it first
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (timer) {
+      await stopTaskTimer(taskId);
+    }
+
+    // Update task status to completed
+    const updated = await updateTask(taskId, { status: 'completed' });
+    return !!updated;
+  };
+
   // Utility functions
   const getTaskHours = (taskId: string): number => {
     return data.timeEntries
@@ -502,6 +602,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteColumn,
         grantProjectAccess,
         revokeProjectAccess,
+        startTaskTimer,
+        stopTaskTimer,
+        getActiveTimer,
+        completeTask,
         getProjectHours,
         getClientHours,
         getTaskHours,

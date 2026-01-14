@@ -110,6 +110,60 @@ export type Database = {
         }
         Relationships: []
       }
+      project_requests: {
+        Row: {
+          admin_notes: string | null
+          briefing: string
+          client_id: string
+          converted_project_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          briefing: string
+          client_id: string
+          converted_project_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          briefing?: string
+          client_id?: string
+          converted_project_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_converted_project_id_fkey"
+            columns: ["converted_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           client_id: string
@@ -164,6 +218,7 @@ export type Database = {
           created_by: string
           id: string
           is_public: boolean
+          share_password: string | null
           share_token: string
           updated_at: string
         }
@@ -173,6 +228,7 @@ export type Database = {
           created_by: string
           id?: string
           is_public?: boolean
+          share_password?: string | null
           share_token?: string
           updated_at?: string
         }
@@ -182,6 +238,7 @@ export type Database = {
           created_by?: string
           id?: string
           is_public?: boolean
+          share_password?: string | null
           share_token?: string
           updated_at?: string
         }
@@ -191,6 +248,38 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_timers: {
+        Row: {
+          created_at: string
+          id: string
+          started_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          started_at?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          started_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_timers_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -347,6 +436,14 @@ export type Database = {
           has_password: boolean
         }[]
       }
+      check_report_has_password: {
+        Args: { p_token: string }
+        Returns: {
+          client_name: string
+          has_password: boolean
+          is_public: boolean
+        }[]
+      }
       get_client_access_token: {
         Args: { p_client_id: string }
         Returns: string
@@ -440,6 +537,10 @@ export type Database = {
       is_master_admin: { Args: { check_user_id: string }; Returns: boolean }
       setup_client_account: {
         Args: { p_client_id: string; p_email: string; p_user_id: string }
+        Returns: boolean
+      }
+      verify_report_password: {
+        Args: { p_password: string; p_token: string }
         Returns: boolean
       }
     }
