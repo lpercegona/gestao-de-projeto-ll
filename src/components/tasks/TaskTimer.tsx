@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TaskTimerProps {
   taskId: string;
@@ -86,11 +87,11 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const showCompleteButton = taskStatus === 'in_progress';
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       {/* Timer display when active */}
       {isTimerActive && (
         <div className={cn(
-          "px-3 py-1.5 rounded-md font-mono text-sm font-medium",
+          "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md font-mono text-xs sm:text-sm font-medium",
           "bg-primary/10 text-primary",
           "animate-pulse"
         )}>
@@ -100,44 +101,59 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
       {/* Play button */}
       {showPlayButton && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleStart}
-          disabled={loading || disabled}
-          className="text-primary hover:text-primary hover:bg-primary/10"
-        >
-          <Play className="w-4 h-4 mr-1" />
-          Iniciar
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStart}
+              disabled={loading || disabled}
+              className="text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
+            >
+              <Play className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1">Iniciar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent className="sm:hidden">Iniciar</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Pause button */}
       {showPauseButton && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleStop}
-          disabled={loading || disabled}
-          className="text-orange-600 hover:text-orange-600 hover:bg-orange-100"
-        >
-          <Pause className="w-4 h-4 mr-1" />
-          Pausar
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStop}
+              disabled={loading || disabled}
+              className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 px-2 sm:px-3"
+            >
+              <Pause className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1">Pausar</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent className="sm:hidden">Pausar</TooltipContent>
+        </Tooltip>
       )}
 
       {/* Complete button */}
       {showCompleteButton && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleComplete}
-          disabled={loading || disabled}
-          className="text-green-600 hover:text-green-600 hover:bg-green-100"
-        >
-          <CheckCircle className="w-4 h-4 mr-1" />
-          Concluir
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleComplete}
+              disabled={loading || disabled}
+              className="text-green-600 hover:text-green-600 hover:bg-green-100 px-2 sm:px-3"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1">Concluir</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent className="sm:hidden">Concluir</TooltipContent>
+        </Tooltip>
       )}
     </div>
   );

@@ -146,7 +146,7 @@ export const NotificationBell: React.FC = () => {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 max-w-80 p-0" align="end">
         <div className="flex items-center justify-between border-b border-border p-3">
           <h4 className="font-semibold text-sm">Notificações</h4>
           <div className="flex items-center gap-1">
@@ -157,8 +157,8 @@ export const NotificationBell: React.FC = () => {
                 onClick={markAllAsRead}
                 className="h-7 px-2 text-xs"
               >
-                <CheckCheck className="h-3 w-3 mr-1" />
-                Marcar todas
+                <CheckCheck className="h-3 w-3 sm:mr-1" />
+                <span className="hidden sm:inline">Marcar todas</span>
               </Button>
             )}
             {notifications.length > 0 && (

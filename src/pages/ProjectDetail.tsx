@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { Task } from '@/types';
 import { toast } from 'sonner';
@@ -184,9 +185,9 @@ export const ProjectDetail: React.FC = () => {
   return (
     <div>
       <div className="mb-6">
-        <Button variant="ghost" onClick={() => navigate('/projects')}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
+        <Button variant="ghost" onClick={() => navigate('/projects')} className="px-2 sm:px-4">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="hidden sm:inline ml-2">Voltar</span>
         </Button>
       </div>
 
@@ -194,9 +195,9 @@ export const ProjectDetail: React.FC = () => {
         title={project.name}
         description={`Cliente: ${client.name} • ${getProjectHours(project.id)}h registradas`}
         actions={
-          <Button onClick={() => handleOpenTaskDialog()}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Tarefa
+          <Button onClick={() => handleOpenTaskDialog()} className="px-3 sm:px-4">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Nova Tarefa</span>
           </Button>
         }
       />
@@ -252,14 +253,14 @@ export const ProjectDetail: React.FC = () => {
             return (
               <Card key={task.id}>
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:justify-between">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                       <CardTitle className="text-base">{task.name}</CardTitle>
                       <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(task.status)}`}>
                         {getStatusLabel(task.status)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       {/* Timer Controls */}
                       <TaskTimer
                         taskId={task.id}
@@ -269,11 +270,16 @@ export const ProjectDetail: React.FC = () => {
                         onStop={handleStopTimer}
                         onComplete={handleCompleteTask}
                       />
-                      {/* Manual Hour Entry - Always Available */}
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenTimeDialog(task.id)}>
-                        <Clock className="w-4 h-4 mr-1" />
-                        Registrar Horas
-                      </Button>
+                      {/* Manual Hour Entry - Icon only on mobile */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenTimeDialog(task.id)} className="px-2 sm:px-3">
+                            <Clock className="w-4 h-4" />
+                            <span className="hidden sm:inline ml-1">Registrar Horas</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="sm:hidden">Registrar Horas</TooltipContent>
+                      </Tooltip>
                       <Button variant="ghost" size="icon" onClick={() => handleOpenTaskDialog(task)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -285,7 +291,7 @@ export const ProjectDetail: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
-                  <div className="flex items-center gap-4 text-sm mb-4">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm mb-4">
                     <span className="font-medium text-foreground">{taskHours}h registradas</span>
                     <span className="text-muted-foreground text-xs">Criada por: {getCreatorName(task.created_by)}</span>
                   </div>
@@ -294,17 +300,17 @@ export const ProjectDetail: React.FC = () => {
                       <p className="text-xs font-medium text-muted-foreground mb-2">Registros de horas:</p>
                       <div className="space-y-2">
                         {taskTimeEntries.map((entry) => (
-                          <div key={entry.id} className="flex items-center justify-between text-sm bg-muted/50 rounded px-3 py-2">
+                          <div key={entry.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm bg-muted/50 rounded px-3 py-2">
                             <div className="flex flex-col gap-0.5">
-                              <div>
+                              <div className="flex flex-wrap items-center gap-1">
                                 <span className="font-medium text-foreground">{entry.hours}h</span>
-                                <span className="text-muted-foreground mx-2">•</span>
+                                <span className="text-muted-foreground">•</span>
                                 <span className="text-muted-foreground">{format(new Date(entry.date), "dd 'de' MMM", { locale: ptBR })}</span>
-                                {entry.description && <><span className="text-muted-foreground mx-2">•</span><span className="text-muted-foreground">{entry.description}</span></>}
+                                {entry.description && <><span className="text-muted-foreground hidden sm:inline">•</span><span className="text-muted-foreground block sm:inline">{entry.description}</span></>}
                               </div>
                               <span className="text-xs text-muted-foreground/70">por {getCreatorName(entry.created_by)}</span>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 self-end sm:self-auto" onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}>
                               <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
