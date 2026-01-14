@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -86,8 +87,18 @@ export const Clients: React.FC = () => {
     }
   };
 
-  const copyAccessLink = (client: Client) => {
-    const link = `${window.location.origin}/portal/${client.access_token}`;
+  const copyAccessLink = async (client: Client) => {
+    // Use secure RPC function to get access token
+    const { data: token, error } = await supabase.rpc('get_client_access_token', { 
+      p_client_id: client.id 
+    });
+    
+    if (error || !token) {
+      toast.error('Não foi possível obter o link de acesso');
+      return;
+    }
+    
+    const link = `${window.location.origin}/portal/${token}`;
     navigator.clipboard.writeText(link);
     toast.success('Link de acesso copiado!');
   };

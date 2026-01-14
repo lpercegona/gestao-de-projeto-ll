@@ -39,49 +39,74 @@ export const ClientPortal: React.FC = () => {
         return;
       }
 
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('access_token', token)
-        .maybeSingle();
+      // Use secure RPC function to get client data without exposing access_token
+      const { data: clientData, error: clientError } = await supabase
+        .rpc('get_client_portal_data', { p_token: token });
 
-      if (!clientData) {
+      if (clientError || !clientData || clientData.length === 0) {
         setLoading(false);
         return;
       }
 
-      setClient(clientData);
+      const clientRecord = clientData[0];
+      // Create a minimal client object for display purposes
+      const displayClient: Client = {
+        id: clientRecord.client_id,
+        name: clientRecord.client_name,
+        email: clientRecord.client_email,
+        contracted_hours: clientRecord.contracted_hours,
+        access_token: '', // Not exposed for security
+        user_id: null,
+        created_at: '',
+      };
+      setClient(displayClient);
 
+      // Use secure RPC function to get projects
       const { data: projectsData } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('client_id', clientData.id);
+        .rpc('get_client_portal_projects', { p_token: token });
 
-      const mappedProjects: Project[] = (projectsData || []).map(p => ({
-        ...p,
-        custom_fields: (p.custom_fields as Record<string, string>) || {}
+      const mappedProjects: Project[] = (projectsData || []).map((p: any) => ({
+        id: p.project_id,
+        name: p.project_name,
+        description: p.project_description,
+        status: p.project_status,
+        client_id: clientRecord.client_id,
+        custom_fields: (p.custom_fields as Record<string, string>) || {},
+        created_at: '',
+        updated_at: '',
       }));
       setProjects(mappedProjects);
 
       if (projectsData && projectsData.length > 0) {
-        const projectIds = projectsData.map(p => p.id);
-        
+        // Use secure RPC function to get tasks
         const { data: tasksData } = await supabase
-          .from('tasks')
-          .select('*')
-          .in('project_id', projectIds);
+          .rpc('get_client_portal_tasks', { p_token: token });
 
-        setTasks(tasksData || []);
+        const mappedTasks: Task[] = (tasksData || []).map((t: any) => ({
+          id: t.task_id,
+          name: t.task_name,
+          description: t.task_description,
+          status: t.task_status,
+          project_id: t.project_id,
+          created_at: '',
+          updated_at: '',
+        }));
+        setTasks(mappedTasks);
 
         if (tasksData && tasksData.length > 0) {
-          const taskIds = tasksData.map(t => t.id);
-          
+          // Use secure RPC function to get time entries
           const { data: entriesData } = await supabase
-            .from('time_entries')
-            .select('*')
-            .in('task_id', taskIds);
+            .rpc('get_client_portal_time_entries', { p_token: token });
 
-          setTimeEntries(entriesData || []);
+          const mappedEntries: TimeEntry[] = (entriesData || []).map((te: any) => ({
+            id: te.entry_id,
+            task_id: te.task_id,
+            hours: te.hours,
+            date: te.entry_date,
+            description: te.description,
+            created_at: '',
+          }));
+          setTimeEntries(mappedEntries);
         }
       }
 
