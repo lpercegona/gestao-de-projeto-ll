@@ -49,7 +49,8 @@ export const ProjectDetail: React.FC = () => {
     createTimeEntry,
     deleteTimeEntry,
     getTaskHours,
-    getProjectHours
+    getProjectHours,
+    getCreatorName
   } = useData();
 
   const project = data.projects.find(p => p.id === projectId);
@@ -246,6 +247,7 @@ export const ProjectDetail: React.FC = () => {
                   {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
                   <div className="flex items-center gap-4 text-sm mb-4">
                     <span className="font-medium text-foreground">{taskHours}h registradas</span>
+                    <span className="text-muted-foreground text-xs">Criada por: {getCreatorName(task.created_by)}</span>
                   </div>
                   {taskTimeEntries.length > 0 && (
                     <div className="border-t border-border pt-3">
@@ -253,11 +255,14 @@ export const ProjectDetail: React.FC = () => {
                       <div className="space-y-2">
                         {taskTimeEntries.map((entry) => (
                           <div key={entry.id} className="flex items-center justify-between text-sm bg-muted/50 rounded px-3 py-2">
-                            <div>
-                              <span className="font-medium text-foreground">{entry.hours}h</span>
-                              <span className="text-muted-foreground mx-2">•</span>
-                              <span className="text-muted-foreground">{format(new Date(entry.date), "dd 'de' MMM", { locale: ptBR })}</span>
-                              {entry.description && <><span className="text-muted-foreground mx-2">•</span><span className="text-muted-foreground">{entry.description}</span></>}
+                            <div className="flex flex-col gap-0.5">
+                              <div>
+                                <span className="font-medium text-foreground">{entry.hours}h</span>
+                                <span className="text-muted-foreground mx-2">•</span>
+                                <span className="text-muted-foreground">{format(new Date(entry.date), "dd 'de' MMM", { locale: ptBR })}</span>
+                                {entry.description && <><span className="text-muted-foreground mx-2">•</span><span className="text-muted-foreground">{entry.description}</span></>}
+                              </div>
+                              <span className="text-xs text-muted-foreground/70">por {getCreatorName(entry.created_by)}</span>
                             </div>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}>
                               <Trash2 className="w-3 h-3" />
