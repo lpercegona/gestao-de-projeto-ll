@@ -100,12 +100,17 @@ export const Clients: React.FC = () => {
       <PageHeader
         title="Clientes"
         description="Gerencie seus clientes e horas contratadas"
-        actions={
-          <Button size="icon" onClick={() => handleOpenDialog()} title="Novo Cliente">
-            <Plus className="w-5 h-5" />
-          </Button>
-        }
       />
+
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          {data.clients.length} {data.clients.length === 1 ? 'cliente' : 'clientes'}
+        </h2>
+        <Button onClick={() => handleOpenDialog()} size="sm" className="px-3">
+          <Plus className="w-4 h-4" />
+          <span className="hidden sm:inline ml-2">Novo Cliente</span>
+        </Button>
+      </div>
 
       {data.clients.length === 0 ? (
         <Card>
