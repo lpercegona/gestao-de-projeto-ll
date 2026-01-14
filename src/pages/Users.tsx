@@ -426,15 +426,19 @@ export const Users: React.FC = () => {
         description={isMasterAdmin 
           ? "Gerencie todos os usuários e suas permissões" 
           : "Gerencie usuários da sua equipe"}
-        actions={
-          canCreateUser() && (
-            <Button onClick={openCreateDialog}>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Usuário
-            </Button>
-          )
-        }
       />
+
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          {users.length} {users.length === 1 ? 'usuário' : 'usuários'}
+        </h2>
+        {canCreateUser() && (
+          <Button onClick={openCreateDialog} size="sm" className="px-3">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Novo Usuário</span>
+          </Button>
+        )}
+      </div>
 
       {users.length === 0 ? (
         <Card>
@@ -451,67 +455,113 @@ export const Users: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Função</TableHead>
-                  {isMasterAdmin && <TableHead>Proprietário</TableHead>}
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((u) => {
-                  const isCurrentUser = u.user_id === user?.id;
-                  
-                  return (
-                    <TableRow key={u.user_id}>
-                      <TableCell className="font-medium">
-                        {u.full_name || 'Sem nome'}
-                        {isCurrentUser && (
-                          <Badge variant="outline" className="ml-2 text-xs">Você</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>{getRoleBadge(u.role)}</TableCell>
-                      {isMasterAdmin && (
-                        <TableCell className="text-muted-foreground">
-                          {u.owner_name || (u.role === 'master_admin' ? '-' : 'Sistema')}
+        <>
+          {/* Desktop Table View */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Função</TableHead>
+                    {isMasterAdmin && <TableHead>Proprietário</TableHead>}
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => {
+                    const isCurrentUser = u.user_id === user?.id;
+                    
+                    return (
+                      <TableRow key={u.user_id}>
+                        <TableCell className="font-medium">
+                          {u.full_name || 'Sem nome'}
+                          {isCurrentUser && (
+                            <Badge variant="outline" className="ml-2 text-xs">Você</Badge>
+                          )}
                         </TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>{getRoleBadge(u.role)}</TableCell>
+                        {isMasterAdmin && (
+                          <TableCell className="text-muted-foreground">
+                            {u.owner_name || (u.role === 'master_admin' ? '-' : 'Sistema')}
+                          </TableCell>
+                        )}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {canEditUser(u) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(u)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {canDeleteUser(u) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openDeleteDialog(u)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Mobile Card View */}
+          <div className="space-y-4 md:hidden">
+            {users.map((u) => {
+              const isCurrentUser = u.user_id === user?.id;
+              
+              return (
+                <Card key={u.user_id} className="relative">
+                  <CardContent className="p-4">
+                    {/* Ações no canto superior direito */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                      {canEditUser(u) && (
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(u)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                       )}
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {canEditUser(u) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditDialog(u)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {canDeleteUser(u) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteDialog(u)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                      {canDeleteUser(u) && (
+                        <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(u)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="pr-20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-semibold text-foreground">{u.full_name || 'Sem nome'}</span>
+                        {isCurrentUser && (
+                          <Badge variant="outline" className="text-xs">Você</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{u.email}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {getRoleBadge(u.role)}
+                        {isMasterAdmin && u.owner_name && (
+                          <span className="text-xs text-muted-foreground">• Proprietário: {u.owner_name}</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Create User Dialog */}
