@@ -12,9 +12,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiredRole 
 }) => {
-  const { user, loading, userRole, isAdmin, isClient } = useAuth();
+  const { user, loading, roleLoading, userRole, isAdmin, isClient } = useAuth();
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
