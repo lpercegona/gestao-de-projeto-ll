@@ -19,6 +19,8 @@ import { ClientProjects } from "@/pages/ClientProjects";
 import { ProjectRequests } from "@/pages/ProjectRequests";
 import { ClientPortal } from "@/pages/ClientPortal";
 import { SharedReport } from "@/pages/SharedReport";
+import { Profile } from "@/pages/Profile";
+import { ResetPassword } from "@/pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,7 @@ const App = () => (
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/portal/:token" element={<ClientPortal />} />
               <Route path="/report/:token" element={<SharedReport />} />
               
@@ -101,6 +104,13 @@ const App = () => (
               <Route path="/my-projects" element={
                 <ProtectedRoute requiredRole="client">
                   <ClientProjects />
+                </ProtectedRoute>
+              } />
+              
+              {/* Profile - accessible by all authenticated users */}
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } />
               

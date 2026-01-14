@@ -20,6 +20,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -134,6 +136,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOwnerId(null);
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { error: error as Error | null };
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    return { error: error as Error | null };
+  };
+
   const isMasterAdmin = userRole === 'master_admin';
   const isAdmin = userRole === 'admin';
   const isCollaborator = userRole === 'collaborator';
@@ -158,6 +177,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         refreshRole,
+        resetPassword,
+        signInWithGoogle,
       }}
     >
       {children}
