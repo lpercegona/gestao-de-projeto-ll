@@ -12,7 +12,8 @@ import {
   LogOut,
   UsersRound,
   Shield,
-  UserCog
+  UserCog,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
+    { path: '/requests', icon: FileText, label: 'Solicitações' },
     { path: '/users', icon: UsersRound, label: 'Usuários' },
     { path: '/settings', icon: Settings, label: 'Configurações' },
   ];
@@ -47,6 +49,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
+    { path: '/requests', icon: FileText, label: 'Solicitações' },
     { path: '/users', icon: UsersRound, label: 'Usuários' },
     { path: '/settings', icon: Settings, label: 'Configurações' },
   ];
@@ -56,9 +59,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/projects', icon: FolderKanban, label: 'Meus Projetos' },
   ];
 
-  // Client nav items (only reports)
+  // Client nav items (reports and projects)
   const clientNavItems = [
     { path: '/my-reports', icon: FileBarChart, label: 'Meus Relatórios' },
+    { path: '/my-projects', icon: FolderKanban, label: 'Meus Projetos' },
   ];
 
   // Select nav items based on role

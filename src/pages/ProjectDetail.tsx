@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2 } from 'lucide-react';
+import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { Task } from '@/types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -50,7 +51,11 @@ export const ProjectDetail: React.FC = () => {
     deleteTimeEntry,
     getTaskHours,
     getProjectHours,
-    getCreatorName
+    getCreatorName,
+    startTaskTimer,
+    stopTaskTimer,
+    getActiveTimer,
+    completeTask
   } = useData();
 
   const project = data.projects.find(p => p.id === projectId);
@@ -218,6 +223,29 @@ export const ProjectDetail: React.FC = () => {
           tasks.map((task) => {
             const taskHours = getTaskHours(task.id);
             const taskTimeEntries = data.timeEntries.filter(te => te.task_id === task.id);
+            const activeTimer = getActiveTimer(task.id);
+
+            const handleStartTimer = async () => {
+              await startTaskTimer(task.id);
+              toast.success('Timer iniciado!');
+            };
+
+            const handleStopTimer = async () => {
+              const result = await stopTaskTimer(task.id);
+              if (result) {
+                toast.success(`${result.hours}h registradas automaticamente!`);
+              }
+            };
+
+            const handleCompleteTask = async () => {
+              const timer = getActiveTimer(task.id);
+              await completeTask(task.id);
+              if (timer) {
+                toast.success('Timer parado e tarefa concluída!');
+              } else {
+                toast.success('Tarefa concluída!');
+              }
+            };
             
             return (
               <Card key={task.id}>
@@ -230,6 +258,16 @@ export const ProjectDetail: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
+                      {/* Timer Controls */}
+                      <TaskTimer
+                        taskId={task.id}
+                        taskStatus={task.status}
+                        activeTimer={activeTimer}
+                        onStart={handleStartTimer}
+                        onStop={handleStopTimer}
+                        onComplete={handleCompleteTask}
+                      />
+                      {/* Manual Hour Entry - Always Available */}
                       <Button variant="ghost" size="sm" onClick={() => handleOpenTimeDialog(task.id)}>
                         <Clock className="w-4 h-4 mr-1" />
                         Registrar Horas

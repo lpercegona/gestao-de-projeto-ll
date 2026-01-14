@@ -15,6 +15,8 @@ import { Reports } from "@/pages/Reports";
 import { Settings } from "@/pages/Settings";
 import { Users } from "@/pages/Users";
 import { ClientReports } from "@/pages/ClientReports";
+import { ClientProjects } from "@/pages/ClientProjects";
+import { ProjectRequests } from "@/pages/ProjectRequests";
 import { ClientPortal } from "@/pages/ClientPortal";
 import { SharedReport } from "@/pages/SharedReport";
 import NotFound from "./pages/NotFound";
@@ -68,6 +70,13 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              {/* Project Requests - admin only */}
+              <Route path="/requests" element={
+                <ProtectedRoute requiredRole="admin">
+                  <ProjectRequests />
+                </ProtectedRoute>
+              } />
+              
               {/* Users - admin only */}
               <Route path="/users" element={
                 <ProtectedRoute requiredRole="admin">
@@ -86,6 +95,12 @@ const App = () => (
               <Route path="/my-reports" element={
                 <ProtectedRoute requiredRole="client">
                   <ClientReports />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/my-projects" element={
+                <ProtectedRoute requiredRole="client">
+                  <ClientProjects />
                 </ProtectedRoute>
               } />
               
