@@ -14,7 +14,7 @@ type ClientLoginStep = 'email' | 'password' | 'set-password';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user, userRole, roleLoading } = useAuth();
+  const { signIn, signUp, user, userRole, roleLoading, refreshRole } = useAuth();
   const [loading, setLoading] = useState(false);
   
   // Admin/Collaborator login
@@ -178,8 +178,13 @@ export const Login: React.FC = () => {
           return;
         }
         
+        // Force refresh the user role to ensure it's loaded before redirect
+        await refreshRole();
+        
         toast.success('Senha definida com sucesso! Você já está logado.');
-        // The auth state change will trigger redirect
+        
+        // Navigate directly to avoid race condition
+        navigate('/my-reports', { replace: true });
       }
     } catch (err) {
       toast.error('Erro ao definir senha.');
