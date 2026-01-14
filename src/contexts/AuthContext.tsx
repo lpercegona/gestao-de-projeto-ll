@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  roleLoading: boolean;
   userRole: AppRole | null;
   isAdmin: boolean;
   isClient: boolean;
@@ -23,9 +24,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
 
   const fetchUserRole = async (userId: string) => {
+    setRoleLoading(true);
     try {
       const { data, error } = await supabase
         .from('user_roles')
@@ -43,6 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error fetching user role:', error);
       setUserRole(null);
+    } finally {
+      setRoleLoading(false);
     }
   };
 
@@ -113,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         loading,
+        roleLoading,
         userRole,
         isAdmin: userRole === 'admin',
         isClient: userRole === 'client',

@@ -11,11 +11,22 @@ import { toast } from 'sonner';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, userRole, roleLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', fullName: '' });
+
+  // Redirect when user is logged in and role is loaded
+  React.useEffect(() => {
+    if (user && !roleLoading && userRole !== undefined) {
+      if (userRole === 'client') {
+        navigate('/my-reports', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [user, userRole, roleLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,12 +36,11 @@ export const Login: React.FC = () => {
     
     if (error) {
       toast.error('Erro ao entrar: ' + error.message);
+      setLoading(false);
     } else {
       toast.success('Login realizado com sucesso!');
-      navigate('/');
+      // Navigation is handled by useEffect when role is loaded
     }
-    
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
