@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
-import { PageHeader } from '@/components/layout/PageHeader';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -184,17 +184,18 @@ export const ProjectDetail: React.FC = () => {
 
   return (
     <div>
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => navigate('/projects')} className="px-2 sm:px-4">
+      {/* Header com Voltar + Título na mesma linha */}
+      <div className="flex items-center gap-3 mb-6">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/projects')}>
           <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline ml-2">Voltar</span>
         </Button>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">{project.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            Cliente: {client.name} • {getProjectHours(project.id)}h registradas
+          </p>
+        </div>
       </div>
-
-      <PageHeader
-        title={project.name}
-        description={`Cliente: ${client.name} • ${getProjectHours(project.id)}h registradas`}
-      />
 
       {project.description && (
         <Card className="mb-6">
@@ -251,9 +252,19 @@ export const ProjectDetail: React.FC = () => {
             };
             
             return (
-              <Card key={task.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:justify-between">
+              <Card key={task.id} className="relative">
+                {/* Ações no canto superior direito */}
+                <div className="absolute top-3 right-3 flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => handleOpenTaskDialog(task)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => { setDeletingTask(task); setIsDeleteDialogOpen(true); }}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                <CardHeader className="pb-2 pr-24">
+                  <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                       <CardTitle className="text-base">{task.name}</CardTitle>
                       <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(task.status)}`}>
@@ -280,12 +291,6 @@ export const ProjectDetail: React.FC = () => {
                         </TooltipTrigger>
                         <TooltipContent className="sm:hidden">Registrar Horas</TooltipContent>
                       </Tooltip>
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenTaskDialog(task)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setDeletingTask(task); setIsDeleteDialogOpen(true); }}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   </div>
                 </CardHeader>
