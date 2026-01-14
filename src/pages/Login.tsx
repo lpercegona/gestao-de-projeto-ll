@@ -73,24 +73,70 @@ export const Login: React.FC = () => {
     setLoading(false);
   };
 
+  // Email validation regex
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+  // Rate limiting helper
+  const checkRateLimit = (key: string, maxAttempts: number, windowMs: number): boolean => {
+    const storageKey = `ratelimit_${key}`;
+    const data = localStorage.getItem(storageKey);
+    const now = Date.now();
+    
+    if (data) {
+      try {
+        const { count, timestamp } = JSON.parse(data);
+        if (now - timestamp < windowMs) {
+          if (count >= maxAttempts) {
+            return false;
+          }
+          localStorage.setItem(storageKey, JSON.stringify({ count: count + 1, timestamp }));
+        } else {
+          localStorage.setItem(storageKey, JSON.stringify({ count: 1, timestamp: now }));
+        }
+      } catch {
+        localStorage.setItem(storageKey, JSON.stringify({ count: 1, timestamp: now }));
+      }
+    } else {
+      localStorage.setItem(storageKey, JSON.stringify({ count: 1, timestamp: now }));
+    }
+    return true;
+  };
+
   // Client login flow
   const handleClientEmailCheck = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const trimmedEmail = clientEmail.toLowerCase().trim();
+    
+    // Input validation - email format and length
+    if (!trimmedEmail || trimmedEmail.length > 255 || !emailRegex.test(trimmedEmail)) {
+      toast.error('Email inválido');
+      return;
+    }
+    
+    // Rate limiting - 5 attempts per 5 minutes
+    if (!checkRateLimit('check_client_email', 5, 300000)) {
+      toast.error('Muitas tentativas. Aguarde alguns minutos.');
+      return;
+    }
+    
     setLoading(true);
     
     try {
       const { data, error } = await supabase.rpc('check_client_email', {
-        check_email: clientEmail.toLowerCase().trim()
+        check_email: trimmedEmail
       });
       
       if (error) {
-        toast.error('Erro ao verificar e-mail: ' + error.message);
+        // Generic error to prevent information leakage
+        toast.error('Erro ao processar solicitação. Tente novamente.');
         setLoading(false);
         return;
       }
       
       if (!data || data.length === 0) {
-        toast.error('E-mail não encontrado. Entre em contato com o administrador.');
+        // Generic error to prevent email enumeration
+        toast.error('Credenciais inválidas ou conta não encontrada.');
         setLoading(false);
         return;
       }
@@ -104,7 +150,7 @@ export const Login: React.FC = () => {
         setClientLoginStep('set-password');
       }
     } catch (err) {
-      toast.error('Erro ao verificar e-mail.');
+      toast.error('Erro ao processar solicitação.');
     }
     
     setLoading(false);

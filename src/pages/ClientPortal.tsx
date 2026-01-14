@@ -32,9 +32,16 @@ export const ClientPortal: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
+  // UUID validation regex
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Validate token format
+  const isValidToken = token && uuidRegex.test(token);
+
   useEffect(() => {
     const fetchClientData = async () => {
-      if (!token) {
+      // Validate token format before making any requests
+      if (!token || !isValidToken) {
         setLoading(false);
         return;
       }
@@ -114,7 +121,7 @@ export const ClientPortal: React.FC = () => {
     };
 
     fetchClientData();
-  }, [token]);
+  }, [token, isValidToken]);
 
   const monthOptions = useMemo(() => {
     const options = [];
