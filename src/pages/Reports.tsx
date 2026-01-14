@@ -393,13 +393,14 @@ export const Reports: React.FC = () => {
                 </div>
 
                 {share.is_public && (
-                  <div className="flex gap-2">
-                    <div className="flex-1 p-3 bg-muted rounded-lg text-sm text-muted-foreground truncate">
-                      {`${window.location.origin}/report/${share.share_token}`}
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1 p-3 bg-muted rounded-lg text-sm text-muted-foreground overflow-hidden">
+                      <span className="block truncate">Link de compartilhamento</span>
                     </div>
                     <Button 
                       variant="outline" 
                       size="icon"
+                      className="shrink-0"
                       onClick={() => handleCopyLink(share.share_token)}
                     >
                       {copiedToken === share.share_token ? (

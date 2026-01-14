@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Link, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Client {
@@ -87,22 +87,6 @@ export const Clients: React.FC = () => {
     }
   };
 
-  const copyAccessLink = async (client: Client) => {
-    // Use secure RPC function to get access token
-    const { data: token, error } = await supabase.rpc('get_client_access_token', { 
-      p_client_id: client.id 
-    });
-    
-    if (error || !token) {
-      toast.error('Não foi possível obter o link de acesso');
-      return;
-    }
-    
-    const link = `${window.location.origin}/portal/${token}`;
-    navigator.clipboard.writeText(link);
-    toast.success('Link de acesso copiado!');
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -148,14 +132,6 @@ export const Clients: React.FC = () => {
                       <p className="text-sm text-muted-foreground">{client.email}</p>
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyAccessLink(client)}
-                        title="Copiar link de acesso"
-                      >
-                        <Link className="w-4 h-4" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
