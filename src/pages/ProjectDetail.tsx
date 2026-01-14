@@ -194,12 +194,6 @@ export const ProjectDetail: React.FC = () => {
       <PageHeader
         title={project.name}
         description={`Cliente: ${client.name} • ${getProjectHours(project.id)}h registradas`}
-        actions={
-          <Button onClick={() => handleOpenTaskDialog()} className="px-3 sm:px-4">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline ml-2">Nova Tarefa</span>
-          </Button>
-        }
       />
 
       {project.description && (
@@ -211,7 +205,13 @@ export const ProjectDetail: React.FC = () => {
       )}
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Tarefas</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">Tarefas</h2>
+          <Button onClick={() => handleOpenTaskDialog()} size="sm" className="px-3">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Nova Tarefa</span>
+          </Button>
+        </div>
         
         {tasks.length === 0 ? (
           <Card>
