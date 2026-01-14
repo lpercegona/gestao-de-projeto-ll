@@ -166,7 +166,7 @@ export const ResetPassword: React.FC = () => {
               <Clock className="w-7 h-7 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Redefinir Senha</CardTitle>
+          <CardTitle className="text-2xl">ORAS</CardTitle>
           <CardDescription>Digite sua nova senha abaixo</CardDescription>
         </CardHeader>
         <CardContent>
