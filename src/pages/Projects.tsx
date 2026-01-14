@@ -197,8 +197,19 @@ export const Projects: React.FC = () => {
       <PageHeader 
         title={isCollaborator && !isAdminOrMaster ? "Meus Projetos" : "Projetos"} 
         description={isCollaborator && !isAdminOrMaster ? "Projetos atribuídos a você" : "Gerencie seus projetos e tarefas"} 
-        actions={isAdminOrMaster && <Button size="icon" onClick={() => handleOpenDialog()} title="Novo Projeto"><Plus className="w-5 h-5" /></Button>} 
       />
+      
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          {visibleProjects.length} {visibleProjects.length === 1 ? 'projeto' : 'projetos'}
+        </h2>
+        {isAdminOrMaster && (
+          <Button onClick={() => handleOpenDialog()} size="sm" className="px-3">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Novo Projeto</span>
+          </Button>
+        )}
+      </div>
       {visibleProjects.length === 0 ? (
         <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground mb-4">Nenhum projeto criado ainda.</p>{isAdminOrMaster && <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Criar primeiro projeto</Button>}</CardContent></Card>
       ) : (
