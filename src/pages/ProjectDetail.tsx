@@ -65,9 +65,12 @@ export const ProjectDetail: React.FC = () => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [pausingTaskId, setPausingTaskId] = useState<string | null>(null);
+  const [pauseDescription, setPauseDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   
   const [taskForm, setTaskForm] = useState({
@@ -230,11 +233,10 @@ export const ProjectDetail: React.FC = () => {
               toast.success('Timer iniciado!');
             };
 
-            const handleStopTimer = async () => {
-              const result = await stopTaskTimer(task.id);
-              if (result) {
-                toast.success(`${result.hours}h registradas automaticamente!`);
-              }
+            const handleStopTimer = async (): Promise<void> => {
+              setPausingTaskId(task.id);
+              setPauseDescription('');
+              setIsPauseDialogOpen(true);
             };
 
             const handleCompleteTask = async () => {
@@ -383,11 +385,56 @@ export const ProjectDetail: React.FC = () => {
             <AlertDialogDescription>Esta ação não pode ser desfeita. Isso excluirá permanentemente a tarefa "{deletingTask?.name}" e todos os seus registros de horas.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteTask}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Pause Timer Dialog */}
+      <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pausar Timer</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="pauseDescription">O que foi feito? (opcional)</Label>
+              <Textarea
+                id="pauseDescription"
+                value={pauseDescription}
+                onChange={(e) => setPauseDescription(e.target.value)}
+                placeholder="Descreva brevemente o que foi realizado..."
+                rows={3}
+                disabled={submitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!pausingTaskId) return;
+                setSubmitting(true);
+                const result = await stopTaskTimer(pausingTaskId, pauseDescription.trim() || undefined);
+                if (result) {
+                  toast.success(`${result.hours}h registradas!`);
+                }
+                setSubmitting(false);
+                setIsPauseDialogOpen(false);
+                setPausingTaskId(null);
+                setPauseDescription('');
+              }}
+              disabled={submitting}
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Confirmar Pausa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
