@@ -15,11 +15,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Clock, Loader2, Lock, KeyRound } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, Loader2, Lock, KeyRound, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Project {
   id: string;
@@ -279,6 +280,10 @@ export const SharedReport: React.FC = () => {
     setExpandedProjects(newExpanded);
   };
 
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
   const totalAllHours = timeEntries.reduce((sum, te) => sum + te.hours, 0);
 
@@ -343,20 +348,43 @@ export const SharedReport: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card">
-        <div className="container py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <Clock className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">Relatório de Horas</h1>
-              <p className="text-sm text-muted-foreground">{clientInfo.client_name}</p>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border bg-card print:hidden">
+          <div className="container py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-foreground">Relatório de Horas</h1>
+                  <p className="text-sm text-muted-foreground">{clientInfo.client_name}</p>
+                </div>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={handleExportPDF}>
+                    <FileDown className="w-5 h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Exportar PDF</TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Print header - only visible when printing */}
+        <div className="hidden print:block border-b border-border bg-card">
+          <div className="container py-6">
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">Relatório de Horas</h1>
+                <p className="text-sm text-muted-foreground">{clientInfo.client_name}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
       <div className="container py-8">
         {/* Client Info */}
@@ -508,5 +536,6 @@ export const SharedReport: React.FC = () => {
         )}
       </div>
     </div>
+    </TooltipProvider>
   );
 };
