@@ -22,7 +22,10 @@ export const Login: React.FC = () => {
     if (user && !roleLoading && userRole !== undefined) {
       if (userRole === 'client') {
         navigate('/my-reports', { replace: true });
+      } else if (userRole === 'collaborator') {
+        navigate('/', { replace: true });
       } else {
+        // master_admin, admin, or any other role
         navigate('/', { replace: true });
       }
     }

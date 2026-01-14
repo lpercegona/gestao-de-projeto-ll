@@ -10,9 +10,12 @@ import {
   Settings,
   Clock,
   LogOut,
-  UsersRound
+  UsersRound,
+  Shield,
+  UserCog
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -21,12 +24,22 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut, isAdmin, isClient, userRole } = useAuth();
+  const { user, signOut, isMasterAdmin, isAdmin, isCollaborator, isClient, userRole } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
+
+  // Master Admin nav items (full access)
+  const masterAdminNavItems = [
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/clients', icon: Users, label: 'Clientes' },
+    { path: '/projects', icon: FolderKanban, label: 'Projetos' },
+    { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
+    { path: '/users', icon: UsersRound, label: 'Usuários' },
+    { path: '/settings', icon: Settings, label: 'Configurações' },
+  ];
 
   // Admin nav items
   const adminNavItems = [
@@ -38,12 +51,57 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/settings', icon: Settings, label: 'Configurações' },
   ];
 
+  // Collaborator nav items
+  const collaboratorNavItems = [
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/projects', icon: FolderKanban, label: 'Projetos' },
+    { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
+  ];
+
   // Client nav items (only reports)
   const clientNavItems = [
     { path: '/my-reports', icon: FileBarChart, label: 'Meus Relatórios' },
   ];
 
-  const navItems = isAdmin ? adminNavItems : clientNavItems;
+  // Select nav items based on role
+  const getNavItems = () => {
+    if (isMasterAdmin) return masterAdminNavItems;
+    if (isAdmin) return adminNavItems;
+    if (isCollaborator) return collaboratorNavItems;
+    return clientNavItems;
+  };
+
+  const navItems = getNavItems();
+
+  // Get role display label
+  const getRoleLabel = () => {
+    switch (userRole) {
+      case 'master_admin':
+        return 'Master Admin';
+      case 'admin':
+        return 'Administrador';
+      case 'collaborator':
+        return 'Colaborador';
+      case 'client':
+        return 'Cliente';
+      default:
+        return 'Usuário';
+    }
+  };
+
+  // Get role badge variant
+  const getRoleBadgeVariant = () => {
+    switch (userRole) {
+      case 'master_admin':
+        return 'default';
+      case 'admin':
+        return 'secondary';
+      case 'collaborator':
+        return 'outline';
+      default:
+        return 'outline';
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -84,11 +142,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         <div className="p-4 border-t border-border space-y-3">
           {user && (
-            <div className="px-3 py-2">
+            <div className="px-3 py-2 space-y-2">
               <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
-              <p className="text-xs text-muted-foreground">
-                {isAdmin ? 'Administrador' : isClient ? 'Cliente' : 'Usuário'}
-              </p>
+              <Badge variant={getRoleBadgeVariant()} className="text-xs">
+                {isMasterAdmin && <Shield className="w-3 h-3 mr-1" />}
+                {isAdmin && <UserCog className="w-3 h-3 mr-1" />}
+                {getRoleLabel()}
+              </Badge>
             </div>
           )}
           <Button

@@ -19,9 +19,11 @@ export type Database = {
           access_token: string
           contracted_hours: number
           created_at: string
+          created_by: string | null
           email: string
           id: string
           name: string
+          owner_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -29,9 +31,11 @@ export type Database = {
           access_token?: string
           contracted_hours?: number
           created_at?: string
+          created_by?: string | null
           email: string
           id?: string
           name: string
+          owner_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -39,9 +43,11 @@ export type Database = {
           access_token?: string
           contracted_hours?: number
           created_at?: string
+          created_by?: string | null
           email?: string
           id?: string
           name?: string
+          owner_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -53,6 +59,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          owner_id: string | null
           updated_at: string
           user_id: string
         }
@@ -61,6 +68,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          owner_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -69,6 +77,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          owner_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -102,30 +111,36 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
+          created_by: string | null
           custom_fields: Json | null
           description: string | null
           id: string
           name: string
+          owner_id: string | null
           status: string
           updated_at: string
         }
         Insert: {
           client_id: string
           created_at?: string
+          created_by?: string | null
           custom_fields?: Json | null
           description?: string | null
           id?: string
           name: string
+          owner_id?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           client_id?: string
           created_at?: string
+          created_by?: string | null
           custom_fields?: Json | null
           description?: string | null
           id?: string
           name?: string
+          owner_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -142,6 +157,7 @@ export type Database = {
       tasks: {
         Row: {
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           name: string
@@ -151,6 +167,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           name: string
@@ -160,6 +177,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           name?: string
@@ -180,6 +198,7 @@ export type Database = {
       time_entries: {
         Row: {
           created_at: string
+          created_by: string | null
           date: string
           description: string | null
           hours: number
@@ -188,6 +207,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           hours: number
@@ -196,6 +216,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           hours?: number
@@ -208,6 +229,41 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_project_access: {
+        Row: {
+          can_edit: boolean
+          created_at: string
+          granted_by: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          can_edit?: boolean
+          created_at?: string
+          granted_by: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          can_edit?: boolean
+          created_at?: string
+          granted_by?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_project_access_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -235,7 +291,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_project: {
+        Args: { check_project_id: string; check_user_id: string }
+        Returns: boolean
+      }
+      can_edit_project: {
+        Args: { check_project_id: string; check_user_id: string }
+        Returns: boolean
+      }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
+      get_user_owner_id: { Args: { check_user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -243,6 +308,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_or_master: { Args: { check_user_id: string }; Returns: boolean }
+      is_collaborator: { Args: { check_user_id: string }; Returns: boolean }
+      is_master_admin: { Args: { check_user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "client" | "master_admin" | "collaborator"

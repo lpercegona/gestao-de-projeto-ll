@@ -2,48 +2,66 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { AppLayout } from './AppLayout';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'client';
+  requiredRole?: 'master_admin' | 'admin' | 'collaborator' | 'client';
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   requiredRole 
 }) => {
-  const { user, loading, roleLoading, userRole, isAdmin, isClient } = useAuth();
+  const { user, loading, roleLoading, isMasterAdmin, isAdmin, isCollaborator, isClient } = useAuth();
 
+  // Show loading while checking authentication
   if (loading || roleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // If no specific role is required, allow access for any authenticated user
-  if (!requiredRole) {
-    return <>{children}</>;
-  }
+  // Check role access
+  if (requiredRole) {
+    let hasAccess = false;
 
-  // Check for specific role requirement
-  if (requiredRole === 'admin' && !isAdmin) {
-    // Redirect clients to their reports page
-    if (isClient) {
-      return <Navigate to="/my-reports" replace />;
+    switch (requiredRole) {
+      case 'master_admin':
+        hasAccess = isMasterAdmin;
+        break;
+      case 'admin':
+        // Admin routes accessible by master_admin and admin
+        hasAccess = isMasterAdmin || isAdmin;
+        break;
+      case 'collaborator':
+        // Collaborator routes accessible by master_admin, admin, and collaborator
+        hasAccess = isMasterAdmin || isAdmin || isCollaborator;
+        break;
+      case 'client':
+        // Client routes accessible by all roles
+        hasAccess = isMasterAdmin || isAdmin || isCollaborator || isClient;
+        break;
     }
-    // Users without role go to login
-    return <Navigate to="/login" replace />;
+
+    if (!hasAccess) {
+      // Redirect based on role
+      if (isClient) {
+        return <Navigate to="/my-reports" replace />;
+      }
+      if (isCollaborator) {
+        return <Navigate to="/" replace />;
+      }
+      return <Navigate to="/login" replace />;
+    }
   }
 
-  if (requiredRole === 'client' && !isClient && !isAdmin) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
+  return <AppLayout>{children}</AppLayout>;
 };
