@@ -227,7 +227,7 @@ export const Projects: React.FC = () => {
                   {isAdminOrMaster && (
                     <div className="absolute top-3 right-3 flex items-center gap-1">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   )}
                   
