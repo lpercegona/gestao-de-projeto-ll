@@ -1,21 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, Loader2 } from 'lucide-react';
+import { Clock, Loader2, Users, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+type ClientLoginStep = 'email' | 'password' | 'set-password';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { signIn, signUp, user, userRole, roleLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   
+  // Admin/Collaborator login
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', fullName: '' });
+  
+  // Client login
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPassword, setClientPassword] = useState('');
+  const [clientNewPassword, setClientNewPassword] = useState('');
+  const [clientConfirmPassword, setClientConfirmPassword] = useState('');
+  const [clientLoginStep, setClientLoginStep] = useState<ClientLoginStep>('email');
+  const [clientId, setClientId] = useState<string | null>(null);
 
   // Redirect when user is logged in and role is loaded
   React.useEffect(() => {
@@ -61,6 +73,141 @@ export const Login: React.FC = () => {
     setLoading(false);
   };
 
+  // Client login flow
+  const handleClientEmailCheck = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase.rpc('check_client_email', {
+        check_email: clientEmail.toLowerCase().trim()
+      });
+      
+      if (error) {
+        toast.error('Erro ao verificar e-mail: ' + error.message);
+        setLoading(false);
+        return;
+      }
+      
+      if (!data || data.length === 0) {
+        toast.error('E-mail não encontrado. Entre em contato com o administrador.');
+        setLoading(false);
+        return;
+      }
+      
+      const clientInfo = data[0];
+      setClientId(clientInfo.client_id);
+      
+      if (clientInfo.has_password) {
+        setClientLoginStep('password');
+      } else {
+        setClientLoginStep('set-password');
+      }
+    } catch (err) {
+      toast.error('Erro ao verificar e-mail.');
+    }
+    
+    setLoading(false);
+  };
+
+  const handleClientLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    const { error } = await signIn(clientEmail.toLowerCase().trim(), clientPassword);
+    
+    if (error) {
+      toast.error('Senha incorreta. Tente novamente.');
+      setLoading(false);
+    } else {
+      toast.success('Login realizado com sucesso!');
+      // Navigation is handled by useEffect when role is loaded
+    }
+  };
+
+  const handleClientSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (clientNewPassword !== clientConfirmPassword) {
+      toast.error('As senhas não coincidem.');
+      return;
+    }
+    
+    if (clientNewPassword.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Create the user account with the client email
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: clientEmail.toLowerCase().trim(),
+        password: clientNewPassword,
+        options: {
+          emailRedirectTo: window.location.origin,
+        }
+      });
+      
+      if (signUpError) {
+        // If user already exists, try to sign in
+        if (signUpError.message.includes('already registered')) {
+          toast.error('Este e-mail já possui uma conta. Use a opção de entrar com senha.');
+          setClientLoginStep('password');
+          setLoading(false);
+          return;
+        }
+        toast.error('Erro ao criar conta: ' + signUpError.message);
+        setLoading(false);
+        return;
+      }
+      
+      if (signUpData.user) {
+        // Update client record with user_id and mark password as set
+        await supabase
+          .from('clients')
+          .update({ 
+            user_id: signUpData.user.id,
+            password_set: true 
+          })
+          .eq('id', clientId);
+        
+        // Create user_role for client
+        await supabase
+          .from('user_roles')
+          .insert({
+            user_id: signUpData.user.id,
+            role: 'client'
+          });
+        
+        // Create profile for client
+        await supabase
+          .from('profiles')
+          .insert({
+            user_id: signUpData.user.id,
+            email: clientEmail.toLowerCase().trim(),
+          });
+        
+        toast.success('Senha definida com sucesso! Você já está logado.');
+        // The auth state change will trigger redirect
+      }
+    } catch (err) {
+      toast.error('Erro ao definir senha.');
+    }
+    
+    setLoading(false);
+  };
+
+  const resetClientLogin = () => {
+    setClientEmail('');
+    setClientPassword('');
+    setClientNewPassword('');
+    setClientConfirmPassword('');
+    setClientLoginStep('email');
+    setClientId(null);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -74,101 +221,259 @@ export const Login: React.FC = () => {
           <CardDescription>Sistema de Gestão de Projetos e Horas</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue="admin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+              <TabsTrigger value="admin" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Equipe
+              </TabsTrigger>
+              <TabsTrigger value="client" className="flex items-center gap-2" onClick={resetClientLogin}>
+                <Building2 className="w-4 h-4" />
+                Cliente
+              </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    required
-                    disabled={loading}
-                    placeholder="seu@email.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                    disabled={loading}
-                    placeholder="••••••••"
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Entrando...
-                    </>
-                  ) : (
-                    'Entrar'
-                  )}
-                </Button>
-              </form>
+            {/* Admin/Collaborator Login */}
+            <TabsContent value="admin">
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Entrar</TabsTrigger>
+                  <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login">
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                        required
+                        disabled={loading}
+                        placeholder="seu@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Senha</Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        required
+                        disabled={loading}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Entrando...
+                        </>
+                      ) : (
+                        'Entrar'
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Nome Completo</Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        value={signupData.fullName}
+                        onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                        required
+                        disabled={loading}
+                        placeholder="Seu nome"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        value={signupData.email}
+                        onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                        required
+                        disabled={loading}
+                        placeholder="seu@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Senha</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        value={signupData.password}
+                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                        required
+                        disabled={loading}
+                        minLength={6}
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Criando conta...
+                        </>
+                      ) : (
+                        'Criar Conta'
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
             
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Nome Completo</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    value={signupData.fullName}
-                    onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                    required
-                    disabled={loading}
-                    placeholder="Seu nome"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={signupData.email}
-                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                    required
-                    disabled={loading}
-                    placeholder="seu@email.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Senha</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    required
-                    disabled={loading}
-                    minLength={6}
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Criando conta...
-                    </>
-                  ) : (
-                    'Criar Conta'
-                  )}
-                </Button>
-              </form>
+            {/* Client Login */}
+            <TabsContent value="client">
+              <div className="space-y-4 pt-4">
+                {clientLoginStep === 'email' && (
+                  <form onSubmit={handleClientEmailCheck} className="space-y-4">
+                    <div className="text-center mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        Acesse seus relatórios usando o e-mail cadastrado pelo administrador.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-email">Email</Label>
+                      <Input
+                        id="client-email"
+                        type="email"
+                        value={clientEmail}
+                        onChange={(e) => setClientEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        placeholder="seu@email.com"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Verificando...
+                        </>
+                      ) : (
+                        'Continuar'
+                      )}
+                    </Button>
+                  </form>
+                )}
+                
+                {clientLoginStep === 'password' && (
+                  <form onSubmit={handleClientLogin} className="space-y-4">
+                    <div className="text-center mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        Digite sua senha para acessar
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {clientEmail}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-password">Senha</Label>
+                      <Input
+                        id="client-password"
+                        type="password"
+                        value={clientPassword}
+                        onChange={(e) => setClientPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Entrando...
+                        </>
+                      ) : (
+                        'Entrar'
+                      )}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      className="w-full" 
+                      onClick={resetClientLogin}
+                      disabled={loading}
+                    >
+                      Voltar
+                    </Button>
+                  </form>
+                )}
+                
+                {clientLoginStep === 'set-password' && (
+                  <form onSubmit={handleClientSetPassword} className="space-y-4">
+                    <div className="text-center mb-4">
+                      <p className="text-sm font-medium text-foreground">
+                        Bem-vindo! 🎉
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Este é seu primeiro acesso. Defina uma senha para continuar.
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {clientEmail}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-new-password">Nova Senha</Label>
+                      <Input
+                        id="client-new-password"
+                        type="password"
+                        value={clientNewPassword}
+                        onChange={(e) => setClientNewPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        minLength={6}
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client-confirm-password">Confirmar Senha</Label>
+                      <Input
+                        id="client-confirm-password"
+                        type="password"
+                        value={clientConfirmPassword}
+                        onChange={(e) => setClientConfirmPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        minLength={6}
+                        placeholder="Repita a senha"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Definindo senha...
+                        </>
+                      ) : (
+                        'Definir Senha e Entrar'
+                      )}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      className="w-full" 
+                      onClick={resetClientLogin}
+                      disabled={loading}
+                    >
+                      Voltar
+                    </Button>
+                  </form>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
