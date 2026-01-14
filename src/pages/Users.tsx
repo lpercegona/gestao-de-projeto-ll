@@ -161,40 +161,35 @@ export const Users: React.FC = () => {
 
     setCreating(true);
     try {
-      // Create user via Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: createForm.email.trim(),
-        password: createForm.password,
-        options: {
-          data: { full_name: createForm.full_name.trim() }
-        }
-      });
-
-      if (authError) throw authError;
-
-      if (!authData.user) {
-        throw new Error('Falha ao criar usuário');
+      // Get current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
       }
 
-      const newUserId = authData.user.id;
-
-      // Update profile with owner_id
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({ owner_id: user.id })
-          .eq('user_id', newUserId);
-      }
-
-      // Assign role if selected
-      if (createForm.role !== 'none') {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({ user_id: newUserId, role: createForm.role });
-
-        if (roleError) {
-          console.error('Error assigning role:', roleError);
+      // Call Edge Function to create user without affecting current session
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            email: createForm.email.trim(),
+            password: createForm.password,
+            fullName: createForm.full_name.trim(),
+            role: createForm.role !== 'none' ? createForm.role : null,
+          }),
         }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar usuário');
       }
 
       toast.success('Usuário criado com sucesso!');
@@ -202,7 +197,7 @@ export const Users: React.FC = () => {
       fetchUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);
-      if (error.message?.includes('already registered')) {
+      if (error.message?.includes('already registered') || error.message?.includes('already been registered')) {
         toast.error('Este email já está cadastrado');
       } else {
         toast.error('Erro ao criar usuário: ' + (error.message || 'Erro desconhecido'));
