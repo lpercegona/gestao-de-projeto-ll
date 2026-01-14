@@ -108,7 +108,7 @@ interface DataContextType {
   revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
   // Task Timer
   startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
-  stopTaskTimer: (taskId: string) => Promise<{ hours: number } | null>;
+  stopTaskTimer: (taskId: string, description?: string) => Promise<{ hours: number } | null>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
   completeTask: (taskId: string) => Promise<boolean>;
   // Utilities
@@ -508,7 +508,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return timer as TaskTimer;
   };
 
-  const stopTaskTimer = async (taskId: string): Promise<{ hours: number } | null> => {
+  const stopTaskTimer = async (taskId: string, description?: string): Promise<{ hours: number } | null> => {
     if (!user) return null;
 
     const timer = data.taskTimers.find(t => t.task_id === taskId);
@@ -524,11 +524,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const roundedHours = Math.round(elapsedHours * 4) / 4;
     const finalHours = Math.max(0.25, roundedHours); // Minimum 15 minutes
 
-    // Create time entry
+    // Create time entry with user-provided description or default
     await createTimeEntry({
       task_id: taskId,
       hours: finalHours,
-      description: 'Timer automático',
+      description: description || 'Timer automático',
       date: new Date().toISOString().split('T')[0],
     });
 
