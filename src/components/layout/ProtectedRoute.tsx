@@ -57,7 +57,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return <Navigate to="/my-reports" replace />;
       }
       if (isCollaborator) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/projects" replace />;
       }
       return <Navigate to="/login" replace />;
     }

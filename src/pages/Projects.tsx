@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { NoProjectsAssigned } from '@/components/collaborator/NoProjectsAssigned';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronRight, Loader2, Users } from 'lucide-react';
 import { Project } from '@/types';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
+interface Collaborator {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+}
+
 export const Projects: React.FC = () => {
-  const { data, loading, createProject, updateProject, deleteProject, getProjectHours } = useData();
+  const { data, loading, createProject, updateProject, deleteProject, getProjectHours, grantProjectAccess, revokeProjectAccess, refreshData } = useData();
+  const { user, isAdminOrMaster, isCollaborator } = useAuth();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -24,16 +36,79 @@ export const Projects: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '', description: '', client_id: '', status: 'active', custom_fields: {} as Record<string, string>,
   });
+  
+  // Collaborator management
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [selectedCollaborators, setSelectedCollaborators] = useState<string[]>([]);
+  const [loadingCollaborators, setLoadingCollaborators] = useState(false);
 
-  const handleOpenDialog = (project?: Project) => {
+  // Fetch collaborators for admin
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      if (!isAdminOrMaster) return;
+      
+      setLoadingCollaborators(true);
+      try {
+        // Get all users with collaborator role
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'collaborator');
+
+        if (rolesError) throw rolesError;
+
+        if (roles && roles.length > 0) {
+          const userIds = roles.map(r => r.user_id);
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, email')
+            .in('user_id', userIds);
+
+          if (profilesError) throw profilesError;
+          setCollaborators(profiles || []);
+        }
+      } catch (error) {
+        console.error('Error fetching collaborators:', error);
+      } finally {
+        setLoadingCollaborators(false);
+      }
+    };
+
+    fetchCollaborators();
+  }, [isAdminOrMaster]);
+
+  // Filter projects for collaborators
+  const visibleProjects = React.useMemo(() => {
+    if (isAdminOrMaster) return data.projects;
+    
+    // For collaborators, filter by project access
+    const accessibleProjectIds = data.projectAccess
+      .filter(access => access.user_id === user?.id)
+      .map(access => access.project_id);
+    
+    return data.projects.filter(project => accessibleProjectIds.includes(project.id));
+  }, [data.projects, data.projectAccess, user?.id, isAdminOrMaster]);
+
+  const handleOpenDialog = async (project?: Project) => {
     if (project) {
       setEditingProject(project);
-      setFormData({ name: project.name, description: project.description || '', client_id: project.client_id, status: project.status, custom_fields: { ...project.custom_fields } });
+      setFormData({ 
+        name: project.name, 
+        description: project.description || '', 
+        client_id: project.client_id, 
+        status: project.status, 
+        custom_fields: { ...project.custom_fields } 
+      });
+      
+      // Load current collaborators for this project
+      const projectAccess = data.projectAccess.filter(a => a.project_id === project.id);
+      setSelectedCollaborators(projectAccess.map(a => a.user_id));
     } else {
       setEditingProject(null);
       const defaultCustomFields: Record<string, string> = {};
       data.projectColumns.forEach(col => { defaultCustomFields[col.id] = col.options?.[0] || ''; });
       setFormData({ name: '', description: '', client_id: data.clients[0]?.id || '', status: 'active', custom_fields: defaultCustomFields });
+      setSelectedCollaborators([]);
     }
     setIsDialogOpen(true);
   };
@@ -41,14 +116,65 @@ export const Projects: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    if (editingProject) { await updateProject(editingProject.id, formData); toast.success('Projeto atualizado!'); }
-    else { await createProject(formData); toast.success('Projeto criado!'); }
+    
+    try {
+      let projectId: string | undefined;
+      
+      if (editingProject) {
+        await updateProject(editingProject.id, formData);
+        projectId = editingProject.id;
+        toast.success('Projeto atualizado!');
+      } else {
+        const newProject = await createProject(formData);
+        projectId = newProject?.id;
+        toast.success('Projeto criado!');
+      }
+
+      // Update collaborator access if admin
+      if (isAdminOrMaster && projectId) {
+        const currentAccess = data.projectAccess.filter(a => a.project_id === projectId);
+        const currentUserIds = currentAccess.map(a => a.user_id);
+        
+        // Grant access to newly selected collaborators
+        for (const userId of selectedCollaborators) {
+          if (!currentUserIds.includes(userId)) {
+            await grantProjectAccess(userId, projectId, true);
+          }
+        }
+        
+        // Revoke access from deselected collaborators
+        for (const userId of currentUserIds) {
+          if (!selectedCollaborators.includes(userId)) {
+            await revokeProjectAccess(userId, projectId);
+          }
+        }
+        
+        await refreshData();
+      }
+    } catch (error) {
+      console.error('Error saving project:', error);
+      toast.error('Erro ao salvar projeto');
+    }
+    
     setSubmitting(false);
     setIsDialogOpen(false);
   };
 
   const handleDelete = async () => {
-    if (deletingProject) { await deleteProject(deletingProject.id); toast.success('Projeto excluído!'); setIsDeleteDialogOpen(false); setDeletingProject(null); }
+    if (deletingProject) { 
+      await deleteProject(deletingProject.id); 
+      toast.success('Projeto excluído!'); 
+      setIsDeleteDialogOpen(false); 
+      setDeletingProject(null); 
+    }
+  };
+
+  const toggleCollaborator = (userId: string) => {
+    setSelectedCollaborators(prev => 
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   };
 
   const getStatusLabel = (s: string) => s === 'active' ? 'Ativo' : s === 'paused' ? 'Pausado' : 'Concluído';
@@ -56,27 +182,47 @@ export const Projects: React.FC = () => {
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
 
-  if (data.clients.length === 0) return (
+  // Show empty state for collaborators with no projects
+  if (isCollaborator && !isAdminOrMaster && visibleProjects.length === 0) {
+    return <NoProjectsAssigned />;
+  }
+
+  if (isAdminOrMaster && data.clients.length === 0) return (
     <div><PageHeader title="Projetos" description="Gerencie seus projetos e tarefas" />
       <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground mb-4">Você precisa cadastrar um cliente antes de criar projetos.</p><Button asChild><Link to="/clients">Ir para Clientes</Link></Button></CardContent></Card></div>
   );
 
   return (
     <div>
-      <PageHeader title="Projetos" description="Gerencie seus projetos e tarefas" actions={<Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Novo Projeto</Button>} />
-      {data.projects.length === 0 ? (
-        <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground mb-4">Nenhum projeto criado ainda.</p><Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Criar primeiro projeto</Button></CardContent></Card>
+      <PageHeader 
+        title={isCollaborator && !isAdminOrMaster ? "Meus Projetos" : "Projetos"} 
+        description={isCollaborator && !isAdminOrMaster ? "Projetos atribuídos a você" : "Gerencie seus projetos e tarefas"} 
+        actions={isAdminOrMaster && <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Novo Projeto</Button>} 
+      />
+      {visibleProjects.length === 0 ? (
+        <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground mb-4">Nenhum projeto criado ainda.</p>{isAdminOrMaster && <Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Criar primeiro projeto</Button>}</CardContent></Card>
       ) : (
         <div className="space-y-4">
-          {data.projects.map((project) => {
+          {visibleProjects.map((project) => {
             const client = data.clients.find(c => c.id === project.client_id);
             const taskCount = data.tasks.filter(t => t.project_id === project.id).length;
             const hours = getProjectHours(project.id);
+            const projectCollaborators = data.projectAccess.filter(a => a.project_id === project.id);
+            
             return (
               <Card key={project.id}><CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2"><h3 className="font-semibold text-lg text-foreground">{project.name}</h3><span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>{getStatusLabel(project.status)}</span></div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>{getStatusLabel(project.status)}</span>
+                      {isAdminOrMaster && projectCollaborators.length > 0 && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {projectCollaborators.length} colaborador{projectCollaborators.length > 1 ? 'es' : ''}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground mb-3">{project.description}</p>
                     <div className="flex flex-wrap gap-4 text-sm">
                       <div><span className="text-muted-foreground">Cliente: </span><span className="font-medium text-foreground">{client?.name}</span></div>
@@ -86,8 +232,12 @@ export const Projects: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}><Trash2 className="w-4 h-4" /></Button>
+                    {isAdminOrMaster && (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}><Pencil className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}><Trash2 className="w-4 h-4" /></Button>
+                      </>
+                    )}
                     <Button variant="ghost" size="icon" asChild><Link to={`/projects/${project.id}`}><ChevronRight className="w-4 h-4" /></Link></Button>
                   </div>
                 </div>
@@ -96,6 +246,7 @@ export const Projects: React.FC = () => {
           })}
         </div>
       )}
+      
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>{editingProject ? 'Editar Projeto' : 'Novo Projeto'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -104,6 +255,46 @@ export const Projects: React.FC = () => {
               <div className="space-y-2"><Label htmlFor="description">Descrição</Label><Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} disabled={submitting} /></div>
               <div className="space-y-2"><Label>Cliente</Label><Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v })} disabled={submitting}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{data.clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem></SelectContent></Select></div>
+              
+              {/* Collaborator selection - only for admins */}
+              {isAdminOrMaster && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Colaboradores
+                  </Label>
+                  {loadingCollaborators ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Carregando...
+                    </div>
+                  ) : collaborators.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum colaborador cadastrado. Crie usuários com função "Colaborador" na área de Usuários.
+                    </p>
+                  ) : (
+                    <div className="border rounded-md p-3 space-y-2 max-h-32 overflow-y-auto">
+                      {collaborators.map((collab) => (
+                        <div key={collab.user_id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`collab-${collab.user_id}`}
+                            checked={selectedCollaborators.includes(collab.user_id)}
+                            onCheckedChange={() => toggleCollaborator(collab.user_id)}
+                            disabled={submitting}
+                          />
+                          <label
+                            htmlFor={`collab-${collab.user_id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {collab.full_name || collab.email || 'Sem nome'}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              
               {data.projectColumns.map((column) => (
                 <div key={column.id} className="space-y-2"><Label>{column.name}</Label>
                   {column.type === 'select' && column.options ? (
