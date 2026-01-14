@@ -146,6 +146,7 @@ export const Clients: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="text-destructive hover:text-destructive"
                         onClick={() => {
                           setDeletingClient(client);
                           setIsDeleteDialogOpen(true);

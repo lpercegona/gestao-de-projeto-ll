@@ -258,7 +258,7 @@ export const ProjectDetail: React.FC = () => {
                   <Button variant="ghost" size="icon" onClick={() => handleOpenTaskDialog(task)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => { setDeletingTask(task); setIsDeleteDialogOpen(true); }}>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { setDeletingTask(task); setIsDeleteDialogOpen(true); }}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
@@ -305,7 +305,16 @@ export const ProjectDetail: React.FC = () => {
                       <p className="text-xs font-medium text-muted-foreground mb-2">Registros de horas:</p>
                       <div className="space-y-2">
                         {taskTimeEntries.map((entry) => (
-                          <div key={entry.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm bg-muted/50 rounded px-3 py-2">
+                          <div key={entry.id} className="relative text-sm bg-muted/50 rounded px-3 py-2 pr-10">
+                            {/* Botão de excluir no canto superior direito */}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="absolute top-1 right-1 h-6 w-6 text-destructive hover:text-destructive" 
+                              onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                             <div className="flex flex-col gap-0.5">
                               <div className="flex flex-wrap items-center gap-1">
                                 <span className="font-medium text-foreground">{entry.hours}h</span>
@@ -315,9 +324,6 @@ export const ProjectDetail: React.FC = () => {
                               </div>
                               <span className="text-xs text-muted-foreground/70">por {getCreatorName(entry.created_by)}</span>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 self-end sm:self-auto" onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
                           </div>
                         ))}
                       </div>
