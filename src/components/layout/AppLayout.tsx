@@ -51,11 +51,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/settings', icon: Settings, label: 'Configurações' },
   ];
 
-  // Collaborator nav items
+  // Collaborator nav items (only projects)
   const collaboratorNavItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-    { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
+    { path: '/projects', icon: FolderKanban, label: 'Meus Projetos' },
   ];
 
   // Client nav items (only reports)
