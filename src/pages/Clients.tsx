@@ -118,7 +118,7 @@ export const Clients: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.clients.map((client) => {
             const usedHours = getClientHours(client.id);
             const projectCount = data.projects.filter(p => p.client_id === client.id).length;

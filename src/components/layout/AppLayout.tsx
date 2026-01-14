@@ -411,7 +411,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Main Content - Scrollable */}
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Mobile header */}
-          <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden flex-shrink-0">
+          <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 sm:px-6 py-3 lg:hidden flex-shrink-0">
             <div className="flex items-center gap-3">
               <button 
                 className="p-2 rounded-md hover:bg-accent"

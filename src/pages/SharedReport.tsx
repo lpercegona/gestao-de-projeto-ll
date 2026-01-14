@@ -393,7 +393,7 @@ export const SharedReport: React.FC = () => {
             <CardTitle>Resumo do Contrato</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
               <div>
                 <p className="text-sm text-muted-foreground">Horas Contratadas</p>
                 <p className="text-2xl font-bold text-foreground">{clientInfo.contracted_hours}h</p>
@@ -425,7 +425,7 @@ export const SharedReport: React.FC = () => {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="py-4">
-            <div className="w-64">
+            <div className="w-full sm:w-64">
               <Label className="mb-2 block">Mês</Label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger>
@@ -449,7 +449,7 @@ export const SharedReport: React.FC = () => {
             <CardTitle>Resumo do Período</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 grid-cols-2">
               <div>
                 <p className="text-sm text-muted-foreground">Projetos com atividade</p>
                 <p className="text-2xl font-bold text-foreground">{reportData.length}</p>

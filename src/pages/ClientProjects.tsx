@@ -138,9 +138,9 @@ export const ClientProjects: React.FC = () => {
         title="Meus Projetos"
         description="Visualize seus projetos e solicite novos"
         actions={
-          <Button onClick={() => setIsFormOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Solicitar Novo Projeto
+          <Button onClick={() => setIsFormOpen(true)} className="px-3 sm:px-4">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Solicitar Novo Projeto</span>
           </Button>
         }
       />
@@ -153,16 +153,19 @@ export const ClientProjects: React.FC = () => {
             {requests.map((request) => (
               <Card key={request.id}>
                 <CardContent className="py-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="mt-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                      <div className="mt-0.5 flex-shrink-0">
                         {getStatusIcon(request.status)}
                       </div>
-                      <div className="space-y-1">
-                        <h3 className="font-medium text-foreground">{request.title}</h3>
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-medium text-foreground">{request.title}</h3>
+                          <div className="sm:hidden">{getStatusBadge(request.status)}</div>
+                        </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">{request.briefing}</p>
                         <p className="text-xs text-muted-foreground">
-                          Enviado em {format(new Date(request.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                          Enviado em {format(new Date(request.created_at), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
                         </p>
                         {request.admin_notes && (
                           <div className="mt-2 p-2 bg-muted rounded-md">
@@ -172,7 +175,7 @@ export const ClientProjects: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div>
+                    <div className="hidden sm:block flex-shrink-0">
                       {getStatusBadge(request.status)}
                     </div>
                   </div>
@@ -192,9 +195,10 @@ export const ClientProjects: React.FC = () => {
             <CardContent className="py-12 text-center">
               <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground mb-4">Você ainda não possui projetos.</p>
-              <Button onClick={() => setIsFormOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Solicitar Primeiro Projeto
+              <Button onClick={() => setIsFormOpen(true)} className="px-3 sm:px-4">
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline ml-2">Solicitar Primeiro Projeto</span>
+                <span className="sm:hidden ml-2">Solicitar</span>
               </Button>
             </CardContent>
           </Card>

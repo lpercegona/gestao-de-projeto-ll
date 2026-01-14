@@ -291,9 +291,9 @@ export const Reports: React.FC = () => {
         if (!open) setSharePassword('');
       }}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" className="gap-1.5">
+          <Button variant="ghost" size="sm" className="gap-1.5 px-2 sm:px-3">
             <Share2 className="w-4 h-4" />
-            Compartilhar
+            <span className="hidden sm:inline">Compartilhar</span>
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -500,8 +500,8 @@ export const Reports: React.FC = () => {
       {/* Filters */}
       <Card className="mb-6">
         <CardContent className="py-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="w-64">
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
+            <div className="w-full sm:w-64">
               <Label className="mb-2 block">Mês</Label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger>
@@ -517,7 +517,7 @@ export const Reports: React.FC = () => {
               </Select>
             </div>
             
-            <div className="w-64">
+            <div className="w-full sm:w-64">
               <Label className="mb-2 block">Cliente</Label>
               <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                 <SelectTrigger>
@@ -543,7 +543,7 @@ export const Reports: React.FC = () => {
           <CardTitle>Resumo Geral do Período</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
             <div>
               <p className="text-sm text-muted-foreground">Clientes com atividade</p>
               <p className="text-2xl font-bold text-foreground">{totalClients}</p>

@@ -210,28 +210,28 @@ export const Projects: React.FC = () => {
             const projectCollaborators = data.projectAccess.filter(a => a.project_id === project.id);
             
             return (
-              <Card key={project.id}><CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+              <Card key={project.id}><CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                       <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
                       <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>{getStatusLabel(project.status)}</span>
                       {isAdminOrMaster && projectCollaborators.length > 0 && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Users className="w-3 h-3" />
-                          {projectCollaborators.length} colaborador{projectCollaborators.length > 1 ? 'es' : ''}
+                          {projectCollaborators.length}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">{project.description}</p>
-                    <div className="flex flex-wrap gap-4 text-sm">
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{project.description}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                       <div><span className="text-muted-foreground">Cliente: </span><span className="font-medium text-foreground">{client?.name}</span></div>
                       <div><span className="text-muted-foreground">Tarefas: </span><span className="font-medium text-foreground">{taskCount}</span></div>
                       <div><span className="text-muted-foreground">Horas: </span><span className="font-medium text-foreground">{hours}h</span></div>
                       {data.projectColumns.map(col => project.custom_fields[col.id] && <div key={col.id}><span className="text-muted-foreground">{col.name}: </span><span className="font-medium text-foreground">{project.custom_fields[col.id]}</span></div>)}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 self-end sm:self-start flex-shrink-0">
                     {isAdminOrMaster && (
                       <>
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}><Pencil className="w-4 h-4" /></Button>
