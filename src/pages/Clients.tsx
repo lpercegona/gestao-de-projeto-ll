@@ -101,9 +101,8 @@ export const Clients: React.FC = () => {
         title="Clientes"
         description="Gerencie seus clientes e horas contratadas"
         actions={
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Cliente
+          <Button size="icon" onClick={() => handleOpenDialog()} title="Novo Cliente">
+            <Plus className="w-5 h-5" />
           </Button>
         }
       />
