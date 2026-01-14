@@ -16,8 +16,6 @@ import {
   UserCog,
   FileText,
   User,
-  ChevronLeft,
-  ChevronRight,
   PanelLeftClose,
   PanelLeft
 } from 'lucide-react';
@@ -41,6 +39,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
+  const [isHovering, setIsHovering] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
 
   // Persist collapsed state
@@ -157,7 +156,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex h-screen bg-background overflow-hidden">
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div 
@@ -166,33 +165,62 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           />
         )}
 
-        {/* Sidebar */}
-        <aside className={cn(
-          "fixed inset-y-0 left-0 z-50 border-r border-border bg-card flex flex-col transition-all duration-300 lg:static",
-          isCollapsed ? "lg:w-16" : "lg:w-64",
-          "w-64", // Mobile always full width
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        )}>
-          {/* Header */}
+        {/* Sidebar - Fixed height 100vh */}
+        <aside 
+          className={cn(
+            "fixed inset-y-0 left-0 z-50 h-screen border-r border-border bg-card flex flex-col transition-all duration-300 lg:static",
+            isCollapsed ? "lg:w-16" : "lg:w-64",
+            "w-64", // Mobile always full width
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          )}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+        >
+          {/* Header with logo and collapse button */}
           <div className={cn(
-            "p-4 border-b border-border",
+            "p-4 border-b border-border flex-shrink-0",
             isCollapsed && "lg:px-2"
           )}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between h-8">
+              {/* Logo */}
               <div className={cn(
-                "flex items-center gap-2",
+                "flex items-center",
                 isCollapsed && "lg:justify-center lg:w-full"
               )}>
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <span className={cn(
-                  "text-xl font-semibold text-foreground transition-opacity duration-300",
-                  isCollapsed && "lg:hidden"
-                )}>
-                  ORAS
-                </span>
+                {isCollapsed ? (
+                  // When collapsed, show first letter as logo on desktop
+                  <span className="hidden lg:block text-xl font-bold text-primary">O</span>
+                ) : (
+                  // When expanded, show full text
+                  <span className="text-xl font-bold text-primary">ORAS</span>
+                )}
+                {/* Mobile always shows full text */}
+                <span className="lg:hidden text-xl font-bold text-primary">ORAS</span>
               </div>
+
+              {/* Collapse toggle (desktop only, visible on hover) */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "hidden lg:flex h-8 w-8 transition-opacity duration-200",
+                      isHovering ? "opacity-100" : "opacity-0"
+                    )}
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                  >
+                    {isCollapsed ? (
+                      <PanelLeft className="h-4 w-4" />
+                    ) : (
+                      <PanelLeftClose className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+                </TooltipContent>
+              </Tooltip>
               
               {/* Mobile close button */}
               <button 
@@ -206,31 +234,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </button>
             </div>
           </div>
-
-          {/* Collapse toggle (desktop only) */}
-          <div className="hidden lg:flex justify-end p-2 border-b border-border">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsCollapsed(!isCollapsed)}
-                >
-                  {isCollapsed ? (
-                    <PanelLeft className="h-4 w-4" />
-                  ) : (
-                    <PanelLeftClose className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {isCollapsed ? 'Expandir menu' : 'Recolher menu'}
-              </TooltipContent>
-            </Tooltip>
-          </div>
           
-          {/* Navigation */}
+          {/* Navigation - Scrollable area */}
           <nav className="flex-1 p-2 overflow-y-auto">
             <ul className="space-y-1">
               {navItems.map((item) => {
@@ -278,9 +283,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </ul>
           </nav>
 
-          {/* User section */}
+          {/* User section - Fixed at bottom */}
           <div className={cn(
-            "p-3 border-t border-border space-y-2",
+            "p-3 border-t border-border space-y-2 flex-shrink-0",
             isCollapsed && "lg:p-2"
           )}>
             {/* User info */}
@@ -403,10 +408,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        {/* Main Content - Scrollable */}
+        <main className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Mobile header */}
-          <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
+          <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden flex-shrink-0">
             <div className="flex items-center gap-3">
               <button 
                 className="p-2 rounded-md hover:bg-accent"
@@ -417,12 +422,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <span className="font-semibold text-foreground">ORAS</span>
-              </div>
+              <span className="font-bold text-primary text-lg">ORAS</span>
             </div>
             <NotificationBell />
           </div>
@@ -432,7 +432,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <NotificationBell />
           </div>
           
-          <div className="p-4 sm:p-6 lg:p-8">
+          {/* Content area - Scrollable */}
+          <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
             {children}
           </div>
         </main>

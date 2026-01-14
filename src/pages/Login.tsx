@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Loader2, Users, Building2, Mail, ArrowLeft } from 'lucide-react';
+import { Loader2, Users, Building2, Mail, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ClientLoginStep = 'email' | 'password' | 'set-password';
@@ -292,12 +292,7 @@ export const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-              <Clock className="w-7 h-7 text-primary-foreground" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl">ORAS</CardTitle>
+          <CardTitle className="text-3xl font-bold text-primary">ORAS</CardTitle>
           <CardDescription>Gestão de Projetos e Horas</CardDescription>
         </CardHeader>
         <CardContent>
