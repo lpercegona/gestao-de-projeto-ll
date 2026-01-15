@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,13 +10,21 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Loader2, Globe } from 'lucide-react';
 import { ProjectColumn } from '@/types';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
+const BRAZILIAN_TIMEZONES = [
+  { value: 'America/Sao_Paulo', label: 'Brasília (UTC-3)' },
+  { value: 'America/Manaus', label: 'Manaus (UTC-4)' },
+  { value: 'America/Rio_Branco', label: 'Rio Branco (UTC-5)' },
+  { value: 'America/Noronha', label: 'Fernando de Noronha (UTC-2)' },
+];
+
 export const Settings: React.FC = () => {
   const { data, loading, createColumn, updateColumn, deleteColumn } = useData();
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ProjectColumn | null>(null);
@@ -22,6 +32,48 @@ export const Settings: React.FC = () => {
   const [newOption, setNewOption] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', type: 'text' as 'text' | 'select', options: [] as string[] });
+  
+  // Timezone preferences
+  const [timezone, setTimezone] = useState('America/Sao_Paulo');
+  const [savingTimezone, setSavingTimezone] = useState(false);
+
+  // Fetch user preferences
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      if (!user) return;
+      const { data: prefs } = await supabase
+        .from('user_preferences')
+        .select('timezone')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (prefs?.timezone) {
+        setTimezone(prefs.timezone);
+      }
+    };
+    fetchPreferences();
+  }, [user]);
+
+  const handleSaveTimezone = async (newTimezone: string) => {
+    if (!user) return;
+    setSavingTimezone(true);
+    setTimezone(newTimezone);
+    
+    const { error } = await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: user.id,
+        timezone: newTimezone,
+      }, { onConflict: 'user_id' });
+    
+    if (error) {
+      console.error('Error saving timezone:', error);
+      toast.error('Erro ao salvar fuso horário.');
+    } else {
+      toast.success('Fuso horário atualizado!');
+    }
+    setSavingTimezone(false);
+  };
 
   const handleOpenDialog = (column?: ProjectColumn) => {
     if (column) {
@@ -65,8 +117,44 @@ export const Settings: React.FC = () => {
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
 
   return (
-    <div>
-      <PageHeader title="Configurações" description="Personalize os campos de projetos" />
+    <div className="space-y-6">
+      <PageHeader title="Configurações" description="Personalize seus campos e preferências" />
+      
+      {/* Preferências Pessoais */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Globe className="w-5 h-5 text-muted-foreground" />
+            <div>
+              <CardTitle>Preferências Pessoais</CardTitle>
+              <CardDescription>Configure seu fuso horário para registro de horas</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-xs">
+            <Label htmlFor="timezone">Fuso Horário</Label>
+            <Select 
+              value={timezone} 
+              onValueChange={handleSaveTimezone}
+              disabled={savingTimezone}
+            >
+              <SelectTrigger id="timezone" className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BRAZILIAN_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Campos de Projeto */}
       <Card><CardHeader><div className="flex items-center justify-between"><div><CardTitle>Campos de Projeto</CardTitle><CardDescription>Configure campos personalizados para categorizar seus projetos</CardDescription></div><Button onClick={() => handleOpenDialog()}><Plus className="w-4 h-4 mr-2" />Novo Campo</Button></div></CardHeader>
         <CardContent>{data.projectColumns.length === 0 ? <p className="text-muted-foreground text-center py-8">Nenhum campo personalizado criado ainda.</p> : (
           <div className="space-y-4">{data.projectColumns.map((column) => {

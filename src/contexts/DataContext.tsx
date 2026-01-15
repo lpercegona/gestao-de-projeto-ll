@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
 
 interface Client {
   id: string;
@@ -525,11 +526,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const finalHours = Math.max(0.25, roundedHours); // Minimum 15 minutes
 
     // Create time entry with user-provided description or default
+    // Use format() instead of toISOString() to avoid timezone issues
     await createTimeEntry({
       task_id: taskId,
       hours: finalHours,
       description: description || 'Timer automático',
-      date: new Date().toISOString().split('T')[0],
+      date: format(new Date(), 'yyyy-MM-dd'),
     });
 
     // Delete the timer
