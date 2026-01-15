@@ -36,7 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { Task } from '@/types';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const ProjectDetail: React.FC = () => {
@@ -81,7 +81,8 @@ export const ProjectDetail: React.FC = () => {
   });
   
   const [timeForm, setTimeForm] = useState({
-    hours: 1,
+    hours: 0,
+    minutes: 15,
     description: '',
     date: format(new Date(), 'yyyy-MM-dd'),
   });
@@ -146,16 +147,21 @@ export const ProjectDetail: React.FC = () => {
 
   const handleOpenTimeDialog = (taskId: string) => {
     setSelectedTaskId(taskId);
-    setTimeForm({ hours: 1, description: '', date: format(new Date(), 'yyyy-MM-dd') });
+    setTimeForm({ hours: 0, minutes: 15, description: '', date: format(new Date(), 'yyyy-MM-dd') });
     setIsTimeDialogOpen(true);
   };
 
   const handleSubmitTime = async (e: React.FormEvent) => {
     e.preventDefault();
+    const totalHours = timeForm.hours + (timeForm.minutes / 60);
+    if (totalHours <= 0) {
+      toast.error('Selecione pelo menos 15 minutos.');
+      return;
+    }
     setSubmitting(true);
     await createTimeEntry({
       task_id: selectedTaskId,
-      hours: timeForm.hours,
+      hours: totalHours,
       description: timeForm.description,
       date: timeForm.date,
     });
@@ -319,7 +325,7 @@ export const ProjectDetail: React.FC = () => {
                               <div className="flex flex-wrap items-center gap-1">
                                 <span className="font-medium text-foreground">{entry.hours}h</span>
                                 <span className="text-muted-foreground">•</span>
-                                <span className="text-muted-foreground">{format(new Date(entry.date), "dd 'de' MMM", { locale: ptBR })}</span>
+                                <span className="text-muted-foreground">{format(parseISO(entry.date), "dd 'de' MMM", { locale: ptBR })}</span>
                                 {entry.description && <><span className="text-muted-foreground hidden sm:inline">•</span><span className="text-muted-foreground block sm:inline">{entry.description}</span></>}
                               </div>
                               <span className="text-xs text-muted-foreground/70">por {getCreatorName(entry.created_by)}</span>
@@ -374,9 +380,37 @@ export const ProjectDetail: React.FC = () => {
           <DialogHeader><DialogTitle>Registrar Horas</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTime}>
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="hours">Horas</Label>
-                <Input id="hours" type="number" min="0.25" step="0.25" value={timeForm.hours} onChange={(e) => setTimeForm({ ...timeForm, hours: Number(e.target.value) })} required disabled={submitting} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hours">Horas</Label>
+                  <Input 
+                    id="hours" 
+                    type="number" 
+                    min="0" 
+                    step="1" 
+                    value={timeForm.hours} 
+                    onChange={(e) => setTimeForm({ ...timeForm, hours: Math.max(0, parseInt(e.target.value) || 0) })} 
+                    disabled={submitting} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="minutes">Minutos</Label>
+                  <Select 
+                    value={String(timeForm.minutes)} 
+                    onValueChange={(value) => setTimeForm({ ...timeForm, minutes: Number(value) })} 
+                    disabled={submitting}
+                  >
+                    <SelectTrigger id="minutes">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">00</SelectItem>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="45">45</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Data</Label>
