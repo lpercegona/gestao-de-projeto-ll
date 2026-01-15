@@ -99,6 +99,7 @@ interface DataContextType {
   deleteTask: (id: string) => Promise<boolean>;
   // Time Entries
   createTimeEntry: (entry: Omit<TimeEntry, 'id' | 'created_at' | 'created_by'>) => Promise<TimeEntry | null>;
+  updateTimeEntry: (id: string, updates: Partial<TimeEntry>) => Promise<TimeEntry | null>;
   deleteTimeEntry: (id: string) => Promise<boolean>;
   // Columns
   createColumn: (column: Omit<ProjectColumn, 'id'>) => Promise<ProjectColumn | null>;
@@ -385,6 +386,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { ...newEntry, hours: Number(newEntry.hours) } as TimeEntry;
   };
 
+  const updateTimeEntry = async (id: string, updates: Partial<TimeEntry>) => {
+    const { data: updated, error } = await supabase
+      .from('time_entries')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating time entry:', error);
+      return null;
+    }
+
+    await refreshData();
+    return { ...updated, hours: Number(updated.hours) } as TimeEntry;
+  };
+
   const deleteTimeEntry = async (id: string) => {
     const { error } = await supabase.from('time_entries').delete().eq('id', id);
     if (error) {
@@ -598,6 +616,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateTask,
         deleteTask,
         createTimeEntry,
+        updateTimeEntry,
         deleteTimeEntry,
         createColumn,
         updateColumn,
