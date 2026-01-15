@@ -49,6 +49,7 @@ export const ProjectDetail: React.FC = () => {
     updateTask, 
     deleteTask, 
     createTimeEntry,
+    updateTimeEntry,
     deleteTimeEntry,
     getTaskHours,
     getProjectHours,
@@ -70,6 +71,7 @@ export const ProjectDetail: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null);
   const [pausingTaskId, setPausingTaskId] = useState<string | null>(null);
   const [pauseDescription, setPauseDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -145,9 +147,24 @@ export const ProjectDetail: React.FC = () => {
     }
   };
 
-  const handleOpenTimeDialog = (taskId: string) => {
+  const handleOpenTimeDialog = (taskId: string, entryToEdit?: { id: string; hours: number; description: string | null; date: string }) => {
     setSelectedTaskId(taskId);
-    setTimeForm({ hours: 0, minutes: 15, description: '', date: format(new Date(), 'yyyy-MM-dd') });
+    if (entryToEdit) {
+      // Editing existing entry - convert decimal hours to hours + minutes
+      const totalMinutes = Math.round(entryToEdit.hours * 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = Math.round((totalMinutes % 60) / 15) * 15; // Round to nearest 15
+      setEditingTimeEntryId(entryToEdit.id);
+      setTimeForm({ 
+        hours, 
+        minutes, 
+        description: entryToEdit.description || '', 
+        date: entryToEdit.date 
+      });
+    } else {
+      setEditingTimeEntryId(null);
+      setTimeForm({ hours: 0, minutes: 15, description: '', date: format(new Date(), 'yyyy-MM-dd') });
+    }
     setIsTimeDialogOpen(true);
   };
 
@@ -159,15 +176,29 @@ export const ProjectDetail: React.FC = () => {
       return;
     }
     setSubmitting(true);
-    await createTimeEntry({
-      task_id: selectedTaskId,
-      hours: totalHours,
-      description: timeForm.description,
-      date: timeForm.date,
-    });
-    toast.success('Horas registradas com sucesso!');
+    
+    if (editingTimeEntryId) {
+      // Update existing entry
+      await updateTimeEntry(editingTimeEntryId, {
+        hours: totalHours,
+        description: timeForm.description,
+        date: timeForm.date,
+      });
+      toast.success('Registro atualizado com sucesso!');
+    } else {
+      // Create new entry
+      await createTimeEntry({
+        task_id: selectedTaskId,
+        hours: totalHours,
+        description: timeForm.description,
+        date: timeForm.date,
+      });
+      toast.success('Horas registradas com sucesso!');
+    }
+    
     setSubmitting(false);
     setIsTimeDialogOpen(false);
+    setEditingTimeEntryId(null);
   };
 
   const getStatusLabel = (status: string) => {
@@ -311,16 +342,26 @@ export const ProjectDetail: React.FC = () => {
                       <p className="text-xs font-medium text-muted-foreground mb-2">Registros de horas:</p>
                       <div className="space-y-2">
                         {taskTimeEntries.map((entry) => (
-                          <div key={entry.id} className="relative text-sm bg-muted/50 rounded px-3 py-2 pr-10">
-                            {/* Botão de excluir no canto superior direito */}
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="absolute top-1 right-1 h-6 w-6 text-destructive hover:text-destructive" 
-                              onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                          <div key={entry.id} className="relative text-sm bg-muted/50 rounded px-3 py-2 pr-16">
+                            {/* Botões de editar/excluir no canto superior direito */}
+                            <div className="absolute top-1 right-1 flex items-center gap-0.5">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6" 
+                                onClick={() => handleOpenTimeDialog(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date })}
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-destructive hover:text-destructive" 
+                                onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
                             <div className="flex flex-col gap-0.5">
                               <div className="flex flex-wrap items-center gap-1">
                                 <span className="font-medium text-foreground">{entry.hours}h</span>
@@ -377,7 +418,7 @@ export const ProjectDetail: React.FC = () => {
 
       <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Registrar Horas</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTime}>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -423,7 +464,7 @@ export const ProjectDetail: React.FC = () => {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button>
-              <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Registrar</Button>
+              <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
