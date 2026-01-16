@@ -67,6 +67,7 @@ export const ProjectDetail: React.FC = () => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteTimeEntryDialogOpen, setIsDeleteTimeEntryDialogOpen] = useState(false);
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
@@ -83,11 +84,23 @@ export const ProjectDetail: React.FC = () => {
   });
   
   const [timeForm, setTimeForm] = useState({
-    hours: 0,
-    minutes: 15,
+    time: '00:15',
     description: '',
     date: format(new Date(), 'yyyy-MM-dd'),
   });
+
+  // Helper functions for HH:mm conversion
+  const parseTimeToHours = (timeString: string): number => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours + (minutes / 60);
+  };
+
+  const formatHoursToTime = (decimalHours: number): string => {
+    const totalMinutes = Math.round(decimalHours * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
 
   if (loading) {
     return (
@@ -150,35 +163,29 @@ export const ProjectDetail: React.FC = () => {
   const handleOpenTimeDialog = (taskId: string, entryToEdit?: { id: string; hours: number; description: string | null; date: string }) => {
     setSelectedTaskId(taskId);
     if (entryToEdit) {
-      // Editing existing entry - convert decimal hours to hours + minutes
-      const totalMinutes = Math.round(entryToEdit.hours * 60);
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = Math.round((totalMinutes % 60) / 15) * 15; // Round to nearest 15
       setEditingTimeEntryId(entryToEdit.id);
       setTimeForm({ 
-        hours, 
-        minutes, 
+        time: formatHoursToTime(entryToEdit.hours),
         description: entryToEdit.description || '', 
         date: entryToEdit.date 
       });
     } else {
       setEditingTimeEntryId(null);
-      setTimeForm({ hours: 0, minutes: 15, description: '', date: format(new Date(), 'yyyy-MM-dd') });
+      setTimeForm({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd') });
     }
     setIsTimeDialogOpen(true);
   };
 
   const handleSubmitTime = async (e: React.FormEvent) => {
     e.preventDefault();
-    const totalHours = timeForm.hours + (timeForm.minutes / 60);
+    const totalHours = parseTimeToHours(timeForm.time);
     if (totalHours <= 0) {
-      toast.error('Selecione pelo menos 15 minutos.');
+      toast.error('Insira um tempo válido maior que zero.');
       return;
     }
     setSubmitting(true);
     
     if (editingTimeEntryId) {
-      // Update existing entry
       await updateTimeEntry(editingTimeEntryId, {
         hours: totalHours,
         description: timeForm.description,
@@ -186,7 +193,6 @@ export const ProjectDetail: React.FC = () => {
       });
       toast.success('Registro atualizado com sucesso!');
     } else {
-      // Create new entry
       await createTimeEntry({
         task_id: selectedTaskId,
         hours: totalHours,
@@ -199,6 +205,16 @@ export const ProjectDetail: React.FC = () => {
     setSubmitting(false);
     setIsTimeDialogOpen(false);
     setEditingTimeEntryId(null);
+  };
+
+  const handleDeleteTimeEntry = async () => {
+    if (editingTimeEntryId) {
+      await deleteTimeEntry(editingTimeEntryId);
+      toast.success('Registro excluído!');
+      setIsDeleteTimeEntryDialogOpen(false);
+      setIsTimeDialogOpen(false);
+      setEditingTimeEntryId(null);
+    }
   };
 
   const getStatusLabel = (status: string) => {
@@ -289,9 +305,9 @@ export const ProjectDetail: React.FC = () => {
             };
             
             return (
-              <Card key={task.id} className="relative">
-                {/* Ações no canto superior direito */}
-                <div className="absolute top-3 right-3 flex items-center gap-1">
+              <Card key={task.id} className="relative group">
+                {/* Ações no canto superior direito - hover no desktop, sempre visível no mobile */}
+                <div className="absolute top-3 right-3 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" onClick={() => handleOpenTaskDialog(task)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
@@ -342,9 +358,9 @@ export const ProjectDetail: React.FC = () => {
                       <p className="text-xs font-medium text-muted-foreground mb-2">Registros de horas:</p>
                       <div className="space-y-2">
                         {taskTimeEntries.map((entry) => (
-                          <div key={entry.id} className="relative text-sm bg-muted/50 rounded px-3 py-2 pr-16">
-                            {/* Botões de editar/excluir no canto superior direito */}
-                            <div className="absolute top-1 right-1 flex items-center gap-0.5">
+                          <div key={entry.id} className="group/entry relative text-sm bg-muted/50 rounded px-3 py-2 pr-10">
+                            {/* Botão de editar - hover no desktop, sempre visível no mobile */}
+                            <div className="absolute top-1 right-1 md:opacity-0 md:group-hover/entry:opacity-100 transition-opacity">
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
@@ -352,14 +368,6 @@ export const ProjectDetail: React.FC = () => {
                                 onClick={() => handleOpenTimeDialog(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date })}
                               >
                                 <Pencil className="w-3 h-3" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6 text-destructive hover:text-destructive" 
-                                onClick={async () => { await deleteTimeEntry(entry.id); toast.success('Registro excluído!'); }}
-                              >
-                                <Trash2 className="w-3 h-3" />
                               </Button>
                             </div>
                             <div className="flex flex-col gap-0.5">
@@ -421,37 +429,16 @@ export const ProjectDetail: React.FC = () => {
           <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTime}>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hours">Horas</Label>
-                  <Input 
-                    id="hours" 
-                    type="number" 
-                    min="0" 
-                    step="1" 
-                    value={timeForm.hours} 
-                    onChange={(e) => setTimeForm({ ...timeForm, hours: Math.max(0, parseInt(e.target.value) || 0) })} 
-                    disabled={submitting} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="minutes">Minutos</Label>
-                  <Select 
-                    value={String(timeForm.minutes)} 
-                    onValueChange={(value) => setTimeForm({ ...timeForm, minutes: Number(value) })} 
-                    disabled={submitting}
-                  >
-                    <SelectTrigger id="minutes">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">00</SelectItem>
-                      <SelectItem value="15">15</SelectItem>
-                      <SelectItem value="30">30</SelectItem>
-                      <SelectItem value="45">45</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="time">Tempo (HH:mm)</Label>
+                <Input 
+                  id="time" 
+                  type="time"
+                  value={timeForm.time} 
+                  onChange={(e) => setTimeForm({ ...timeForm, time: e.target.value })} 
+                  disabled={submitting}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Data</Label>
@@ -462,13 +449,40 @@ export const ProjectDetail: React.FC = () => {
                 <Input id="timeDescription" value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} placeholder="O que foi feito?" disabled={submitting} />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button>
-              <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {editingTimeEntryId && (
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={() => setIsDeleteTimeEntryDialogOpen(true)} 
+                  disabled={submitting}
+                  className="w-full sm:w-auto sm:mr-auto"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Excluir
+                </Button>
+              )}
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting} className="flex-1 sm:flex-initial">Cancelar</Button>
+                <Button type="submit" disabled={submitting} className="flex-1 sm:flex-initial">{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteTimeEntryDialogOpen} onOpenChange={setIsDeleteTimeEntryDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir registro?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. O registro de horas será excluído permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTimeEntry}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
