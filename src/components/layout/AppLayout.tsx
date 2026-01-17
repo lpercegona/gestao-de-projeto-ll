@@ -179,15 +179,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         >
           {/* Header with logo and collapse button */}
           <div className={cn(
-            "p-4 border-b border-border flex-shrink-0",
+            "relative p-4 border-b border-border flex-shrink-0",
             isCollapsed && "lg:px-2"
           )}>
-            <div className="flex items-center justify-between h-8">
-              {/* Logo */}
-              <div className={cn(
-                "flex items-center justify-center",
-                isCollapsed ? "lg:w-full" : "flex-1"
-              )}>
+            <div className="flex items-center justify-center h-8">
+              {/* Logo - centered */}
+              <div className="flex items-center justify-center w-full">
                 {/* Desktop: show symbol when collapsed, full logo when expanded */}
                 <img 
                   src={isCollapsed ? SimboloOras : LogoOras} 
@@ -205,14 +202,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 />
               </div>
 
-              {/* Collapse toggle (desktop only, visible on hover) */}
+              {/* Collapse toggle (desktop only, positioned overlapping the border) */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     className={cn(
-                      "hidden lg:flex h-8 w-8 transition-opacity duration-200",
+                      "hidden lg:flex absolute top-1/2 -translate-y-1/2 -right-4 h-8 w-8 rounded-full bg-background border border-border shadow-sm transition-opacity duration-200 z-10",
                       isHovering ? "opacity-100" : "opacity-0"
                     )}
                     onClick={() => setIsCollapsed(!isCollapsed)}
@@ -228,18 +225,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   {isCollapsed ? 'Expandir menu' : 'Recolher menu'}
                 </TooltipContent>
               </Tooltip>
-              
-              {/* Mobile close button */}
-              <button 
-                className="lg:hidden p-2 rounded-md hover:bg-accent"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <span className="sr-only">Fechar menu</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
             </div>
+            
+            {/* Mobile close button */}
+            <button 
+              className="lg:hidden absolute top-1/2 -translate-y-1/2 right-4 p-2 rounded-md hover:bg-accent"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <span className="sr-only">Fechar menu</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
           
           {/* Navigation - Scrollable area */}
