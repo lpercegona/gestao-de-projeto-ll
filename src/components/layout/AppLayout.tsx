@@ -9,7 +9,6 @@ import {
   FolderKanban, 
   FileBarChart, 
   Settings,
-  Clock,
   LogOut,
   UsersRound,
   Shield,
@@ -24,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import LogoOras from '@/assets/logo-oras.svg';
+import SimboloOras from '@/assets/simbolo-oras.svg';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -184,18 +185,24 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <div className="flex items-center justify-between h-8">
               {/* Logo */}
               <div className={cn(
-                "flex items-center",
-                isCollapsed && "lg:justify-center lg:w-full"
+                "flex items-center justify-center",
+                isCollapsed ? "lg:w-full" : "flex-1"
               )}>
-                {/* Desktop: show "O" when collapsed, "ORAS" when expanded */}
-                <span className={cn(
-                  "hidden lg:block text-xl font-bold text-primary",
-                  isCollapsed ? "" : ""
-                )}>
-                  {isCollapsed ? "O" : "ORAS"}
-                </span>
-                {/* Mobile: always show full text */}
-                <span className="lg:hidden text-xl font-bold text-primary">ORAS</span>
+                {/* Desktop: show symbol when collapsed, full logo when expanded */}
+                <img 
+                  src={isCollapsed ? SimboloOras : LogoOras} 
+                  alt="ORAS" 
+                  className={cn(
+                    "hidden lg:block h-8",
+                    isCollapsed ? "w-8" : "w-auto max-w-[120px]"
+                  )}
+                />
+                {/* Mobile: always show full logo centered */}
+                <img 
+                  src={LogoOras} 
+                  alt="ORAS" 
+                  className="lg:hidden h-8 w-auto max-w-[120px]"
+                />
               </div>
 
               {/* Collapse toggle (desktop only, visible on hover) */}
@@ -422,7 +429,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <span className="font-bold text-primary text-lg">ORAS</span>
+              <img src={LogoOras} alt="ORAS" className="h-6 w-auto" />
             </div>
             <NotificationBell />
           </div>
