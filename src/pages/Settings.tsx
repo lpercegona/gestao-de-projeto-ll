@@ -14,6 +14,7 @@ import { Plus, Pencil, Trash2, X, Loader2, Globe } from 'lucide-react';
 import { ProjectColumn } from '@/types';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { ThemeSettings } from '@/components/settings/ThemeSettings';
 
 const WORLD_TIMEZONES = [
   {
@@ -107,7 +108,7 @@ const WORLD_TIMEZONES = [
 
 export const Settings: React.FC = () => {
   const { data, loading, createColumn, updateColumn, deleteColumn } = useData();
-  const { user } = useAuth();
+  const { user, isMasterAdmin } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ProjectColumn | null>(null);
@@ -202,6 +203,9 @@ export const Settings: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="Configurações" description="Personalize seus campos e preferências" />
+      
+      {/* Theme Settings - Only for Master Admin */}
+      {isMasterAdmin && <ThemeSettings />}
       
       {/* Preferências Pessoais */}
       <Card>

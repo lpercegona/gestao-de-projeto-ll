@@ -369,6 +369,36 @@ export type Database = {
           },
         ]
       }
+      theme_settings: {
+        Row: {
+          accent_color: string
+          created_at: string
+          font_family: string
+          id: string
+          primary_color: string
+          secondary_color: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          font_family?: string
+          id?: string
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          font_family?: string
+          id?: string
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_entries: {
         Row: {
           created_at: string

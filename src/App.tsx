@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
@@ -28,11 +29,12 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <DataProvider>
-          <Toaster />
-          <Sonner />
+    <ThemeProvider>
+      <TooltipProvider>
+        <AuthProvider>
+          <DataProvider>
+            <Toaster />
+            <Sonner />
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
@@ -123,7 +125,8 @@ const App = () => (
         </DataProvider>
       </AuthProvider>
     </TooltipProvider>
-  </QueryClientProvider>
+  </ThemeProvider>
+</QueryClientProvider>
 );
 
 export default App;
