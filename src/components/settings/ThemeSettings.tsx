@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -116,6 +117,7 @@ const hexToHsl = (hex: string): string => {
 
 export const ThemeSettings: React.FC = () => {
   const { isMasterAdmin } = useAuth();
+  const { refreshTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [colors, setColors] = useState<ThemeColors>({
@@ -211,6 +213,8 @@ export const ThemeSettings: React.FC = () => {
       toast.error('Erro ao salvar tema.');
     } else {
       toast.success('Tema atualizado com sucesso!');
+      // Refresh theme globally to apply changes immediately
+      await refreshTheme();
     }
     setSaving(false);
   };
@@ -318,15 +322,27 @@ export const ThemeSettings: React.FC = () => {
         </div>
 
         {/* Preview */}
-        <div className="p-4 border border-border rounded-lg space-y-3">
+        <div 
+          className="p-4 border border-border rounded-lg space-y-3"
+          style={{ 
+            fontFamily: ['Roboto Mono', 'Source Code Pro', 'Space Mono'].includes(fontFamily)
+              ? `"${fontFamily}", monospace`
+              : fontFamily === 'Lora'
+              ? `"${fontFamily}", serif`
+              : `"${fontFamily}", sans-serif`
+          }}
+        >
           <p className="text-sm font-medium text-muted-foreground">Prévia</p>
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm">Botão Primário</Button>
-            <Button size="sm" variant="secondary">Secundário</Button>
+            <Button size="sm" style={{ backgroundColor: `hsl(${colors.primary})` }}>Botão Primário</Button>
+            <Button size="sm" variant="secondary" style={{ backgroundColor: `hsl(${colors.secondary})` }}>Secundário</Button>
             <Button size="sm" variant="outline">Outline</Button>
           </div>
           <p className="text-sm">
-            Esta é uma prévia de como o texto ficará com a fonte selecionada.
+            Esta é uma prévia de como o texto ficará com a fonte <strong>{fontFamily}</strong>.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
           </p>
         </div>
 
