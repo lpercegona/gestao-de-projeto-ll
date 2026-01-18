@@ -23,6 +23,42 @@ const defaultTheme: ThemeSettings = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Map font names to their Google Fonts import parameters
+const GOOGLE_FONTS_MAP: Record<string, string> = {
+  'Inter': 'Inter:wght@400;500;600;700',
+  'Roboto': 'Roboto:wght@400;500;700',
+  'Open Sans': 'Open+Sans:wght@400;500;600;700',
+  'Montserrat': 'Montserrat:wght@400;500;600;700',
+  'Lato': 'Lato:wght@400;700',
+  'Poppins': 'Poppins:wght@400;500;600;700',
+  'Noto Sans': 'Noto+Sans:wght@400;500;600;700',
+  'Raleway': 'Raleway:wght@400;500;600;700',
+  'Oswald': 'Oswald:wght@400;500;600;700',
+  'DM Sans': 'DM+Sans:wght@400;500;600;700',
+  'Lora': 'Lora:wght@400;500;600;700',
+  'Roboto Mono': 'Roboto+Mono:wght@400;500;700',
+  'Source Code Pro': 'Source+Code+Pro:wght@400;500;600;700',
+  'Space Mono': 'Space+Mono:wght@400;700',
+};
+
+function loadGoogleFont(fontFamily: string) {
+  const fontParam = GOOGLE_FONTS_MAP[fontFamily];
+  if (!fontParam) return;
+
+  const linkId = 'dynamic-google-font';
+  let linkElement = document.getElementById(linkId) as HTMLLinkElement | null;
+  
+  if (linkElement) {
+    linkElement.href = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
+  } else {
+    linkElement = document.createElement('link');
+    linkElement.id = linkId;
+    linkElement.rel = 'stylesheet';
+    linkElement.href = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
+    document.head.appendChild(linkElement);
+  }
+}
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<ThemeSettings>(defaultTheme);
   const [loading, setLoading] = useState(true);
@@ -32,15 +68,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.documentElement.style.setProperty('--secondary', settings.secondaryColor);
     document.documentElement.style.setProperty('--accent', settings.accentColor);
     
-    if (settings.fontFamily === 'System') {
-      document.documentElement.style.setProperty('--font-sans', "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif");
+    // Load Google Font dynamically
+    loadGoogleFont(settings.fontFamily);
+    
+    // Build font stack based on font type
+    let fontStack: string;
+    if (['Roboto Mono', 'Source Code Pro', 'Space Mono'].includes(settings.fontFamily)) {
+      fontStack = `"${settings.fontFamily}", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
     } else if (settings.fontFamily === 'Lora') {
-      document.documentElement.style.setProperty('--font-sans', "'Lora', ui-serif, Georgia, serif");
-    } else if (settings.fontFamily === 'Space Mono') {
-      document.documentElement.style.setProperty('--font-sans', "'Space Mono', ui-monospace, monospace");
+      fontStack = `"${settings.fontFamily}", ui-serif, Georgia, Cambria, "Times New Roman", serif`;
     } else {
-      document.documentElement.style.setProperty('--font-sans', "'Inter', ui-sans-serif, system-ui, sans-serif");
+      fontStack = `"${settings.fontFamily}", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
     }
+    
+    document.documentElement.style.setProperty('--font-sans', fontStack);
+    document.body.style.fontFamily = fontStack;
   };
 
   const fetchTheme = async () => {

@@ -16,11 +16,42 @@ interface ThemeColors {
 }
 
 const FONT_OPTIONS = [
-  { value: 'Inter', label: 'Inter (Sans-serif)' },
-  { value: 'System', label: 'Sistema (Padrão)' },
-  { value: 'Lora', label: 'Lora (Serif)' },
-  { value: 'Space Mono', label: 'Space Mono (Monospace)' },
+  // Sans-serif
+  { value: 'Roboto', label: 'Roboto', category: 'Sans-serif' },
+  { value: 'Open Sans', label: 'Open Sans', category: 'Sans-serif' },
+  { value: 'Inter', label: 'Inter', category: 'Sans-serif' },
+  { value: 'Montserrat', label: 'Montserrat', category: 'Sans-serif' },
+  { value: 'Lato', label: 'Lato', category: 'Sans-serif' },
+  { value: 'Poppins', label: 'Poppins', category: 'Sans-serif' },
+  { value: 'Noto Sans', label: 'Noto Sans', category: 'Sans-serif' },
+  { value: 'Raleway', label: 'Raleway', category: 'Sans-serif' },
+  { value: 'Oswald', label: 'Oswald', category: 'Sans-serif' },
+  { value: 'DM Sans', label: 'DM Sans', category: 'Sans-serif' },
+  // Serif
+  { value: 'Lora', label: 'Lora', category: 'Serif' },
+  // Monospace
+  { value: 'Roboto Mono', label: 'Roboto Mono', category: 'Monospace' },
+  { value: 'Source Code Pro', label: 'Source Code Pro', category: 'Monospace' },
+  { value: 'Space Mono', label: 'Space Mono', category: 'Monospace' },
 ];
+
+// Map font names to their Google Fonts import parameters
+const GOOGLE_FONTS_PREVIEW: Record<string, string> = {
+  'Inter': 'Inter:wght@400;500;600;700',
+  'Roboto': 'Roboto:wght@400;500;700',
+  'Open Sans': 'Open+Sans:wght@400;500;600;700',
+  'Montserrat': 'Montserrat:wght@400;500;600;700',
+  'Lato': 'Lato:wght@400;700',
+  'Poppins': 'Poppins:wght@400;500;600;700',
+  'Noto Sans': 'Noto+Sans:wght@400;500;600;700',
+  'Raleway': 'Raleway:wght@400;500;600;700',
+  'Oswald': 'Oswald:wght@400;500;600;700',
+  'DM Sans': 'DM+Sans:wght@400;500;600;700',
+  'Lora': 'Lora:wght@400;500;600;700',
+  'Roboto Mono': 'Roboto+Mono:wght@400;500;700',
+  'Source Code Pro': 'Source+Code+Pro:wght@400;500;600;700',
+  'Space Mono': 'Space+Mono:wght@400;700',
+};
 
 const COLOR_PRESETS = [
   { name: 'Padrão (Cinza)', primary: '266 4% 20.8%', secondary: '248 0.7% 96.8%', accent: '248 0.7% 96.8%' },
@@ -115,21 +146,40 @@ export const ThemeSettings: React.FC = () => {
     fetchTheme();
   }, []);
 
-  // Apply theme to CSS variables
+  // Apply theme to CSS variables and load fonts dynamically
   useEffect(() => {
     document.documentElement.style.setProperty('--primary', colors.primary);
     document.documentElement.style.setProperty('--secondary', colors.secondary);
     document.documentElement.style.setProperty('--accent', colors.accent);
     
-    if (fontFamily === 'System') {
-      document.documentElement.style.setProperty('--font-sans', "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif");
-    } else if (fontFamily === 'Lora') {
-      document.documentElement.style.setProperty('--font-sans', "'Lora', ui-serif, Georgia, serif");
-    } else if (fontFamily === 'Space Mono') {
-      document.documentElement.style.setProperty('--font-sans', "'Space Mono', ui-monospace, monospace");
-    } else {
-      document.documentElement.style.setProperty('--font-sans', "'Inter', ui-sans-serif, system-ui, sans-serif");
+    // Load Google Font dynamically for preview
+    const fontParam = GOOGLE_FONTS_PREVIEW[fontFamily];
+    if (fontParam) {
+      const linkId = 'theme-settings-preview-font';
+      let linkElement = document.getElementById(linkId) as HTMLLinkElement | null;
+      
+      if (linkElement) {
+        linkElement.href = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
+      } else {
+        linkElement = document.createElement('link');
+        linkElement.id = linkId;
+        linkElement.rel = 'stylesheet';
+        linkElement.href = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
+        document.head.appendChild(linkElement);
+      }
     }
+    
+    // Build font stack based on font type
+    let fontStack: string;
+    if (['Roboto Mono', 'Source Code Pro', 'Space Mono'].includes(fontFamily)) {
+      fontStack = `"${fontFamily}", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
+    } else if (fontFamily === 'Lora') {
+      fontStack = `"${fontFamily}", ui-serif, Georgia, Cambria, "Times New Roman", serif`;
+    } else {
+      fontStack = `"${fontFamily}", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+    }
+    
+    document.documentElement.style.setProperty('--font-sans', fontStack);
   }, [colors, fontFamily]);
 
   const handlePresetChange = (presetName: string) => {
@@ -245,11 +295,22 @@ export const ThemeSettings: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {FONT_OPTIONS.map((font) => (
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Sans-serif</div>
+              {FONT_OPTIONS.filter(f => f.category === 'Sans-serif').map((font) => (
                 <SelectItem key={font.value} value={font.value}>
-                  <span style={{ fontFamily: font.value === 'System' ? 'inherit' : font.value }}>
-                    {font.label}
-                  </span>
+                  <span style={{ fontFamily: `"${font.value}", sans-serif` }}>{font.label}</span>
+                </SelectItem>
+              ))}
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Serif</div>
+              {FONT_OPTIONS.filter(f => f.category === 'Serif').map((font) => (
+                <SelectItem key={font.value} value={font.value}>
+                  <span style={{ fontFamily: `"${font.value}", serif` }}>{font.label}</span>
+                </SelectItem>
+              ))}
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Monospace</div>
+              {FONT_OPTIONS.filter(f => f.category === 'Monospace').map((font) => (
+                <SelectItem key={font.value} value={font.value}>
+                  <span style={{ fontFamily: `"${font.value}", monospace` }}>{font.label}</span>
                 </SelectItem>
               ))}
             </SelectContent>
