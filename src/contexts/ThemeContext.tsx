@@ -35,6 +35,8 @@ const GOOGLE_FONTS_MAP: Record<string, string> = {
   'Raleway': 'Raleway:wght@400;500;600;700',
   'Oswald': 'Oswald:wght@400;500;600;700',
   'DM Sans': 'DM+Sans:wght@400;500;600;700',
+  'Stack Sans': 'Stack:wght@400;500;600;700',
+  'Nata Sans': 'Nata:wght@400;500;600;700',
   'Lora': 'Lora:wght@400;500;600;700',
   'Roboto Mono': 'Roboto+Mono:wght@400;500;700',
   'Source Code Pro': 'Source+Code+Pro:wght@400;500;600;700',
