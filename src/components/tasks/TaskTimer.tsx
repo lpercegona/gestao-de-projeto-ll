@@ -4,6 +4,7 @@ import { Play, Pause, Square, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
+import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
 import { toast } from 'sonner';
 
 interface TaskTimerProps {
@@ -29,7 +30,15 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
-  const { hasActiveTimer, timerState, syncWithTaskTimer, pauseGlobalTimer, resumeGlobalTimer, resetTimer } = useGlobalTimer();
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const { 
+    hasActiveTimer, 
+    timerState, 
+    syncWithTaskTimer, 
+    pauseGlobalTimer, 
+    resumeGlobalTimer, 
+    completeGlobalTimer,
+  } = useGlobalTimer();
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -89,15 +98,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     resumeGlobalTimer();
   };
 
-  const handleStop = async () => {
-    // Reset global timer when completing registration
-    resetTimer();
-    setLoading(true);
-    try {
-      await onStop();
-    } finally {
-      setLoading(false);
-    }
+  const handleStop = () => {
+    // Use the global timer complete dialog
+    completeGlobalTimer();
   };
 
   const handleComplete = async () => {
