@@ -27,12 +27,14 @@ interface GlobalTimerContextType {
   pauseGlobalTimer: () => void;
   resumeGlobalTimer: () => void;
   completeGlobalTimer: () => void;
+  cancelCompleteDialog: () => void;
   hasActiveTimer: boolean;
   showCompleteDialog: boolean;
   setShowCompleteDialog: (show: boolean) => void;
   getElapsedHours: () => number;
   resetTimer: () => void;
   syncWithTaskTimer: (taskId: string, startedAt: string) => void;
+  wasPausedBeforeComplete: boolean;
 }
 
 const GlobalTimerContext = createContext<GlobalTimerContextType | undefined>(undefined);
@@ -107,6 +109,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const { data } = useData();
   const [timerState, setTimerState] = useState<GlobalTimerState>(() => loadPersistedState());
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [wasPausedBeforeComplete, setWasPausedBeforeComplete] = useState(false);
 
   // Sync with any active task timer from the database
   useEffect(() => {
@@ -192,8 +195,38 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [timerState]);
 
   const completeGlobalTimer = useCallback(() => {
+    // Store if timer was paused before showing dialog
+    setWasPausedBeforeComplete(timerState.isPaused);
+    
+    // Auto-pause timer when showing complete dialog
+    if (!timerState.isPaused && timerState.isRunning) {
+      const newState: GlobalTimerState = {
+        ...timerState,
+        isPaused: true,
+        pausedElapsed: timerState.elapsedSeconds,
+        startTime: null,
+      };
+      setTimerState(newState);
+      persistState(newState);
+    }
+    
     setShowCompleteDialog(true);
-  }, []);
+  }, [timerState]);
+
+  const cancelCompleteDialog = useCallback(() => {
+    setShowCompleteDialog(false);
+    
+    // Resume timer only if it wasn't paused before opening dialog
+    if (!wasPausedBeforeComplete && timerState.isPaused) {
+      const newState: GlobalTimerState = {
+        ...timerState,
+        isPaused: false,
+        startTime: Date.now(),
+      };
+      setTimerState(newState);
+      persistState(newState);
+    }
+  }, [wasPausedBeforeComplete, timerState]);
 
   const resetTimer = useCallback(() => {
     setTimerState(initialState);
@@ -231,12 +264,14 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         pauseGlobalTimer,
         resumeGlobalTimer,
         completeGlobalTimer,
+        cancelCompleteDialog,
         hasActiveTimer,
         showCompleteDialog,
         setShowCompleteDialog,
         getElapsedHours,
         resetTimer,
         syncWithTaskTimer,
+        wasPausedBeforeComplete,
       }}
     >
       {children}

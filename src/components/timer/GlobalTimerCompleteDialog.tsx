@@ -35,7 +35,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   open,
   onOpenChange,
 }) => {
-  const { timerState, getElapsedHours, resetTimer } = useGlobalTimer();
+  const { timerState, getElapsedHours, resetTimer, cancelCompleteDialog } = useGlobalTimer();
   const { data, createTimeEntry, createTask, createProject, stopTaskTimer, cancelTaskTimer } = useData();
 
   const [linkMode, setLinkMode] = useState<'existing' | 'new'>('existing');
@@ -72,7 +72,8 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   }, [data.projects, data.tasks, data.clients]);
 
   const handleClose = () => {
-    onOpenChange(false);
+    // Use cancelCompleteDialog to handle resuming timer if needed
+    cancelCompleteDialog();
     setSelectedTaskId('');
     setDescription('');
     setEntryType('task');
