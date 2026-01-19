@@ -13,6 +13,12 @@ interface Client {
   owner_id: string | null;
   created_by: string | null;
   created_at: string;
+  pipeline_status: string;
+  company: string | null;
+  phone: string | null;
+  source: string | null;
+  notes: string | null;
+  converted_at: string | null;
 }
 
 interface ProjectColumn {
@@ -98,7 +104,7 @@ interface DataContextType {
   loading: boolean;
   refreshData: () => Promise<void>;
   // Clients
-  createClient: (client: Omit<Client, 'id' | 'access_token' | 'created_at' | 'user_id' | 'owner_id' | 'created_by'>) => Promise<Client | null>;
+  createClient: (client: Pick<Client, 'name' | 'email' | 'contracted_hours'> & Partial<Pick<Client, 'pipeline_status' | 'company' | 'phone' | 'source' | 'notes'>>) => Promise<Client | null>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<Client | null>;
   deleteClient: (id: string) => Promise<boolean>;
   // Projects

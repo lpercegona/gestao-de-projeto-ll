@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Client {
@@ -33,11 +35,17 @@ interface Client {
   email: string;
   contracted_hours: number;
   access_token: string;
+  pipeline_status?: string;
+  company?: string | null;
+  phone?: string | null;
+  source?: string | null;
+  notes?: string | null;
 }
 
 export const Clients: React.FC = () => {
   const navigate = useNavigate();
   const { data, loading, createClient, updateClient, deleteClient, getClientHours } = useData();
+  const [activeTab, setActiveTab] = useState<'active' | 'negotiation'>('active');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -48,6 +56,18 @@ export const Clients: React.FC = () => {
     email: '',
     contracted_hours: 0,
   });
+
+  // Filter clients by pipeline status
+  const filteredClients = useMemo(() => {
+    if (activeTab === 'active') {
+      return data.clients.filter(c => c.pipeline_status === 'active');
+    } else {
+      return data.clients.filter(c => ['lead', 'proposal'].includes(c.pipeline_status || 'lead'));
+    }
+  }, [data.clients, activeTab]);
+
+  const activeCount = data.clients.filter(c => c.pipeline_status === 'active').length;
+  const negotiationCount = data.clients.filter(c => ['lead', 'proposal'].includes(c.pipeline_status || 'lead')).length;
 
   const handleOpenDialog = (client?: Client) => {
     if (client) {
@@ -97,6 +117,19 @@ export const Clients: React.FC = () => {
     );
   }
 
+  const getPipelineBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800">Ativo</Badge>;
+      case 'proposal':
+        return <Badge className="bg-blue-100 text-blue-800">Em Negociação</Badge>;
+      case 'churned':
+        return <Badge variant="destructive">Inativo</Badge>;
+      default:
+        return <Badge variant="secondary">Lead</Badge>;
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -105,16 +138,27 @@ export const Clients: React.FC = () => {
       />
 
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-foreground">
-          {data.clients.length} {data.clients.length === 1 ? 'cliente' : 'clientes'}
-        </h2>
-        <Button onClick={() => handleOpenDialog()} size="sm" className="px-3">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'negotiation')} className="flex-1">
+          <TabsList>
+            <TabsTrigger value="active" className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Ativos</span>
+              <Badge variant="secondary" className="ml-1">{activeCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="negotiation" className="flex items-center gap-2">
+              <Handshake className="w-4 h-4" />
+              <span className="hidden sm:inline">Em Negociação</span>
+              <Badge variant="secondary" className="ml-1">{negotiationCount}</Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button onClick={() => handleOpenDialog()} size="sm" className="px-3 ml-4">
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline ml-2">Novo Cliente</span>
         </Button>
       </div>
 
-      {data.clients.length === 0 ? (
+      {filteredClients.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground mb-4">Nenhum cliente cadastrado ainda.</p>
@@ -126,7 +170,7 @@ export const Clients: React.FC = () => {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.clients.map((client) => {
+          {filteredClients.map((client) => {
             const usedHours = getClientHours(client.id);
             const projectCount = data.projects.filter(p => p.client_id === client.id).length;
             return (
