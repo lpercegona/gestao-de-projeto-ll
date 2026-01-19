@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, CheckCircle } from 'lucide-react';
+import { Play, Pause, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
@@ -27,7 +27,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
-  const { hasActiveTimer, timerState, syncWithTaskTimer } = useGlobalTimer();
+  const { hasActiveTimer, timerState, syncWithTaskTimer, pauseGlobalTimer, resumeGlobalTimer } = useGlobalTimer();
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -83,6 +83,14 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     }
   };
 
+  const handlePause = () => {
+    pauseGlobalTimer();
+  };
+
+  const handleResume = () => {
+    resumeGlobalTimer();
+  };
+
   const handleStop = async () => {
     setLoading(true);
     try {
@@ -102,27 +110,31 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   };
 
   const isTimerActive = !!activeTimer;
-  const showPlayButton = taskStatus !== 'completed' && !isTimerActive;
-  const showPauseButton = isTimerActive;
-  const showCompleteButton = taskStatus === 'in_progress';
+  const isThisTaskTimer = timerState.taskId === taskId;
+  const isPaused = isThisTaskTimer && timerState.isPaused;
+  const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isPaused;
+  const showTimerControls = isTimerActive || isPaused;
+  const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isPaused;
 
   // Check if another timer is running (disable play if so)
   const anotherTimerRunning = hasActiveTimer && timerState.taskId !== taskId && !isTimerActive;
 
+  // Get display time - use global timer elapsed if paused, otherwise local elapsed
+  const displayTime = isPaused ? timerState.elapsedSeconds : elapsedSeconds;
+
   return (
     <div className="flex items-center gap-1 sm:gap-2">
-      {/* Timer display when active */}
-      {isTimerActive && (
+      {/* Timer display when active or paused */}
+      {showTimerControls && (
         <div className={cn(
           "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md font-mono text-xs sm:text-sm font-medium",
-          "bg-primary/10 text-primary",
-          "animate-pulse"
+          isPaused ? "bg-orange-100 text-orange-600" : "bg-primary/10 text-primary animate-pulse"
         )}>
-          {formatTime(elapsedSeconds)}
+          {formatTime(displayTime)}
         </div>
       )}
 
-      {/* Play button */}
+      {/* Play button - start timer */}
       {showPlayButton && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -146,26 +158,62 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
         </Tooltip>
       )}
 
-      {/* Pause button */}
-      {showPauseButton && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleStop}
-              disabled={loading || disabled}
-              className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 px-2 sm:px-3"
-            >
-              <Pause className="w-4 h-4" />
-              <span className="hidden sm:inline ml-1">Pausar</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="sm:hidden">Pausar</TooltipContent>
-        </Tooltip>
+      {/* Timer controls: Pause/Resume and Stop */}
+      {showTimerControls && (
+        <>
+          {isPaused ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResume}
+                  disabled={loading || disabled}
+                  className="text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
+                >
+                  <Play className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-1">Retomar</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="sm:hidden">Retomar</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePause}
+                  disabled={loading || disabled}
+                  className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 px-2 sm:px-3"
+                >
+                  <Pause className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-1">Pausar</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="sm:hidden">Pausar</TooltipContent>
+            </Tooltip>
+          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleStop}
+                disabled={loading || disabled}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
+              >
+                <Square className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1">Concluir</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="sm:hidden">Concluir</TooltipContent>
+          </Tooltip>
+        </>
       )}
 
-      {/* Complete button */}
+      {/* Complete task button (when not timing) */}
       {showCompleteButton && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -176,11 +224,11 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               disabled={loading || disabled}
               className="text-green-600 hover:text-green-600 hover:bg-green-100 px-2 sm:px-3"
             >
-              <CheckCircle className="w-4 h-4" />
-              <span className="hidden sm:inline ml-1">Concluir</span>
+              <Square className="w-4 h-4 fill-current" />
+              <span className="hidden sm:inline ml-1">Finalizar</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="sm:hidden">Concluir</TooltipContent>
+          <TooltipContent className="sm:hidden">Finalizar Tarefa</TooltipContent>
         </Tooltip>
       )}
     </div>
