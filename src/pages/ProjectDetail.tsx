@@ -515,11 +515,11 @@ export const ProjectDetail: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Pause Timer Dialog */}
+      {/* Complete Timer Dialog */}
       <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Pausar Timer</DialogTitle>
+            <DialogTitle>Concluir Registro</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -534,28 +534,43 @@ export const ProjectDetail: React.FC = () => {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} disabled={submitting}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!pausingTaskId) return;
-                setSubmitting(true);
-                const result = await stopTaskTimer(pausingTaskId, pauseDescription.trim() || undefined);
-                if (result) {
-                  toast.success(`${result.hours}h registradas!`);
-                }
-                setSubmitting(false);
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="ghost" 
+              onClick={() => {
                 setIsPauseDialogOpen(false);
                 setPausingTaskId(null);
                 setPauseDescription('');
-              }}
+              }} 
               disabled={submitting}
+              className="text-destructive hover:text-destructive sm:mr-auto"
             >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Confirmar Pausa
+              Descartar
             </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} disabled={submitting} className="flex-1 sm:flex-initial">
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!pausingTaskId) return;
+                  setSubmitting(true);
+                  const result = await stopTaskTimer(pausingTaskId, pauseDescription.trim() || undefined);
+                  if (result) {
+                    toast.success(`${result.hours}h registradas!`);
+                  }
+                  setSubmitting(false);
+                  setIsPauseDialogOpen(false);
+                  setPausingTaskId(null);
+                  setPauseDescription('');
+                }}
+                disabled={submitting}
+                className="flex-1 sm:flex-initial"
+              >
+                {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Registrar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
