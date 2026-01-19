@@ -178,41 +178,51 @@ export const HeaderTimerTaskInfo: React.FC = () => {
 
   if (!hasActiveTimer) return null;
 
+  const displayText = linkedInfo 
+    ? `${linkedInfo.taskName} • ${linkedInfo.projectName} • ${linkedInfo.clientName}`
+    : 'Registro não vinculado';
+
+  const shouldAnimate = displayText.length > 20;
+
   return (
     <div 
       className={cn(
-        "flex items-center gap-2 text-xs text-muted-foreground overflow-hidden",
+        "flex items-center gap-2 text-xs overflow-hidden",
         "animate-in slide-in-from-left duration-300"
       )}
     >
-      {linkedInfo ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 max-w-[200px] truncate">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1.5 max-w-[200px] overflow-hidden">
+            {linkedInfo ? (
               <LinkIcon className="h-3 w-3 flex-shrink-0 text-primary" />
-              <span className="truncate font-medium text-foreground">{linkedInfo.taskName}</span>
+            ) : (
+              <Clock className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+            )}
+            <div className="overflow-hidden whitespace-nowrap">
+              <span 
+                className={cn(
+                  "inline-block font-medium",
+                  linkedInfo ? "text-foreground" : "text-muted-foreground italic",
+                  shouldAnimate && "animate-marquee"
+                )}
+              >
+                {displayText}
+              </span>
             </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="max-w-[250px]">
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[250px]">
+          {linkedInfo ? (
             <div className="space-y-1 text-xs">
               <p className="font-medium">{linkedInfo.taskName}</p>
               <p className="text-muted-foreground">{linkedInfo.projectName} • {linkedInfo.clientName}</p>
             </div>
-          </TooltipContent>
-        </Tooltip>
-      ) : (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate italic">Sem tarefa vinculada</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            Registro não vinculado a nenhuma tarefa
-          </TooltipContent>
-        </Tooltip>
-      )}
+          ) : (
+            <span>Registro não vinculado a nenhuma tarefa</span>
+          )}
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 };
