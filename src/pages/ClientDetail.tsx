@@ -1304,60 +1304,108 @@ export const ClientDetail: React.FC = () => {
                       <Mail className="w-4 h-4" />
                       Acesso do Cliente ({clientUsers.length})
                     </CardTitle>
-                    <Button size="sm" onClick={() => setIsCreateUserDialogOpen(true)}>
+                    <Button size="sm" onClick={() => {
+                      // Pre-fill with client email if no users yet
+                      if (clientUsers.length === 0 && client?.email) {
+                        setNewClientUserEmail(client.email);
+                        setNewClientUserName(client.name);
+                      }
+                      setIsCreateUserDialogOpen(true);
+                    }}>
                       <UserPlus className="w-4 h-4 mr-2" />
                       Adicionar Acesso
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {clientUsers.length > 0 ? (
-                    <div className="space-y-2">
-                      {clientUsers.map((clientUser) => (
-                        <div key={clientUser.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-medium text-primary">
-                                {clientUser.profile?.full_name?.charAt(0)?.toUpperCase() || clientUser.profile?.email?.charAt(0)?.toUpperCase() || 'C'}
-                              </span>
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-foreground">{clientUser.profile?.full_name || 'Sem nome'}</p>
-                                {clientUser.is_primary && (
-                                  <Badge variant="outline" className="text-xs">Principal</Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground">{clientUser.profile?.email}</p>
-                            </div>
+                  {/* Show client's main email as pending if no linked user yet */}
+                  {clientUsers.length === 0 && client?.email && (
+                    <div className="mb-4 p-3 border border-dashed border-muted-foreground/30 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              {client.name?.charAt(0)?.toUpperCase() || client.email?.charAt(0)?.toUpperCase() || 'C'}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {clientUser.profile && getRoleBadge(clientUser.profile.role)}
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => clientUser.profile && handleOpenEditUser(clientUser.profile)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleRemoveClientUser(clientUser.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-foreground">{client.name}</p>
+                              <Badge variant="secondary" className="text-xs">Responsável</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{client.email}</p>
                           </div>
                         </div>
-                      ))}
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setNewClientUserEmail(client.email);
+                            setNewClientUserName(client.name);
+                            setIsCreateUserDialogOpen(true);
+                          }}
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Criar Acesso
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Este email ainda não possui acesso ao portal. Clique em "Criar Acesso" para gerar as credenciais.
+                      </p>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum usuário com acesso ao portal. Clique em "Adicionar Acesso" para criar uma conta.
-                    </p>
                   )}
+                  
+                  {clientUsers.length > 0 ? (
+                    <div className="space-y-2">
+                      {clientUsers.map((clientUser) => {
+                        const isMainEmail = clientUser.profile?.email?.toLowerCase() === client?.email?.toLowerCase();
+                        return (
+                          <div key={clientUser.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-sm font-medium text-primary">
+                                  {clientUser.profile?.full_name?.charAt(0)?.toUpperCase() || clientUser.profile?.email?.charAt(0)?.toUpperCase() || 'C'}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground">{clientUser.profile?.full_name || 'Sem nome'}</p>
+                                  {isMainEmail && (
+                                    <Badge variant="secondary" className="text-xs">Responsável</Badge>
+                                  )}
+                                  {clientUser.is_primary && !isMainEmail && (
+                                    <Badge variant="outline" className="text-xs">Principal</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{clientUser.profile?.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {clientUser.profile && getRoleBadge(clientUser.profile.role)}
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8"
+                                onClick={() => clientUser.profile && handleOpenEditUser(clientUser.profile)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              {!isMainEmail && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => handleRemoveClientUser(clientUser.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
 
