@@ -1,0 +1,168 @@
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Pencil, Trash2, Clock, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { TaskTimer } from '@/components/tasks/TaskTimer';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface TimeEntry {
+  id: string;
+  task_id: string;
+  hours: number;
+  description: string | null;
+  date: string;
+  created_by: string | null;
+}
+
+interface TaskTimer {
+  id: string;
+  task_id: string;
+  started_at: string;
+}
+
+interface TaskCardProps {
+  task: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+    created_by: string | null;
+  };
+  taskHours: number;
+  timeEntries: TimeEntry[];
+  activeTimer: TaskTimer | null;
+  getCreatorName: (userId: string | null) => string;
+  onEditTask: () => void;
+  onDeleteTask: () => void;
+  onRegisterTime: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string }) => void;
+  onStartTimer: () => Promise<void>;
+  onStopTimer: () => Promise<void>;
+  onCompleteTask: () => Promise<void>;
+  compact?: boolean;
+}
+
+export const TaskCard: React.FC<TaskCardProps> = ({
+  task,
+  taskHours,
+  timeEntries,
+  activeTimer,
+  getCreatorName,
+  onEditTask,
+  onDeleteTask,
+  onRegisterTime,
+  onStartTimer,
+  onStopTimer,
+  onCompleteTask,
+  compact = false,
+}) => {
+  const [entriesOpen, setEntriesOpen] = React.useState(false);
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pendente';
+      case 'in_progress': return 'Em Andamento';
+      case 'completed': return 'Concluída';
+      default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  return (
+    <div className="bg-card border rounded-lg p-3 group relative">
+      {/* Actions */}
+      <div className="absolute top-2 right-2 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEditTask}>
+          <Pencil className="w-3.5 h-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onDeleteTask}>
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
+      <div className="pr-16">
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <h4 className="font-medium text-sm text-foreground">{task.name}</h4>
+          {compact && (
+            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(task.status)}`}>
+              {getStatusLabel(task.status)}
+            </span>
+          )}
+        </div>
+
+        {task.description && !compact && (
+          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{task.description}</p>
+        )}
+
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <TaskTimer
+            taskId={task.id}
+            taskStatus={task.status}
+            activeTimer={activeTimer}
+            onStart={onStartTimer}
+            onStop={onStopTimer}
+            onComplete={onCompleteTask}
+          />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => onRegisterTime(task.id)} 
+            className="h-7 px-2 text-xs"
+          >
+            <Clock className="w-3.5 h-3.5 mr-1" />
+            Registrar
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{taskHours}h</span>
+          <span>por {getCreatorName(task.created_by)}</span>
+        </div>
+      </div>
+
+      {/* Time entries dropdown */}
+      {timeEntries.length > 0 && (
+        <Collapsible open={entriesOpen} onOpenChange={setEntriesOpen} className="mt-2 pt-2 border-t">
+          <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground w-full">
+            <ChevronDown className={`w-3 h-3 transition-transform ${entriesOpen ? 'rotate-180' : ''}`} />
+            {timeEntries.length} {timeEntries.length === 1 ? 'registro' : 'registros'} de horas
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 space-y-1.5">
+            {timeEntries.map((entry) => (
+              <div 
+                key={entry.id} 
+                className="group/entry relative text-xs bg-muted/50 rounded px-2 py-1.5 pr-8 cursor-pointer hover:bg-muted"
+                onClick={() => onRegisterTime(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date })}
+              >
+                <div className="absolute top-1 right-1 md:opacity-0 md:group-hover/entry:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" className="h-5 w-5">
+                    <Pencil className="w-2.5 h-2.5" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="font-medium text-foreground">{entry.hours}h</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">{format(parseISO(entry.date), "dd/MM", { locale: ptBR })}</span>
+                  {entry.description && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-muted-foreground truncate max-w-[100px]">{entry.description}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </div>
+  );
+};

@@ -72,6 +72,14 @@ interface UserProjectAccess {
   created_at: string;
 }
 
+interface KanbanStage {
+  id: string;
+  name: string;
+  order_position: number;
+  color: string;
+  is_default: boolean;
+}
+
 interface AppData {
   clients: Client[];
   projects: Project[];
@@ -80,6 +88,7 @@ interface AppData {
   projectColumns: ProjectColumn[];
   projectAccess: UserProjectAccess[];
   taskTimers: TaskTimer[];
+  kanbanStages: KanbanStage[];
 }
 
 interface DataContextType {
@@ -115,6 +124,8 @@ interface DataContextType {
   stopTaskTimer: (taskId: string, description?: string) => Promise<{ hours: number } | null>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
   completeTask: (taskId: string) => Promise<boolean>;
+  // Kanban stages
+  saveKanbanStages: (stages: Omit<KanbanStage, 'id' | 'is_default'>[]) => Promise<void>;
   // Utilities
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
@@ -132,6 +143,7 @@ const emptyData: AppData = {
   projectColumns: [],
   projectAccess: [],
   taskTimers: [],
+  kanbanStages: [],
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -150,7 +162,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       // Fetch all data in parallel
-      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes] = await Promise.all([
+      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes] = await Promise.all([
         supabase.from('clients').select('*').order('created_at', { ascending: false }),
         supabase.from('projects').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
@@ -159,6 +171,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('user_project_access').select('*'),
         supabase.from('profiles').select('user_id, full_name'),
         supabase.from('task_timers').select('*'),
+        supabase.from('kanban_stages').select('*').order('order_position', { ascending: true }),
       ]);
 
       // Build profiles map for creator names
@@ -184,6 +197,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         projectColumns: (columnsRes.data || []) as ProjectColumn[],
         projectAccess: (accessRes.data || []) as UserProjectAccess[],
         taskTimers: (timersRes.data || []) as TaskTimer[],
+        kanbanStages: (stagesRes.data || []) as KanbanStage[],
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -606,6 +620,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data.projectColumns.filter(col => col.client_id === clientId);
   };
 
+  // Kanban stages operations
+  const saveKanbanStages = async (stages: Omit<KanbanStage, 'id' | 'is_default'>[]): Promise<void> => {
+    if (!user) return;
+
+    // Delete existing custom stages (keep defaults)
+    await supabase
+      .from('kanban_stages')
+      .delete()
+      .eq('is_default', false)
+      .eq('owner_id', user.id);
+
+    // Insert new custom stages
+    if (stages.length > 0) {
+      const stagesToInsert = stages.map((stage, index) => ({
+        name: stage.name,
+        order_position: index,
+        color: stage.color,
+        is_default: false,
+        owner_id: user.id,
+      }));
+
+      await supabase.from('kanban_stages').insert(stagesToInsert);
+    }
+
+    await refreshData();
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -634,6 +675,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         stopTaskTimer,
         getActiveTimer,
         completeTask,
+        saveKanbanStages,
         getProjectHours,
         getClientHours,
         getTaskHours,
