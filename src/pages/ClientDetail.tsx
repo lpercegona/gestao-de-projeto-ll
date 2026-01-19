@@ -57,7 +57,12 @@ import {
   XCircle,
   FileSignature,
   Pencil,
+  Plus,
+  UserPlus,
+  Mail,
+  Trash2,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -141,6 +146,20 @@ export const ClientDetail: React.FC = () => {
     source: '',
     notes: '',
   });
+
+  // Client user management state
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [clientUserData, setClientUserData] = useState<UserProfile | null>(null);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [editingUserData, setEditingUserData] = useState<UserProfile | null>(null);
+  const [editUserSubmitting, setEditUserSubmitting] = useState(false);
+  const [editUserForm, setEditUserForm] = useState({ full_name: '' });
+  
+  // Collaborator management
+  const [allCollaborators, setAllCollaborators] = useState<UserProfile[]>([]);
+  const [isAddCollaboratorDialogOpen, setIsAddCollaboratorDialogOpen] = useState(false);
+  const [selectedCollaborator, setSelectedCollaborator] = useState<string>('');
 
   const client = data.clients.find(c => c.id === clientId);
   const clientProjects = data.projects.filter(p => p.client_id === clientId);
@@ -242,6 +261,35 @@ export const ClientDetail: React.FC = () => {
         });
         
         setTeamMembers(members);
+        
+        // Find the client user specifically
+        if (clientProfile) {
+          const clientRole = (rolesData || []).find(r => r.user_id === clientProfile.user_id);
+          setClientUserData({
+            user_id: clientProfile.user_id,
+            full_name: clientProfile.full_name,
+            email: clientProfile.email,
+            role: clientRole?.role || null,
+          });
+        } else {
+          setClientUserData(null);
+        }
+        
+        // Get all collaborators for adding to projects
+        const collaboratorUsers = (profilesData || []).filter(p => {
+          const role = (rolesData || []).find(r => r.user_id === p.user_id);
+          return role?.role === 'collaborator' && !userIds.includes(p.user_id);
+        }).map(p => {
+          const role = (rolesData || []).find(r => r.user_id === p.user_id);
+          return {
+            user_id: p.user_id,
+            full_name: p.full_name,
+            email: p.email,
+            role: role?.role || null,
+          };
+        });
+        setAllCollaborators(collaboratorUsers);
+        
       } catch (error) {
         console.error('Error fetching team:', error);
       } finally {
@@ -503,6 +551,135 @@ export const ClientDetail: React.FC = () => {
       toast.error('Erro ao atualizar cliente');
     } finally {
       setEditSubmitting(false);
+    }
+  };
+
+  // Create client user account
+  const handleCreateClientUser = async () => {
+    if (!clientId || !client?.email) return;
+    setCreatingUser(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('create-client-user', {
+        body: { 
+          clientId, 
+          email: client.email, 
+          fullName: client.name 
+        },
+        headers: {
+          Authorization: `Bearer ${sessionData.session?.access_token}`
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const result = response.data;
+      if (result.success) {
+        if (result.isExisting) {
+          toast.success('Usuário existente vinculado ao cliente!');
+        } else if (result.temporaryPassword) {
+          toast.success(`Usuário criado! Senha temporária: ${result.temporaryPassword}`, {
+            duration: 10000,
+          });
+        } else {
+          toast.success('Usuário cliente criado com sucesso!');
+        }
+        setIsCreateUserDialogOpen(false);
+        // Refresh team data
+        setActiveTab('overview');
+        setTimeout(() => setActiveTab('team'), 100);
+      } else {
+        throw new Error(result.error || 'Erro ao criar usuário');
+      }
+    } catch (error) {
+      console.error('Error creating client user:', error);
+      toast.error('Erro ao criar usuário cliente');
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  // Edit client user profile
+  const handleOpenEditUser = (member: UserProfile) => {
+    setEditingUserData(member);
+    setEditUserForm({ full_name: member.full_name || '' });
+    setIsEditUserDialogOpen(true);
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUserData) return;
+    setEditUserSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: editUserForm.full_name })
+        .eq('user_id', editingUserData.user_id);
+
+      if (error) throw error;
+      toast.success('Perfil atualizado com sucesso!');
+      setIsEditUserDialogOpen(false);
+      // Refresh team data
+      setActiveTab('overview');
+      setTimeout(() => setActiveTab('team'), 100);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Erro ao atualizar perfil');
+    } finally {
+      setEditUserSubmitting(false);
+    }
+  };
+
+  // Add collaborator to client projects
+  const handleAddCollaborator = async () => {
+    if (!selectedCollaborator || clientProjects.length === 0) return;
+    try {
+      // Grant access to all client projects
+      const insertData = clientProjects.map(project => ({
+        user_id: selectedCollaborator,
+        project_id: project.id,
+        granted_by: user?.id || '',
+        can_edit: true,
+      }));
+
+      const { error } = await supabase
+        .from('user_project_access')
+        .upsert(insertData, { onConflict: 'user_id,project_id' });
+
+      if (error) throw error;
+      toast.success('Colaborador adicionado aos projetos do cliente!');
+      setIsAddCollaboratorDialogOpen(false);
+      setSelectedCollaborator('');
+      // Refresh team data
+      setActiveTab('overview');
+      setTimeout(() => setActiveTab('team'), 100);
+    } catch (error) {
+      console.error('Error adding collaborator:', error);
+      toast.error('Erro ao adicionar colaborador');
+    }
+  };
+
+  // Remove collaborator from client projects
+  const handleRemoveCollaborator = async (userId: string) => {
+    if (clientProjects.length === 0) return;
+    try {
+      const projectIds = clientProjects.map(p => p.id);
+      const { error } = await supabase
+        .from('user_project_access')
+        .delete()
+        .eq('user_id', userId)
+        .in('project_id', projectIds);
+
+      if (error) throw error;
+      toast.success('Colaborador removido dos projetos do cliente!');
+      // Refresh team data
+      setActiveTab('overview');
+      setTimeout(() => setActiveTab('team'), 100);
+    } catch (error) {
+      console.error('Error removing collaborator:', error);
+      toast.error('Erro ao remover colaborador');
     }
   };
 
@@ -982,46 +1159,156 @@ export const ClientDetail: React.FC = () => {
         </TabsContent>
 
         {/* Team Tab */}
-        <TabsContent value="team" className="space-y-4">
+        <TabsContent value="team" className="space-y-6">
           {teamLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : teamMembers.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">Nenhum membro da equipe vinculado a este cliente.</p>
-              </CardContent>
-            </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {teamMembers.map((member) => (
-                <Card key={member.user_id}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary">
-                          {member.full_name?.charAt(0)?.toUpperCase() || member.email?.charAt(0)?.toUpperCase() || 'U'}
-                        </span>
+            <>
+              {/* Client User Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      Acesso do Cliente
+                    </CardTitle>
+                    {!clientUserData && client?.email && (
+                      <Button size="sm" onClick={() => setIsCreateUserDialogOpen(true)}>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Criar Acesso
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {clientUserData ? (
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {clientUserData.full_name?.charAt(0)?.toUpperCase() || clientUserData.email?.charAt(0)?.toUpperCase() || 'C'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{clientUserData.full_name || 'Sem nome'}</p>
+                          <p className="text-sm text-muted-foreground">{clientUserData.email}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">
-                          {member.full_name || 'Sem nome'}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate">{member.email}</p>
+                      <div className="flex items-center gap-2">
+                        {getRoleBadge(clientUserData.role)}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleOpenEditUser(clientUserData)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                    {getRoleBadge(member.role)}
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      {client?.email 
+                        ? 'Nenhum usuário vinculado. Clique em "Criar Acesso" para gerar uma conta de acesso ao portal.'
+                        : 'Adicione um email ao cliente para criar uma conta de acesso.'}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Collaborators Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Colaboradores ({teamMembers.filter(m => m.role === 'collaborator').length})
+                    </CardTitle>
+                    {allCollaborators.length > 0 && (
+                      <Button size="sm" variant="outline" onClick={() => setIsAddCollaboratorDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {teamMembers.filter(m => m.role === 'collaborator').length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhum colaborador vinculado aos projetos deste cliente.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {teamMembers.filter(m => m.role === 'collaborator').map((member) => (
+                        <div key={member.user_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-secondary/20 flex items-center justify-center">
+                              <span className="text-xs font-medium text-secondary-foreground">
+                                {member.full_name?.charAt(0)?.toUpperCase() || member.email?.charAt(0)?.toUpperCase() || 'C'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground text-sm">{member.full_name || 'Sem nome'}</p>
+                              <p className="text-xs text-muted-foreground">{member.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => handleOpenEditUser(member)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => handleRemoveCollaborator(member.user_id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Admins Section */}
+              {teamMembers.filter(m => m.role === 'admin' || m.role === 'master_admin').length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Administradores</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {teamMembers.filter(m => m.role === 'admin' || m.role === 'master_admin').map((member) => (
+                        <div key={member.user_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-xs font-medium text-primary">
+                                {member.full_name?.charAt(0)?.toUpperCase() || member.email?.charAt(0)?.toUpperCase() || 'A'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground text-sm">{member.full_name || 'Sem nome'}</p>
+                              <p className="text-xs text-muted-foreground">{member.email}</p>
+                            </div>
+                          </div>
+                          {getRoleBadge(member.role)}
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+              )}
+            </>
           )}
-          
-          <Button variant="outline" onClick={() => navigate('/users')}>
-            Gerenciar usuários
-          </Button>
         </TabsContent>
       </Tabs>
 
@@ -1145,6 +1432,131 @@ export const ClientDetail: React.FC = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Client User Dialog */}
+      <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar Acesso do Cliente</DialogTitle>
+            <DialogDescription>
+              Um usuário será criado com o email do cliente ({client?.email}) para acessar o portal.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              O cliente receberá uma senha temporária que poderá ser alterada posteriormente. 
+              O acesso permitirá visualizar projetos, solicitar novos projetos e acompanhar relatórios.
+            </p>
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-3">
+                <Mail className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground">{client?.name}</p>
+                  <p className="text-sm text-muted-foreground">{client?.email}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)} disabled={creatingUser}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateClientUser} disabled={creatingUser}>
+              {creatingUser ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <UserPlus className="w-4 h-4 mr-2" />
+              )}
+              Criar Acesso
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditUser}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="user-email">Email</Label>
+                <Input
+                  id="user-email"
+                  value={editingUserData?.email || ''}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="user-full-name">Nome Completo</Label>
+                <Input
+                  id="user-full-name"
+                  value={editUserForm.full_name}
+                  onChange={(e) => setEditUserForm({ full_name: e.target.value })}
+                  disabled={editUserSubmitting}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsEditUserDialogOpen(false)} disabled={editUserSubmitting}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editUserSubmitting}>
+                {editUserSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                Salvar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Collaborator Dialog */}
+      <Dialog open={isAddCollaboratorDialogOpen} onOpenChange={setIsAddCollaboratorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Colaborador</DialogTitle>
+            <DialogDescription>
+              Selecione um colaborador para vincular aos projetos deste cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-2">
+              <Label>Colaborador</Label>
+              <Select value={selectedCollaborator} onValueChange={setSelectedCollaborator}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um colaborador..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allCollaborators.map((collab) => (
+                    <SelectItem key={collab.user_id} value={collab.user_id}>
+                      {collab.full_name || collab.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {clientProjects.length === 0 && (
+              <p className="text-sm text-yellow-600 mt-4">
+                Este cliente não possui projetos. Crie um projeto primeiro.
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddCollaboratorDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddCollaborator} disabled={!selectedCollaborator || clientProjects.length === 0}>
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
