@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
+import { toast } from '@/components/ui/use-toast';
 
 interface TaskTimerProps {
   taskId: string;
@@ -25,6 +27,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
+  const { hasActiveTimer, timerState, syncWithTaskTimer } = useGlobalTimer();
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -47,6 +50,13 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     return () => clearInterval(interval);
   }, [activeTimer]);
 
+  // Sync with global timer when this task has an active timer
+  useEffect(() => {
+    if (activeTimer && timerState.taskId !== taskId) {
+      syncWithTaskTimer(taskId, activeTimer.started_at);
+    }
+  }, [activeTimer, taskId, syncWithTaskTimer, timerState.taskId]);
+
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -55,6 +65,16 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   };
 
   const handleStart = async () => {
+    // Check if there's already an active global timer (either standalone or from another task)
+    if (hasActiveTimer && timerState.taskId !== taskId) {
+      toast({
+        title: 'Timer em andamento',
+        description: 'Já existe um cronômetro ativo. Finalize-o antes de iniciar outro.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       await onStart();
@@ -86,6 +106,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const showPauseButton = isTimerActive;
   const showCompleteButton = taskStatus === 'in_progress';
 
+  // Check if another timer is running (disable play if so)
+  const anotherTimerRunning = hasActiveTimer && timerState.taskId !== taskId && !isTimerActive;
+
   return (
     <div className="flex items-center gap-1 sm:gap-2">
       {/* Timer display when active */}
@@ -107,14 +130,19 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleStart}
-              disabled={loading || disabled}
-              className="text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
+              disabled={loading || disabled || anotherTimerRunning}
+              className={cn(
+                "text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3",
+                anotherTimerRunning && "opacity-50 cursor-not-allowed"
+              )}
             >
               <Play className="w-4 h-4" />
               <span className="hidden sm:inline ml-1">Iniciar</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="sm:hidden">Iniciar</TooltipContent>
+          <TooltipContent className="sm:hidden">
+            {anotherTimerRunning ? 'Outro timer em andamento' : 'Iniciar'}
+          </TooltipContent>
         </Tooltip>
       )}
 

@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { GlobalTimerButton } from '@/components/timer/GlobalTimerButton';
 import LogoOras from '@/assets/logo-oras.svg';
 import SimboloOras from '@/assets/simbolo-oras.svg';
 
@@ -428,11 +429,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </button>
               <img src={LogoOras} alt="ORAS" className="h-6 w-auto" />
             </div>
-            <NotificationBell />
+            <div className="flex items-center gap-1">
+              <GlobalTimerButton />
+              <NotificationBell />
+            </div>
           </div>
 
-          {/* Desktop notification bell */}
-          <div className="hidden lg:flex fixed top-4 right-6 z-30">
+          {/* Desktop header buttons */}
+          <div className="hidden lg:flex fixed top-4 right-6 z-30 items-center gap-2">
+            <GlobalTimerButton />
             <NotificationBell />
           </div>
           
