@@ -24,6 +24,8 @@ import { SharedReport } from "@/pages/SharedReport";
 import { Preferences } from "@/pages/Preferences";
 import { ResetPassword } from "@/pages/ResetPassword";
 import { Landing } from "@/pages/Landing";
+import { Proposals } from "@/pages/Proposals";
+import { PublicProposal } from "@/pages/PublicProposal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/portal/:token" element={<ClientPortal />} />
               <Route path="/report/:token" element={<SharedReport />} />
+              <Route path="/proposal/:token" element={<PublicProposal />} />
               
               {/* Dashboard - accessible by admin and master_admin only */}
               <Route path="/" element={
@@ -88,6 +91,13 @@ const App = () => (
               <Route path="/requests" element={
                 <ProtectedRoute requiredRole="admin">
                   <ProjectRequests />
+                </ProtectedRoute>
+              } />
+              
+              {/* Proposals - admin only */}
+              <Route path="/proposals" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Proposals />
                 </ProtectedRoute>
               } />
               
