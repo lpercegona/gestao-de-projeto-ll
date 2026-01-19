@@ -4,6 +4,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, FolderKanban, ListTodo, Clock, Loader2 } from 'lucide-react';
 import { QuickTimeTracker } from '@/components/dashboard/QuickTimeTracker';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export const Dashboard: React.FC = () => {
   const { data, loading, getClientHours } = useData();
@@ -48,6 +50,26 @@ export const Dashboard: React.FC = () => {
 
   const recentProjects = data.projects.slice(0, 5);
 
+  // Get recent time entries with task, project, and client info
+  const recentTimeEntries = data.timeEntries.slice(0, 5).map(entry => {
+    const task = data.tasks.find(t => t.id === entry.task_id);
+    const project = task ? data.projects.find(p => p.id === task.project_id) : null;
+    const client = project ? data.clients.find(c => c.id === project.client_id) : null;
+    return {
+      ...entry,
+      taskName: task?.name || 'Tarefa não encontrada',
+      projectName: project?.name || 'Projeto não encontrado',
+      clientName: client?.name || 'Cliente não encontrado',
+    };
+  });
+
+  const formatHoursDisplay = (hours: number) => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}min`;
+  };
+
   return (
     <div>
       <PageHeader
@@ -74,7 +96,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Quick Timer + Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 mb-6">
         {/* Quick Timer */}
         <div className="lg:col-span-1">
           <QuickTimeTracker />
@@ -152,6 +174,45 @@ export const Dashboard: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Recent Time Entries */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Últimos Registros de Horas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentTimeEntries.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Nenhum registro de horas ainda.</p>
+          ) : (
+            <ul className="space-y-3">
+              {recentTimeEntries.map((entry) => (
+                <li key={entry.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-border last:border-0 gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground truncate">{entry.taskName}</p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {entry.projectName} • {entry.clientName}
+                    </p>
+                    {entry.description && (
+                      <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-1">{entry.description}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs text-muted-foreground">
+                      {format(parseISO(entry.date), "dd 'de' MMM", { locale: ptBR })}
+                    </span>
+                    <span className="text-sm font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
+                      {formatHoursDisplay(entry.hours)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
