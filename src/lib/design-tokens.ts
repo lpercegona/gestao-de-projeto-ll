@@ -8,6 +8,12 @@ export const ICON_SIZES = {
   xl: 'w-6 h-6',
 } as const;
 
+// Action button styles for edit/delete icons
+export const ACTION_BUTTON = {
+  size: 'h-6 w-6',
+  iconSize: 'w-3 h-3',
+} as const;
+
 export const TIMER_STYLES = {
   active: 'px-2 py-1 rounded-md font-mono text-xs font-medium bg-primary/10 text-primary animate-pulse',
   paused: 'px-2 py-1 rounded-md font-mono text-xs font-medium bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',

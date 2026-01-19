@@ -152,11 +152,11 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
               <div className="relative">
                 {isAdminOrMaster && (
                   <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEditProject(project); }}>
-                      <Pencil className="w-4 h-4" />
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEditProject(project); }}>
+                      <Pencil className="w-3 h-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteProject(project); }}>
-                      <Trash2 className="w-4 h-4" />
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteProject(project); }}>
+                      <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
                 )}

@@ -91,11 +91,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     <div className="bg-card border rounded-lg p-3 group relative">
       {/* Actions */}
       <div className="absolute top-2 right-2 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEditTask}>
-          <Pencil className="w-3.5 h-3.5" />
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEditTask}>
+          <Pencil className="w-3 h-3" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onDeleteTask}>
-          <Trash2 className="w-3.5 h-3.5" />
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={onDeleteTask}>
+          <Trash2 className="w-3 h-3" />
         </Button>
       </div>
 
@@ -159,7 +159,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 className="group/entry relative text-xs bg-muted/50 rounded px-2 py-1.5 pr-8 cursor-pointer hover:bg-muted"
                 onClick={() => onRegisterTime(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date, entry_type: entry.entry_type })}
               >
-                <div className="absolute top-1 right-1 md:opacity-0 md:group-hover/entry:opacity-100 transition-opacity">
+              <div className="absolute top-1 right-1 md:opacity-0 md:group-hover/entry:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-5 w-5">
                     <Pencil className="w-2.5 h-2.5" />
                   </Button>
