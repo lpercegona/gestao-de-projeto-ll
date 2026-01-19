@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,7 +59,7 @@ interface Client {
 export const Clients: React.FC = () => {
   const navigate = useNavigate();
   const { data, loading, createClient, updateClient, deleteClient, getClientHours } = useData();
-  const [activeTab, setActiveTab] = useState<'active' | 'negotiation'>('active');
+  const [activeTab, setActiveTab] = useState<'lead' | 'proposal' | 'active' | 'churned'>('lead');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -78,15 +78,13 @@ export const Clients: React.FC = () => {
 
   // Filter clients by pipeline status
   const filteredClients = useMemo(() => {
-    if (activeTab === 'active') {
-      return data.clients.filter(c => c.pipeline_status === 'active');
-    } else {
-      return data.clients.filter(c => ['lead', 'proposal'].includes(c.pipeline_status || 'lead'));
-    }
+    return data.clients.filter(c => (c.pipeline_status || 'lead') === activeTab);
   }, [data.clients, activeTab]);
 
+  const leadCount = data.clients.filter(c => (c.pipeline_status || 'lead') === 'lead').length;
+  const proposalCount = data.clients.filter(c => c.pipeline_status === 'proposal').length;
   const activeCount = data.clients.filter(c => c.pipeline_status === 'active').length;
-  const negotiationCount = data.clients.filter(c => ['lead', 'proposal'].includes(c.pipeline_status || 'lead')).length;
+  const churnedCount = data.clients.filter(c => c.pipeline_status === 'churned').length;
 
   const handleOpenDialog = (client?: Client) => {
     if (client) {
@@ -170,22 +168,32 @@ export const Clients: React.FC = () => {
         description="Gerencie seus clientes e horas contratadas"
       />
 
-      <div className="flex items-center justify-between mb-4">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'negotiation')} className="flex-1">
-          <TabsList>
-            <TabsTrigger value="active" className="flex items-center gap-2">
-              <UserCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Ativos</span>
-              <Badge variant="secondary" className="ml-1">{activeCount}</Badge>
+      <div className="flex items-center justify-between mb-4 gap-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'lead' | 'proposal' | 'active' | 'churned')} className="flex-1 overflow-x-auto">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2">
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Lead</span>
+              <Badge variant="secondary" className="ml-1">{leadCount}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="negotiation" className="flex items-center gap-2">
+            <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2">
               <Handshake className="w-4 h-4" />
               <span className="hidden sm:inline">Em Negociação</span>
-              <Badge variant="secondary" className="ml-1">{negotiationCount}</Badge>
+              <Badge variant="secondary" className="ml-1">{proposalCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="active" className="flex items-center gap-1 sm:gap-2">
+              <UserCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Ativo</span>
+              <Badge variant="secondary" className="ml-1">{activeCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="churned" className="flex items-center gap-1 sm:gap-2">
+              <UserX className="w-4 h-4" />
+              <span className="hidden sm:inline">Inativo</span>
+              <Badge variant="secondary" className="ml-1">{churnedCount}</Badge>
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button onClick={() => handleOpenDialog()} size="sm" className="px-3 ml-4">
+        <Button onClick={() => handleOpenDialog()} size="sm" className="px-3 shrink-0">
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline ml-2">Novo Cliente</span>
         </Button>
