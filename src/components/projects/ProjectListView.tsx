@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Pencil, Trash2, Plus, Users } from 'lucide-react';
+import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { TaskCard } from './TaskCard';
 import { Badge } from '@/components/ui/badge';
 
@@ -151,13 +157,27 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">
                 {isAdminOrMaster && (
-                  <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEditProject(project); }}>
-                      <Pencil className="w-3 h-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteProject(project); }}>
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                  <div className="absolute top-3 right-3 z-10">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                          <MoreVertical className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditProject(project); }}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => { e.stopPropagation(); onDeleteProject(project); }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
 

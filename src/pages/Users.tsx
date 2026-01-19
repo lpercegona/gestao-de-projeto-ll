@@ -40,7 +40,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Shield, User, UserCog, Users as UsersIcon, Pencil, Trash2, Plus } from 'lucide-react';
+import { Loader2, Shield, User, UserCog, Users as UsersIcon, Pencil, Trash2, Plus, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
@@ -489,28 +495,30 @@ export const Users: React.FC = () => {
                           </TableCell>
                         )}
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {canEditUser(u) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => openEditDialog(u)}
-                              >
-                                <Pencil className="w-3 h-3" />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreVertical className="w-3 h-3" />
                               </Button>
-                            )}
-                            {canDeleteUser(u) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive hover:text-destructive"
-                                onClick={() => openDeleteDialog(u)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {canEditUser(u) && (
+                                <DropdownMenuItem onClick={() => openEditDialog(u)}>
+                                  <Pencil className="w-4 h-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                              )}
+                              {canDeleteUser(u) && (
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => openDeleteDialog(u)}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -529,17 +537,31 @@ export const Users: React.FC = () => {
                 <Card key={u.user_id} className="relative">
                   <CardContent className="p-4">
                     {/* Ações no canto superior direito */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1">
-                      {canEditUser(u) && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditDialog(u)}>
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                      )}
-                      {canDeleteUser(u) && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(u)}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      )}
+                    <div className="absolute top-3 right-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreVertical className="w-3 h-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canEditUser(u) && (
+                            <DropdownMenuItem onClick={() => openEditDialog(u)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                          )}
+                          {canDeleteUser(u) && (
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => openDeleteDialog(u)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                     
                     <div className="pr-20">

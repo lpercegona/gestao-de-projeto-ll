@@ -1,7 +1,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Clock, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, Clock, ChevronDown, MoreVertical } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -90,13 +96,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <div className="bg-card border rounded-lg p-3 group relative">
       {/* Actions */}
-      <div className="absolute top-2 right-2 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEditTask}>
-          <Pencil className="w-3 h-3" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={onDeleteTask}>
-          <Trash2 className="w-3 h-3" />
-        </Button>
+      <div className="absolute top-2 right-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+              <MoreVertical className="w-3 h-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEditTask}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={onDeleteTask}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="pr-16">
