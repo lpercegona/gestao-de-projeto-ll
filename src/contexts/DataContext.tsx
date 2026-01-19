@@ -122,7 +122,7 @@ interface DataContextType {
   revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
   // Task Timer
   startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
-  stopTaskTimer: (taskId: string, description?: string) => Promise<{ hours: number } | null>;
+  stopTaskTimer: (taskId: string, description?: string, entryType?: 'task' | 'meeting') => Promise<{ hours: number } | null>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
   completeTask: (taskId: string) => Promise<boolean>;
   // Kanban stages
@@ -544,7 +544,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return timer as TaskTimer;
   };
 
-  const stopTaskTimer = async (taskId: string, description?: string): Promise<{ hours: number } | null> => {
+  const stopTaskTimer = async (taskId: string, description?: string, entryType: 'task' | 'meeting' = 'task'): Promise<{ hours: number } | null> => {
     if (!user) return null;
 
     const timer = data.taskTimers.find(t => t.task_id === taskId);
@@ -567,7 +567,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       hours: finalHours,
       description: description || 'Timer automático',
       date: format(new Date(), 'yyyy-MM-dd'),
-      entry_type: 'task',
+      entry_type: entryType,
     });
 
     // Delete the timer
