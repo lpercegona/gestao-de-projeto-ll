@@ -85,15 +85,26 @@ export const Reports: React.FC = () => {
     return options;
   }, []);
 
-  // Calculate hours for a specific month
-  const getMonthHours = (taskId: string, monthStart: Date, monthEnd: Date) => {
+  // Calculate hours for a specific month with optional type filter
+  const getMonthHours = (taskId: string, monthStart: Date, monthEnd: Date, entryType?: 'task' | 'meeting') => {
     return data.timeEntries
       .filter(te => {
         if (te.task_id !== taskId) return false;
+        if (entryType && te.entry_type !== entryType) return false;
         const entryDate = parseISO(te.date);
         return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
       })
       .reduce((sum, te) => sum + Number(te.hours), 0);
+  };
+
+  // Calculate meeting hours for a specific month
+  const getMonthMeetingHours = (taskId: string, monthStart: Date, monthEnd: Date) => {
+    return getMonthHours(taskId, monthStart, monthEnd, 'meeting');
+  };
+
+  // Calculate task hours for a specific month
+  const getMonthTaskHours = (taskId: string, monthStart: Date, monthEnd: Date) => {
+    return getMonthHours(taskId, monthStart, monthEnd, 'task');
   };
 
   // Filter and calculate report data by client
@@ -114,33 +125,45 @@ export const Reports: React.FC = () => {
         
         const tasksWithHours = projectTasks.map(task => {
           const monthHours = getMonthHours(task.id, monthStart, monthEnd);
+          const monthTaskHours = getMonthTaskHours(task.id, monthStart, monthEnd);
+          const monthMeetingHours = getMonthMeetingHours(task.id, monthStart, monthEnd);
           const totalHours = getTaskHours(task.id);
           
           return {
             ...task,
             monthHours,
+            monthTaskHours,
+            monthMeetingHours,
             totalHours,
           };
         }).filter(t => t.monthHours > 0 || t.totalHours > 0);
 
         const projectMonthHours = tasksWithHours.reduce((sum, t) => sum + t.monthHours, 0);
+        const projectMonthTaskHours = tasksWithHours.reduce((sum, t) => sum + t.monthTaskHours, 0);
+        const projectMonthMeetingHours = tasksWithHours.reduce((sum, t) => sum + t.monthMeetingHours, 0);
         const projectTotalHours = getProjectHours(project.id);
 
         return {
           ...project,
           tasks: tasksWithHours,
           monthHours: projectMonthHours,
+          monthTaskHours: projectMonthTaskHours,
+          monthMeetingHours: projectMonthMeetingHours,
           totalHours: projectTotalHours,
         };
       }).filter(p => p.monthHours > 0 || p.tasks.length > 0);
 
       const clientMonthHours = projectsWithData.reduce((sum, p) => sum + p.monthHours, 0);
+      const clientMonthTaskHours = projectsWithData.reduce((sum, p) => sum + p.monthTaskHours, 0);
+      const clientMonthMeetingHours = projectsWithData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
       const clientTotalHours = getClientHours(client.id);
 
       return {
         ...client,
         projects: projectsWithData,
         monthHours: clientMonthHours,
+        monthTaskHours: clientMonthTaskHours,
+        monthMeetingHours: clientMonthMeetingHours,
         totalHours: clientTotalHours,
       };
     }).filter(c => c.monthHours > 0 || c.projects.length > 0);
@@ -271,6 +294,8 @@ export const Reports: React.FC = () => {
   };
 
   const totalMonthHours = reportDataByClient.reduce((sum, c) => sum + c.monthHours, 0);
+  const totalMonthTaskHours = reportDataByClient.reduce((sum, c) => sum + c.monthTaskHours, 0);
+  const totalMonthMeetingHours = reportDataByClient.reduce((sum, c) => sum + c.monthMeetingHours, 0);
   const totalClients = reportDataByClient.length;
   const totalProjects = allProjectsData.length;
 
@@ -475,9 +500,10 @@ export const Reports: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-foreground">{task.monthHours}h</p>
-                        <p className="text-xs text-muted-foreground">
-                          Total: {task.totalHours}h
-                        </p>
+                        <div className="flex gap-2 text-xs text-muted-foreground">
+                          {task.monthTaskHours > 0 && <span className="text-primary">{task.monthTaskHours}h tarefas</span>}
+                          {task.monthMeetingHours > 0 && <span className="text-accent-foreground">{task.monthMeetingHours}h reuniões</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -543,18 +569,26 @@ export const Reports: React.FC = () => {
           <CardTitle>Resumo Geral do Período</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <div>
-              <p className="text-sm text-muted-foreground">Clientes com atividade</p>
+              <p className="text-sm text-muted-foreground">Clientes ativos</p>
               <p className="text-2xl font-bold text-foreground">{totalClients}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Projetos com atividade</p>
+              <p className="text-sm text-muted-foreground">Projetos ativos</p>
               <p className="text-2xl font-bold text-foreground">{totalProjects}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total de horas no período</p>
+              <p className="text-sm text-muted-foreground">Total de horas</p>
               <p className="text-2xl font-bold text-foreground">{totalMonthHours}h</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas em tarefas</p>
+              <p className="text-2xl font-bold text-primary">{totalMonthTaskHours}h</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas em reuniões</p>
+              <p className="text-2xl font-bold text-accent-foreground">{totalMonthMeetingHours}h</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Média por cliente</p>
@@ -645,7 +679,7 @@ export const Reports: React.FC = () => {
                       <CollapsibleContent>
                         <CardContent className="pt-4 space-y-4">
                           {/* Client summary */}
-                          <div className="grid gap-4 md:grid-cols-3 p-4 bg-muted/50 rounded-lg">
+                          <div className="grid gap-4 grid-cols-2 md:grid-cols-5 p-4 bg-muted/50 rounded-lg">
                             <div>
                               <p className="text-sm text-muted-foreground">Horas Contratadas</p>
                               <p className="text-lg font-bold text-foreground">{clientData.contracted_hours}h</p>
@@ -653,6 +687,14 @@ export const Reports: React.FC = () => {
                             <div>
                               <p className="text-sm text-muted-foreground">Total Utilizado</p>
                               <p className="text-lg font-bold text-foreground">{clientData.totalHours}h</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Horas em Tarefas</p>
+                              <p className="text-lg font-bold text-primary">{clientData.monthTaskHours}h</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Horas em Reuniões</p>
+                              <p className="text-lg font-bold text-accent-foreground">{clientData.monthMeetingHours}h</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Restante</p>

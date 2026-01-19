@@ -51,6 +51,7 @@ interface TimeEntry {
   hours: number;
   description: string | null;
   date: string;
+  entry_type: 'task' | 'meeting';
   created_by: string | null;
   created_at: string;
 }
@@ -566,6 +567,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       hours: finalHours,
       description: description || 'Timer automático',
       date: format(new Date(), 'yyyy-MM-dd'),
+      entry_type: 'task',
     });
 
     // Delete the timer
