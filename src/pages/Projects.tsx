@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { NoProjectsAssigned } from '@/components/collaborator/NoProjectsAssigned';
@@ -68,11 +69,13 @@ export const Projects: React.FC = () => {
     getCreatorName,
     startTaskTimer,
     stopTaskTimer,
+    cancelTaskTimer,
     getActiveTimer,
     completeTask,
     saveKanbanStages,
   } = useData();
   const { user, isAdminOrMaster, isCollaborator } = useAuth();
+  const { resetTimer } = useGlobalTimer();
   
   // View state
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
@@ -352,10 +355,22 @@ export const Projects: React.FC = () => {
   const handleConfirmPause = async () => {
     if (pausingTaskId) {
       await stopTaskTimer(pausingTaskId, pauseDescription || undefined, pauseEntryType);
+      resetTimer(); // Reset global timer after registration
       toast.success('Timer parado e horas registradas!');
       setIsPauseDialogOpen(false);
       setPausingTaskId(null);
     }
+  };
+
+  const handleDiscardTimer = async () => {
+    if (pausingTaskId) {
+      await cancelTaskTimer(pausingTaskId);
+    }
+    resetTimer();
+    setIsPauseDialogOpen(false);
+    setPausingTaskId(null);
+    setPauseDescription('');
+    toast.info('Timer descartado');
   };
 
   const handleCompleteTask = async (taskId: string) => {
@@ -671,11 +686,7 @@ export const Projects: React.FC = () => {
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button 
               variant="ghost" 
-              onClick={() => {
-                setIsPauseDialogOpen(false);
-                setPausingTaskId(null);
-                setPauseDescription('');
-              }} 
+              onClick={handleDiscardTimer} 
               className="text-destructive hover:text-destructive sm:mr-auto"
             >
               Descartar

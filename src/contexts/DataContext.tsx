@@ -124,6 +124,7 @@ interface DataContextType {
   // Task Timer
   startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
   stopTaskTimer: (taskId: string, description?: string, entryType?: 'task' | 'meeting') => Promise<{ hours: number } | null>;
+  cancelTaskTimer: (taskId: string) => Promise<boolean>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
   completeTask: (taskId: string) => Promise<boolean>;
   // Kanban stages
@@ -668,6 +669,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { hours: finalHours };
   };
 
+  const cancelTaskTimer = async (taskId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer) return false;
+
+    // Delete the timer without creating a time entry
+    const { error } = await supabase
+      .from('task_timers')
+      .delete()
+      .eq('id', timer.id);
+
+    if (error) {
+      console.error('Error canceling timer:', error);
+      return false;
+    }
+
+    // Update local state immediately (remove timer)
+    setData(prev => ({
+      ...prev,
+      taskTimers: prev.taskTimers.filter(t => t.id !== timer.id),
+    }));
+    return true;
+  };
+
   const getActiveTimer = (taskId: string): TaskTimer | null => {
     return data.taskTimers.find(t => t.task_id === taskId) || null;
   };
@@ -770,6 +796,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         revokeProjectAccess,
         startTaskTimer,
         stopTaskTimer,
+        cancelTaskTimer,
         getActiveTimer,
         completeTask,
         saveKanbanStages,

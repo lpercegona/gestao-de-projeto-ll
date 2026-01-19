@@ -13,6 +13,7 @@ interface TaskTimerProps {
   onStart: () => Promise<void>;
   onStop: () => Promise<void>;
   onComplete: () => Promise<void>;
+  onDiscard?: () => void;
   disabled?: boolean;
 }
 
@@ -23,11 +24,12 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   onStart,
   onStop,
   onComplete,
+  onDiscard,
   disabled = false,
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
-  const { hasActiveTimer, timerState, syncWithTaskTimer, pauseGlobalTimer, resumeGlobalTimer } = useGlobalTimer();
+  const { hasActiveTimer, timerState, syncWithTaskTimer, pauseGlobalTimer, resumeGlobalTimer, resetTimer } = useGlobalTimer();
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -92,6 +94,8 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   };
 
   const handleStop = async () => {
+    // Reset global timer when completing registration
+    resetTimer();
     setLoading(true);
     try {
       await onStop();
