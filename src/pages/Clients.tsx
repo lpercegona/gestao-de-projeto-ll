@@ -8,7 +8,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -60,7 +68,12 @@ export const Clients: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    company: '',
+    phone: '',
     contracted_hours: 0,
+    pipeline_status: 'lead',
+    source: '',
+    notes: '',
   });
 
   // Filter clients by pipeline status
@@ -81,11 +94,25 @@ export const Clients: React.FC = () => {
       setFormData({
         name: client.name,
         email: client.email,
+        company: client.company || '',
+        phone: client.phone || '',
         contracted_hours: client.contracted_hours,
+        pipeline_status: client.pipeline_status || 'lead',
+        source: client.source || '',
+        notes: client.notes || '',
       });
     } else {
       setEditingClient(null);
-      setFormData({ name: '', email: '', contracted_hours: 0 });
+      setFormData({
+        name: '',
+        email: '',
+        company: '',
+        phone: '',
+        contracted_hours: 0,
+        pipeline_status: 'lead',
+        source: '',
+        notes: '',
+      });
     }
     setIsDialogOpen(true);
   };
@@ -253,39 +280,116 @@ export const Clients: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome da Empresa</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  disabled={submitting}
-                />
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+              {/* Dados Básicos */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Dados Básicos</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome do Contato</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Empresa</Label>
+                    <Input
+                      id="company"
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  disabled={submitting}
-                />
+
+              {/* Faturamento */}
+              <div className="space-y-4 pt-4 border-t">
+                <h4 className="font-medium text-sm text-muted-foreground">Faturamento</h4>
+                <div className="space-y-2">
+                  <Label htmlFor="contracted_hours">Horas Contratadas</Label>
+                  <Input
+                    id="contracted_hours"
+                    type="number"
+                    min="0"
+                    value={formData.contracted_hours}
+                    onChange={(e) => setFormData({ ...formData, contracted_hours: Number(e.target.value) })}
+                    required
+                    disabled={submitting}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="contracted_hours">Horas Contratadas</Label>
-                <Input
-                  id="contracted_hours"
-                  type="number"
-                  min="0"
-                  value={formData.contracted_hours}
-                  onChange={(e) => setFormData({ ...formData, contracted_hours: Number(e.target.value) })}
-                  required
-                  disabled={submitting}
-                />
+
+              {/* Pipeline de Vendas */}
+              <div className="space-y-4 pt-4 border-t">
+                <h4 className="font-medium text-sm text-muted-foreground">Pipeline de Vendas</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pipeline_status">Status</Label>
+                    <Select
+                      value={formData.pipeline_status}
+                      onValueChange={(value) => setFormData({ ...formData, pipeline_status: value })}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lead">Lead</SelectItem>
+                        <SelectItem value="proposal">Em Negociação</SelectItem>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="churned">Inativo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="source">Origem</Label>
+                    <Input
+                      id="source"
+                      value={formData.source}
+                      onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                      placeholder="Ex: Indicação, Google, etc."
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Anotações sobre o cliente..."
+                    rows={3}
+                    disabled={submitting}
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
