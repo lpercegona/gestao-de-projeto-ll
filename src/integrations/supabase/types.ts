@@ -132,6 +132,7 @@ export type Database = {
       }
       project_columns: {
         Row: {
+          client_id: string | null
           created_at: string
           id: string
           name: string
@@ -139,6 +140,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           id?: string
           name: string
@@ -146,13 +148,22 @@ export type Database = {
           type?: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           id?: string
           name?: string
           options?: string[] | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "project_columns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_requests: {
         Row: {
