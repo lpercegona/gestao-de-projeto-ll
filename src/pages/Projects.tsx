@@ -654,10 +654,10 @@ export const Projects: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Pause Timer Dialog */}
+      {/* Complete Timer Dialog */}
       <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Pausar Timer</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Tipo de Registro</Label>
@@ -668,9 +668,22 @@ export const Projects: React.FC = () => {
             </div>
             <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleConfirmPause}>Pausar e Registrar</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setIsPauseDialogOpen(false);
+                setPausingTaskId(null);
+                setPauseDescription('');
+              }} 
+              className="text-destructive hover:text-destructive sm:mr-auto"
+            >
+              Descartar
+            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button>
+              <Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
