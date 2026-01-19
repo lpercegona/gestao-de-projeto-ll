@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from './GlobalTimerCompleteDialog';
+import { MarqueeText } from './MarqueeText';
 
 interface LinkedInfo {
   taskName: string;
@@ -182,8 +183,6 @@ export const HeaderTimerTaskInfo: React.FC = () => {
     ? `${linkedInfo.taskName} • ${linkedInfo.projectName} • ${linkedInfo.clientName}`
     : 'Registro não vinculado';
 
-  const shouldAnimate = displayText.length > 20;
-
   return (
     <div 
       className={cn(
@@ -199,17 +198,14 @@ export const HeaderTimerTaskInfo: React.FC = () => {
             ) : (
               <Clock className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
             )}
-            <div className="overflow-hidden whitespace-nowrap">
-              <span 
-                className={cn(
-                  "inline-block font-medium",
-                  linkedInfo ? "text-foreground" : "text-muted-foreground italic",
-                  shouldAnimate && "animate-marquee"
-                )}
-              >
-                {displayText}
-              </span>
-            </div>
+            <MarqueeText
+              text={displayText}
+              className={cn(
+                "font-medium",
+                linkedInfo ? "text-foreground" : "text-muted-foreground italic"
+              )}
+              pauseDuration={3000}
+            />
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-[250px]">
