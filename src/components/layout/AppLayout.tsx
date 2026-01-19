@@ -384,7 +384,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </div>
             )}
 
-            {/* Preferences link */}
+            {/* Settings link */}
             {isCollapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
@@ -402,7 +402,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     <Settings className="w-5 h-5 flex-shrink-0" />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">Preferências</TooltipContent>
+                <TooltipContent side="right">Configurações</TooltipContent>
                 <Link
                   to="/preferences"
                   onClick={() => setSidebarOpen(false)}
@@ -414,7 +414,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   )}
                 >
                   <Settings className="w-5 h-5" />
-                  Preferências
+                  Configurações
                 </Link>
               </Tooltip>
             ) : (
@@ -429,7 +429,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 )}
               >
                 <Settings className="w-5 h-5" />
-                Preferências
+                Configurações
               </Link>
             )}
 
