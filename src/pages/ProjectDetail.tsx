@@ -198,6 +198,7 @@ export const ProjectDetail: React.FC = () => {
         hours: totalHours,
         description: timeForm.description,
         date: timeForm.date,
+        entry_type: 'task',
       });
       toast.success('Horas registradas com sucesso!');
     }

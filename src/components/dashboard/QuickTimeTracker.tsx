@@ -101,6 +101,7 @@ export const QuickTimeTracker: React.FC = () => {
         hours,
         description: description || null,
         date: new Date().toISOString().split('T')[0],
+        entry_type: 'task',
       });
       toast.success(`${hours}h registradas com sucesso!`);
       await refreshData();
@@ -179,6 +180,7 @@ export const QuickTimeTracker: React.FC = () => {
         hours,
         description: description || null,
         date: new Date().toISOString().split('T')[0],
+        entry_type: 'task',
       });
 
       toast.success(`Tarefa criada e ${hours}h registradas!`);

@@ -99,7 +99,7 @@ export const Projects: React.FC = () => {
   const [isDeleteTimeEntryDialogOpen, setIsDeleteTimeEntryDialogOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null);
-  const [timeForm, setTimeForm] = useState({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd') });
+  const [timeForm, setTimeForm] = useState({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd'), entry_type: 'task' as 'task' | 'meeting' });
 
   // Pause dialog state
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
@@ -294,14 +294,14 @@ export const Projects: React.FC = () => {
   };
 
   // Time entry handlers
-  const handleOpenTimeDialog = (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string }) => {
+  const handleOpenTimeDialog = (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string; entry_type?: 'task' | 'meeting' }) => {
     setSelectedTaskId(taskId);
     if (entry) {
       setEditingTimeEntryId(entry.id);
-      setTimeForm({ time: formatHoursToTime(entry.hours), description: entry.description || '', date: entry.date });
+      setTimeForm({ time: formatHoursToTime(entry.hours), description: entry.description || '', date: entry.date, entry_type: entry.entry_type || 'task' });
     } else {
       setEditingTimeEntryId(null);
-      setTimeForm({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd') });
+      setTimeForm({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd'), entry_type: 'task' });
     }
     setIsTimeDialogOpen(true);
   };
@@ -312,10 +312,10 @@ export const Projects: React.FC = () => {
     if (totalHours <= 0) { toast.error('Insira um tempo válido maior que zero.'); return; }
     setSubmitting(true);
     if (editingTimeEntryId) {
-      await updateTimeEntry(editingTimeEntryId, { hours: totalHours, description: timeForm.description, date: timeForm.date });
+      await updateTimeEntry(editingTimeEntryId, { hours: totalHours, description: timeForm.description, date: timeForm.date, entry_type: timeForm.entry_type });
       toast.success('Registro atualizado!');
     } else {
-      await createTimeEntry({ task_id: selectedTaskId, hours: totalHours, description: timeForm.description, date: timeForm.date });
+      await createTimeEntry({ task_id: selectedTaskId, hours: totalHours, description: timeForm.description, date: timeForm.date, entry_type: timeForm.entry_type });
       toast.success('Horas registradas!');
     }
     setSubmitting(false);
@@ -622,7 +622,19 @@ export const Projects: React.FC = () => {
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Tempo (HH:mm)</Label><Input type="time" value={timeForm.time} onChange={(e) => setTimeForm({ ...timeForm, time: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Data</Label><Input type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} /></div>
-              <div className="space-y-2"><Label>Descrição</Label><Textarea value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} rows={2} disabled={submitting} /></div>
+              <div className="space-y-2">
+                <Label>Tipo de Registro</Label>
+                <Select value={timeForm.entry_type} onValueChange={(v: 'task' | 'meeting') => setTimeForm({ ...timeForm, entry_type: v })} disabled={submitting}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="task">Tarefa</SelectItem>
+                    <SelectItem value="meeting">Reunião</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2"><Label>Descrição (opcional)</Label><Textarea value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} rows={2} disabled={submitting} /></div>
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2">
               {editingTimeEntryId && (

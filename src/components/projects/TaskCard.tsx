@@ -12,6 +12,7 @@ interface TimeEntry {
   hours: number;
   description: string | null;
   date: string;
+  entry_type?: 'task' | 'meeting';
   created_by: string | null;
 }
 
@@ -43,7 +44,7 @@ interface TaskCardProps {
   getCreatorName: (userId: string | null) => string;
   onEditTask: () => void;
   onDeleteTask: () => void;
-  onRegisterTime: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string }) => void;
+  onRegisterTime: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string; entry_type?: 'task' | 'meeting' }) => void;
   onStartTimer: () => Promise<void>;
   onStopTimer: () => Promise<void>;
   onCompleteTask: () => Promise<void>;
@@ -156,7 +157,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <div 
                 key={entry.id} 
                 className="group/entry relative text-xs bg-muted/50 rounded px-2 py-1.5 pr-8 cursor-pointer hover:bg-muted"
-                onClick={() => onRegisterTime(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date })}
+                onClick={() => onRegisterTime(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date, entry_type: entry.entry_type })}
               >
                 <div className="absolute top-1 right-1 md:opacity-0 md:group-hover/entry:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-5 w-5">
@@ -167,6 +168,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   <span className="font-medium text-foreground">{entry.hours}h</span>
                   <span className="text-muted-foreground">•</span>
                   <span className="text-muted-foreground">{format(parseISO(entry.date), "dd/MM", { locale: ptBR })}</span>
+                  {entry.entry_type === 'meeting' && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-primary font-medium">Reunião</span>
+                    </>
+                  )}
                   {entry.description && (
                     <>
                       <span className="text-muted-foreground">•</span>
