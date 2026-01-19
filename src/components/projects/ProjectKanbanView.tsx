@@ -265,6 +265,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 onStopTimer={() => onStopTimer(task.id)}
                                 onCompleteTask={() => onCompleteTask(task.id)}
                                 compact
+                                showStatus={false}
                               />
                             </div>
                           );

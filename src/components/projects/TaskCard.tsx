@@ -101,7 +101,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className="pr-16">
         <div className="flex items-center gap-2 flex-wrap mb-2">
           <h4 className="font-medium text-sm text-foreground">{task.name}</h4>
-          {(compact || showStatus) && (
+          {showStatus && (
             <span 
               className="text-xs px-2 py-0.5 rounded-full font-medium"
               style={{
@@ -134,8 +134,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             onClick={() => onRegisterTime(task.id)} 
             className="h-7 px-2 text-xs"
           >
-            <Clock className="w-3.5 h-3.5 mr-1" />
-            Registrar
+            <Clock className="w-3.5 h-3.5" />
           </Button>
         </div>
 
