@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Play, Square, Clock, Plus, Link2, Loader2 } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Play, Square, Clock, Plus, Link2, Loader2, ClipboardList, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const QuickTimeTracker: React.FC = () => {
@@ -22,6 +23,7 @@ export const QuickTimeTracker: React.FC = () => {
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkMode, setLinkMode] = useState<'existing' | 'new' | null>(null);
   const [description, setDescription] = useState('');
+  const [entryType, setEntryType] = useState<'task' | 'meeting'>('task');
   const [loading, setLoading] = useState(false);
   
   // Link to existing task
@@ -79,6 +81,7 @@ export const QuickTimeTracker: React.FC = () => {
     setShowLinkDialog(false);
     setLinkMode(null);
     setDescription('');
+    setEntryType('task');
     setSelectedTaskId('');
     setNewTaskName('');
     setSelectedProjectId('');
@@ -101,7 +104,7 @@ export const QuickTimeTracker: React.FC = () => {
         hours,
         description: description || null,
         date: new Date().toISOString().split('T')[0],
-        entry_type: 'task',
+        entry_type: entryType,
       });
       toast.success(`${hours}h registradas com sucesso!`);
       await refreshData();
@@ -180,7 +183,7 @@ export const QuickTimeTracker: React.FC = () => {
         hours,
         description: description || null,
         date: new Date().toISOString().split('T')[0],
-        entry_type: 'task',
+        entry_type: entryType,
       });
 
       toast.success(`Tarefa criada e ${hours}h registradas!`);
@@ -295,6 +298,19 @@ export const QuickTimeTracker: React.FC = () => {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Tipo</Label>
+                <ToggleGroup type="single" value={entryType} onValueChange={(v) => v && setEntryType(v as 'task' | 'meeting')} className="justify-start">
+                  <ToggleGroupItem value="task" className="gap-1.5">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Tarefa
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="meeting" className="gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    Reunião
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <div className="space-y-2">
                 <Label>Descrição (opcional)</Label>
                 <Textarea
                   value={description}
@@ -386,6 +402,19 @@ export const QuickTimeTracker: React.FC = () => {
                 </>
               )}
 
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <ToggleGroup type="single" value={entryType} onValueChange={(v) => v && setEntryType(v as 'task' | 'meeting')} className="justify-start">
+                  <ToggleGroupItem value="task" className="gap-1.5">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Tarefa
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="meeting" className="gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    Reunião
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
               <div className="space-y-2">
                 <Label>Descrição (opcional)</Label>
                 <Textarea

@@ -14,7 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Plus, Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList } from 'lucide-react';
+import { Users as UsersIcon } from 'lucide-react';
 import { Project, Task } from '@/types';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -623,16 +625,17 @@ export const Projects: React.FC = () => {
               <div className="space-y-2"><Label>Tempo (HH:mm)</Label><Input type="time" value={timeForm.time} onChange={(e) => setTimeForm({ ...timeForm, time: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Data</Label><Input type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2">
-                <Label>Tipo de Registro</Label>
-                <Select value={timeForm.entry_type} onValueChange={(v: 'task' | 'meeting') => setTimeForm({ ...timeForm, entry_type: v })} disabled={submitting}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="task">Tarefa</SelectItem>
-                    <SelectItem value="meeting">Reunião</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Tipo</Label>
+                <ToggleGroup type="single" value={timeForm.entry_type} onValueChange={(v) => v && setTimeForm({ ...timeForm, entry_type: v as 'task' | 'meeting' })} className="justify-start">
+                  <ToggleGroupItem value="task" className="gap-1.5">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Tarefa
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="meeting" className="gap-1.5">
+                    <UsersIcon className="h-3.5 w-3.5" />
+                    Reunião
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
               <div className="space-y-2"><Label>Descrição (opcional)</Label><Textarea value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} rows={2} disabled={submitting} /></div>
             </div>
