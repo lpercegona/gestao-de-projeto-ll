@@ -759,11 +759,12 @@ export const Contracts: React.FC = () => {
             {/* Client selection */}
             <div className="space-y-2">
               <Label>Vincular a Cliente (opcional)</Label>
-              <Select value={formData.clientId} onValueChange={(v) => {
-                const client = appData.clients.find(c => c.id === v);
+              <Select value={formData.clientId || 'none'} onValueChange={(v) => {
+                const clientId = v === 'none' ? '' : v;
+                const client = appData.clients.find(c => c.id === clientId);
                 setFormData(prev => ({
                   ...prev,
-                  clientId: v || '',
+                  clientId: clientId,
                   contractorName: client?.name || prev.contractorName,
                   contractorEmail: client?.email || prev.contractorEmail,
                   contractorCompany: prev.contractorCompany,
@@ -773,7 +774,7 @@ export const Contracts: React.FC = () => {
                   <SelectValue placeholder="Selecione um cliente..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {appData.clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}

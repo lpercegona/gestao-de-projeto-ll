@@ -867,11 +867,12 @@ export const Proposals: React.FC = () => {
             {/* Client selection */}
             <div className="space-y-2">
               <Label>Vincular a Cliente (opcional)</Label>
-              <Select value={formData.clientId} onValueChange={(v) => {
-                const client = appData.clients.find(c => c.id === v);
+              <Select value={formData.clientId || 'none'} onValueChange={(v) => {
+                const clientId = v === 'none' ? '' : v;
+                const client = appData.clients.find(c => c.id === clientId);
                 setFormData(prev => ({
                   ...prev,
-                  clientId: v || '',
+                  clientId: clientId,
                   recipientName: client?.name || prev.recipientName,
                   recipientEmail: client?.email || prev.recipientEmail,
                   recipientCompany: prev.recipientCompany,
@@ -881,7 +882,7 @@ export const Proposals: React.FC = () => {
                   <SelectValue placeholder="Selecione um cliente..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {appData.clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}

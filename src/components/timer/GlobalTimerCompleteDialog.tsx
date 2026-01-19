@@ -71,9 +71,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     return grouped;
   }, [data.projects, data.tasks, data.clients]);
 
-  const handleClose = () => {
-    // Use cancelCompleteDialog to handle resuming timer if needed
-    cancelCompleteDialog();
+  const resetFormState = () => {
     setSelectedTaskId('');
     setDescription('');
     setEntryType('task');
@@ -83,6 +81,19 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     setCreateNewProject(false);
     setNewProjectName('');
     setSelectedClientId('');
+  };
+
+  // Called when user cancels or closes the dialog without saving
+  const handleClose = () => {
+    // Resume timer if it was running before opening dialog
+    cancelCompleteDialog();
+    resetFormState();
+  };
+
+  // Called after successful registration - doesn't resume timer
+  const handleSuccessClose = () => {
+    onOpenChange(false);
+    resetFormState();
   };
 
   const handleSubmit = async () => {
@@ -96,7 +107,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         await stopTaskTimer(timerState.taskId, description || 'Timer global', entryType);
         resetTimer();
         toast.success(`${hours.toFixed(2)}h registradas com sucesso.`);
-        handleClose();
+        handleSuccessClose();
         return;
       }
 
@@ -188,7 +199,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
 
       resetTimer();
       toast.success(`${hours.toFixed(2)}h registradas com sucesso.`);
-      handleClose();
+      handleSuccessClose();
     } catch (error) {
       console.error('Error completing timer:', error);
       toast.error('Falha ao registrar tempo.');
