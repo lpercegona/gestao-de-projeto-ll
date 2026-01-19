@@ -499,10 +499,10 @@ export const Reports: React.FC = () => {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-foreground">{task.monthHours}h</p>
+                        <p className="font-medium text-foreground">{task.monthHours.toFixed(2)}h</p>
                         <div className="flex gap-2 text-xs text-muted-foreground">
-                          {task.monthTaskHours > 0 && <span className="text-primary">{task.monthTaskHours}h tarefas</span>}
-                          {task.monthMeetingHours > 0 && <span className="text-accent-foreground">{task.monthMeetingHours}h reuniões</span>}
+                          {task.monthTaskHours > 0 && <span className="text-primary">{task.monthTaskHours.toFixed(2)}h tarefas</span>}
+                          {task.monthMeetingHours > 0 && <span className="text-accent-foreground">{task.monthMeetingHours.toFixed(2)}h reuniões</span>}
                         </div>
                       </div>
                     </div>
@@ -580,15 +580,15 @@ export const Reports: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total de horas</p>
-              <p className="text-2xl font-bold text-foreground">{totalMonthHours}h</p>
+              <p className="text-2xl font-bold text-foreground">{totalMonthHours.toFixed(2)}h</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas em tarefas</p>
-              <p className="text-2xl font-bold text-primary">{totalMonthTaskHours}h</p>
+              <p className="text-2xl font-bold text-primary">{totalMonthTaskHours.toFixed(2)}h</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas em reuniões</p>
-              <p className="text-2xl font-bold text-accent-foreground">{totalMonthMeetingHours}h</p>
+              <p className="text-2xl font-bold text-accent-foreground">{totalMonthMeetingHours.toFixed(2)}h</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Média por cliente</p>
@@ -690,11 +690,11 @@ export const Reports: React.FC = () => {
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Horas em Tarefas</p>
-                              <p className="text-lg font-bold text-primary">{clientData.monthTaskHours}h</p>
+                              <p className="text-lg font-bold text-primary">{clientData.monthTaskHours.toFixed(2)}h</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Horas em Reuniões</p>
-                              <p className="text-lg font-bold text-accent-foreground">{clientData.monthMeetingHours}h</p>
+                              <p className="text-lg font-bold text-accent-foreground">{clientData.monthMeetingHours.toFixed(2)}h</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Restante</p>
