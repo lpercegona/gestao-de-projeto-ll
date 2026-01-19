@@ -66,6 +66,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { UserEditDialog } from '@/components/users/UserEditDialog';
+import { UserCreateDialog } from '@/components/users/UserCreateDialog';
 
 interface ProjectRequest {
   id: string;
@@ -153,13 +155,12 @@ export const ClientDetail: React.FC = () => {
   const [clientUserData, setClientUserData] = useState<UserProfile | null>(null);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [editingUserData, setEditingUserData] = useState<UserProfile | null>(null);
-  const [editUserSubmitting, setEditUserSubmitting] = useState(false);
-  const [editUserForm, setEditUserForm] = useState({ full_name: '' });
   
   // Collaborator management
   const [allCollaborators, setAllCollaborators] = useState<UserProfile[]>([]);
   const [isAddCollaboratorDialogOpen, setIsAddCollaboratorDialogOpen] = useState(false);
   const [selectedCollaborator, setSelectedCollaborator] = useState<string>('');
+  const [isCreateCollaboratorDialogOpen, setIsCreateCollaboratorDialogOpen] = useState(false);
 
   const client = data.clients.find(c => c.id === clientId);
   const clientProjects = data.projects.filter(p => p.client_id === clientId);
@@ -608,32 +609,19 @@ export const ClientDetail: React.FC = () => {
   // Edit client user profile
   const handleOpenEditUser = (member: UserProfile) => {
     setEditingUserData(member);
-    setEditUserForm({ full_name: member.full_name || '' });
     setIsEditUserDialogOpen(true);
   };
 
-  const handleEditUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingUserData) return;
-    setEditUserSubmitting(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: editUserForm.full_name })
-        .eq('user_id', editingUserData.user_id);
+  const handleUserSaved = () => {
+    // Refresh team data
+    setActiveTab('overview');
+    setTimeout(() => setActiveTab('team'), 100);
+  };
 
-      if (error) throw error;
-      toast.success('Perfil atualizado com sucesso!');
-      setIsEditUserDialogOpen(false);
-      // Refresh team data
-      setActiveTab('overview');
-      setTimeout(() => setActiveTab('team'), 100);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error('Erro ao atualizar perfil');
-    } finally {
-      setEditUserSubmitting(false);
-    }
+  const handleCollaboratorCreated = () => {
+    // Refresh collaborators list
+    setActiveTab('overview');
+    setTimeout(() => setActiveTab('team'), 100);
   };
 
   // Add collaborator to client projects
@@ -1230,19 +1218,27 @@ export const ClientDetail: React.FC = () => {
                       <Users className="w-4 h-4" />
                       Colaboradores ({teamMembers.filter(m => m.role === 'collaborator').length})
                     </CardTitle>
-                    {allCollaborators.length > 0 && (
-                      <Button size="sm" variant="outline" onClick={() => setIsAddCollaboratorDialogOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Adicionar
-                      </Button>
-                    )}
+                    <Button size="sm" variant="outline" onClick={() => setIsAddCollaboratorDialogOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {teamMembers.filter(m => m.role === 'collaborator').length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum colaborador vinculado aos projetos deste cliente.
-                    </p>
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Nenhum colaborador vinculado aos projetos deste cliente.
+                      </p>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setIsCreateCollaboratorDialogOpen(true)}
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Criar Colaborador
+                      </Button>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       {teamMembers.filter(m => m.role === 'collaborator').map((member) => (
@@ -1479,47 +1475,15 @@ export const ClientDetail: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit User Dialog */}
-      <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Perfil</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEditUser}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="user-email">Email</Label>
-                <Input
-                  id="user-email"
-                  value={editingUserData?.email || ''}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-full-name">Nome Completo</Label>
-                <Input
-                  id="user-full-name"
-                  value={editUserForm.full_name}
-                  onChange={(e) => setEditUserForm({ full_name: e.target.value })}
-                  disabled={editUserSubmitting}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditUserDialogOpen(false)} disabled={editUserSubmitting}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={editUserSubmitting}>
-                {editUserSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : null}
-                Salvar
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Edit User Dialog - using reusable component */}
+      <UserEditDialog
+        open={isEditUserDialogOpen}
+        onOpenChange={setIsEditUserDialogOpen}
+        user={editingUserData}
+        onSaved={handleUserSaved}
+        showRoleEdit={true}
+        showPreferences={true}
+      />
 
       {/* Add Collaborator Dialog */}
       <Dialog open={isAddCollaboratorDialogOpen} onOpenChange={setIsAddCollaboratorDialogOpen}>
@@ -1527,25 +1491,56 @@ export const ClientDetail: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Adicionar Colaborador</DialogTitle>
             <DialogDescription>
-              Selecione um colaborador para vincular aos projetos deste cliente.
+              Selecione um colaborador existente ou crie um novo para vincular aos projetos deste cliente.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="space-y-2">
-              <Label>Colaborador</Label>
-              <Select value={selectedCollaborator} onValueChange={setSelectedCollaborator}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um colaborador..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {allCollaborators.map((collab) => (
-                    <SelectItem key={collab.user_id} value={collab.user_id}>
-                      {collab.full_name || collab.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Colaborador Existente</Label>
+                <Select value={selectedCollaborator} onValueChange={setSelectedCollaborator}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um colaborador..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allCollaborators.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        Nenhum colaborador disponível
+                      </SelectItem>
+                    ) : (
+                      allCollaborators.map((collab) => (
+                        <SelectItem key={collab.user_id} value={collab.user_id}>
+                          {collab.full_name || collab.email}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+              
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  setIsAddCollaboratorDialogOpen(false);
+                  setIsCreateCollaboratorDialogOpen(true);
+                }}
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Criar Novo Colaborador
+              </Button>
             </div>
+            
             {clientProjects.length === 0 && (
               <p className="text-sm text-yellow-600 mt-4">
                 Este cliente não possui projetos. Crie um projeto primeiro.
@@ -1563,6 +1558,16 @@ export const ClientDetail: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Collaborator Dialog */}
+      <UserCreateDialog
+        open={isCreateCollaboratorDialogOpen}
+        onOpenChange={setIsCreateCollaboratorDialogOpen}
+        onCreated={handleCollaboratorCreated}
+        defaultRole="collaborator"
+        title="Novo Colaborador"
+        description="Crie um novo colaborador que será vinculado aos projetos deste cliente."
+      />
     </div>
   );
 };
