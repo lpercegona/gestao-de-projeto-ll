@@ -468,7 +468,7 @@ export const Reports: React.FC = () => {
                   <div>
                     <CardTitle className="text-base">{project.name}</CardTitle>
                     {showClientName && 'client' in project && (
-                      <p className="text-sm text-muted-foreground">{project.client?.name}</p>
+                      <p className="text-sm text-muted-foreground">{project.client?.company || project.client?.name}</p>
                     )}
                   </div>
                 </div>
@@ -553,7 +553,7 @@ export const Reports: React.FC = () => {
                   <SelectItem value="all">Todos os clientes</SelectItem>
                   {data.clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+                      {client.company || client.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -656,7 +656,7 @@ export const Reports: React.FC = () => {
                                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
                               )}
                               <div>
-                                <CardTitle className="text-lg">{clientData.name}</CardTitle>
+                                <CardTitle className="text-lg">{clientData.company || clientData.name}</CardTitle>
                                 <p className="text-sm text-muted-foreground">
                                   {clientData.projects.length} projeto{clientData.projects.length !== 1 ? 's' : ''} • 
                                   Contratado: {clientData.contracted_hours}h

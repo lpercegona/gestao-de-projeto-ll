@@ -72,7 +72,7 @@ export const QuickTimeTracker: React.FC = () => {
                 {isLinkedToTask && linkedTask ? (
                   <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
                     <p className="font-medium text-foreground truncate">{linkedTask.name}</p>
-                    <p className="truncate">{linkedProject?.name} • {linkedClient?.name}</p>
+                    <p className="truncate">{linkedProject?.name} • {linkedClient?.company || linkedClient?.name}</p>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">

@@ -55,6 +55,7 @@ interface TimeEntry {
 interface Client {
   id: string;
   name: string;
+  company?: string | null;
   contracted_hours: number;
 }
 
@@ -340,7 +341,7 @@ export const ClientReports: React.FC = () => {
     <div>
       <PageHeader
         title="Meus Relatórios"
-        description={`Relatórios de horas - ${client.name}`}
+        description={`Relatórios de horas - ${client.company || client.name}`}
         actions={
           <Dialog>
             <DialogTrigger asChild>

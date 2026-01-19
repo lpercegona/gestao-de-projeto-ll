@@ -64,7 +64,7 @@ export const Dashboard: React.FC = () => {
       ...entry,
       taskName: task?.name || 'Tarefa não encontrada',
       projectName: project?.name || 'Projeto não encontrado',
-      clientName: client?.name || 'Cliente não encontrado',
+      clientName: client?.company || client?.name || 'Cliente não encontrado',
     };
   });
 
@@ -133,7 +133,7 @@ export const Dashboard: React.FC = () => {
                         <li key={project.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-foreground truncate">{project.name}</p>
-                            <p className="text-sm text-muted-foreground truncate">{client?.name || 'Cliente não encontrado'}</p>
+                            <p className="text-sm text-muted-foreground truncate">{client?.company || client?.name || 'Cliente não encontrado'}</p>
                           </div>
                           <span className={`text-xs px-2 py-1 rounded-full ml-2 shrink-0 ${
                             project.status === 'active' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
@@ -181,7 +181,7 @@ export const Dashboard: React.FC = () => {
                       return (
                         <li key={client.id} className="py-2 border-b border-border last:border-0">
                           <div className="flex justify-between mb-1">
-                            <span className="font-medium text-foreground text-sm truncate">{client.name}</span>
+                            <span className="font-medium text-foreground text-sm truncate">{client.company || client.name}</span>
                             <span className="text-xs text-muted-foreground shrink-0 ml-2">
                               {usedHours}h / {client.contracted_hours}h
                             </span>

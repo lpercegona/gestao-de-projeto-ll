@@ -48,6 +48,7 @@ interface TaskTimer {
 interface Client {
   id: string;
   name: string;
+  company?: string | null;
 }
 
 interface KanbanStage {
@@ -249,7 +250,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                   <GripVertical className="w-3 h-3" />
                                   <span className="truncate">{project?.name}</span>
                                   <span className="text-muted-foreground/50">•</span>
-                                  <span className="truncate">{client?.name}</span>
+                                  <span className="truncate">{client?.company || client?.name}</span>
                                 </div>
                               </div>
                               <TaskCard

@@ -223,7 +223,7 @@ export const Clients: React.FC = () => {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="font-semibold text-foreground">{client.name}</h3>
+                      <h3 className="font-semibold text-foreground">{client.company || client.name}</h3>
                       <p className="text-sm text-muted-foreground">{client.email}</p>
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
