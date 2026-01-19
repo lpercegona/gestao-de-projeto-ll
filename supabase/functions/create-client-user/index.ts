@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { clientId, email, fullName, password } = await req.json();
+    const { clientId, email, fullName, password, isPrimary } = await req.json();
 
     if (!clientId || !email) {
       return new Response(
@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    const setAsPrimary = isPrimary !== false; // default to true for backwards compatibility
 
     // Create admin client to create user without affecting current session
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -79,17 +81,44 @@ Deno.serve(async (req) => {
     let userId: string;
 
     if (existingUser) {
-      // User already exists - just link them to the client
+      // User already exists - link them to the client via client_users table
       userId = existingUser.id;
       
-      // Update the client with user_id
-      const { error: clientUpdateError } = await supabaseAdmin
-        .from('clients')
-        .update({ user_id: userId })
-        .eq('id', clientId);
+      // Check if already linked to this client
+      const { data: existingLink } = await supabaseAdmin
+        .from('client_users')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (existingLink) {
+        return new Response(
+          JSON.stringify({ error: 'Este usuário já está vinculado a este cliente' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // If setting as primary, unset other primaries first
+      if (setAsPrimary) {
+        await supabaseAdmin
+          .from('client_users')
+          .update({ is_primary: false })
+          .eq('client_id', clientId);
+      }
+      
+      // Insert into client_users
+      const { error: linkError } = await supabaseAdmin
+        .from('client_users')
+        .insert({ 
+          client_id: clientId, 
+          user_id: userId, 
+          is_primary: setAsPrimary,
+          created_by: callingUser.id
+        });
 
-      if (clientUpdateError) {
-        console.error('Error linking user to client:', clientUpdateError);
+      if (linkError) {
+        console.error('Error linking user to client:', linkError);
         return new Response(
           JSON.stringify({ error: 'Failed to link existing user to client' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -169,12 +198,24 @@ Deno.serve(async (req) => {
     if (roleInsertError) {
       console.error('Error assigning role:', roleInsertError);
     }
+    
+    // If setting as primary, unset other primaries first
+    if (setAsPrimary) {
+      await supabaseAdmin
+        .from('client_users')
+        .update({ is_primary: false })
+        .eq('client_id', clientId);
+    }
 
-    // Link user to client
+    // Link user to client via client_users table
     const { error: clientLinkError } = await supabaseAdmin
-      .from('clients')
-      .update({ user_id: userId })
-      .eq('id', clientId);
+      .from('client_users')
+      .insert({ 
+        client_id: clientId, 
+        user_id: userId, 
+        is_primary: setAsPrimary,
+        created_by: callingUser.id
+      });
 
     if (clientLinkError) {
       console.error('Error linking user to client:', clientLinkError);
