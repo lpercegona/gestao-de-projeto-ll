@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Square } from 'lucide-react';
+import { Play, Pause, Square, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
@@ -226,7 +226,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               disabled={loading || disabled}
               className="text-green-600 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 sm:px-3"
             >
-              <Square className="w-4 h-4 fill-current" />
+              <CheckCircle className="w-4 h-4" />
               <span className="hidden sm:inline ml-2">Finalizar</span>
             </Button>
           </TooltipTrigger>
