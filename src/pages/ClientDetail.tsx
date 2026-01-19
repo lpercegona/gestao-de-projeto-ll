@@ -462,6 +462,26 @@ export const ClientDetail: React.FC = () => {
     }
   };
 
+  const handleUpdatePassword = async () => {
+    if (!reportShare || sharePassword.length < 4) return;
+    setShareLoading(true);
+    try {
+      const { error } = await supabase
+        .from('report_shares')
+        .update({ share_password: sharePassword })
+        .eq('id', reportShare.id);
+
+      if (error) throw error;
+      setSharePassword('');
+      toast.success('Senha atualizada com sucesso!');
+    } catch (error) {
+      console.error('Error updating password:', error);
+      toast.error('Erro ao atualizar senha');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   const handleCopyLink = async () => {
     if (!reportShare) return;
     const shareUrl = `${window.location.origin}/report/${reportShare.share_token}`;
@@ -1063,9 +1083,32 @@ export const ClientDetail: React.FC = () => {
                         />
                       </div>
                       
-                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                        <KeyRound className="w-4 h-4 text-primary" />
-                        <span className="text-sm text-foreground">Protegido por senha</span>
+                      {/* Alterar senha */}
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-share-password" className="flex items-center gap-2">
+                          <KeyRound className="w-4 h-4" />
+                          Alterar senha de acesso
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="edit-share-password"
+                            type="password"
+                            placeholder="Nova senha (mínimo 4 caracteres)"
+                            value={sharePassword}
+                            onChange={(e) => setSharePassword(e.target.value)}
+                          />
+                          <Button 
+                            variant="outline"
+                            onClick={handleUpdatePassword}
+                            disabled={shareLoading || sharePassword.length < 4}
+                          >
+                            {shareLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              'Salvar'
+                            )}
+                          </Button>
+                        </div>
                       </div>
 
                       {reportShare.is_public && (
