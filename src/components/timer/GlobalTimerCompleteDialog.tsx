@@ -62,7 +62,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       if (projectTasks.length > 0) {
         grouped[project.id] = {
           projectName: project.name,
-          clientName: client?.name || 'Cliente desconhecido',
+          clientName: client?.company || client?.name || 'Cliente desconhecido',
           tasks: projectTasks,
         };
       }
@@ -334,7 +334,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
                       <SelectContent>
                         {data.clients.map(client => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                            {client.company || client.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -364,7 +364,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
                         const client = data.clients.find(c => c.id === project.client_id);
                         return (
                           <SelectItem key={project.id} value={project.id}>
-                            {project.name} - {client?.name}
+                            {project.name} - {client?.company || client?.name}
                           </SelectItem>
                         );
                       })}

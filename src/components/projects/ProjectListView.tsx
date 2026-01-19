@@ -50,6 +50,7 @@ interface TaskTimer {
 interface Client {
   id: string;
   name: string;
+  company?: string | null;
 }
 
 interface ProjectColumn {
@@ -198,7 +199,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         </div>
                         {project.description && <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{project.description}</p>}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                          <div><span className="text-muted-foreground">Cliente: </span><span className="font-medium text-foreground">{client?.name}</span></div>
+                          <div><span className="text-muted-foreground">Cliente: </span><span className="font-medium text-foreground">{client?.company || client?.name}</span></div>
                           <div><span className="text-muted-foreground">Tarefas: </span><span className="font-medium text-foreground">{projectTasks.length}</span></div>
                           <div><span className="text-muted-foreground">Horas: </span><span className="font-medium text-foreground">{hours}h</span></div>
                           {projectColumns.map(col => project.custom_fields[col.id] && (

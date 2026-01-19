@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 interface Client {
   id: string;
   name: string;
+  company?: string | null;
 }
 
 interface ProjectFiltersProps {
@@ -36,7 +37,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             <SelectItem value="all">Todos os clientes</SelectItem>
             {clients.map((client) => (
               <SelectItem key={client.id} value={client.id}>
-                {client.name}
+                {client.company || client.name}
               </SelectItem>
             ))}
           </SelectContent>
