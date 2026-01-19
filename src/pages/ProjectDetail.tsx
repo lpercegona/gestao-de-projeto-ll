@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2, ClipboardList, Users } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { Task } from '@/types';
@@ -87,6 +88,7 @@ export const ProjectDetail: React.FC = () => {
     time: '00:15',
     description: '',
     date: format(new Date(), 'yyyy-MM-dd'),
+    entry_type: 'task' as 'task' | 'meeting',
   });
 
   // Helper functions for HH:mm conversion
@@ -160,18 +162,19 @@ export const ProjectDetail: React.FC = () => {
     }
   };
 
-  const handleOpenTimeDialog = (taskId: string, entryToEdit?: { id: string; hours: number; description: string | null; date: string }) => {
+  const handleOpenTimeDialog = (taskId: string, entryToEdit?: { id: string; hours: number; description: string | null; date: string; entry_type?: 'task' | 'meeting' }) => {
     setSelectedTaskId(taskId);
     if (entryToEdit) {
       setEditingTimeEntryId(entryToEdit.id);
       setTimeForm({ 
         time: formatHoursToTime(entryToEdit.hours),
         description: entryToEdit.description || '', 
-        date: entryToEdit.date 
+        date: entryToEdit.date,
+        entry_type: entryToEdit.entry_type || 'task',
       });
     } else {
       setEditingTimeEntryId(null);
-      setTimeForm({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd') });
+      setTimeForm({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd'), entry_type: 'task' });
     }
     setIsTimeDialogOpen(true);
   };
@@ -190,6 +193,7 @@ export const ProjectDetail: React.FC = () => {
         hours: totalHours,
         description: timeForm.description,
         date: timeForm.date,
+        entry_type: timeForm.entry_type,
       });
       toast.success('Registro atualizado com sucesso!');
     } else {
@@ -198,7 +202,7 @@ export const ProjectDetail: React.FC = () => {
         hours: totalHours,
         description: timeForm.description,
         date: timeForm.date,
-        entry_type: 'task',
+        entry_type: timeForm.entry_type,
       });
       toast.success('Horas registradas com sucesso!');
     }
@@ -366,7 +370,7 @@ export const ProjectDetail: React.FC = () => {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-6 w-6" 
-                                onClick={() => handleOpenTimeDialog(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date })}
+                                onClick={() => handleOpenTimeDialog(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date, entry_type: entry.entry_type })}
                               >
                                 <Pencil className="w-3 h-3" />
                               </Button>
@@ -444,6 +448,19 @@ export const ProjectDetail: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="date">Data</Label>
                 <Input id="date" type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <ToggleGroup type="single" value={timeForm.entry_type} onValueChange={(v) => v && setTimeForm({ ...timeForm, entry_type: v as 'task' | 'meeting' })} className="justify-start">
+                  <ToggleGroupItem value="task" className="gap-1.5">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Tarefa
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="meeting" className="gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    Reunião
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timeDescription">Descrição (opcional)</Label>
