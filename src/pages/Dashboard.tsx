@@ -3,6 +3,7 @@ import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, FolderKanban, ListTodo, Clock, Loader2 } from 'lucide-react';
+import { QuickTimeTracker } from '@/components/dashboard/QuickTimeTracker';
 
 export const Dashboard: React.FC = () => {
   const { data, loading, getClientHours } = useData();
@@ -54,92 +55,102 @@ export const Dashboard: React.FC = () => {
         description="Visão geral do sistema de gestão de projetos"
       />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
         {stats.map((stat) => (
           <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+            <CardContent className="p-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{stat.description}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Projetos Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentProjects.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Nenhum projeto criado ainda.</p>
-            ) : (
-              <ul className="space-y-3">
-                {recentProjects.map((project) => {
-                  const client = data.clients.find(c => c.id === project.client_id);
-                  return (
-                    <li key={project.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                      <div>
-                        <p className="font-medium text-foreground">{project.name}</p>
-                        <p className="text-sm text-muted-foreground">{client?.name || 'Cliente não encontrado'}</p>
-                      </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        project.status === 'active' ? 'bg-green-100 text-green-800' :
-                        project.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
-                        {project.status === 'active' ? 'Ativo' : 
-                         project.status === 'paused' ? 'Pausado' : 'Concluído'}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+      {/* Quick Timer + Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Quick Timer */}
+        <div className="lg:col-span-1">
+          <QuickTimeTracker />
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo de Horas por Cliente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data.clients.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Nenhum cliente cadastrado ainda.</p>
-            ) : (
-              <ul className="space-y-3">
-                {data.clients.map((client) => {
-                  const usedHours = getClientHours(client.id);
-                  const percentage = client.contracted_hours > 0 
-                    ? Math.min((usedHours / client.contracted_hours) * 100, 100)
-                    : 0;
-                  return (
-                    <li key={client.id} className="py-2 border-b border-border last:border-0">
-                      <div className="flex justify-between mb-1">
-                        <span className="font-medium text-foreground">{client.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {usedHours}h / {client.contracted_hours}h
+        {/* Recent Projects + Hours Summary */}
+        <div className="lg:col-span-2 grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Projetos Recentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentProjects.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Nenhum projeto criado ainda.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {recentProjects.map((project) => {
+                    const client = data.clients.find(c => c.id === project.client_id);
+                    return (
+                      <li key={project.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-foreground truncate">{project.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{client?.name || 'Cliente não encontrado'}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full ml-2 shrink-0 ${
+                          project.status === 'active' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
+                          project.status === 'paused' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {project.status === 'active' ? 'Ativo' : 
+                           project.status === 'paused' ? 'Pausado' : 'Concluído'}
                         </span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Horas por Cliente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.clients.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Nenhum cliente cadastrado ainda.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {data.clients.slice(0, 5).map((client) => {
+                    const usedHours = getClientHours(client.id);
+                    const percentage = client.contracted_hours > 0 
+                      ? Math.min((usedHours / client.contracted_hours) * 100, 100)
+                      : 0;
+                    return (
+                      <li key={client.id} className="py-2 border-b border-border last:border-0">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-medium text-foreground text-sm truncate">{client.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                            {usedHours}h / {client.contracted_hours}h
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
