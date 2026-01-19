@@ -266,6 +266,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 onCompleteTask={() => onCompleteTask(task.id)}
                                 compact
                                 showStatus={false}
+                                iconOnly
                               />
                             </div>
                           );

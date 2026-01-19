@@ -16,6 +16,7 @@ interface TaskTimerProps {
   onComplete: () => Promise<void>;
   onDiscard?: () => void;
   disabled?: boolean;
+  iconOnly?: boolean;
 }
 
 export const TaskTimer: React.FC<TaskTimerProps> = ({
@@ -27,6 +28,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   onComplete,
   onDiscard,
   disabled = false,
+  iconOnly = false,
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -154,10 +156,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               )}
             >
               <Play className="w-4 h-4" />
-              <span className="hidden sm:inline ml-2">Iniciar</span>
+              {!iconOnly && <span className="hidden sm:inline ml-2">Iniciar</span>}
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="sm:hidden">
+          <TooltipContent className={iconOnly ? "" : "sm:hidden"}>
             {anotherTimerRunning ? 'Outro timer em andamento' : 'Iniciar'}
           </TooltipContent>
         </Tooltip>
@@ -177,10 +179,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   className="text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
                 >
                   <Play className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-2">Retomar</span>
+                  {!iconOnly && <span className="hidden sm:inline ml-2">Retomar</span>}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="sm:hidden">Retomar</TooltipContent>
+              <TooltipContent className={iconOnly ? "" : "sm:hidden"}>Retomar</TooltipContent>
             </Tooltip>
           ) : (
             <Tooltip>
@@ -193,10 +195,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30 px-2 sm:px-3"
                 >
                   <Pause className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-2">Pausar</span>
+                  {!iconOnly && <span className="hidden sm:inline ml-2">Pausar</span>}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="sm:hidden">Pausar</TooltipContent>
+              <TooltipContent className={iconOnly ? "" : "sm:hidden"}>Pausar</TooltipContent>
             </Tooltip>
           )}
 
@@ -210,10 +212,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                 className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
               >
                 <Square className="w-4 h-4" />
-                <span className="hidden sm:inline ml-2">Concluir</span>
+                {!iconOnly && <span className="hidden sm:inline ml-2">Concluir</span>}
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="sm:hidden">Concluir</TooltipContent>
+            <TooltipContent className={iconOnly ? "" : "sm:hidden"}>Concluir</TooltipContent>
           </Tooltip>
         </>
       )}
@@ -230,10 +232,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               className="text-green-600 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 sm:px-3"
             >
               <CheckCircle className="w-4 h-4" />
-              <span className="hidden sm:inline ml-2">Finalizar</span>
+              {!iconOnly && <span className="hidden sm:inline ml-2">Finalizar</span>}
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="sm:hidden">Finalizar Tarefa</TooltipContent>
+          <TooltipContent className={iconOnly ? "" : "sm:hidden"}>Finalizar Tarefa</TooltipContent>
         </Tooltip>
       )}
     </div>

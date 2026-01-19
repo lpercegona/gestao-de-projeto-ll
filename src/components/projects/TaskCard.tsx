@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -56,6 +57,7 @@ interface TaskCardProps {
   onCompleteTask: () => Promise<void>;
   compact?: boolean;
   showStatus?: boolean;
+  iconOnly?: boolean;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -73,6 +75,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onCompleteTask,
   compact = false,
   showStatus = false,
+  iconOnly = false,
 }) => {
   const [entriesOpen, setEntriesOpen] = React.useState(false);
 
@@ -145,15 +148,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             onStart={onStartTimer}
             onStop={onStopTimer}
             onComplete={onCompleteTask}
+            iconOnly={iconOnly}
           />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => onRegisterTime(task.id)} 
-            className="h-7 px-2 text-xs"
-          >
-            <Clock className="w-3.5 h-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => onRegisterTime(task.id)} 
+                className="h-7 px-2 text-xs"
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Registrar tempo</TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
