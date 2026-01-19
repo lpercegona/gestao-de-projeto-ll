@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -8,16 +9,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Play, Square, Clock, Plus, Link2, Loader2, ClipboardList, Users } from 'lucide-react';
+import { Play, Pause, Square, Clock, Plus, Link2, Loader2, ClipboardList, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export const QuickTimeTracker: React.FC = () => {
-  const { data, createTimeEntry, createTask, createProject, refreshData } = useData();
-  
-  // Timer state
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [startTime, setStartTime] = useState<Date | null>(null);
+  const { data, createTimeEntry, createTask, createProject } = useData();
+  const { 
+    timerState, 
+    startGlobalTimer, 
+    pauseGlobalTimer, 
+    resumeGlobalTimer,
+    hasActiveTimer,
+    getElapsedHours,
+    resetTimer,
+  } = useGlobalTimer();
   
   // Dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -36,21 +42,6 @@ export const QuickTimeTracker: React.FC = () => {
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedClientId, setSelectedClientId] = useState('');
 
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isRunning && startTime) {
-      interval = setInterval(() => {
-        const now = new Date();
-        const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-        setElapsedSeconds(diff);
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isRunning, startTime]);
-
   const formatTime = useCallback((totalSeconds: number): string => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -59,25 +50,26 @@ export const QuickTimeTracker: React.FC = () => {
   }, []);
 
   const handleStart = () => {
-    setIsRunning(true);
-    setStartTime(new Date());
-    setElapsedSeconds(0);
+    startGlobalTimer();
+  };
+
+  const handlePause = () => {
+    pauseGlobalTimer();
+  };
+
+  const handleResume = () => {
+    resumeGlobalTimer();
   };
 
   const handleStop = () => {
-    setIsRunning(false);
+    // If linked to a task, don't show our dialog - the global timer dialog will handle it
+    if (timerState.taskId) {
+      return;
+    }
     setShowLinkDialog(true);
   };
 
-  const calculateHours = (): number => {
-    const hours = elapsedSeconds / 3600;
-    // Round to nearest 0.25h
-    return Math.round(hours * 4) / 4 || 0.25; // Minimum 0.25h
-  };
-
-  const resetState = () => {
-    setElapsedSeconds(0);
-    setStartTime(null);
+  const resetDialogState = () => {
     setShowLinkDialog(false);
     setLinkMode(null);
     setDescription('');
@@ -98,17 +90,17 @@ export const QuickTimeTracker: React.FC = () => {
 
     setLoading(true);
     try {
-      const hours = calculateHours();
+      const hours = getElapsedHours();
       await createTimeEntry({
         task_id: selectedTaskId,
         hours,
         description: description || null,
-        date: new Date().toISOString().split('T')[0],
+        date: format(new Date(), 'yyyy-MM-dd'),
         entry_type: entryType,
       });
-      toast.success(`${hours}h registradas com sucesso!`);
-      await refreshData();
-      resetState();
+      toast.success(`${hours.toFixed(2)}h registradas com sucesso!`);
+      resetTimer();
+      resetDialogState();
     } catch (error) {
       toast.error('Erro ao registrar horas');
       console.error(error);
@@ -167,7 +159,7 @@ export const QuickTimeTracker: React.FC = () => {
         project_id: projectId,
         name: newTaskName.trim(),
         description: null,
-        status: 'todo',
+        status: 'in_progress',
       });
 
       if (!newTask) {
@@ -177,18 +169,18 @@ export const QuickTimeTracker: React.FC = () => {
       }
 
       // Create time entry
-      const hours = calculateHours();
+      const hours = getElapsedHours();
       await createTimeEntry({
         task_id: newTask.id,
         hours,
         description: description || null,
-        date: new Date().toISOString().split('T')[0],
+        date: format(new Date(), 'yyyy-MM-dd'),
         entry_type: entryType,
       });
 
-      toast.success(`Tarefa criada e ${hours}h registradas!`);
-      await refreshData();
-      resetState();
+      toast.success(`Tarefa criada e ${hours.toFixed(2)}h registradas!`);
+      resetTimer();
+      resetDialogState();
     } catch (error) {
       toast.error('Erro ao criar tarefa e registrar horas');
       console.error(error);
@@ -198,13 +190,18 @@ export const QuickTimeTracker: React.FC = () => {
   };
 
   const handleCancel = () => {
-    resetState();
+    resetDialogState();
+  };
+
+  const handleDiscard = () => {
+    resetTimer();
+    resetDialogState();
   };
 
   // Group tasks by project for better selection
   const tasksByProject = data.tasks.reduce((acc, task) => {
     const project = data.projects.find(p => p.id === task.project_id);
-    if (project) {
+    if (project && task.status !== 'completed') {
       const key = project.id;
       if (!acc[key]) {
         acc[key] = { project, tasks: [] };
@@ -213,6 +210,10 @@ export const QuickTimeTracker: React.FC = () => {
     }
     return acc;
   }, {} as Record<string, { project: typeof data.projects[0]; tasks: typeof data.tasks }>);
+
+  const isRunning = timerState.isRunning && !timerState.isPaused;
+  const isPaused = timerState.isPaused;
+  const isLinkedToTask = !!timerState.taskId;
 
   return (
     <>
@@ -225,19 +226,45 @@ export const QuickTimeTracker: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center gap-3">
-            <div className="text-3xl font-mono font-bold text-foreground">
-              {formatTime(elapsedSeconds)}
+            <div className={`text-3xl font-mono font-bold text-foreground ${isRunning ? 'animate-pulse' : ''}`}>
+              {formatTime(timerState.elapsedSeconds)}
             </div>
-            {!isRunning ? (
+            
+            {!hasActiveTimer ? (
               <Button onClick={handleStart} className="w-full gap-2">
                 <Play className="h-4 w-4" />
                 Iniciar
               </Button>
             ) : (
-              <Button onClick={handleStop} variant="destructive" className="w-full gap-2">
-                <Square className="h-4 w-4" />
-                Parar
-              </Button>
+              <div className="flex gap-2 w-full">
+                {isPaused ? (
+                  <Button onClick={handleResume} className="flex-1 gap-2">
+                    <Play className="h-4 w-4" />
+                    Retomar
+                  </Button>
+                ) : (
+                  <Button onClick={handlePause} variant="outline" className="flex-1 gap-2">
+                    <Pause className="h-4 w-4" />
+                    Pausar
+                  </Button>
+                )}
+                <Button 
+                  onClick={isLinkedToTask ? undefined : handleStop} 
+                  variant="destructive" 
+                  className="flex-1 gap-2"
+                  disabled={isLinkedToTask}
+                  title={isLinkedToTask ? 'Este timer está vinculado a uma tarefa' : 'Concluir registro'}
+                >
+                  <Square className="h-4 w-4" />
+                  Concluir
+                </Button>
+              </div>
+            )}
+            
+            {isLinkedToTask && hasActiveTimer && (
+              <p className="text-xs text-muted-foreground text-center">
+                Timer vinculado a uma tarefa. Finalize pela tarefa ou pelo timer global.
+              </p>
             )}
           </div>
         </CardContent>
@@ -246,7 +273,7 @@ export const QuickTimeTracker: React.FC = () => {
       <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Registrar {calculateHours()}h</DialogTitle>
+            <DialogTitle>Registrar {getElapsedHours().toFixed(2)}h</DialogTitle>
             <DialogDescription>
               Escolha como deseja vincular este registro de horas
             </DialogDescription>
@@ -345,12 +372,12 @@ export const QuickTimeTracker: React.FC = () => {
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="createNewProject"
+                  id="createNewProjectDashboard"
                   checked={createNewProject}
                   onChange={(e) => setCreateNewProject(e.target.checked)}
                   className="rounded border-border"
                 />
-                <Label htmlFor="createNewProject" className="text-sm font-normal cursor-pointer">
+                <Label htmlFor="createNewProjectDashboard" className="text-sm font-normal cursor-pointer">
                   Criar novo projeto
                 </Label>
               </div>
@@ -438,9 +465,12 @@ export const QuickTimeTracker: React.FC = () => {
           )}
 
           {!linkMode && (
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancel}>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="ghost" onClick={handleDiscard} className="text-destructive hover:text-destructive">
                 Descartar
+              </Button>
+              <Button variant="outline" onClick={handleCancel}>
+                Cancelar
               </Button>
             </DialogFooter>
           )}
