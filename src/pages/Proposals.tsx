@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -61,6 +61,8 @@ import {
   MessageSquare,
   FileCheck,
   LayoutTemplate,
+  FileSignature,
+  User,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -89,6 +91,7 @@ interface Proposal {
   status: string;
   valid_until: string | null;
   created_at: string;
+  client_id: string | null;
 }
 
 interface ProposalTemplate {
@@ -109,6 +112,7 @@ const emptyItem = (): ProposalItem => ({
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { data: appData } = useData();
   
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [templates, setTemplates] = useState<ProposalTemplate[]>([]);
@@ -122,6 +126,7 @@ export const Proposals: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
   const [viewCommentsDialogOpen, setViewCommentsDialogOpen] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   
   // Form states
   const [editingProposal, setEditingProposal] = useState<Proposal | null>(null);
@@ -129,6 +134,7 @@ export const Proposals: React.FC = () => {
   const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
   const [viewingCommentsFor, setViewingCommentsFor] = useState<Proposal | null>(null);
+  const [proposalToConvert, setProposalToConvert] = useState<Proposal | null>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   
@@ -140,6 +146,7 @@ export const Proposals: React.FC = () => {
     title: '',
     description: '',
     validUntil: '',
+    clientId: '',
     items: [emptyItem()] as ProposalItem[],
   });
   
@@ -215,6 +222,7 @@ export const Proposals: React.FC = () => {
         total_hours: totalHours,
         total_value: totalValue,
         created_by: user?.id,
+        client_id: formData.clientId || null,
       };
 
       if (editingProposal) {
@@ -372,6 +380,32 @@ export const Proposals: React.FC = () => {
     }
   };
 
+  // Convert to contract
+  const handleConvertToContract = async () => {
+    if (!proposalToConvert) return;
+    
+    setSaving(true);
+    try {
+      const { data, error } = await supabase
+        .rpc('convert_proposal_to_contract', {
+          p_proposal_id: proposalToConvert.id,
+          p_template_id: null
+        });
+      
+      if (error) throw error;
+      
+      toast.success('Contrato criado com sucesso!');
+      setConvertDialogOpen(false);
+      setProposalToConvert(null);
+      navigate('/contracts');
+    } catch (error) {
+      console.error('Error converting to contract:', error);
+      toast.error('Erro ao criar contrato');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Apply template
   const handleApplyTemplate = (template: ProposalTemplate) => {
     setFormData(prev => ({
@@ -434,6 +468,7 @@ export const Proposals: React.FC = () => {
       title: '',
       description: '',
       validUntil: '',
+      clientId: '',
       items: [emptyItem()],
     });
   };
@@ -457,6 +492,7 @@ export const Proposals: React.FC = () => {
       title: proposal.title,
       description: proposal.description || '',
       validUntil: proposal.valid_until || '',
+      clientId: proposal.client_id || '',
       items: proposal.items.length > 0 ? proposal.items : [emptyItem()],
     });
     setProposalDialogOpen(true);
@@ -479,18 +515,25 @@ export const Proposals: React.FC = () => {
       case 'draft':
         return <Badge variant="outline">Rascunho</Badge>;
       case 'sent':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Enviada</Badge>;
+        return <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">Enviada</Badge>;
       case 'viewed':
-        return <Badge variant="secondary" className="bg-purple-100 text-purple-800">Visualizada</Badge>;
+        return <Badge variant="secondary" className="bg-purple-500/20 text-purple-700 dark:text-purple-300">Visualizada</Badge>;
       case 'accepted':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Aceita</Badge>;
+        return <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-300">Aceita</Badge>;
       case 'rejected':
         return <Badge variant="destructive">Rejeitada</Badge>;
       case 'negotiating':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Negociando</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-300">Negociando</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  // Get client name
+  const getClientName = (clientId: string | null) => {
+    if (!clientId) return null;
+    const client = appData.clients.find(c => c.id === clientId);
+    return client?.name || null;
   };
 
   // Filter proposals
@@ -521,232 +564,185 @@ export const Proposals: React.FC = () => {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
-          title="Propostas"
-          description="Gerencie propostas comerciais e templates"
-        />
+    <div className="space-y-6">
+      <PageHeader
+        title="Propostas"
+        description="Gerencie propostas comerciais e templates"
+      />
 
-        {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <FileText className="w-4 h-4" />
-                <span className="text-sm">Total</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm">Pendentes</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm">Aceitas</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stats.accepted}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <DollarSign className="w-4 h-4" />
-                <span className="text-sm">Valor Aceito</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">
-                {stats.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="proposals">
-          <TabsList>
-            <TabsTrigger value="proposals" className="flex items-center gap-2">
+      {/* Stats */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <FileText className="w-4 h-4" />
-              Propostas
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="flex items-center gap-2">
-              <LayoutTemplate className="w-4 h-4" />
-              Templates
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Proposals Tab */}
-          <TabsContent value="proposals" className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="flex flex-1 gap-3 w-full sm:w-auto">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="draft">Rascunho</SelectItem>
-                    <SelectItem value="sent">Enviada</SelectItem>
-                    <SelectItem value="viewed">Visualizada</SelectItem>
-                    <SelectItem value="accepted">Aceita</SelectItem>
-                    <SelectItem value="rejected">Rejeitada</SelectItem>
-                    <SelectItem value="negotiating">Negociando</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={() => { resetProposalForm(); setProposalDialogOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Nova Proposta</span>
-              </Button>
+              <span className="text-sm">Total</span>
             </div>
+            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm">Pendentes</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-sm">Aceitas</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{stats.accepted}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <DollarSign className="w-4 h-4" />
+              <span className="text-sm">Valor Aceito</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {stats.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-            {filteredProposals.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">Nenhuma proposta encontrada.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {filteredProposals.map((proposal) => (
-                  <Card key={proposal.id} className="group">
-                    <CardContent className="py-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-foreground">{proposal.title}</h3>
-                            {getStatusBadge(proposal.status)}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {proposal.recipient_name} • {proposal.recipient_email}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {proposal.total_hours}h • {proposal.total_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Criada em {format(parseISO(proposal.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                          </p>
+      <Tabs defaultValue="proposals">
+        <TabsList>
+          <TabsTrigger value="proposals" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Propostas
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <LayoutTemplate className="w-4 h-4" />
+            Templates
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Proposals Tab */}
+        <TabsContent value="proposals" className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-1 gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="draft">Rascunho</SelectItem>
+                  <SelectItem value="sent">Enviada</SelectItem>
+                  <SelectItem value="viewed">Visualizada</SelectItem>
+                  <SelectItem value="accepted">Aceita</SelectItem>
+                  <SelectItem value="rejected">Rejeitada</SelectItem>
+                  <SelectItem value="negotiating">Negociando</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => { resetProposalForm(); setProposalDialogOpen(true); }}>
+              <Plus className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Nova Proposta</span>
+            </Button>
+          </div>
+
+          {filteredProposals.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhuma proposta encontrada.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredProposals.map((proposal) => (
+                <Card key={proposal.id} className="group">
+                  <CardContent className="py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-foreground truncate">{proposal.title}</h3>
+                          {getStatusBadge(proposal.status)}
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {proposal.status === 'draft' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSendProposal(proposal)}
-                            >
-                              <Send className="w-4 h-4 mr-2" />
-                              Enviar
-                            </Button>
-                          )}
-                          
-                          {proposal.status !== 'draft' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCopyLink(proposal.share_token)}
-                            >
-                              {copiedToken === proposal.share_token ? (
-                                <Check className="w-4 h-4" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </Button>
-                          )}
-                          
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <User className="w-3 h-3" />
+                          <span className="truncate">{proposal.recipient_name}</span>
+                          <span>•</span>
+                          <span className="truncate">{proposal.recipient_email}</span>
+                        </div>
+                        {proposal.client_id && (
+                          <p className="text-xs text-primary">
+                            Vinculada ao cliente: {getClientName(proposal.client_id)}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {proposal.total_hours}h
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                            {proposal.total_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Criada em {format(parseISO(proposal.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {proposal.status === 'draft' && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleViewComments(proposal)}
+                            onClick={() => handleSendProposal(proposal)}
                           >
-                            <MessageSquare className="w-4 h-4" />
+                            <Send className="w-4 h-4 mr-2" />
+                            Enviar
                           </Button>
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="ghost">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => window.open(`/proposal/${proposal.share_token}`, '_blank')}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Visualizar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openEditProposal(proposal)}>
-                                <Pencil className="w-4 h-4 mr-2" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => {
-                                  setProposalToDelete(proposal.id);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Templates Tab */}
-          <TabsContent value="templates" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={() => { resetTemplateForm(); setTemplateDialogOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Novo Template</span>
-              </Button>
-            </div>
-
-            {templates.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <LayoutTemplate className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">Nenhum template cadastrado.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {templates.map((template) => (
-                  <Card key={template.id} className="group">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg">{template.name}</CardTitle>
+                        )}
+                        
+                        {proposal.status !== 'draft' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCopyLink(proposal.share_token)}
+                          >
+                            {copiedToken === proposal.share_token ? (
+                              <Check className="w-4 h-4" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewComments(proposal)}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                        
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="ghost">
@@ -754,15 +750,28 @@ export const Proposals: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditTemplate(template)}>
+                            <DropdownMenuItem onClick={() => window.open(`/proposal/${proposal.share_token}`, '_blank')}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Visualizar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEditProposal(proposal)}>
                               <Pencil className="w-4 h-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
+                            {proposal.status === 'accepted' && (
+                              <DropdownMenuItem onClick={() => {
+                                setProposalToConvert(proposal);
+                                setConvertDialogOpen(true);
+                              }}>
+                                <FileSignature className="w-4 h-4 mr-2" />
+                                Gerar Contrato
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => {
-                                setTemplateToDelete(template.id);
-                                setDeleteTemplateDialogOpen(true);
+                                setProposalToDelete(proposal.id);
+                                setDeleteDialogOpen(true);
                               }}
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -771,130 +780,224 @@ export const Proposals: React.FC = () => {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      {template.description && (
-                        <CardDescription>{template.description}</CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        {template.items.length} {template.items.length === 1 ? 'item' : 'itens'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Templates Tab */}
+        <TabsContent value="templates" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => { resetTemplateForm(); setTemplateDialogOpen(true); }}>
+              <Plus className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Novo Template</span>
+            </Button>
+          </div>
+
+          {templates.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <LayoutTemplate className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhum template cadastrado.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {templates.map((template) => (
+                <Card key={template.id} className="group relative">
+                  <div className="absolute top-3 right-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                          <MoreVertical className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditTemplate(template)}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            setTemplateToDelete(template.id);
+                            setDeleteTemplateDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <CardHeader className="pb-2 pr-10">
+                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                    {template.description && (
+                      <CardDescription>{template.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {template.items.length} {template.items.length === 1 ? 'item' : 'itens'}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Proposal Dialog */}
+      <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingProposal ? 'Editar Proposta' : 'Nova Proposta'}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados da proposta comercial
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Client selection */}
+            <div className="space-y-2">
+              <Label>Vincular a Cliente (opcional)</Label>
+              <Select value={formData.clientId} onValueChange={(v) => {
+                const client = appData.clients.find(c => c.id === v);
+                setFormData(prev => ({
+                  ...prev,
+                  clientId: v || '',
+                  recipientName: client?.name || prev.recipientName,
+                  recipientEmail: client?.email || prev.recipientEmail,
+                  recipientCompany: prev.recipientCompany,
+                }));
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {appData.clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Recipient info */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Nome do Destinatário *</Label>
+                <Input
+                  value={formData.recipientName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, recipientName: e.target.value }))}
+                  placeholder="Nome completo"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  value={formData.recipientEmail}
+                  onChange={(e) => setFormData(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Empresa</Label>
+                <Input
+                  value={formData.recipientCompany}
+                  onChange={(e) => setFormData(prev => ({ ...prev, recipientCompany: e.target.value }))}
+                  placeholder="Nome da empresa"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Válida até</Label>
+                <Input
+                  type="date"
+                  value={formData.validUntil}
+                  onChange={(e) => setFormData(prev => ({ ...prev, validUntil: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Proposal details */}
+            <div className="space-y-2">
+              <Label>Título da Proposta *</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Ex: Proposta de Desenvolvimento Web"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descrição geral da proposta..."
+                rows={3}
+              />
+            </div>
+
+            {/* Apply template */}
+            {templates.length > 0 && (
+              <div className="space-y-2">
+                <Label>Aplicar Template</Label>
+                <Select onValueChange={(id) => {
+                  const template = templates.find(t => t.id === id);
+                  if (template) handleApplyTemplate(template);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
-          </TabsContent>
-        </Tabs>
 
-        {/* Proposal Dialog */}
-        <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingProposal ? 'Editar Proposta' : 'Nova Proposta'}
-              </DialogTitle>
-              <DialogDescription>
-                Preencha os dados da proposta comercial
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              {/* Template selector */}
-              {!editingProposal && templates.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Aplicar Template</Label>
-                  <Select onValueChange={(id) => {
-                    const template = templates.find(t => t.id === id);
-                    if (template) handleApplyTemplate(template);
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um template (opcional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Recipient info */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="recipientName">Nome do Destinatário *</Label>
-                  <Input
-                    id="recipientName"
-                    value={formData.recipientName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, recipientName: e.target.value }))}
-                    placeholder="Nome do contato"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recipientEmail">Email *</Label>
-                  <Input
-                    id="recipientEmail"
-                    type="email"
-                    value={formData.recipientEmail}
-                    onChange={(e) => setFormData(prev => ({ ...prev, recipientEmail: e.target.value }))}
-                    placeholder="email@empresa.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recipientCompany">Empresa</Label>
-                  <Input
-                    id="recipientCompany"
-                    value={formData.recipientCompany}
-                    onChange={(e) => setFormData(prev => ({ ...prev, recipientCompany: e.target.value }))}
-                    placeholder="Nome da empresa"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="validUntil">Válido até</Label>
-                  <Input
-                    id="validUntil"
-                    type="date"
-                    value={formData.validUntil}
-                    onChange={(e) => setFormData(prev => ({ ...prev, validUntil: e.target.value }))}
-                  />
-                </div>
+            {/* Items */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Itens da Proposta</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => addItem()}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Adicionar
+                </Button>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="title">Título da Proposta *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Ex: Proposta de Desenvolvimento Web"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descrição geral da proposta..."
-                  rows={3}
-                />
-              </div>
-
-              {/* Items */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Itens / Serviços</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => addItem()}>
-                    <Plus className="w-4 h-4 mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
-
-                {formData.items.map((item, index) => (
-                  <Card key={item.id} className="p-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
+              {formData.items.map((item, index) => (
+                <Card key={item.id}>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">Item {index + 1}</span>
+                      {formData.items.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(item.id)}
+                          className="text-destructive h-6 w-6 p-0"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Serviço</Label>
                         <Input
@@ -908,113 +1011,125 @@ export const Proposals: React.FC = () => {
                         <Input
                           value={item.description}
                           onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                          placeholder="Descrição breve"
+                          placeholder="Breve descrição"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Horas</Label>
                         <Input
                           type="number"
-                          min="0"
-                          value={item.hours}
+                          min={0}
+                          value={item.hours || ''}
                           onChange={(e) => updateItem(item.id, 'hours', Number(e.target.value))}
+                          placeholder="0"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Preço/Hora (R$)</Label>
                         <Input
                           type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.pricePerHour}
+                          min={0}
+                          value={item.pricePerHour || ''}
                           onChange={(e) => updateItem(item.id, 'pricePerHour', Number(e.target.value))}
+                          placeholder="0"
                         />
                       </div>
                     </div>
-                    {formData.items.length > 1 && (
-                      <div className="flex justify-end mt-2">
+                    <div className="text-right text-sm text-muted-foreground">
+                      Subtotal: {((item.hours || 0) * (item.pricePerHour || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              <Card className="bg-muted/50">
+                <CardContent className="py-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Total</span>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">{formTotalHours} horas</p>
+                      <p className="text-lg font-bold">
+                        {formTotalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setProposalDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveProposal} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingProposal ? 'Salvar' : 'Criar Proposta'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Dialog */}
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTemplate ? 'Editar Template' : 'Novo Template'}
+            </DialogTitle>
+            <DialogDescription>
+              Crie um modelo reutilizável para suas propostas
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label>Nome do Template *</Label>
+              <Input
+                value={templateFormData.name}
+                onChange={(e) => setTemplateFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Pacote Básico de Design"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={templateFormData.description}
+                onChange={(e) => setTemplateFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Breve descrição do template..."
+                rows={2}
+              />
+            </div>
+
+            {/* Items */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Itens do Template</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => addItem(true)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Adicionar
+                </Button>
+              </div>
+
+              {templateFormData.items.map((item, index) => (
+                <Card key={item.id}>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">Item {index + 1}</span>
+                      {templateFormData.items.length > 1 && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="text-destructive"
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.id, true)}
+                          className="text-destructive h-6 w-6 p-0"
                         >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Remover
+                          <Trash2 className="w-3 h-3" />
                         </Button>
-                      </div>
-                    )}
-                  </Card>
-                ))}
-
-                {/* Totals */}
-                <div className="flex justify-end gap-6 text-sm font-medium">
-                  <span>Total: {formTotalHours}h</span>
-                  <span>{formTotalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setProposalDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveProposal} disabled={saving}>
-                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingProposal ? 'Salvar' : 'Criar Proposta'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Template Dialog */}
-        <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTemplate ? 'Editar Template' : 'Novo Template'}
-              </DialogTitle>
-              <DialogDescription>
-                Crie um modelo reutilizável para suas propostas
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="templateName">Nome do Template *</Label>
-                <Input
-                  id="templateName"
-                  value={templateFormData.name}
-                  onChange={(e) => setTemplateFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: Desenvolvimento Web Básico"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="templateDescription">Descrição</Label>
-                <Textarea
-                  id="templateDescription"
-                  value={templateFormData.description}
-                  onChange={(e) => setTemplateFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descrição do template..."
-                  rows={2}
-                />
-              </div>
-
-              {/* Items */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Itens / Serviços</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => addItem(true)}>
-                    <Plus className="w-4 h-4 mr-1" />
-                    Adicionar
-                  </Button>
-                </div>
-
-                {templateFormData.items.map((item) => (
-                  <Card key={item.id} className="p-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
+                      )}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Serviço</Label>
                         <Input
@@ -1028,130 +1143,139 @@ export const Proposals: React.FC = () => {
                         <Input
                           value={item.description}
                           onChange={(e) => updateItem(item.id, 'description', e.target.value, true)}
-                          placeholder="Descrição breve"
+                          placeholder="Breve descrição"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Horas</Label>
                         <Input
                           type="number"
-                          min="0"
-                          value={item.hours}
+                          min={0}
+                          value={item.hours || ''}
                           onChange={(e) => updateItem(item.id, 'hours', Number(e.target.value), true)}
+                          placeholder="0"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Preço/Hora (R$)</Label>
                         <Input
                           type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.pricePerHour}
+                          min={0}
+                          value={item.pricePerHour || ''}
                           onChange={(e) => updateItem(item.id, 'pricePerHour', Number(e.target.value), true)}
+                          placeholder="0"
                         />
                       </div>
                     </div>
-                    {templateFormData.items.length > 1 && (
-                      <div className="flex justify-end mt-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => removeItem(item.id, true)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Remover
-                        </Button>
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+          </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveTemplate} disabled={saving}>
-                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingTemplate ? 'Salvar' : 'Criar Template'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveTemplate} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingTemplate ? 'Salvar' : 'Criar Template'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Comments Dialog */}
-        <Dialog open={viewCommentsDialogOpen} onOpenChange={setViewCommentsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Comentários</DialogTitle>
-              <DialogDescription>
-                {viewingCommentsFor?.title}
-              </DialogDescription>
-            </DialogHeader>
+      {/* Delete Proposal Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Proposta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta proposta? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProposal} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-            <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-              {commentsLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                </div>
-              ) : comments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhum comentário ainda.
-                </p>
-              ) : (
-                comments.map((comment) => (
-                  <div key={comment.id} className="p-3 bg-muted rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-sm">
-                        {comment.author_name || 'Cliente'}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(parseISO(comment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-foreground">{comment.content}</p>
+      {/* Delete Template Dialog */}
+      <AlertDialog open={deleteTemplateDialogOpen} onOpenChange={setDeleteTemplateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este template? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTemplate} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Comments Dialog */}
+      <Dialog open={viewCommentsDialogOpen} onOpenChange={setViewCommentsDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Comentários</DialogTitle>
+            <DialogDescription>
+              {viewingCommentsFor?.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          {commentsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2" />
+              <p>Nenhum comentário ainda.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-80 overflow-y-auto">
+              {comments.map((comment) => (
+                <div key={comment.id} className="p-3 rounded-lg bg-muted">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="font-medium text-sm">{comment.author_name || 'Anônimo'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(parseISO(comment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    </span>
                   </div>
-                ))
-              )}
+                  <p className="text-sm">{comment.content}</p>
+                </div>
+              ))}
             </div>
-          </DialogContent>
-        </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
 
-        {/* Delete Proposal Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir proposta?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. A proposta será excluída permanentemente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteProposal}>Excluir</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Delete Template Dialog */}
-        <AlertDialog open={deleteTemplateDialogOpen} onOpenChange={setDeleteTemplateDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir template?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. O template será excluído permanentemente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteTemplate}>Excluir</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </AppLayout>
+      {/* Convert to Contract Dialog */}
+      <AlertDialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gerar Contrato</AlertDialogTitle>
+            <AlertDialogDescription>
+              Um contrato será criado com base nos dados desta proposta. Você poderá editá-lo antes de enviar ao cliente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConvertToContract} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Gerar Contrato
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };

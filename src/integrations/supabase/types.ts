@@ -17,44 +17,245 @@ export type Database = {
       clients: {
         Row: {
           access_token: string
+          company: string | null
           contracted_hours: number
+          converted_at: string | null
           created_at: string
           created_by: string | null
           email: string
           id: string
           name: string
+          notes: string | null
           owner_id: string | null
           password_set: boolean
+          phone: string | null
+          pipeline_status: string
+          source: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           access_token?: string
+          company?: string | null
           contracted_hours?: number
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           email: string
           id?: string
           name: string
+          notes?: string | null
           owner_id?: string | null
           password_set?: boolean
+          phone?: string | null
+          pipeline_status?: string
+          source?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           access_token?: string
+          company?: string | null
           contracted_hours?: number
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           email?: string
           id?: string
           name?: string
+          notes?: string | null
           owner_id?: string | null
           password_set?: boolean
+          phone?: string | null
+          pipeline_status?: string
+          source?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Relationships: []
+      }
+      contract_history: {
+        Row: {
+          changed_by: string | null
+          contract_id: string
+          created_at: string
+          id: string
+          new_status: string
+          notes: string | null
+          old_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          contract_id: string
+          created_at?: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          contract_id?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_history_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          content: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contracts: {
+        Row: {
+          client_id: string | null
+          content: string
+          contractor_address: string | null
+          contractor_company: string | null
+          contractor_document: string | null
+          contractor_email: string
+          contractor_name: string
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          id: string
+          owner_id: string | null
+          payment_terms: string | null
+          proposal_id: string | null
+          sent_at: string | null
+          services_summary: Json | null
+          share_token: string
+          signed_at: string | null
+          signer_ip: string | null
+          signer_name: string | null
+          start_date: string | null
+          status: string
+          template_id: string | null
+          title: string
+          total_hours: number | null
+          total_value: number | null
+          updated_at: string
+          viewed_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          content?: string
+          contractor_address?: string | null
+          contractor_company?: string | null
+          contractor_document?: string | null
+          contractor_email: string
+          contractor_name: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          owner_id?: string | null
+          payment_terms?: string | null
+          proposal_id?: string | null
+          sent_at?: string | null
+          services_summary?: Json | null
+          share_token?: string
+          signed_at?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          start_date?: string | null
+          status?: string
+          template_id?: string | null
+          title: string
+          total_hours?: number | null
+          total_value?: number | null
+          updated_at?: string
+          viewed_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          content?: string
+          contractor_address?: string | null
+          contractor_company?: string | null
+          contractor_document?: string | null
+          contractor_email?: string
+          contractor_name?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          owner_id?: string | null
+          payment_terms?: string | null
+          proposal_id?: string | null
+          sent_at?: string | null
+          services_summary?: Json | null
+          share_token?: string
+          signed_at?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          start_date?: string | null
+          status?: string
+          template_id?: string | null
+          title?: string
+          total_hours?: number | null
+          total_value?: number | null
+          updated_at?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kanban_stages: {
         Row: {
@@ -401,6 +602,7 @@ export type Database = {
       }
       proposals: {
         Row: {
+          client_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -420,6 +622,7 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -439,6 +642,7 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -458,6 +662,13 @@ export type Database = {
           valid_until?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proposals_template_id_fkey"
             columns: ["template_id"]
@@ -757,6 +968,10 @@ export type Database = {
           is_public: boolean
         }[]
       }
+      convert_proposal_to_contract: {
+        Args: { p_proposal_id: string; p_template_id?: string }
+        Returns: string
+      }
       get_client_access_token: {
         Args: { p_client_id: string }
         Returns: string
@@ -799,6 +1014,25 @@ export type Database = {
           entry_id: string
           hours: number
           task_id: string
+        }[]
+      }
+      get_contract_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          content: string
+          contractor_company: string
+          contractor_email: string
+          contractor_name: string
+          created_at: string
+          end_date: string
+          id: string
+          payment_terms: string
+          services_summary: Json
+          start_date: string
+          status: string
+          title: string
+          total_hours: number
+          total_value: number
         }[]
       }
       get_proposal_by_token: {
@@ -886,6 +1120,16 @@ export type Database = {
       }
       setup_client_account: {
         Args: { p_client_id: string; p_email: string; p_user_id: string }
+        Returns: boolean
+      }
+      sign_contract: {
+        Args: {
+          p_address?: string
+          p_document?: string
+          p_signer_ip?: string
+          p_signer_name: string
+          p_token: string
+        }
         Returns: boolean
       }
       verify_report_password: {

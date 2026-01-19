@@ -48,6 +48,7 @@ const App = () => (
               <Route path="/portal/:token" element={<ClientPortal />} />
               <Route path="/report/:token" element={<SharedReport />} />
               <Route path="/proposal/:token" element={<PublicProposal />} />
+              <Route path="/contract/:token" element={<PublicContract />} />
               
               {/* Dashboard - accessible by admin and master_admin only */}
               <Route path="/" element={
@@ -98,6 +99,13 @@ const App = () => (
               <Route path="/proposals" element={
                 <ProtectedRoute requiredRole="admin">
                   <Proposals />
+                </ProtectedRoute>
+              } />
+              
+              {/* Contracts - admin only */}
+              <Route path="/contracts" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Contracts />
                 </ProtectedRoute>
               } />
               
