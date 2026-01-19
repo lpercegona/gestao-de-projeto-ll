@@ -211,6 +211,11 @@ export const QuickTimeTracker: React.FC = () => {
   const isPaused = timerState.isPaused;
   const isLinkedToTask = !!timerState.taskId;
 
+  // Get linked task info
+  const linkedTask = timerState.taskId ? data.tasks.find(t => t.id === timerState.taskId) : null;
+  const linkedProject = linkedTask ? data.projects.find(p => p.id === linkedTask.project_id) : null;
+  const linkedClient = linkedProject ? data.clients.find(c => c.id === linkedProject.client_id) : null;
+
   return (
     <>
       <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
@@ -225,6 +230,22 @@ export const QuickTimeTracker: React.FC = () => {
             <div className={`text-3xl font-mono font-bold text-foreground ${isRunning ? 'animate-pulse' : ''}`}>
               {formatTime(timerState.elapsedSeconds)}
             </div>
+            
+            {/* Show linked task info or status */}
+            {hasActiveTimer && (
+              <div className="w-full text-center">
+                {isLinkedToTask && linkedTask ? (
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    <p className="font-medium text-foreground truncate">{linkedTask.name}</p>
+                    <p className="truncate">{linkedProject?.name} • {linkedClient?.name}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Registro não vinculado a nenhuma tarefa
+                  </p>
+                )}
+              </div>
+            )}
             
             {!hasActiveTimer ? (
               <Button onClick={handleStart} className="w-full gap-2">
@@ -255,7 +276,6 @@ export const QuickTimeTracker: React.FC = () => {
                 </Button>
               </div>
             )}
-            
           </div>
         </CardContent>
       </Card>
