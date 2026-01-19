@@ -95,6 +95,14 @@ interface UserProfile {
   role: string | null;
 }
 
+interface ClientUser {
+  id: string;
+  client_id: string;
+  user_id: string;
+  is_primary: boolean;
+  profile?: UserProfile;
+}
+
 interface Contract {
   id: string;
   title: string;
@@ -151,9 +159,11 @@ export const ClientDetail: React.FC = () => {
   // Client user management state
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
-  const [clientUserData, setClientUserData] = useState<UserProfile | null>(null);
+  const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [editingUserData, setEditingUserData] = useState<UserProfile | null>(null);
+  const [newClientUserEmail, setNewClientUserEmail] = useState('');
+  const [newClientUserName, setNewClientUserName] = useState('');
   
   // Collaborator management
   const [allCollaborators, setAllCollaborators] = useState<UserProfile[]>([]);
@@ -213,7 +223,7 @@ export const ClientDetail: React.FC = () => {
     }
   }, [clientId, activeTab]);
 
-  // Fetch team members (collaborators assigned to client's projects + client account)
+  // Fetch team members (collaborators assigned to client's projects + client users)
   useEffect(() => {
     const fetchTeam = async () => {
       if (!clientId || !client) return;
@@ -244,16 +254,36 @@ export const ClientDetail: React.FC = () => {
           .from('user_roles')
           .select('user_id, role');
         
-        // Also include the client's own account if exists
-        const clientProfile = (profilesData || []).find(p => 
-          p.email?.toLowerCase() === client.email?.toLowerCase()
-        );
+        // Fetch client users from client_users table
+        const { data: clientUsersData } = await supabase
+          .from('client_users')
+          .select('*')
+          .eq('client_id', clientId)
+          .order('is_primary', { ascending: false });
         
-        const allUserIds = clientProfile 
-          ? [...new Set([...userIds, clientProfile.user_id])]
-          : userIds;
+        // Map client users with their profiles
+        const mappedClientUsers: ClientUser[] = (clientUsersData || []).map(cu => {
+          const profile = (profilesData || []).find(p => p.user_id === cu.user_id);
+          const role = (rolesData || []).find(r => r.user_id === cu.user_id);
+          return {
+            ...cu,
+            profile: {
+              user_id: cu.user_id,
+              full_name: profile?.full_name || null,
+              email: profile?.email || null,
+              role: role?.role || null,
+            }
+          };
+        });
+        setClientUsers(mappedClientUsers);
         
-        const members = allUserIds.map(userId => {
+        // Get user IDs that are client users
+        const clientUserIds = mappedClientUsers.map(cu => cu.user_id);
+        
+        // Filter collaborators (exclude client users from team members)
+        const collaboratorUserIds = userIds.filter(id => !clientUserIds.includes(id));
+        
+        const members = collaboratorUserIds.map(userId => {
           const profile = (profilesData || []).find(p => p.user_id === userId);
           const role = (rolesData || []).find(r => r.user_id === userId);
           return {
@@ -265,19 +295,6 @@ export const ClientDetail: React.FC = () => {
         });
         
         setTeamMembers(members);
-        
-        // Find the client user specifically
-        if (clientProfile) {
-          const clientRole = (rolesData || []).find(r => r.user_id === clientProfile.user_id);
-          setClientUserData({
-            user_id: clientProfile.user_id,
-            full_name: clientProfile.full_name,
-            email: clientProfile.email,
-            role: clientRole?.role || null,
-          });
-        } else {
-          setClientUserData(null);
-        }
         
         // Get all collaborators for adding to projects
         const collaboratorUsers = (profilesData || []).filter(p => {
@@ -580,15 +597,16 @@ export const ClientDetail: React.FC = () => {
 
   // Create client user account
   const handleCreateClientUser = async () => {
-    if (!clientId || !client?.email) return;
+    if (!clientId || !newClientUserEmail) return;
     setCreatingUser(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const response = await supabase.functions.invoke('create-client-user', {
         body: { 
           clientId, 
-          email: client.email, 
-          fullName: client.name 
+          email: newClientUserEmail.trim(), 
+          fullName: newClientUserName.trim() || null,
+          isPrimary: clientUsers.length === 0 // First user is primary
         },
         headers: {
           Authorization: `Bearer ${sessionData.session?.access_token}`
@@ -611,17 +629,38 @@ export const ClientDetail: React.FC = () => {
           toast.success('Usuário cliente criado com sucesso!');
         }
         setIsCreateUserDialogOpen(false);
+        setNewClientUserEmail('');
+        setNewClientUserName('');
         // Refresh team data
         setActiveTab('overview');
         setTimeout(() => setActiveTab('team'), 100);
       } else {
         throw new Error(result.error || 'Erro ao criar usuário');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating client user:', error);
-      toast.error('Erro ao criar usuário cliente');
+      toast.error(error?.message || 'Erro ao criar usuário cliente');
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  // Remove client user access
+  const handleRemoveClientUser = async (clientUserId: string) => {
+    try {
+      const { error } = await supabase
+        .from('client_users')
+        .delete()
+        .eq('id', clientUserId);
+
+      if (error) throw error;
+      toast.success('Acesso removido com sucesso!');
+      // Refresh team data
+      setActiveTab('overview');
+      setTimeout(() => setActiveTab('team'), 100);
+    } catch (error) {
+      console.error('Error removing client user:', error);
+      toast.error('Erro ao remover acesso');
     }
   };
 
@@ -1257,53 +1296,66 @@ export const ClientDetail: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Client User Section */}
+              {/* Client Users Section */}
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Mail className="w-4 h-4" />
-                      Acesso do Cliente
+                      Acesso do Cliente ({clientUsers.length})
                     </CardTitle>
-                    {!clientUserData && client?.email && (
-                      <Button size="sm" onClick={() => setIsCreateUserDialogOpen(true)}>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Criar Acesso
-                      </Button>
-                    )}
+                    <Button size="sm" onClick={() => setIsCreateUserDialogOpen(true)}>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Adicionar Acesso
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {clientUserData ? (
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary">
-                            {clientUserData.full_name?.charAt(0)?.toUpperCase() || clientUserData.email?.charAt(0)?.toUpperCase() || 'C'}
-                          </span>
+                  {clientUsers.length > 0 ? (
+                    <div className="space-y-2">
+                      {clientUsers.map((clientUser) => (
+                        <div key={clientUser.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-sm font-medium text-primary">
+                                {clientUser.profile?.full_name?.charAt(0)?.toUpperCase() || clientUser.profile?.email?.charAt(0)?.toUpperCase() || 'C'}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground">{clientUser.profile?.full_name || 'Sem nome'}</p>
+                                {clientUser.is_primary && (
+                                  <Badge variant="outline" className="text-xs">Principal</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{clientUser.profile?.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {clientUser.profile && getRoleBadge(clientUser.profile.role)}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => clientUser.profile && handleOpenEditUser(clientUser.profile)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => handleRemoveClientUser(clientUser.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-foreground">{clientUserData.full_name || 'Sem nome'}</p>
-                          <p className="text-sm text-muted-foreground">{clientUserData.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getRoleBadge(clientUserData.role)}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => handleOpenEditUser(clientUserData)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      ))}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      {client?.email 
-                        ? 'Nenhum usuário vinculado. Clique em "Criar Acesso" para gerar uma conta de acesso ao portal.'
-                        : 'Adicione um email ao cliente para criar uma conta de acesso.'}
+                      Nenhum usuário com acesso ao portal. Clique em "Adicionar Acesso" para criar uma conta.
                     </p>
                   )}
                 </CardContent>
@@ -1535,34 +1587,49 @@ export const ClientDetail: React.FC = () => {
       </Dialog>
 
       {/* Create Client User Dialog */}
-      <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+      <Dialog open={isCreateUserDialogOpen} onOpenChange={(open) => {
+        setIsCreateUserDialogOpen(open);
+        if (!open) {
+          setNewClientUserEmail('');
+          setNewClientUserName('');
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Criar Acesso do Cliente</DialogTitle>
+            <DialogTitle>Adicionar Acesso ao Portal</DialogTitle>
             <DialogDescription>
-              Um usuário será criado com o email do cliente ({client?.email}) para acessar o portal.
+              Adicione um usuário com acesso ao portal do cliente.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              O cliente receberá uma senha temporária que poderá ser alterada posteriormente. 
-              O acesso permitirá visualizar projetos, solicitar novos projetos e acompanhar relatórios.
-            </p>
-            <div className="p-4 bg-muted rounded-lg">
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-foreground">{client?.name}</p>
-                  <p className="text-sm text-muted-foreground">{client?.email}</p>
-                </div>
-              </div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-client-user-name">Nome</Label>
+              <Input
+                id="new-client-user-name"
+                placeholder="Nome do usuário"
+                value={newClientUserName}
+                onChange={(e) => setNewClientUserName(e.target.value)}
+              />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-client-user-email">Email</Label>
+              <Input
+                id="new-client-user-email"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={newClientUserEmail}
+                onChange={(e) => setNewClientUserEmail(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O usuário receberá uma senha temporária. Se já existir um usuário com esse email, ele será vinculado automaticamente.
+            </p>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)} disabled={creatingUser}>
               Cancelar
             </Button>
-            <Button onClick={handleCreateClientUser} disabled={creatingUser}>
+            <Button onClick={handleCreateClientUser} disabled={creatingUser || !newClientUserEmail}>
               {creatingUser ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : (
