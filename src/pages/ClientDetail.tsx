@@ -36,7 +36,6 @@ import {
 } from '@/components/ui/collapsible';
 import {
   ArrowLeft,
-  Building2,
   FolderKanban,
   FileBarChart,
   FileText,
@@ -711,31 +710,144 @@ export const ClientDetail: React.FC = () => {
     );
   }
 
+  const getPipelineStatusLabel = (status: string) => {
+    switch (status) {
+      case 'lead':
+        return 'Lead';
+      case 'proposal':
+        return 'Em Negociação';
+      case 'active':
+        return 'Ativo';
+      case 'churned':
+        return 'Inativo';
+      default:
+        return status;
+    }
+  };
+
+  const getPipelineStatusBadge = (status: string) => {
+    switch (status) {
+      case 'lead':
+        return <Badge variant="secondary">Lead</Badge>;
+      case 'proposal':
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Em Negociação</Badge>;
+      case 'active':
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">Ativo</Badge>;
+      case 'churned':
+        return <Badge variant="destructive">Inativo</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{client.name}</h1>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
-          <Pencil className="w-4 h-4 mr-2" />
-          <span className="hidden sm:inline">Editar</span>
+      {/* Header com título e botão de editar */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
+          <ArrowLeft className="h-5 w-5" />
         </Button>
+        <div className="flex items-center gap-3 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            {client.company || client.name}
+          </h1>
+          <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}>
+            <Pencil className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Seção fixa com informações gerais e dados do cliente */}
+      <div className="space-y-4">
+        {/* Grid de métricas + barra de progresso */}
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <FolderKanban className="w-4 h-4" />
+                <span className="text-sm">Projetos</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{clientProjects.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm">Horas Usadas</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{usedHours.toFixed(2)}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm">Horas Contratadas</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm">Disponível</span>
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {Math.max(client.contracted_hours - usedHours, 0).toFixed(2)}h
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Barra de progresso */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Utilização de Horas</span>
+              <span className="font-medium text-foreground">
+                {usedHours.toFixed(2)}h de {client.contracted_hours}h ({progressPercentage.toFixed(1)}%)
+              </span>
+            </div>
+            <Progress value={progressPercentage} className="h-2" />
+          </CardContent>
+        </Card>
+
+        {/* Dados básicos do cliente */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+              <div>
+                <span className="text-xs text-muted-foreground">Responsável</span>
+                <p className="text-sm font-medium text-foreground">{client.name}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">E-mail</span>
+                <p className="text-sm font-medium text-foreground truncate">{client.email}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Telefone</span>
+                <p className="text-sm font-medium text-foreground">{client.phone || '—'}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Origem</span>
+                <p className="text-sm font-medium text-foreground">{client.source || '—'}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Status</span>
+                <div className="mt-0.5">
+                  {getPipelineStatusBadge(client.pipeline_status)}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview" className="flex items-center gap-1.5">
-            <Building2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Geral</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="projects" className="flex items-center gap-1.5">
             <FolderKanban className="w-4 h-4" />
             <span className="hidden sm:inline">Projetos</span>
@@ -757,62 +869,6 @@ export const ClientDetail: React.FC = () => {
             <span className="hidden sm:inline">Equipe</span>
           </TabsTrigger>
         </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 grid-cols-2">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <FolderKanban className="w-4 h-4" />
-                  <span className="text-sm">Projetos</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{clientProjects.length}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm">Horas Usadas</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{usedHours.toFixed(2)}h</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm">Horas Contratadas</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm">Disponível</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">
-                  {Math.max(client.contracted_hours - usedHours, 0).toFixed(2)}h
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Utilização de Horas</CardTitle>
-              <CardDescription>
-                {usedHours.toFixed(2)}h de {client.contracted_hours}h contratadas ({progressPercentage.toFixed(1)}%)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Progress value={progressPercentage} className="h-3" />
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-4">
