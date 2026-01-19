@@ -20,6 +20,7 @@ interface ProjectColumn {
   name: string;
   type: string;
   options: string[] | null;
+  client_id: string | null;
 }
 
 interface Project {
@@ -104,6 +105,7 @@ interface DataContextType {
   // Columns
   createColumn: (column: Omit<ProjectColumn, 'id'>) => Promise<ProjectColumn | null>;
   updateColumn: (id: string, updates: Partial<ProjectColumn>) => Promise<ProjectColumn | null>;
+  getClientColumns: (clientId: string) => ProjectColumn[];
   deleteColumn: (id: string) => Promise<boolean>;
   // Project Access
   grantProjectAccess: (userId: string, projectId: string, canEdit: boolean) => Promise<UserProjectAccess | null>;
@@ -600,6 +602,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return clientProjects.reduce((sum, project) => sum + getProjectHours(project.id), 0);
   };
 
+  const getClientColumns = (clientId: string): ProjectColumn[] => {
+    return data.projectColumns.filter(col => col.client_id === clientId);
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -621,6 +627,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createColumn,
         updateColumn,
         deleteColumn,
+        getClientColumns,
         grantProjectAccess,
         revokeProjectAccess,
         startTaskTimer,
