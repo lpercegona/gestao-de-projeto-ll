@@ -533,7 +533,7 @@ export const Proposals: React.FC = () => {
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
     const client = appData.clients.find(c => c.id === clientId);
-    return client?.name || null;
+    return client?.company || client?.name || null;
   };
 
   // Filter proposals
@@ -885,7 +885,7 @@ export const Proposals: React.FC = () => {
                   <SelectItem value="none">Nenhum</SelectItem>
                   {appData.clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+                      {client.company || client.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

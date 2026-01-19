@@ -1060,7 +1060,7 @@ export const ClientDetail: React.FC = () => {
                 <DialogHeader>
                   <DialogTitle>Compartilhar Relatório</DialogTitle>
                   <DialogDescription>
-                    Gere um link protegido por senha para compartilhar o relatório de {client.name}.
+                    Gere um link protegido por senha para compartilhar o relatório de {client.company || client.name}.
                   </DialogDescription>
                 </DialogHeader>
                 

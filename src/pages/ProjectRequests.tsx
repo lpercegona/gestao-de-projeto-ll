@@ -89,7 +89,7 @@ export const ProjectRequests: React.FC = () => {
 
   const getClientName = (clientId: string) => {
     const client = data.clients.find(c => c.id === clientId);
-    return client?.name || 'Cliente desconhecido';
+    return client?.company || client?.name || 'Cliente desconhecido';
   };
 
   const updateRequestStatus = async (requestId: string, status: string, notes?: string) => {
