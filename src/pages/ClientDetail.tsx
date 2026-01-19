@@ -216,33 +216,37 @@ export const ClientDetail: React.FC = () => {
   // Fetch team members (collaborators assigned to client's projects + client account)
   useEffect(() => {
     const fetchTeam = async () => {
-      if (!clientId) return;
+      if (!clientId || !client) return;
       setTeamLoading(true);
       try {
         // Get project IDs for this client
         const projectIds = clientProjects.map(p => p.id);
         
-        // Fetch user_project_access for these projects
-        const { data: accessData } = await supabase
-          .from('user_project_access')
-          .select('user_id')
-          .in('project_id', projectIds);
+        let userIds: string[] = [];
         
-        const userIds = [...new Set((accessData || []).map(a => a.user_id))];
+        // Only fetch user_project_access if there are projects
+        if (projectIds.length > 0) {
+          const { data: accessData } = await supabase
+            .from('user_project_access')
+            .select('user_id')
+            .in('project_id', projectIds);
+          
+          userIds = [...new Set((accessData || []).map(a => a.user_id))];
+        }
         
-        // Fetch profiles for these users
+        // Fetch profiles for all users
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('user_id, full_name, email');
         
-        // Fetch roles
+        // Fetch roles for all users
         const { data: rolesData } = await supabase
           .from('user_roles')
           .select('user_id, role');
         
         // Also include the client's own account if exists
         const clientProfile = (profilesData || []).find(p => 
-          p.email?.toLowerCase() === client?.email?.toLowerCase()
+          p.email?.toLowerCase() === client.email?.toLowerCase()
         );
         
         const allUserIds = clientProfile 
@@ -297,10 +301,10 @@ export const ClientDetail: React.FC = () => {
       }
     };
 
-    if (activeTab === 'team') {
+    if (activeTab === 'team' && client) {
       fetchTeam();
     }
-  }, [clientId, activeTab, clientProjects, client?.email]);
+  }, [clientId, activeTab, clientProjects.length, client?.email]);
 
   // Fetch report share
   useEffect(() => {
