@@ -26,6 +26,8 @@ import { ResetPassword } from "@/pages/ResetPassword";
 import { Landing } from "@/pages/Landing";
 import { Proposals } from "@/pages/Proposals";
 import { PublicProposal } from "@/pages/PublicProposal";
+import { Contracts } from "@/pages/Contracts";
+import { PublicContract } from "@/pages/PublicContract";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
