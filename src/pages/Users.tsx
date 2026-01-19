@@ -494,19 +494,20 @@ export const Users: React.FC = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-6 w-6"
                                 onClick={() => openEditDialog(u)}
                               >
-                                <Pencil className="w-4 h-4" />
+                                <Pencil className="w-3 h-3" />
                               </Button>
                             )}
                             {canDeleteUser(u) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-6 w-6 text-destructive hover:text-destructive"
                                 onClick={() => openDeleteDialog(u)}
-                                className="text-destructive hover:text-destructive"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3 h-3" />
                               </Button>
                             )}
                           </div>
@@ -530,13 +531,13 @@ export const Users: React.FC = () => {
                     {/* Ações no canto superior direito */}
                     <div className="absolute top-3 right-3 flex items-center gap-1">
                       {canEditUser(u) && (
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(u)}>
-                          <Pencil className="w-4 h-4" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditDialog(u)}>
+                          <Pencil className="w-3 h-3" />
                         </Button>
                       )}
                       {canDeleteUser(u) && (
-                        <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(u)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="w-4 h-4" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(u)}>
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       )}
                     </div>

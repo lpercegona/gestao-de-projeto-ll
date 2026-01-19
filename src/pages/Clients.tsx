@@ -139,20 +139,21 @@ export const Clients: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-6 w-6"
                         onClick={() => handleOpenDialog(client)}
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Pencil className="w-3 h-3" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-destructive hover:text-destructive"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
                         onClick={() => {
                           setDeletingClient(client);
                           setIsDeleteDialogOpen(true);
                         }}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </div>
