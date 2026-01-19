@@ -32,7 +32,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2, ClipboardList, Users } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2, ClipboardList, Users, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { Task } from '@/types';
@@ -244,7 +250,7 @@ export const ProjectDetail: React.FC = () => {
     <div>
       {/* Header com Voltar + Título na mesma linha */}
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/projects')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(client ? `/clients/${client.id}` : '/projects')}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
@@ -311,14 +317,28 @@ export const ProjectDetail: React.FC = () => {
             
             return (
               <Card key={task.id} className="relative group">
-                {/* Ações no canto superior direito - hover no desktop, sempre visível no mobile */}
-                <div className="absolute top-3 right-3 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" onClick={() => handleOpenTaskDialog(task)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { setDeletingTask(task); setIsDeleteDialogOpen(true); }}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                {/* Ações no canto superior direito */}
+                <div className="absolute top-3 right-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleOpenTaskDialog(task)}>
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive" 
+                        onClick={() => { setDeletingTask(task); setIsDeleteDialogOpen(true); }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 
                 <CardHeader className="pb-2 pr-24">
@@ -364,16 +384,31 @@ export const ProjectDetail: React.FC = () => {
                       <div className="space-y-2">
                         {taskTimeEntries.map((entry) => (
                           <div key={entry.id} className="group/entry relative text-sm bg-muted/50 rounded px-3 py-2 pr-10">
-                            {/* Botão de editar - hover no desktop, sempre visível no mobile */}
-                            <div className="absolute top-1 right-1 md:opacity-0 md:group-hover/entry:opacity-100 transition-opacity">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6" 
-                                onClick={() => handleOpenTimeDialog(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date, entry_type: entry.entry_type })}
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </Button>
+                            {/* Menu de ações */}
+                            <div className="absolute top-1 right-1">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <MoreVertical className="w-3 h-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleOpenTimeDialog(task.id, { id: entry.id, hours: entry.hours, description: entry.description, date: entry.date, entry_type: entry.entry_type })}>
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-destructive" 
+                                    onClick={() => { 
+                                      setEditingTimeEntryId(entry.id);
+                                      setIsDeleteTimeEntryDialogOpen(true); 
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                             <div className="flex flex-col gap-0.5">
                               <div className="flex flex-wrap items-center gap-1">
