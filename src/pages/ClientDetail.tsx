@@ -55,6 +55,8 @@ import {
   Search,
   FolderPlus,
   XCircle,
+  FileSignature,
+  Pencil,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -87,11 +89,24 @@ interface UserProfile {
   role: string | null;
 }
 
+interface Contract {
+  id: string;
+  title: string;
+  status: string;
+  contractor_name: string;
+  contractor_email: string;
+  total_value: number | null;
+  total_hours: number | null;
+  created_at: string;
+  signed_at: string | null;
+  share_token: string;
+}
+
 export const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data, loading, getClientHours, getProjectHours, getTaskHours } = useData();
+  const { data, loading, getClientHours, getProjectHours, getTaskHours, updateClient } = useData();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
@@ -108,6 +123,24 @@ export const ClientDetail: React.FC = () => {
   const [sharePassword, setSharePassword] = useState('');
   const [copiedToken, setCopiedToken] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  
+  // Contracts state
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contractsLoading, setContractsLoading] = useState(false);
+  
+  // Edit client state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    email: '',
+    company: '',
+    phone: '',
+    contracted_hours: 0,
+    pipeline_status: 'lead',
+    source: '',
+    notes: '',
+  });
 
   const client = data.clients.find(c => c.id === clientId);
   const clientProjects = data.projects.filter(p => p.client_id === clientId);
@@ -134,6 +167,30 @@ export const ClientDetail: React.FC = () => {
 
     if (activeTab === 'requests') {
       fetchRequests();
+    }
+  }, [clientId, activeTab]);
+
+  // Fetch contracts
+  useEffect(() => {
+    const fetchContracts = async () => {
+      if (!clientId) return;
+      setContractsLoading(true);
+      try {
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('*')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: false });
+        setContracts(contractsData || []);
+      } catch (error) {
+        console.error('Error fetching contracts:', error);
+      } finally {
+        setContractsLoading(false);
+      }
+    };
+
+    if (activeTab === 'contracts') {
+      fetchContracts();
     }
   }, [clientId, activeTab]);
 
@@ -394,6 +451,26 @@ export const ClientDetail: React.FC = () => {
     }
   };
 
+  const progressPercentage = client && client.contracted_hours > 0 
+    ? Math.min((usedHours / client.contracted_hours) * 100, 100) 
+    : 0;
+
+  // Initialize edit form when client data is available
+  useEffect(() => {
+    if (client) {
+      setEditFormData({
+        name: client.name || '',
+        email: client.email || '',
+        company: client.company || '',
+        phone: client.phone || '',
+        contracted_hours: client.contracted_hours || 0,
+        pipeline_status: client.pipeline_status || 'lead',
+        source: client.source || '',
+        notes: client.notes || '',
+      });
+    }
+  }, [client]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -413,33 +490,90 @@ export const ClientDetail: React.FC = () => {
     );
   }
 
-  const progressPercentage = client.contracted_hours > 0 
-    ? Math.min((usedHours / client.contracted_hours) * 100, 100) 
-    : 0;
+  const handleEditClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientId) return;
+    setEditSubmitting(true);
+    try {
+      await updateClient(clientId, editFormData);
+      toast.success('Cliente atualizado com sucesso!');
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating client:', error);
+      toast.error('Erro ao atualizar cliente');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const getContractStatusBadge = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return <Badge variant="secondary">Rascunho</Badge>;
+      case 'sent':
+        return <Badge className="bg-blue-100 text-blue-800">Enviado</Badge>;
+      case 'viewed':
+        return <Badge className="bg-yellow-100 text-yellow-800">Visualizado</Badge>;
+      case 'signed':
+        return <Badge className="bg-green-100 text-green-800">Assinado</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelado</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Cliente não encontrado.</p>
+        <Button variant="link" onClick={() => navigate('/clients')}>
+          Voltar para clientes
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{client.name}</h1>
-          <p className="text-muted-foreground">{client.email}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{client.name}</h1>
+          </div>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
+          <Pencil className="w-4 h-4 mr-2" />
+          <span className="hidden sm:inline">Editar</span>
+        </Button>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" className="flex items-center gap-1.5">
             <Building2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Visão Geral</span>
+            <span className="hidden sm:inline">Geral</span>
           </TabsTrigger>
           <TabsTrigger value="projects" className="flex items-center gap-1.5">
             <FolderKanban className="w-4 h-4" />
             <span className="hidden sm:inline">Projetos</span>
+          </TabsTrigger>
+          <TabsTrigger value="contracts" className="flex items-center gap-1.5">
+            <FileSignature className="w-4 h-4" />
+            <span className="hidden sm:inline">Contratos</span>
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-1.5">
             <FileBarChart className="w-4 h-4" />
@@ -545,6 +679,66 @@ export const ClientDetail: React.FC = () => {
                       <span className="font-medium text-foreground">
                         {getProjectHours(project.id).toFixed(2)}h
                       </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Contracts Tab */}
+        <TabsContent value="contracts" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              {contracts.length} {contracts.length === 1 ? 'contrato' : 'contratos'}
+            </h2>
+            <Button size="sm" onClick={() => navigate('/contracts')}>
+              Ver todos os contratos
+            </Button>
+          </div>
+
+          {contractsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : contracts.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileSignature className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhum contrato para este cliente.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {contracts.map((contract) => (
+                <Card key={contract.id}>
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-medium text-foreground">{contract.title}</h3>
+                          {getContractStatusBadge(contract.status)}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {contract.contractor_name} ({contract.contractor_email})
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          {contract.total_value && (
+                            <span>R$ {contract.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          )}
+                          {contract.total_hours && (
+                            <span>{contract.total_hours}h</span>
+                          )}
+                          <span>Criado em {format(new Date(contract.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                          {contract.signed_at && (
+                            <span className="text-green-600">Assinado em {format(new Date(contract.signed_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => window.open(`/contract/${contract.share_token}`, '_blank')}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -830,6 +1024,129 @@ export const ClientDetail: React.FC = () => {
           </Button>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Client Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditClient}>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome</Label>
+                  <Input
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    required
+                    disabled={editSubmitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-company">Empresa</Label>
+                  <Input
+                    id="edit-company"
+                    value={editFormData.company}
+                    onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                    disabled={editSubmitting}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    required
+                    disabled={editSubmitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-phone">Telefone</Label>
+                  <Input
+                    id="edit-phone"
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    disabled={editSubmitting}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-pipeline">Status do Pipeline</Label>
+                  <Select 
+                    value={editFormData.pipeline_status} 
+                    onValueChange={(value) => setEditFormData({ ...editFormData, pipeline_status: value })}
+                    disabled={editSubmitting}
+                  >
+                    <SelectTrigger id="edit-pipeline">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lead">Lead</SelectItem>
+                      <SelectItem value="proposal">Em Negociação</SelectItem>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="churned">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-source">Origem</Label>
+                  <Input
+                    id="edit-source"
+                    placeholder="Ex: Indicação, Google, etc."
+                    value={editFormData.source}
+                    onChange={(e) => setEditFormData({ ...editFormData, source: e.target.value })}
+                    disabled={editSubmitting}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-contracted-hours">Horas Contratadas</Label>
+                <Input
+                  id="edit-contracted-hours"
+                  type="number"
+                  min="0"
+                  value={editFormData.contracted_hours}
+                  onChange={(e) => setEditFormData({ ...editFormData, contracted_hours: Number(e.target.value) })}
+                  required
+                  disabled={editSubmitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-notes">Observações</Label>
+                <Input
+                  id="edit-notes"
+                  placeholder="Notas sobre o cliente..."
+                  value={editFormData.notes}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                  disabled={editSubmitting}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={editSubmitting}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editSubmitting}>
+                {editSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                Salvar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
