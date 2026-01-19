@@ -1,0 +1,835 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  ArrowLeft,
+  Building2,
+  FolderKanban,
+  FileBarChart,
+  FileText,
+  Users,
+  Clock,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Share2,
+  Copy,
+  Check,
+  Globe,
+  Lock,
+  KeyRound,
+  Eye,
+  Search,
+  FolderPlus,
+  XCircle,
+} from 'lucide-react';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
+
+interface ProjectRequest {
+  id: string;
+  client_id: string;
+  title: string;
+  briefing: string;
+  status: string;
+  admin_notes: string | null;
+  converted_project_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ReportShare {
+  id: string;
+  client_id: string;
+  share_token: string;
+  is_public: boolean;
+  share_password: string | null;
+}
+
+interface UserProfile {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  role: string | null;
+}
+
+export const ClientDetail: React.FC = () => {
+  const { clientId } = useParams<{ clientId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data, loading, getClientHours, getProjectHours, getTaskHours } = useData();
+
+  const [activeTab, setActiveTab] = useState('overview');
+  const [requests, setRequests] = useState<ProjectRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  
+  // Reports state
+  const currentMonth = format(new Date(), 'yyyy-MM');
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [reportShare, setReportShare] = useState<ReportShare | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [sharePassword, setSharePassword] = useState('');
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+
+  const client = data.clients.find(c => c.id === clientId);
+  const clientProjects = data.projects.filter(p => p.client_id === clientId);
+  const usedHours = clientId ? getClientHours(clientId) : 0;
+
+  // Fetch client requests
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!clientId) return;
+      setRequestsLoading(true);
+      try {
+        const { data: requestsData } = await supabase
+          .from('project_requests')
+          .select('*')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: false });
+        setRequests(requestsData || []);
+      } catch (error) {
+        console.error('Error fetching requests:', error);
+      } finally {
+        setRequestsLoading(false);
+      }
+    };
+
+    if (activeTab === 'requests') {
+      fetchRequests();
+    }
+  }, [clientId, activeTab]);
+
+  // Fetch team members (collaborators assigned to client's projects + client account)
+  useEffect(() => {
+    const fetchTeam = async () => {
+      if (!clientId) return;
+      setTeamLoading(true);
+      try {
+        // Get project IDs for this client
+        const projectIds = clientProjects.map(p => p.id);
+        
+        // Fetch user_project_access for these projects
+        const { data: accessData } = await supabase
+          .from('user_project_access')
+          .select('user_id')
+          .in('project_id', projectIds);
+        
+        const userIds = [...new Set((accessData || []).map(a => a.user_id))];
+        
+        // Fetch profiles for these users
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email');
+        
+        // Fetch roles
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+        
+        // Also include the client's own account if exists
+        const clientProfile = (profilesData || []).find(p => 
+          p.email?.toLowerCase() === client?.email?.toLowerCase()
+        );
+        
+        const allUserIds = clientProfile 
+          ? [...new Set([...userIds, clientProfile.user_id])]
+          : userIds;
+        
+        const members = allUserIds.map(userId => {
+          const profile = (profilesData || []).find(p => p.user_id === userId);
+          const role = (rolesData || []).find(r => r.user_id === userId);
+          return {
+            user_id: userId,
+            full_name: profile?.full_name || null,
+            email: profile?.email || null,
+            role: role?.role || null,
+          };
+        });
+        
+        setTeamMembers(members);
+      } catch (error) {
+        console.error('Error fetching team:', error);
+      } finally {
+        setTeamLoading(false);
+      }
+    };
+
+    if (activeTab === 'team') {
+      fetchTeam();
+    }
+  }, [clientId, activeTab, clientProjects, client?.email]);
+
+  // Fetch report share
+  useEffect(() => {
+    const fetchShare = async () => {
+      if (!clientId) return;
+      const { data: shareData } = await supabase
+        .from('report_shares')
+        .select('*')
+        .eq('client_id', clientId)
+        .maybeSingle();
+      setReportShare(shareData);
+    };
+    
+    if (activeTab === 'reports') {
+      fetchShare();
+    }
+  }, [clientId, activeTab]);
+
+  // Generate month options
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      options.push({
+        value: format(date, 'yyyy-MM'),
+        label: format(date, "MMMM 'de' yyyy", { locale: ptBR }),
+      });
+    }
+    return options;
+  }, []);
+
+  // Calculate hours for a specific month
+  const getMonthHours = (taskId: string, monthStart: Date, monthEnd: Date, entryType?: 'task' | 'meeting') => {
+    return data.timeEntries
+      .filter(te => {
+        if (te.task_id !== taskId) return false;
+        if (entryType && te.entry_type !== entryType) return false;
+        const entryDate = parseISO(te.date);
+        return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
+      })
+      .reduce((sum, te) => sum + Number(te.hours), 0);
+  };
+
+  // Report data for selected month
+  const reportData = useMemo(() => {
+    if (!clientId) return { projects: [], totalHours: 0, taskHours: 0, meetingHours: 0 };
+    
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const monthStart = startOfMonth(new Date(year, month - 1));
+    const monthEnd = endOfMonth(new Date(year, month - 1));
+
+    const projectsWithData = clientProjects.map(project => {
+      const projectTasks = data.tasks.filter(t => t.project_id === project.id);
+      
+      const tasksWithHours = projectTasks.map(task => {
+        const monthHours = getMonthHours(task.id, monthStart, monthEnd);
+        const taskHours = getMonthHours(task.id, monthStart, monthEnd, 'task');
+        const meetingHours = getMonthHours(task.id, monthStart, monthEnd, 'meeting');
+        const totalHours = getTaskHours(task.id);
+        
+        return {
+          ...task,
+          monthHours,
+          monthTaskHours: taskHours,
+          monthMeetingHours: meetingHours,
+          totalHours,
+        };
+      }).filter(t => t.monthHours > 0);
+
+      const projectMonthHours = tasksWithHours.reduce((sum, t) => sum + t.monthHours, 0);
+      const projectTaskHours = tasksWithHours.reduce((sum, t) => sum + t.monthTaskHours, 0);
+      const projectMeetingHours = tasksWithHours.reduce((sum, t) => sum + t.monthMeetingHours, 0);
+
+      return {
+        ...project,
+        tasks: tasksWithHours,
+        monthHours: projectMonthHours,
+        taskHours: projectTaskHours,
+        meetingHours: projectMeetingHours,
+        totalHours: getProjectHours(project.id),
+      };
+    }).filter(p => p.monthHours > 0);
+
+    return {
+      projects: projectsWithData,
+      totalHours: projectsWithData.reduce((sum, p) => sum + p.monthHours, 0),
+      taskHours: projectsWithData.reduce((sum, p) => sum + p.taskHours, 0),
+      meetingHours: projectsWithData.reduce((sum, p) => sum + p.meetingHours, 0),
+    };
+  }, [clientId, selectedMonth, clientProjects, data.tasks, data.timeEntries, getTaskHours, getProjectHours]);
+
+  const toggleProject = (projectId: string) => {
+    const newExpanded = new Set(expandedProjects);
+    if (newExpanded.has(projectId)) {
+      newExpanded.delete(projectId);
+    } else {
+      newExpanded.add(projectId);
+    }
+    setExpandedProjects(newExpanded);
+  };
+
+  // Share handlers
+  const handleCreateShare = async (password: string) => {
+    if (!user || !clientId) return;
+    if (!password || password.length < 4) {
+      toast.error('A senha deve ter pelo menos 4 caracteres');
+      return;
+    }
+    
+    setShareLoading(true);
+    try {
+      const { data: shareData, error } = await supabase
+        .from('report_shares')
+        .insert({
+          client_id: clientId,
+          created_by: user.id,
+          is_public: false,
+          share_password: password
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setReportShare(shareData);
+      setSharePassword('');
+      toast.success('Link de compartilhamento criado!');
+    } catch (error) {
+      console.error('Error creating share:', error);
+      toast.error('Erro ao criar link de compartilhamento');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleTogglePublic = async () => {
+    if (!reportShare) return;
+    setShareLoading(true);
+    try {
+      const { data: updatedShare, error } = await supabase
+        .from('report_shares')
+        .update({ is_public: !reportShare.is_public })
+        .eq('id', reportShare.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setReportShare(updatedShare);
+      toast.success(updatedShare.is_public ? 'Relatório agora é público' : 'Relatório agora é privado');
+    } catch (error) {
+      console.error('Error updating share:', error);
+      toast.error('Erro ao atualizar configuração');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!reportShare) return;
+    const shareUrl = `${window.location.origin}/report/${reportShare.share_token}`;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopiedToken(true);
+    toast.success('Link copiado!');
+    setTimeout(() => setCopiedToken(false), 2000);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Aguardando</Badge>;
+      case 'in_review':
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Em análise</Badge>;
+      case 'approved':
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">Aprovado</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Rejeitado</Badge>;
+      case 'converted':
+        return <Badge variant="default">Convertido</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getRoleBadge = (role: string | null) => {
+    switch (role) {
+      case 'master_admin':
+        return <Badge variant="default">Master Admin</Badge>;
+      case 'admin':
+        return <Badge variant="secondary">Admin</Badge>;
+      case 'collaborator':
+        return <Badge variant="outline">Colaborador</Badge>;
+      case 'client':
+        return <Badge variant="outline">Cliente</Badge>;
+      default:
+        return <Badge variant="outline">Sem função</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Cliente não encontrado.</p>
+        <Button variant="link" onClick={() => navigate('/clients')}>
+          Voltar para clientes
+        </Button>
+      </div>
+    );
+  }
+
+  const progressPercentage = client.contracted_hours > 0 
+    ? Math.min((usedHours / client.contracted_hours) * 100, 100) 
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{client.name}</h1>
+          <p className="text-muted-foreground">{client.email}</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="flex items-center gap-1.5">
+            <Building2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Visão Geral</span>
+          </TabsTrigger>
+          <TabsTrigger value="projects" className="flex items-center gap-1.5">
+            <FolderKanban className="w-4 h-4" />
+            <span className="hidden sm:inline">Projetos</span>
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-1.5">
+            <FileBarChart className="w-4 h-4" />
+            <span className="hidden sm:inline">Relatórios</span>
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="flex items-center gap-1.5">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Solicitações</span>
+          </TabsTrigger>
+          <TabsTrigger value="team" className="flex items-center gap-1.5">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Equipe</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <FolderKanban className="w-4 h-4" />
+                  <span className="text-sm">Projetos</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">{clientProjects.length}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm">Horas Usadas</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">{usedHours.toFixed(2)}h</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm">Horas Contratadas</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm">Disponível</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground">
+                  {Math.max(client.contracted_hours - usedHours, 0).toFixed(2)}h
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Utilização de Horas</CardTitle>
+              <CardDescription>
+                {usedHours.toFixed(2)}h de {client.contracted_hours}h contratadas ({progressPercentage.toFixed(1)}%)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Progress value={progressPercentage} className="h-3" />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Projects Tab */}
+        <TabsContent value="projects" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              {clientProjects.length} {clientProjects.length === 1 ? 'projeto' : 'projetos'}
+            </h2>
+            <Button size="sm" onClick={() => navigate('/projects')}>
+              Ver todos os projetos
+            </Button>
+          </div>
+
+          {clientProjects.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhum projeto cadastrado para este cliente.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {clientProjects.map((project) => (
+                <Card key={project.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/projects/${project.id}`)}>
+                  <CardContent className="pt-6">
+                    <h3 className="font-semibold text-foreground mb-2">{project.name}</h3>
+                    {project.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{project.description}</p>
+                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {data.tasks.filter(t => t.project_id === project.id).length} tarefas
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {getProjectHours(project.id).toFixed(2)}h
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports" className="space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="w-64">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Compartilhar
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Compartilhar Relatório</DialogTitle>
+                  <DialogDescription>
+                    Gere um link protegido por senha para compartilhar o relatório de {client.name}.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 pt-4">
+                  {!reportShare ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="share-password" className="flex items-center gap-2">
+                          <KeyRound className="w-4 h-4" />
+                          Senha de acesso (obrigatória)
+                        </Label>
+                        <Input
+                          id="share-password"
+                          type="password"
+                          placeholder="Mínimo 4 caracteres"
+                          value={sharePassword}
+                          onChange={(e) => setSharePassword(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        onClick={() => handleCreateShare(sharePassword)} 
+                        disabled={shareLoading || sharePassword.length < 4}
+                        className="w-full"
+                      >
+                        {shareLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Criando...
+                          </>
+                        ) : (
+                          'Criar Link de Compartilhamento'
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {reportShare.is_public ? (
+                            <Globe className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Lock className="w-5 h-5 text-muted-foreground" />
+                          )}
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {reportShare.is_public ? 'Público' : 'Privado'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {reportShare.is_public 
+                                ? 'Qualquer pessoa com o link e senha pode ver' 
+                                : 'Link desabilitado'}
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={reportShare.is_public}
+                          onCheckedChange={handleTogglePublic}
+                          disabled={shareLoading}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                        <KeyRound className="w-4 h-4 text-primary" />
+                        <span className="text-sm text-foreground">Protegido por senha</span>
+                      </div>
+
+                      {reportShare.is_public && (
+                        <div className="flex gap-2 items-center">
+                          <div className="flex-1 p-3 bg-muted rounded-lg text-sm text-muted-foreground overflow-hidden">
+                            <span className="block truncate">Link de compartilhamento</span>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="shrink-0"
+                            onClick={handleCopyLink}
+                          >
+                            {copiedToken ? (
+                              <Check className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Report Summary */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Total do Mês</p>
+                <p className="text-2xl font-bold text-foreground">{reportData.totalHours.toFixed(2)}h</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Tarefas</p>
+                <p className="text-2xl font-bold text-foreground">{reportData.taskHours.toFixed(2)}h</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Reuniões</p>
+                <p className="text-2xl font-bold text-foreground">{reportData.meetingHours.toFixed(2)}h</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Projects breakdown */}
+          {reportData.projects.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileBarChart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhuma hora registrada neste período.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {reportData.projects.map((project) => (
+                <Card key={project.id}>
+                  <Collapsible open={expandedProjects.has(project.id)} onOpenChange={() => toggleProject(project.id)}>
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {expandedProjects.has(project.id) ? (
+                              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                            )}
+                            <CardTitle className="text-base">{project.name}</CardTitle>
+                          </div>
+                          <span className="font-bold text-foreground">{project.monthHours.toFixed(2)}h</span>
+                        </div>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0 pb-4">
+                        <div className="space-y-2 pl-8">
+                          {project.tasks.map((task) => (
+                            <div key={task.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                              <span className="text-sm text-foreground">{task.name}</span>
+                              <span className="text-sm font-medium text-muted-foreground">{task.monthHours.toFixed(2)}h</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Requests Tab */}
+        <TabsContent value="requests" className="space-y-4">
+          {requestsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : requests.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhuma solicitação recebida deste cliente.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {requests.map((request) => (
+                <Card key={request.id}>
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-medium text-foreground">{request.title}</h3>
+                          {getStatusBadge(request.status)}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {request.briefing}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Enviado em {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          
+          <Button variant="outline" onClick={() => navigate('/requests')}>
+            Ver todas as solicitações
+          </Button>
+        </TabsContent>
+
+        {/* Team Tab */}
+        <TabsContent value="team" className="space-y-4">
+          {teamLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : teamMembers.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhum membro da equipe vinculado a este cliente.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {teamMembers.map((member) => (
+                <Card key={member.user_id}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">
+                          {member.full_name?.charAt(0)?.toUpperCase() || member.email?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {member.full_name || 'Sem nome'}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">{member.email}</p>
+                      </div>
+                    </div>
+                    {getRoleBadge(member.role)}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          
+          <Button variant="outline" onClick={() => navigate('/users')}>
+            Gerenciar usuários
+          </Button>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};

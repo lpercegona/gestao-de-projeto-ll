@@ -148,10 +148,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-    { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
-    { path: '/users', icon: UsersRound, label: 'Usuários' },
-    { path: '/settings', icon: Settings, label: 'Configurações' },
   ];
 
   // Admin nav items
@@ -159,10 +156,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-    { path: '/reports', icon: FileBarChart, label: 'Relatórios' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
-    { path: '/users', icon: UsersRound, label: 'Usuários' },
-    { path: '/settings', icon: Settings, label: 'Configurações' },
   ];
 
   // Collaborator nav items (only projects)
@@ -387,52 +381,52 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </div>
             )}
 
-            {/* Profile link */}
+            {/* Preferences link */}
             {isCollapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
                   <Link
-                    to="/profile"
+                    to="/preferences"
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors w-full',
-                      location.pathname === '/profile'
+                      location.pathname === '/preferences'
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                       'lg:justify-center lg:px-2'
                     )}
                   >
-                    <User className="w-5 h-5 flex-shrink-0" />
+                    <Settings className="w-5 h-5 flex-shrink-0" />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right">Meu Perfil</TooltipContent>
+                <TooltipContent side="right">Preferências</TooltipContent>
                 <Link
-                  to="/profile"
+                  to="/preferences"
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
                     'lg:hidden flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                    location.pathname === '/profile'
+                    location.pathname === '/preferences'
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
                 >
-                  <User className="w-5 h-5" />
-                  Meu Perfil
+                  <Settings className="w-5 h-5" />
+                  Preferências
                 </Link>
               </Tooltip>
             ) : (
               <Link
-                to="/profile"
+                to="/preferences"
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                  location.pathname === '/profile'
+                  location.pathname === '/preferences'
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <User className="w-5 h-5" />
-                Meu Perfil
+                <Settings className="w-5 h-5" />
+                Preferências
               </Link>
             )}
 
