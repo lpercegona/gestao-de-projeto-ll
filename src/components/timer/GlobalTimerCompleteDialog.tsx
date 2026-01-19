@@ -20,9 +20,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useData } from '@/contexts/DataContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 interface GlobalTimerCompleteDialogProps {
@@ -93,10 +94,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       if (timerState.taskId) {
         await stopTaskTimer(timerState.taskId, description || 'Timer global', entryType);
         resetTimer();
-        toast({
-          title: 'Tempo registrado',
-          description: `${hours.toFixed(2)}h registradas com sucesso.`,
-        });
+        toast.success(`${hours.toFixed(2)}h registradas com sucesso.`);
         handleClose();
         return;
       }
@@ -107,11 +105,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       if (linkMode === 'new') {
         if (createNewProject) {
           if (!newProjectName.trim() || !selectedClientId) {
-            toast({
-              title: 'Erro',
-              description: 'Preencha o nome do projeto e selecione um cliente.',
-              variant: 'destructive',
-            });
+            toast.error('Preencha o nome do projeto e selecione um cliente.');
             setLoading(false);
             return;
           }
@@ -125,22 +119,14 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           });
 
           if (!newProject) {
-            toast({
-              title: 'Erro',
-              description: 'Falha ao criar projeto.',
-              variant: 'destructive',
-            });
+            toast.error('Falha ao criar projeto.');
             setLoading(false);
             return;
           }
 
           // Create new task in new project
           if (!newTaskName.trim()) {
-            toast({
-              title: 'Erro',
-              description: 'Preencha o nome da tarefa.',
-              variant: 'destructive',
-            });
+            toast.error('Preencha o nome da tarefa.');
             setLoading(false);
             return;
           }
@@ -153,11 +139,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           });
 
           if (!newTask) {
-            toast({
-              title: 'Erro',
-              description: 'Falha ao criar tarefa.',
-              variant: 'destructive',
-            });
+            toast.error('Falha ao criar tarefa.');
             setLoading(false);
             return;
           }
@@ -166,11 +148,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         } else {
           // Create task in existing project
           if (!selectedProjectId || !newTaskName.trim()) {
-            toast({
-              title: 'Erro',
-              description: 'Selecione um projeto e preencha o nome da tarefa.',
-              variant: 'destructive',
-            });
+            toast.error('Selecione um projeto e preencha o nome da tarefa.');
             setLoading(false);
             return;
           }
@@ -183,11 +161,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           });
 
           if (!newTask) {
-            toast({
-              title: 'Erro',
-              description: 'Falha ao criar tarefa.',
-              variant: 'destructive',
-            });
+            toast.error('Falha ao criar tarefa.');
             setLoading(false);
             return;
           }
@@ -197,11 +171,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       }
 
       if (!taskId) {
-        toast({
-          title: 'Erro',
-          description: 'Selecione ou crie uma tarefa.',
-          variant: 'destructive',
-        });
+        toast.error('Selecione ou crie uma tarefa.');
         setLoading(false);
         return;
       }
@@ -216,18 +186,11 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       });
 
       resetTimer();
-      toast({
-        title: 'Tempo registrado',
-        description: `${hours.toFixed(2)}h registradas com sucesso.`,
-      });
+      toast.success(`${hours.toFixed(2)}h registradas com sucesso.`);
       handleClose();
     } catch (error) {
       console.error('Error completing timer:', error);
-      toast({
-        title: 'Erro',
-        description: 'Falha ao registrar tempo.',
-        variant: 'destructive',
-      });
+      toast.error('Falha ao registrar tempo.');
     } finally {
       setLoading(false);
     }
@@ -247,10 +210,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     }
     resetTimer();
     handleClose();
-    toast({
-      title: 'Registro descartado',
-      description: 'O tempo foi descartado e não foi registrado.',
-    });
+    toast.info('Registro descartado');
   };
 
   return (
@@ -337,12 +297,10 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
             <div className="space-y-4">
               {/* Create new project toggle */}
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="createNewProject"
                   checked={createNewProject}
-                  onChange={(e) => setCreateNewProject(e.target.checked)}
-                  className="rounded border-input"
+                  onCheckedChange={(checked) => setCreateNewProject(checked === true)}
                 />
                 <Label htmlFor="createNewProject" className="cursor-pointer text-sm">
                   Criar novo projeto

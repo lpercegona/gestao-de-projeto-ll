@@ -291,8 +291,8 @@ export const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-primary">ORAS</CardTitle>
+        <CardHeader className="text-center space-y-3">
+          <img src="/logo-oras.svg" alt="ORAS" className="h-10 mx-auto" />
           <CardDescription>Gestão de Projetos e Horas</CardDescription>
         </CardHeader>
         <CardContent>
