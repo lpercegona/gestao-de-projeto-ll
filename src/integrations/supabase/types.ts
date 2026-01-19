@@ -296,6 +296,177 @@ export type Database = {
           },
         ]
       }
+      proposal_comments: {
+        Row: {
+          author_name: string | null
+          author_type: string
+          content: string
+          created_at: string
+          id: string
+          proposal_id: string
+        }
+        Insert: {
+          author_name?: string | null
+          author_type?: string
+          content: string
+          created_at?: string
+          id?: string
+          proposal_id: string
+        }
+        Update: {
+          author_name?: string | null
+          author_type?: string
+          content?: string
+          created_at?: string
+          id?: string
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_comments_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_status: string
+          notes: string | null
+          old_status: string | null
+          proposal_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+          proposal_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_history_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          items: Json
+          name: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          items?: Json
+          name: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          items?: Json
+          name?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          items: Json
+          owner_id: string | null
+          recipient_company: string | null
+          recipient_email: string
+          recipient_name: string
+          share_token: string
+          status: string
+          template_id: string | null
+          title: string
+          total_hours: number
+          total_value: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          items?: Json
+          owner_id?: string | null
+          recipient_company?: string | null
+          recipient_email: string
+          recipient_name: string
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          title: string
+          total_hours?: number
+          total_value?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          items?: Json
+          owner_id?: string | null
+          recipient_company?: string | null
+          recipient_email?: string
+          recipient_name?: string
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          title?: string
+          total_hours?: number
+          total_value?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_shares: {
         Row: {
           client_id: string
@@ -630,6 +801,33 @@ export type Database = {
           task_id: string
         }[]
       }
+      get_proposal_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          created_at: string
+          description: string
+          items: Json
+          proposal_id: string
+          recipient_company: string
+          recipient_email: string
+          recipient_name: string
+          status: string
+          title: string
+          total_hours: number
+          total_value: number
+          valid_until: string
+        }[]
+      }
+      get_proposal_comments_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          author_name: string
+          author_type: string
+          comment_id: string
+          content: string
+          created_at: string
+        }[]
+      }
       get_shared_report: {
         Args: { p_token: string }
         Returns: {
@@ -677,6 +875,15 @@ export type Database = {
       is_admin_or_master: { Args: { check_user_id: string }; Returns: boolean }
       is_collaborator: { Args: { check_user_id: string }; Returns: boolean }
       is_master_admin: { Args: { check_user_id: string }; Returns: boolean }
+      respond_to_proposal: {
+        Args: {
+          p_action: string
+          p_author_name?: string
+          p_comment?: string
+          p_token: string
+        }
+        Returns: boolean
+      }
       setup_client_account: {
         Args: { p_client_id: string; p_email: string; p_user_id: string }
         Returns: boolean

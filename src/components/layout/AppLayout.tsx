@@ -17,7 +17,8 @@ import {
   FileText,
   User,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  FileCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -149,6 +150,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
+    { path: '/proposals', icon: FileCheck, label: 'Propostas' },
   ];
 
   // Admin nav items
@@ -157,6 +159,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
+    { path: '/proposals', icon: FileCheck, label: 'Propostas' },
   ];
 
   // Collaborator nav items (only projects)
