@@ -221,7 +221,10 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       await cancelTaskTimer(timerState.taskId);
     }
     resetTimer();
-    handleClose();
+    // Don't call handleClose as it would try to resume the timer
+    // Just close the dialog and reset form state
+    onOpenChange(false);
+    resetFormState();
     toast.info('Registro descartado');
   };
 
