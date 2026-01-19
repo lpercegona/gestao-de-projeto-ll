@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   LayoutDashboard, 
@@ -23,9 +24,74 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { GlobalTimerButton } from '@/components/timer/GlobalTimerButton';
+import { HeaderTimerDisplay, HeaderTimerTaskInfo } from '@/components/timer/HeaderTimerDisplay';
 import LogoOras from '@/assets/logo-oras.svg';
 import SimboloOras from '@/assets/simbolo-oras.svg';
+
+// Mobile Header Component with animated logo/task info
+const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void }> = ({ setSidebarOpen }) => {
+  const { hasActiveTimer } = useGlobalTimer();
+  
+  return (
+    <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 sm:px-6 py-3 lg:hidden flex-shrink-0">
+      <div className="flex items-center gap-3 flex-1 overflow-hidden">
+        <button 
+          className="p-2 rounded-md hover:bg-accent flex-shrink-0"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <span className="sr-only">Abrir menu</span>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        
+        {/* Animated container for logo/task info */}
+        <div className="relative flex-1 h-6 overflow-hidden">
+          {/* Logo - slides up when timer active */}
+          <div className={cn(
+            "absolute inset-0 flex items-center transition-transform duration-300 ease-in-out",
+            hasActiveTimer ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
+          )}>
+            <img src={LogoOras} alt="ORAS" className="h-6 w-auto" />
+          </div>
+          
+          {/* Task info - slides in from left when timer active */}
+          <div className={cn(
+            "absolute inset-0 flex items-center transition-all duration-300 ease-in-out",
+            hasActiveTimer ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
+          )}>
+            <HeaderTimerTaskInfo />
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <HeaderTimerDisplay />
+        <NotificationBell />
+      </div>
+    </div>
+  );
+};
+
+// Desktop Header Component with animated logo/task info
+const DesktopHeader: React.FC = () => {
+  const { hasActiveTimer } = useGlobalTimer();
+  
+  return (
+    <div className="hidden lg:flex fixed top-4 right-6 z-30 items-center gap-3">
+      {/* Task info - slides in from left when timer active */}
+      <div className={cn(
+        "transition-all duration-300 ease-in-out overflow-hidden",
+        hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
+      )}>
+        <HeaderTimerTaskInfo />
+      </div>
+      
+      <HeaderTimerDisplay />
+      <NotificationBell />
+    </div>
+  );
+};
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -416,30 +482,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Main Content - Scrollable */}
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Mobile header */}
-          <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 sm:px-6 py-3 lg:hidden flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <button 
-                className="p-2 rounded-md hover:bg-accent"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <span className="sr-only">Abrir menu</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <img src={LogoOras} alt="ORAS" className="h-6 w-auto" />
-            </div>
-            <div className="flex items-center gap-1">
-              <GlobalTimerButton />
-              <NotificationBell />
-            </div>
-          </div>
+          <MobileHeader 
+            setSidebarOpen={setSidebarOpen}
+          />
 
           {/* Desktop header buttons */}
-          <div className="hidden lg:flex fixed top-4 right-6 z-30 items-center gap-2">
-            <GlobalTimerButton />
-            <NotificationBell />
-          </div>
+          <DesktopHeader />
           
           {/* Content area - Scrollable */}
           <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
