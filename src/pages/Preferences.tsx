@@ -24,13 +24,11 @@ export const Preferences: React.FC = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={`grid w-full ${showUserManagement && showPlatformCustomization ? 'grid-cols-3' : showUserManagement || showPlatformCustomization ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {showUserManagement && (
-            <TabsTrigger value="users" className="flex items-center gap-1.5">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Gestão de Usuários</span>
-              <span className="sm:hidden">Usuários</span>
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="profile" className="flex items-center gap-1.5">
+            <User className="w-4 h-4" />
+            <span className="hidden sm:inline">Edição do Perfil</span>
+            <span className="sm:hidden">Perfil</span>
+          </TabsTrigger>
           {showPlatformCustomization && (
             <TabsTrigger value="platform" className="flex items-center gap-1.5">
               <Palette className="w-4 h-4" />
@@ -38,19 +36,19 @@ export const Preferences: React.FC = () => {
               <span className="sm:hidden">Tema</span>
             </TabsTrigger>
           )}
-          <TabsTrigger value="profile" className="flex items-center gap-1.5">
-            <User className="w-4 h-4" />
-            <span className="hidden sm:inline">Edição do Perfil</span>
-            <span className="sm:hidden">Perfil</span>
-          </TabsTrigger>
+          {showUserManagement && (
+            <TabsTrigger value="users" className="flex items-center gap-1.5">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Gestão de Usuários</span>
+              <span className="sm:hidden">Usuários</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        {/* User Management Tab - Admin only */}
-        {showUserManagement && (
-          <TabsContent value="users">
-            <UserManagementTab />
-          </TabsContent>
-        )}
+        {/* Profile Edit Tab - All users */}
+        <TabsContent value="profile">
+          <ProfileEditTab />
+        </TabsContent>
 
         {/* Platform Customization Tab - Admin only */}
         {showPlatformCustomization && (
@@ -59,10 +57,12 @@ export const Preferences: React.FC = () => {
           </TabsContent>
         )}
 
-        {/* Profile Edit Tab - All users */}
-        <TabsContent value="profile">
-          <ProfileEditTab />
-        </TabsContent>
+        {/* User Management Tab - Admin only */}
+        {showUserManagement && (
+          <TabsContent value="users">
+            <UserManagementTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
