@@ -1,14 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FolderKanban, ListTodo, Clock, Loader2 } from 'lucide-react';
+import { Users, FolderKanban, ListTodo, Clock, Loader2, ChevronDown } from 'lucide-react';
 import { QuickTimeTracker } from '@/components/dashboard/QuickTimeTracker';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 export const Dashboard: React.FC = () => {
   const { data, loading, getClientHours } = useData();
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  const [hoursClientOpen, setHoursClientOpen] = useState(false);
+  const [recentEntriesOpen, setRecentEntriesOpen] = useState(false);
 
   if (loading) {
     return (
@@ -77,7 +82,7 @@ export const Dashboard: React.FC = () => {
         description="Visão geral do sistema de gestão de projetos"
       />
 
-      {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
+      {/* Stats Grid - 2 columns on mobile, 4 on desktop - Always visible */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
         {stats.map((stat) => (
           <Card key={stat.title}>
@@ -95,124 +100,156 @@ export const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Quick Timer + Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3 mb-6">
-        {/* Quick Timer */}
-        <div className="lg:col-span-1">
-          <QuickTimeTracker />
-        </div>
-
-        {/* Recent Projects + Hours Summary */}
-        <div className="lg:col-span-2 grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Projetos Recentes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentProjects.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum projeto criado ainda.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {recentProjects.map((project) => {
-                    const client = data.clients.find(c => c.id === project.client_id);
-                    return (
-                      <li key={project.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-foreground truncate">{project.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">{client?.name || 'Cliente não encontrado'}</p>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ml-2 shrink-0 ${
-                          project.status === 'active' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
-                          project.status === 'paused' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
-                          {project.status === 'active' ? 'Ativo' : 
-                           project.status === 'paused' ? 'Pausado' : 'Concluído'}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Horas por Cliente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.clients.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum cliente cadastrado ainda.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {data.clients.slice(0, 5).map((client) => {
-                    const usedHours = getClientHours(client.id);
-                    const percentage = client.contracted_hours > 0 
-                      ? Math.min((usedHours / client.contracted_hours) * 100, 100)
-                      : 0;
-                    return (
-                      <li key={client.id} className="py-2 border-b border-border last:border-0">
-                        <div className="flex justify-between mb-1">
-                          <span className="font-medium text-foreground text-sm truncate">{client.name}</span>
-                          <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                            {usedHours}h / {client.contracted_hours}h
-                          </span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div
-                            className="bg-primary h-2 rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      {/* Quick Timer - Always visible */}
+      <div className="mb-6">
+        <QuickTimeTracker />
       </div>
 
-      {/* Recent Time Entries */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Últimos Registros de Horas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentTimeEntries.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nenhum registro de horas ainda.</p>
-          ) : (
-            <ul className="space-y-3">
-              {recentTimeEntries.map((entry) => (
-                <li key={entry.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-border last:border-0 gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground truncate">{entry.taskName}</p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {entry.projectName} • {entry.clientName}
-                    </p>
-                    {entry.description && (
-                      <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-1">{entry.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-muted-foreground">
-                      {format(parseISO(entry.date), "dd 'de' MMM", { locale: ptBR })}
-                    </span>
-                    <span className="text-sm font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                      {formatHoursDisplay(entry.hours)}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {/* Collapsible Sections */}
+      <div className="grid gap-4 lg:grid-cols-2 mb-4">
+        {/* Recent Projects - Collapsible */}
+        <Collapsible open={projectsOpen} onOpenChange={setProjectsOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FolderKanban className="h-4 w-4" />
+                    Projetos Recentes
+                  </CardTitle>
+                  <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", projectsOpen && "rotate-180")} />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                {recentProjects.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Nenhum projeto criado ainda.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {recentProjects.map((project) => {
+                      const client = data.clients.find(c => c.id === project.client_id);
+                      return (
+                        <li key={project.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-foreground truncate">{project.name}</p>
+                            <p className="text-sm text-muted-foreground truncate">{client?.name || 'Cliente não encontrado'}</p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ml-2 shrink-0 ${
+                            project.status === 'active' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
+                            project.status === 'paused' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {project.status === 'active' ? 'Ativo' : 
+                             project.status === 'paused' ? 'Pausado' : 'Concluído'}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
+        {/* Hours by Client - Collapsible */}
+        <Collapsible open={hoursClientOpen} onOpenChange={setHoursClientOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Horas por Cliente
+                  </CardTitle>
+                  <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", hoursClientOpen && "rotate-180")} />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                {data.clients.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Nenhum cliente cadastrado ainda.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {data.clients.slice(0, 5).map((client) => {
+                      const usedHours = getClientHours(client.id);
+                      const percentage = client.contracted_hours > 0 
+                        ? Math.min((usedHours / client.contracted_hours) * 100, 100)
+                        : 0;
+                      return (
+                        <li key={client.id} className="py-2 border-b border-border last:border-0">
+                          <div className="flex justify-between mb-1">
+                            <span className="font-medium text-foreground text-sm truncate">{client.name}</span>
+                            <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                              {usedHours}h / {client.contracted_hours}h
+                            </span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div
+                              className="bg-primary h-2 rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      </div>
+
+      {/* Recent Time Entries - Collapsible */}
+      <Collapsible open={recentEntriesOpen} onOpenChange={setRecentEntriesOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Últimos Registros de Horas
+                </CardTitle>
+                <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", recentEntriesOpen && "rotate-180")} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              {recentTimeEntries.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Nenhum registro de horas ainda.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {recentTimeEntries.map((entry) => (
+                    <li key={entry.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-border last:border-0 gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">{entry.taskName}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {entry.projectName} • {entry.clientName}
+                        </p>
+                        {entry.description && (
+                          <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-1">{entry.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseISO(entry.date), "dd 'de' MMM", { locale: ptBR })}
+                        </span>
+                        <span className="text-sm font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
+                          {formatHoursDisplay(entry.hours)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
     </div>
   );
 };
