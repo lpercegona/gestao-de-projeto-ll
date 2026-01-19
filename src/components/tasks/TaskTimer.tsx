@@ -4,7 +4,7 @@ import { Play, Pause, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 interface TaskTimerProps {
   taskId: string;
@@ -69,11 +69,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const handleStart = async () => {
     // Check if there's already an active global timer (either standalone or from another task)
     if (hasActiveTimer && timerState.taskId !== taskId) {
-      toast({
-        title: 'Timer em andamento',
-        description: 'Já existe um cronômetro ativo. Finalize-o antes de iniciar outro.',
-        variant: 'destructive',
-      });
+      toast.error('Timer em andamento: Já existe um cronômetro ativo. Finalize-o antes de iniciar outro.');
       return;
     }
 
@@ -132,7 +128,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
       {showTimerControls && (
         <div className={cn(
           "px-2 sm:px-3 py-1 sm:py-1.5 rounded-md font-mono text-xs sm:text-sm font-medium",
-          isPaused ? "bg-orange-100 text-orange-600" : "bg-primary/10 text-primary animate-pulse"
+          isPaused 
+            ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" 
+            : "bg-primary/10 text-primary animate-pulse"
         )}>
           {formatTime(displayTime)}
         </div>
@@ -153,7 +151,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               )}
             >
               <Play className="w-4 h-4" />
-              <span className="hidden sm:inline ml-1">Iniciar</span>
+              <span className="hidden sm:inline ml-2">Iniciar</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent className="sm:hidden">
@@ -176,7 +174,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   className="text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
                 >
                   <Play className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-1">Retomar</span>
+                  <span className="hidden sm:inline ml-2">Retomar</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="sm:hidden">Retomar</TooltipContent>
@@ -189,10 +187,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   size="sm"
                   onClick={handlePause}
                   disabled={loading || disabled}
-                  className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 px-2 sm:px-3"
+                  className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30 px-2 sm:px-3"
                 >
                   <Pause className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-1">Pausar</span>
+                  <span className="hidden sm:inline ml-2">Pausar</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="sm:hidden">Pausar</TooltipContent>
@@ -209,7 +207,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                 className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
               >
                 <Square className="w-4 h-4" />
-                <span className="hidden sm:inline ml-1">Concluir</span>
+                <span className="hidden sm:inline ml-2">Concluir</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent className="sm:hidden">Concluir</TooltipContent>
@@ -226,10 +224,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               size="sm"
               onClick={handleComplete}
               disabled={loading || disabled}
-              className="text-green-600 hover:text-green-600 hover:bg-green-100 px-2 sm:px-3"
+              className="text-green-600 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 sm:px-3"
             >
               <Square className="w-4 h-4 fill-current" />
-              <span className="hidden sm:inline ml-1">Finalizar</span>
+              <span className="hidden sm:inline ml-2">Finalizar</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent className="sm:hidden">Finalizar Tarefa</TooltipContent>

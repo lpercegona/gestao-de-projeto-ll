@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Play, Pause, Square, Clock, Plus, Link2, Loader2, ClipboardList, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -356,7 +357,7 @@ export const QuickTimeTracker: React.FC = () => {
                   rows={2}
                 />
               </div>
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button variant="outline" onClick={() => setLinkMode(null)}>
                   Voltar
                 </Button>
@@ -380,12 +381,10 @@ export const QuickTimeTracker: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="createNewProjectDashboard"
                   checked={createNewProject}
-                  onChange={(e) => setCreateNewProject(e.target.checked)}
-                  className="rounded border-border"
+                  onCheckedChange={(checked) => setCreateNewProject(checked === true)}
                 />
                 <Label htmlFor="createNewProjectDashboard" className="text-sm font-normal cursor-pointer">
                   Criar novo projeto
@@ -462,7 +461,7 @@ export const QuickTimeTracker: React.FC = () => {
                 />
               </div>
 
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button variant="outline" onClick={() => setLinkMode(null)}>
                   Voltar
                 </Button>
@@ -475,8 +474,12 @@ export const QuickTimeTracker: React.FC = () => {
           )}
 
           {!linkMode && (
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="ghost" onClick={handleDiscard} className="text-destructive hover:text-destructive">
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button 
+                variant="ghost" 
+                onClick={handleDiscard} 
+                className="text-destructive hover:text-destructive sm:mr-auto"
+              >
                 Descartar
               </Button>
               <Button variant="outline" onClick={handleCancel}>

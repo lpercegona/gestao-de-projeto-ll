@@ -96,8 +96,9 @@ export const HeaderTimerDisplay: React.FC = () => {
         {/* Timer display */}
         <div className={cn(
           "px-2 py-1 rounded-md font-mono text-xs font-medium",
-          "bg-primary/10 text-primary",
-          timerState.isRunning && !timerState.isPaused && "animate-pulse"
+          timerState.isPaused 
+            ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" 
+            : "bg-primary/10 text-primary animate-pulse"
         )}>
           {formatTime(timerState.elapsedSeconds)}
         </div>
@@ -113,7 +114,7 @@ export const HeaderTimerDisplay: React.FC = () => {
                 "h-8 w-8",
                 timerState.isPaused 
                   ? "text-primary hover:text-primary hover:bg-primary/10" 
-                  : "text-orange-600 hover:text-orange-600 hover:bg-orange-100"
+                  : "text-orange-600 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30"
               )}
               aria-label={timerState.isPaused ? "Retomar" : "Pausar"}
             >
@@ -134,7 +135,7 @@ export const HeaderTimerDisplay: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={completeGlobalTimer}
-              className="h-8 w-8 text-green-600 hover:text-green-600 hover:bg-green-100"
+              className="h-8 w-8 text-green-600 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
               aria-label="Concluir registro"
             >
               <Square className="h-4 w-4" />
