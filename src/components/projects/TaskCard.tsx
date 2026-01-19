@@ -21,6 +21,13 @@ interface TaskTimer {
   started_at: string;
 }
 
+interface KanbanStage {
+  id: string;
+  name: string;
+  color: string | null;
+  order_position: number;
+}
+
 interface TaskCardProps {
   task: {
     id: string;
@@ -32,6 +39,7 @@ interface TaskCardProps {
   taskHours: number;
   timeEntries: TimeEntry[];
   activeTimer: TaskTimer | null;
+  kanbanStages?: KanbanStage[];
   getCreatorName: (userId: string | null) => string;
   onEditTask: () => void;
   onDeleteTask: () => void;
@@ -40,6 +48,7 @@ interface TaskCardProps {
   onStopTimer: () => Promise<void>;
   onCompleteTask: () => Promise<void>;
   compact?: boolean;
+  showStatus?: boolean;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -47,6 +56,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   taskHours,
   timeEntries,
   activeTimer,
+  kanbanStages = [],
   getCreatorName,
   onEditTask,
   onDeleteTask,
@@ -55,26 +65,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onStopTimer,
   onCompleteTask,
   compact = false,
+  showStatus = false,
 }) => {
   const [entriesOpen, setEntriesOpen] = React.useState(false);
 
-  const getStatusLabel = (status: string) => {
+  // Find the kanban stage for this task's status
+  const getStageInfo = (status: string) => {
+    const stage = kanbanStages.find(s => s.name === status);
+    if (stage) {
+      return { name: stage.name, color: stage.color };
+    }
+    // Fallback for legacy status values
     switch (status) {
-      case 'pending': return 'Pendente';
-      case 'in_progress': return 'Em Andamento';
-      case 'completed': return 'Concluída';
-      default: return status;
+      case 'pending': return { name: 'Pendente', color: '#eab308' };
+      case 'in_progress': return { name: 'Em Andamento', color: '#3b82f6' };
+      case 'completed': return { name: 'Concluída', color: '#22c55e' };
+      default: return { name: status, color: null };
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
+  const stageInfo = getStageInfo(task.status);
 
   return (
     <div className="bg-card border rounded-lg p-3 group relative">
@@ -91,9 +101,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className="pr-16">
         <div className="flex items-center gap-2 flex-wrap mb-2">
           <h4 className="font-medium text-sm text-foreground">{task.name}</h4>
-          {compact && (
-            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(task.status)}`}>
-              {getStatusLabel(task.status)}
+          {(compact || showStatus) && (
+            <span 
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{
+                backgroundColor: stageInfo.color ? `${stageInfo.color}20` : 'hsl(var(--muted))',
+                color: stageInfo.color || 'hsl(var(--muted-foreground))',
+                border: `1px solid ${stageInfo.color || 'hsl(var(--border))'}40`
+              }}
+            >
+              {stageInfo.name}
             </span>
           )}
         </div>

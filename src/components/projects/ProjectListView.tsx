@@ -59,6 +59,13 @@ interface ProjectAccess {
   user_id: string;
 }
 
+interface KanbanStage {
+  id: string;
+  name: string;
+  color: string | null;
+  order_position: number;
+}
+
 interface ProjectListViewProps {
   projects: Project[];
   clients: Client[];
@@ -67,6 +74,7 @@ interface ProjectListViewProps {
   taskTimers: TaskTimer[];
   projectColumns: ProjectColumn[];
   projectAccess: ProjectAccess[];
+  kanbanStages: KanbanStage[];
   isAdminOrMaster: boolean;
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
@@ -91,6 +99,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   timeEntries,
   taskTimers,
   projectAccess,
+  kanbanStages,
   isAdminOrMaster,
   getProjectHours,
   getTaskHours,
@@ -207,6 +216,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             taskHours={getTaskHours(task.id)}
                             timeEntries={taskTimeEntries}
                             activeTimer={activeTimer}
+                            kanbanStages={kanbanStages}
                             getCreatorName={getCreatorName}
                             onEditTask={() => onEditTask(task)}
                             onDeleteTask={() => onDeleteTask(task)}
@@ -214,6 +224,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             onStartTimer={() => onStartTimer(task.id)}
                             onStopTimer={() => onStopTimer(task.id)}
                             onCompleteTask={() => onCompleteTask(task.id)}
+                            showStatus={true}
                           />
                         );
                       })}
