@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -11,17 +11,17 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
 import { Clients } from "@/pages/Clients";
+import { ClientDetail } from "@/pages/ClientDetail";
 import { Projects } from "@/pages/Projects";
 import { ProjectDetail } from "@/pages/ProjectDetail";
 import { Reports } from "@/pages/Reports";
-import { Settings } from "@/pages/Settings";
 import { Users } from "@/pages/Users";
 import { ClientReports } from "@/pages/ClientReports";
 import { ClientProjects } from "@/pages/ClientProjects";
 import { ProjectRequests } from "@/pages/ProjectRequests";
 import { ClientPortal } from "@/pages/ClientPortal";
 import { SharedReport } from "@/pages/SharedReport";
-import { Profile } from "@/pages/Profile";
+import { Preferences } from "@/pages/Preferences";
 import { ResetPassword } from "@/pages/ResetPassword";
 import { Landing } from "@/pages/Landing";
 import NotFound from "./pages/NotFound";
@@ -59,6 +59,11 @@ const App = () => (
                   <Clients />
                 </ProtectedRoute>
               } />
+              <Route path="/clients/:clientId" element={
+                <ProtectedRoute requiredRole="admin">
+                  <ClientDetail />
+                </ProtectedRoute>
+              } />
               
               {/* Projects - accessible by collaborator and above */}
               <Route path="/projects" element={
@@ -93,13 +98,6 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Settings - admin only */}
-              <Route path="/settings" element={
-                <ProtectedRoute requiredRole="admin">
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              
               {/* Client routes */}
               <Route path="/my-reports" element={
                 <ProtectedRoute requiredRole="client">
@@ -113,12 +111,16 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Profile - accessible by all authenticated users */}
-              <Route path="/profile" element={
+              {/* Preferences - accessible by all authenticated users */}
+              <Route path="/preferences" element={
                 <ProtectedRoute>
-                  <Profile />
+                  <Preferences />
                 </ProtectedRoute>
               } />
+              
+              {/* Redirects for old routes */}
+              <Route path="/profile" element={<Navigate to="/preferences" replace />} />
+              <Route path="/settings" element={<Navigate to="/preferences" replace />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

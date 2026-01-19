@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -35,6 +36,7 @@ interface Client {
 }
 
 export const Clients: React.FC = () => {
+  const navigate = useNavigate();
   const { data, loading, createClient, updateClient, deleteClient, getClientHours } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -128,14 +130,18 @@ export const Clients: React.FC = () => {
             const usedHours = getClientHours(client.id);
             const projectCount = data.projects.filter(p => p.client_id === client.id).length;
             return (
-              <Card key={client.id}>
+              <Card 
+                key={client.id} 
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate(`/clients/${client.id}`)}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="font-semibold text-foreground">{client.name}</h3>
                       <p className="text-sm text-muted-foreground">{client.email}</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="icon"
