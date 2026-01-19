@@ -62,10 +62,6 @@ export const QuickTimeTracker: React.FC = () => {
   };
 
   const handleStop = () => {
-    // If linked to a task, don't show our dialog - the global timer dialog will handle it
-    if (timerState.taskId) {
-      return;
-    }
     setShowLinkDialog(true);
   };
 
@@ -249,11 +245,10 @@ export const QuickTimeTracker: React.FC = () => {
                   </Button>
                 )}
                 <Button 
-                  onClick={isLinkedToTask ? undefined : handleStop} 
+                  onClick={handleStop} 
                   variant="destructive" 
                   className="flex-1 gap-2"
-                  disabled={isLinkedToTask}
-                  title={isLinkedToTask ? 'Este timer está vinculado a uma tarefa' : 'Concluir registro'}
+                  title="Concluir registro"
                 >
                   <Square className="h-4 w-4" />
                   Concluir
@@ -261,11 +256,6 @@ export const QuickTimeTracker: React.FC = () => {
               </div>
             )}
             
-            {isLinkedToTask && hasActiveTimer && (
-              <p className="text-xs text-muted-foreground text-center">
-                Timer vinculado a uma tarefa. Finalize pela tarefa ou pelo timer global.
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -273,9 +263,9 @@ export const QuickTimeTracker: React.FC = () => {
       <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Registrar {getElapsedHours().toFixed(2)}h</DialogTitle>
+            <DialogTitle>Concluir Registro</DialogTitle>
             <DialogDescription>
-              Escolha como deseja vincular este registro de horas
+              Tempo decorrido: {getElapsedHours().toFixed(2)}h — Escolha como deseja vincular este registro
             </DialogDescription>
           </DialogHeader>
 

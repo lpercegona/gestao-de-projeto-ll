@@ -240,11 +240,20 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const handleDiscard = () => {
+    resetTimer();
+    handleClose();
+    toast({
+      title: 'Registro descartado',
+      description: 'O tempo foi descartado e não foi registrado.',
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Registrar Tempo</DialogTitle>
+          <DialogTitle>Concluir Registro</DialogTitle>
           <DialogDescription>
             Tempo decorrido: <span className="font-mono font-semibold text-primary">{formatTime(timerState.elapsedSeconds)}</span>
             {' '}({getElapsedHours().toFixed(2)}h)
@@ -411,13 +420,23 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
-            Cancelar
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button 
+            variant="ghost" 
+            onClick={handleDiscard} 
+            disabled={loading}
+            className="text-destructive hover:text-destructive sm:mr-auto"
+          >
+            Descartar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Registrando...' : 'Registrar'}
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={handleClose} disabled={loading} className="flex-1 sm:flex-initial">
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading} className="flex-1 sm:flex-initial">
+              {loading ? 'Registrando...' : 'Registrar'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
