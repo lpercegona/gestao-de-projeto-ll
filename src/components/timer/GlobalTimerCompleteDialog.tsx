@@ -35,7 +35,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   onOpenChange,
 }) => {
   const { timerState, getElapsedHours, resetTimer } = useGlobalTimer();
-  const { data, createTimeEntry, createTask, createProject, stopTaskTimer } = useData();
+  const { data, createTimeEntry, createTask, createProject, stopTaskTimer, cancelTaskTimer } = useData();
 
   const [linkMode, setLinkMode] = useState<'existing' | 'new'>('existing');
   const [selectedTaskId, setSelectedTaskId] = useState('');
@@ -240,7 +240,11 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleDiscard = () => {
+  const handleDiscard = async () => {
+    // If linked to a task timer, cancel it in the database
+    if (timerState.taskId) {
+      await cancelTaskTimer(timerState.taskId);
+    }
     resetTimer();
     handleClose();
     toast({
