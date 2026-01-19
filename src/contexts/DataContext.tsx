@@ -79,6 +79,7 @@ interface KanbanStage {
   order_position: number;
   color: string;
   is_default: boolean;
+  owner_id: string | null;
 }
 
 interface AppData {
@@ -126,7 +127,7 @@ interface DataContextType {
   getActiveTimer: (taskId: string) => TaskTimer | null;
   completeTask: (taskId: string) => Promise<boolean>;
   // Kanban stages
-  saveKanbanStages: (stages: Omit<KanbanStage, 'id' | 'is_default'>[]) => Promise<void>;
+  saveKanbanStages: (stages: Omit<KanbanStage, 'id' | 'is_default' | 'owner_id'>[]) => Promise<void>;
   // Utilities
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
@@ -153,14 +154,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
 
-  const refreshData = useCallback(async () => {
+  const refreshData = useCallback(async (showLoading = true) => {
     if (!user) {
       setData(emptyData);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       // Fetch all data in parallel
       const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes] = await Promise.all([
@@ -236,7 +237,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      clients: [newClient as Client, ...prev.clients],
+    }));
     return newClient as Client;
   };
 
@@ -253,7 +258,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      clients: prev.clients.map(c => c.id === id ? updated as Client : c),
+    }));
     return updated as Client;
   };
 
@@ -263,7 +272,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error deleting client:', error);
       return false;
     }
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      clients: prev.clients.filter(c => c.id !== id),
+    }));
     return true;
   };
 
@@ -295,11 +308,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
-    return {
+    const projectWithFields = {
       ...newProject,
       custom_fields: (newProject.custom_fields as Record<string, string>) || {},
     } as Project;
+    
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projects: [projectWithFields, ...prev.projects],
+    }));
+    return projectWithFields;
   };
 
   const updateProject = async (id: string, updates: Partial<Project>) => {
@@ -315,11 +334,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
-    return {
+    const projectWithFields = {
       ...updated,
       custom_fields: (updated.custom_fields as Record<string, string>) || {},
     } as Project;
+    
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projects: prev.projects.map(p => p.id === id ? projectWithFields : p),
+    }));
+    return projectWithFields;
   };
 
   const deleteProject = async (id: string) => {
@@ -328,7 +353,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error deleting project:', error);
       return false;
     }
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projects: prev.projects.filter(p => p.id !== id),
+    }));
     return true;
   };
 
@@ -350,7 +379,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      tasks: [newTask as Task, ...prev.tasks],
+    }));
     return newTask as Task;
   };
 
@@ -367,7 +400,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t => t.id === id ? updated as Task : t),
+    }));
     return updated as Task;
   };
 
@@ -377,7 +414,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error deleting task:', error);
       return false;
     }
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      tasks: prev.tasks.filter(t => t.id !== id),
+    }));
     return true;
   };
 
@@ -399,8 +440,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
-    return { ...newEntry, hours: Number(newEntry.hours) } as TimeEntry;
+    const entryWithNumber = { ...newEntry, hours: Number(newEntry.hours) } as TimeEntry;
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      timeEntries: [entryWithNumber, ...prev.timeEntries],
+    }));
+    return entryWithNumber;
   };
 
   const updateTimeEntry = async (id: string, updates: Partial<TimeEntry>) => {
@@ -416,8 +462,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
-    return { ...updated, hours: Number(updated.hours) } as TimeEntry;
+    const entryWithNumber = { ...updated, hours: Number(updated.hours) } as TimeEntry;
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      timeEntries: prev.timeEntries.map(e => e.id === id ? entryWithNumber : e),
+    }));
+    return entryWithNumber;
   };
 
   const deleteTimeEntry = async (id: string) => {
@@ -426,7 +477,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error deleting time entry:', error);
       return false;
     }
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      timeEntries: prev.timeEntries.filter(e => e.id !== id),
+    }));
     return true;
   };
 
@@ -443,7 +498,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projectColumns: [...prev.projectColumns, newColumn as ProjectColumn],
+    }));
     return newColumn as ProjectColumn;
   };
 
@@ -460,7 +519,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projectColumns: prev.projectColumns.map(c => c.id === id ? updated as ProjectColumn : c),
+    }));
     return updated as ProjectColumn;
   };
 
@@ -470,7 +533,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error deleting column:', error);
       return false;
     }
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projectColumns: prev.projectColumns.filter(c => c.id !== id),
+    }));
     return true;
   };
 
@@ -496,7 +563,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projectAccess: [...prev.projectAccess.filter(a => !(a.user_id === userId && a.project_id === projectId)), access as UserProjectAccess],
+    }));
     return access as UserProjectAccess;
   };
 
@@ -512,7 +583,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      projectAccess: prev.projectAccess.filter(a => !(a.user_id === userId && a.project_id === projectId)),
+    }));
     return true;
   };
 
@@ -540,7 +615,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately
+    setData(prev => ({
+      ...prev,
+      taskTimers: [...prev.taskTimers, timer as TaskTimer],
+    }));
     return timer as TaskTimer;
   };
 
@@ -581,7 +660,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    await refreshData();
+    // Update local state immediately (remove timer)
+    setData(prev => ({
+      ...prev,
+      taskTimers: prev.taskTimers.filter(t => t.id !== timer.id),
+    }));
     return { hours: finalHours };
   };
 
@@ -623,7 +706,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Kanban stages operations
-  const saveKanbanStages = async (stages: Omit<KanbanStage, 'id' | 'is_default'>[]): Promise<void> => {
+  const saveKanbanStages = async (stages: Omit<KanbanStage, 'id' | 'is_default' | 'owner_id'>[]): Promise<void> => {
     if (!user) return;
 
     // Delete existing custom stages (keep defaults)
@@ -643,10 +726,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         owner_id: user.id,
       }));
 
-      await supabase.from('kanban_stages').insert(stagesToInsert);
+      const { data: insertedStages } = await supabase.from('kanban_stages').insert(stagesToInsert).select();
+      
+      // Update local state immediately
+      if (insertedStages) {
+        setData(prev => ({
+          ...prev,
+          kanbanStages: [...prev.kanbanStages.filter(s => s.is_default || s.owner_id !== user.id), ...insertedStages as KanbanStage[]].sort((a, b) => a.order_position - b.order_position),
+        }));
+      }
+    } else {
+      // Just remove custom stages from local state
+      setData(prev => ({
+        ...prev,
+        kanbanStages: prev.kanbanStages.filter(s => s.is_default || s.owner_id !== user.id),
+      }));
     }
-
-    await refreshData();
   };
 
   return (
