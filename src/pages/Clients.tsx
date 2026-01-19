@@ -332,17 +332,29 @@ export const Clients: React.FC = () => {
               {/* Faturamento */}
               <div className="space-y-4 pt-4 border-t">
                 <h4 className="font-medium text-sm text-muted-foreground">Faturamento</h4>
-                <div className="space-y-2">
-                  <Label htmlFor="contracted_hours">Horas Contratadas</Label>
-                  <Input
-                    id="contracted_hours"
-                    type="number"
-                    min="0"
-                    value={formData.contracted_hours}
-                    onChange={(e) => setFormData({ ...formData, contracted_hours: Number(e.target.value) })}
-                    required
-                    disabled={submitting}
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contracted_hours">Horas Contratadas</Label>
+                    <Input
+                      id="contracted_hours"
+                      type="number"
+                      min="0"
+                      value={formData.contracted_hours}
+                      onChange={(e) => setFormData({ ...formData, contracted_hours: Number(e.target.value) })}
+                      required
+                      disabled={submitting}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="source">Origem</Label>
+                    <Input
+                      id="source"
+                      value={formData.source}
+                      onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                      placeholder="Ex: Indicação, Google, etc."
+                      disabled={submitting}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -369,26 +381,16 @@ export const Clients: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="source">Origem</Label>
-                    <Input
-                      id="source"
-                      value={formData.source}
-                      onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                      placeholder="Ex: Indicação, Google, etc."
+                    <Label htmlFor="notes">Observações</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Anotações sobre o cliente..."
+                      rows={2}
                       disabled={submitting}
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Observações</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Anotações sobre o cliente..."
-                    rows={3}
-                    disabled={submitting}
-                  />
                 </div>
               </div>
             </div>
