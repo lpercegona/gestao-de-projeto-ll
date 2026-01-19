@@ -48,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { UserEditDialog } from '@/components/users/UserEditDialog';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
 
@@ -60,11 +61,7 @@ interface UserProfile {
   owner_name?: string | null;
 }
 
-interface EditFormData {
-  full_name: string;
-  email: string;
-  role: AppRole | 'none';
-}
+// EditFormData removed - using UserEditDialog component instead
 
 interface CreateFormData {
   full_name: string;
@@ -88,11 +85,9 @@ export const Users: React.FC = () => {
   });
   const [creating, setCreating] = useState(false);
   
-  // Edit dialog state
+  // Edit dialog state - using reusable UserEditDialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [editForm, setEditForm] = useState<EditFormData>({ full_name: '', email: '', role: 'none' });
-  const [saving, setSaving] = useState(false);
   
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -235,77 +230,11 @@ export const Users: React.FC = () => {
   // Edit user handlers
   const openEditDialog = (userProfile: UserProfile) => {
     setEditingUser(userProfile);
-    setEditForm({
-      full_name: userProfile.full_name || '',
-      email: userProfile.email || '',
-      role: userProfile.role || 'none',
-    });
     setEditDialogOpen(true);
   };
 
-  const handleSaveUser = async () => {
-    if (!editingUser) return;
-
-    if (!editForm.full_name.trim()) {
-      toast.error('Nome é obrigatório');
-      return;
-    }
-    if (!editForm.email.trim()) {
-      toast.error('Email é obrigatório');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: editForm.full_name.trim(),
-          email: editForm.email.trim(),
-        })
-        .eq('user_id', editingUser.user_id);
-
-      if (profileError) throw profileError;
-
-      if (editForm.role !== (editingUser.role || 'none')) {
-        if (editForm.role === 'none') {
-          const { error } = await supabase
-            .from('user_roles')
-            .delete()
-            .eq('user_id', editingUser.user_id);
-          if (error) throw error;
-        } else {
-          const { data: existingRole } = await supabase
-            .from('user_roles')
-            .select('id')
-            .eq('user_id', editingUser.user_id)
-            .maybeSingle();
-
-          if (existingRole) {
-            const { error } = await supabase
-              .from('user_roles')
-              .update({ role: editForm.role })
-              .eq('user_id', editingUser.user_id);
-            if (error) throw error;
-          } else {
-            const { error } = await supabase
-              .from('user_roles')
-              .insert({ user_id: editingUser.user_id, role: editForm.role });
-            if (error) throw error;
-          }
-        }
-      }
-
-      toast.success('Usuário atualizado com sucesso!');
-      setEditDialogOpen(false);
-      setEditingUser(null);
-      fetchUsers();
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error('Erro ao atualizar usuário');
-    } finally {
-      setSaving(false);
-    }
+  const handleUserSaved = () => {
+    fetchUsers();
   };
 
   // Delete user handlers
@@ -672,77 +601,15 @@ export const Users: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Usuário</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do usuário abaixo.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Nome Completo</Label>
-              <Input
-                id="edit-name"
-                value={editForm.full_name}
-                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-                placeholder="Nome do usuário"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            
-            {editingUser && canChangeRole(editingUser) && (
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Função</Label>
-                <Select
-                  value={editForm.role}
-                  onValueChange={(value) => setEditForm({ ...editForm, role: value as AppRole | 'none' })}
-                >
-                  <SelectTrigger id="edit-role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableRoles().map(role => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveUser} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                'Salvar'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Dialog - using reusable UserEditDialog component */}
+      <UserEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        user={editingUser}
+        onSaved={handleUserSaved}
+        showRoleEdit={editingUser ? canChangeRole(editingUser) : false}
+        showPreferences={true}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
