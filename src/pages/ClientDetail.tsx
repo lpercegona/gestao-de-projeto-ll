@@ -457,7 +457,7 @@ export const ClientDetail: React.FC = () => {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -676,7 +676,7 @@ export const ClientDetail: React.FC = () => {
           </div>
 
           {/* Report Summary */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-2">
             <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Total do Mês</p>
