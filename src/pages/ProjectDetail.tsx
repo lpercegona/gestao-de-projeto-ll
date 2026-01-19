@@ -256,7 +256,7 @@ export const ProjectDetail: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">{project.name}</h1>
           <p className="text-sm text-muted-foreground">
-            Cliente: {client.name} • {getProjectHours(project.id)}h registradas
+            Cliente: {client.company || client.name} • {getProjectHours(project.id)}h registradas
           </p>
         </div>
       </div>
