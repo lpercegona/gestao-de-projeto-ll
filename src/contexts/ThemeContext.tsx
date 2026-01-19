@@ -37,6 +37,7 @@ const GOOGLE_FONTS_MAP: Record<string, string> = {
   'DM Sans': 'DM+Sans:wght@400;500;600;700',
   'Space Grotesk': 'Space+Grotesk:wght@400;500;600;700',
   'Nunito Sans': 'Nunito+Sans:wght@400;500;600;700',
+  'Stack Sans Text': 'Stack+Sans+Text:wght@400;500;600;700',
   'Lora': 'Lora:wght@400;500;600;700',
   'Roboto Mono': 'Roboto+Mono:wght@400;500;700',
   'Source Code Pro': 'Source+Code+Pro:wght@400;500;600;700',

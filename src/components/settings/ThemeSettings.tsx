@@ -30,6 +30,7 @@ const FONT_OPTIONS = [
   { value: 'DM Sans', label: 'DM Sans', category: 'Sans-serif' },
   { value: 'Space Grotesk', label: 'Space Grotesk', category: 'Sans-serif' },
   { value: 'Nunito Sans', label: 'Nunito Sans', category: 'Sans-serif' },
+  { value: 'Stack Sans Text', label: 'Stack Sans Text', category: 'Sans-serif' },
   // Serif
   { value: 'Lora', label: 'Lora', category: 'Serif' },
   // Monospace
@@ -52,6 +53,7 @@ const GOOGLE_FONTS_PREVIEW: Record<string, string> = {
   'DM Sans': 'DM+Sans:wght@400;500;600;700',
   'Space Grotesk': 'Space+Grotesk:wght@400;500;600;700',
   'Nunito Sans': 'Nunito+Sans:wght@400;500;600;700',
+  'Stack Sans Text': 'Stack+Sans+Text:wght@400;500;600;700',
   'Lora': 'Lora:wght@400;500;600;700',
   'Roboto Mono': 'Roboto+Mono:wght@400;500;700',
   'Source Code Pro': 'Source+Code+Pro:wght@400;500;600;700',
