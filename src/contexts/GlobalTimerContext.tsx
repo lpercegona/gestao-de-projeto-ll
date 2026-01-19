@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 
+const TIMER_STORAGE_KEY = 'oras-global-timer';
+
 interface GlobalTimerState {
   isRunning: boolean;
   isPaused: boolean;
@@ -9,6 +11,14 @@ interface GlobalTimerState {
   startTime: number | null;
   pausedElapsed: number;
   taskId: string | null; // If linked to a task
+}
+
+interface PersistedTimerState {
+  isRunning: boolean;
+  isPaused: boolean;
+  startTime: number | null;
+  pausedElapsed: number;
+  taskId: string | null;
 }
 
 interface GlobalTimerContextType {
@@ -36,10 +46,66 @@ const initialState: GlobalTimerState = {
   taskId: null,
 };
 
+// Load persisted state from localStorage
+const loadPersistedState = (): GlobalTimerState => {
+  try {
+    const stored = localStorage.getItem(TIMER_STORAGE_KEY);
+    if (!stored) return initialState;
+    
+    const parsed: PersistedTimerState = JSON.parse(stored);
+    
+    // If running, calculate elapsed time since start
+    if (parsed.isRunning && parsed.startTime) {
+      const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000) + parsed.pausedElapsed;
+      return {
+        isRunning: true,
+        isPaused: false,
+        elapsedSeconds: elapsed,
+        startTime: parsed.startTime,
+        pausedElapsed: parsed.pausedElapsed,
+        taskId: parsed.taskId,
+      };
+    }
+    
+    // If paused, restore paused state
+    if (parsed.isPaused) {
+      return {
+        isRunning: true, // Still considered "active"
+        isPaused: true,
+        elapsedSeconds: parsed.pausedElapsed,
+        startTime: null,
+        pausedElapsed: parsed.pausedElapsed,
+        taskId: parsed.taskId,
+      };
+    }
+    
+    return initialState;
+  } catch {
+    return initialState;
+  }
+};
+
+// Persist state to localStorage
+const persistState = (state: GlobalTimerState) => {
+  const toPersist: PersistedTimerState = {
+    isRunning: state.isRunning && !state.isPaused,
+    isPaused: state.isPaused,
+    startTime: state.startTime,
+    pausedElapsed: state.pausedElapsed,
+    taskId: state.taskId,
+  };
+  localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(toPersist));
+};
+
+// Clear persisted state
+const clearPersistedState = () => {
+  localStorage.removeItem(TIMER_STORAGE_KEY);
+};
+
 export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const { data } = useData();
-  const [timerState, setTimerState] = useState<GlobalTimerState>(initialState);
+  const [timerState, setTimerState] = useState<GlobalTimerState>(() => loadPersistedState());
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   // Sync with any active task timer from the database
@@ -49,20 +115,23 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // Find any active timer for the current user
     const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id);
     
-    if (activeTaskTimer && !timerState.isRunning && !timerState.isPaused) {
-      // Sync global timer with the active task timer
+    if (activeTaskTimer) {
+      // There's an active task timer - sync with it
       const startTime = new Date(activeTaskTimer.started_at).getTime();
-      setTimerState({
+      const newState: GlobalTimerState = {
         isRunning: true,
         isPaused: false,
         elapsedSeconds: Math.floor((Date.now() - startTime) / 1000),
         startTime,
         pausedElapsed: 0,
         taskId: activeTaskTimer.task_id,
-      });
-    } else if (!activeTaskTimer && timerState.taskId) {
-      // Task timer was stopped externally, reset if linked
+      };
+      setTimerState(newState);
+      persistState(newState);
+    } else if (timerState.taskId && !timerState.isPaused) {
+      // Task timer was stopped externally, reset if it was linked to a task
       setTimerState(initialState);
+      clearPersistedState();
     }
   }, [user, data.taskTimers]);
 
@@ -85,36 +154,42 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // Don't allow starting if already running
     if (timerState.isRunning) return;
 
-    setTimerState({
+    const newState: GlobalTimerState = {
       isRunning: true,
       isPaused: false,
       elapsedSeconds: 0,
       startTime: Date.now(),
       pausedElapsed: 0,
       taskId: null,
-    });
+    };
+    setTimerState(newState);
+    persistState(newState);
   }, [timerState.isRunning]);
 
   const pauseGlobalTimer = useCallback(() => {
     if (!timerState.isRunning || timerState.isPaused) return;
 
-    setTimerState(prev => ({
-      ...prev,
+    const newState: GlobalTimerState = {
+      ...timerState,
       isPaused: true,
-      pausedElapsed: prev.elapsedSeconds,
+      pausedElapsed: timerState.elapsedSeconds,
       startTime: null,
-    }));
-  }, [timerState.isRunning, timerState.isPaused]);
+    };
+    setTimerState(newState);
+    persistState(newState);
+  }, [timerState]);
 
   const resumeGlobalTimer = useCallback(() => {
     if (!timerState.isPaused) return;
 
-    setTimerState(prev => ({
-      ...prev,
+    const newState: GlobalTimerState = {
+      ...timerState,
       isPaused: false,
       startTime: Date.now(),
-    }));
-  }, [timerState.isPaused]);
+    };
+    setTimerState(newState);
+    persistState(newState);
+  }, [timerState]);
 
   const completeGlobalTimer = useCallback(() => {
     setShowCompleteDialog(true);
@@ -123,6 +198,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const resetTimer = useCallback(() => {
     setTimerState(initialState);
     setShowCompleteDialog(false);
+    clearPersistedState();
   }, []);
 
   const getElapsedHours = useCallback(() => {
@@ -133,14 +209,16 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const syncWithTaskTimer = useCallback((taskId: string, startedAt: string) => {
     const startTime = new Date(startedAt).getTime();
-    setTimerState({
+    const newState: GlobalTimerState = {
       isRunning: true,
       isPaused: false,
       elapsedSeconds: Math.floor((Date.now() - startTime) / 1000),
       startTime,
       pausedElapsed: 0,
       taskId,
-    });
+    };
+    setTimerState(newState);
+    persistState(newState);
   }, []);
 
   const hasActiveTimer = timerState.isRunning || timerState.isPaused;
