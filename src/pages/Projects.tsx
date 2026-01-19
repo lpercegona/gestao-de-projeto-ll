@@ -107,6 +107,7 @@ export const Projects: React.FC = () => {
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [pausingTaskId, setPausingTaskId] = useState<string | null>(null);
   const [pauseDescription, setPauseDescription] = useState('');
+  const [pauseEntryType, setPauseEntryType] = useState<'task' | 'meeting'>('task');
   
   // Collaborator management
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
@@ -344,12 +345,13 @@ export const Projects: React.FC = () => {
   const handleStopTimer = async (taskId: string) => {
     setPausingTaskId(taskId);
     setPauseDescription('');
+    setPauseEntryType('task');
     setIsPauseDialogOpen(true);
   };
 
   const handleConfirmPause = async () => {
     if (pausingTaskId) {
-      await stopTaskTimer(pausingTaskId, pauseDescription || undefined);
+      await stopTaskTimer(pausingTaskId, pauseDescription || undefined, pauseEntryType);
       toast.success('Timer parado e horas registradas!');
       setIsPauseDialogOpen(false);
       setPausingTaskId(null);
@@ -657,6 +659,13 @@ export const Projects: React.FC = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>Pausar Timer</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo de Registro</Label>
+              <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
+                <ToggleGroupItem value="task" aria-label="Tarefa" className="gap-2"><ClipboardList className="w-4 h-4" />Tarefa</ToggleGroupItem>
+                <ToggleGroupItem value="meeting" aria-label="Reunião" className="gap-2"><UsersIcon className="w-4 h-4" />Reunião</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
             <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
           </div>
           <DialogFooter>
