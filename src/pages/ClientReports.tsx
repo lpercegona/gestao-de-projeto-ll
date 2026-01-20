@@ -32,10 +32,19 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'da
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
+interface ProjectColumn {
+  id: string;
+  name: string;
+  type: string;
+  options: string[] | null;
+  client_id: string | null;
+}
+
 interface Project {
   id: string;
   name: string;
   client_id: string;
+  custom_fields?: Record<string, string> | null;
 }
 
 interface Task {
@@ -74,6 +83,7 @@ export const ClientReports: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
   const [reportShare, setReportShare] = useState<ReportShare | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -105,7 +115,10 @@ export const ClientReports: React.FC = () => {
             .select('*')
             .eq('client_id', clientData.id);
 
-          setProjects(projectsData || []);
+          setProjects((projectsData || []).map(p => ({
+            ...p,
+            custom_fields: (p.custom_fields as Record<string, string> | null) || {}
+          })));
 
           if (projectsData && projectsData.length > 0) {
             const projectIds = projectsData.map(p => p.id);
@@ -130,6 +143,14 @@ export const ClientReports: React.FC = () => {
               setTimeEntries(entriesData || []);
             }
           }
+
+          // Fetch project columns for this client
+          const { data: columnsData } = await supabase
+            .from('project_columns')
+            .select('*')
+            .eq('client_id', clientData.id);
+
+          setProjectColumns(columnsData || []);
 
           // Fetch existing share settings
           const { data: shareData } = await supabase
@@ -593,6 +614,8 @@ export const ClientReports: React.FC = () => {
         <div className="space-y-4">
           {reportData.map((project) => {
             const isExpanded = expandedProjects.has(project.id);
+            const originalProject = projects.find(p => p.id === project.id);
+            const customFields = originalProject?.custom_fields || {};
             
             return (
               <Card key={project.id}>
@@ -618,7 +641,28 @@ export const ClientReports: React.FC = () => {
                   
                   <CollapsibleContent>
                     <CardContent className="pt-0">
-                      <div className="border-t border-border pt-4">
+                      {/* Custom Fields */}
+                      {projectColumns.length > 0 && Object.keys(customFields).length > 0 && (
+                        <div className="border-t border-border pt-4 mb-4">
+                          <p className="text-sm font-medium text-muted-foreground mb-3">
+                            Campos do Projeto
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {projectColumns.map(col => {
+                              const value = customFields[col.id];
+                              if (!value) return null;
+                              return (
+                                <div key={col.id} className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md text-sm">
+                                  <span className="text-muted-foreground">{col.name}:</span>
+                                  <span className="font-medium text-foreground">{value}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className={projectColumns.length > 0 && Object.keys(customFields).length > 0 ? '' : 'border-t border-border pt-4'}>
                         <p className="text-sm font-medium text-muted-foreground mb-3">
                           Tarefas ({project.tasks.length})
                         </p>

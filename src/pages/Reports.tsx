@@ -44,7 +44,7 @@ interface ReportShare {
 
 export const Reports: React.FC = () => {
   const { user } = useAuth();
-  const { data, loading, getProjectHours, getTaskHours, getClientHours } = useData();
+  const { data, loading, getProjectHours, getTaskHours, getClientHours, getClientColumns } = useData();
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -452,6 +452,9 @@ export const Reports: React.FC = () => {
 
   const renderProjectCard = (project: typeof allProjectsData[0], showClientName: boolean = true) => {
     const isExpanded = expandedProjects.has(project.id);
+    const clientId = 'client' in project && project.client ? project.client.id : (project as any).client_id;
+    const clientColumns = clientId ? getClientColumns(clientId) : [];
+    const customFields = (project as any).custom_fields || {};
     
     return (
       <Card key={project.id}>
@@ -482,7 +485,28 @@ export const Reports: React.FC = () => {
           
           <CollapsibleContent>
             <CardContent className="pt-0">
-              <div className="border-t border-border pt-4">
+              {/* Custom Fields */}
+              {clientColumns.length > 0 && Object.keys(customFields).length > 0 && (
+                <div className="border-t border-border pt-4 mb-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-3">
+                    Campos do Projeto
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {clientColumns.map(col => {
+                      const value = customFields[col.id];
+                      if (!value) return null;
+                      return (
+                        <div key={col.id} className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md text-sm">
+                          <span className="text-muted-foreground">{col.name}:</span>
+                          <span className="font-medium text-foreground">{value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              <div className={clientColumns.length > 0 && Object.keys(customFields).length > 0 ? '' : 'border-t border-border pt-4'}>
                 <p className="text-sm font-medium text-muted-foreground mb-3">
                   Tarefas ({project.tasks.length})
                 </p>
