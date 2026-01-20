@@ -1128,6 +1128,7 @@ export type Database = {
         Returns: {
           entry_date: string
           entry_id: string
+          entry_type: string
           hours: number
           task_id: string
         }[]
