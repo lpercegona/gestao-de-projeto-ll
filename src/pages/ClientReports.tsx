@@ -50,6 +50,7 @@ interface TimeEntry {
   task_id: string;
   hours: number;
   date: string;
+  entry_type?: string;
 }
 
 interface Client {
@@ -180,6 +181,12 @@ export const ClientReports: React.FC = () => {
         });
         
         const monthHours = taskEntries.reduce((sum, te) => sum + Number(te.hours), 0);
+        const monthTaskHours = taskEntries
+          .filter(te => te.entry_type === 'task')
+          .reduce((sum, te) => sum + Number(te.hours), 0);
+        const monthMeetingHours = taskEntries
+          .filter(te => te.entry_type === 'meeting')
+          .reduce((sum, te) => sum + Number(te.hours), 0);
         const totalHours = timeEntries
           .filter(te => te.task_id === task.id)
           .reduce((sum, te) => sum + Number(te.hours), 0);
@@ -187,17 +194,23 @@ export const ClientReports: React.FC = () => {
         return {
           ...task,
           monthHours,
+          monthTaskHours,
+          monthMeetingHours,
           totalHours,
         };
       }).filter(t => t.monthHours > 0); // Only tasks with hours in period
 
       const monthHours = tasksWithHours.reduce((sum, t) => sum + t.monthHours, 0);
+      const monthTaskHours = tasksWithHours.reduce((sum, t) => sum + t.monthTaskHours, 0);
+      const monthMeetingHours = tasksWithHours.reduce((sum, t) => sum + t.monthMeetingHours, 0);
       const totalHours = tasksWithHours.reduce((sum, t) => sum + t.totalHours, 0);
 
       return {
         ...project,
         tasks: tasksWithHours,
         monthHours,
+        monthTaskHours,
+        monthMeetingHours,
         totalHours,
       };
     }).filter(p => p.monthHours > 0); // Only projects with hours in period
@@ -309,6 +322,8 @@ export const ClientReports: React.FC = () => {
   };
 
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
+  const totalMonthTaskHours = reportData.reduce((sum, p) => sum + p.monthTaskHours, 0);
+  const totalMonthMeetingHours = reportData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
   const totalAllHours = timeEntries.reduce((sum, te) => sum + Number(te.hours), 0);
 
   if (loading) {
@@ -544,14 +559,22 @@ export const ClientReports: React.FC = () => {
           <CardTitle>Resumo do Período</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
             <div>
               <p className="text-sm text-muted-foreground">Projetos com atividade</p>
               <p className="text-2xl font-bold text-foreground">{reportData.length}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Horas no período</p>
-              <p className="text-2xl font-bold text-foreground">{totalMonthHours}h</p>
+              <p className="text-sm text-muted-foreground">Total de horas</p>
+              <p className="text-2xl font-bold text-foreground">{totalMonthHours.toFixed(2)}h</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas em tarefas</p>
+              <p className="text-2xl font-bold text-primary">{totalMonthTaskHours.toFixed(2)}h</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas em reuniões</p>
+              <p className="text-2xl font-bold text-accent-foreground">{totalMonthMeetingHours.toFixed(2)}h</p>
             </div>
           </div>
         </CardContent>
@@ -612,10 +635,11 @@ export const ClientReports: React.FC = () => {
                                 )}
                               </div>
                               <div className="text-right">
-                                <p className="font-medium text-foreground">{task.monthHours}h</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Total: {task.totalHours}h
-                                </p>
+                                <p className="font-medium text-foreground">{task.monthHours.toFixed(2)}h</p>
+                                <div className="flex gap-2 text-xs text-muted-foreground">
+                                  {task.monthTaskHours > 0 && <span className="text-primary">{task.monthTaskHours.toFixed(2)}h tarefas</span>}
+                                  {task.monthMeetingHours > 0 && <span className="text-accent-foreground">{task.monthMeetingHours.toFixed(2)}h reuniões</span>}
+                                </div>
                               </div>
                             </div>
                           ))}
