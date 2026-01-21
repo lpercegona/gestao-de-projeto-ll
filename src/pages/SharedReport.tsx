@@ -22,10 +22,18 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'da
 import { ptBR } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+interface ProjectColumn {
+  id: string;
+  name: string;
+  type: string;
+  options: string[] | null;
+}
+
 interface Project {
   id: string;
   name: string;
   status: string;
+  custom_fields?: Record<string, string> | null;
 }
 
 interface Task {
@@ -57,6 +65,7 @@ export const SharedReport: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
   
   // Password protection states
   const [needsPassword, setNeedsPassword] = useState(false);
@@ -179,9 +188,23 @@ export const SharedReport: React.FC = () => {
         const mappedProjects: Project[] = (projectsData || []).map((p: any) => ({
           id: p.project_id,
           name: p.project_name,
-          status: p.project_status
+          status: p.project_status,
+          custom_fields: (p.custom_fields as Record<string, string> | null) || {}
         }));
         setProjects(mappedProjects);
+
+        // Fetch project columns
+        const { data: columnsData } = await supabase.rpc('get_shared_report_project_columns', {
+          p_token: token
+        });
+
+        const mappedColumns: ProjectColumn[] = (columnsData || []).map((c: any) => ({
+          id: c.column_id,
+          name: c.column_name,
+          type: c.column_type,
+          options: c.column_options
+        }));
+        setProjectColumns(mappedColumns);
         
         const { data: tasksData } = await supabase.rpc('get_shared_report_tasks', {
           p_token: token
@@ -499,6 +522,8 @@ export const SharedReport: React.FC = () => {
           <div className="space-y-4">
             {reportData.map((project) => {
               const isExpanded = expandedProjects.has(project.id);
+              const originalProject = projects.find(p => p.id === project.id);
+              const customFields = originalProject?.custom_fields || {};
               
               return (
                 <Card key={project.id}>
@@ -524,7 +549,28 @@ export const SharedReport: React.FC = () => {
                     
                     <CollapsibleContent>
                       <CardContent className="pt-0">
-                        <div className="border-t border-border pt-4">
+                        {/* Custom Fields */}
+                        {projectColumns.length > 0 && Object.keys(customFields).length > 0 && (
+                          <div className="border-t border-border pt-4 mb-4">
+                            <p className="text-sm font-medium text-muted-foreground mb-3">
+                              Campos do Projeto
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {projectColumns.map(col => {
+                                const value = customFields[col.id];
+                                if (!value) return null;
+                                return (
+                                  <div key={col.id} className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md text-sm">
+                                    <span className="text-muted-foreground">{col.name}:</span>
+                                    <span className="font-medium text-foreground">{value}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className={projectColumns.length > 0 && Object.keys(customFields).length > 0 ? '' : 'border-t border-border pt-4'}>
                           <p className="text-sm font-medium text-muted-foreground mb-3">
                             Tarefas ({project.tasks.length})
                           </p>
