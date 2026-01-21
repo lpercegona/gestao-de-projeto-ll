@@ -10,17 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Loader2, CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface ProjectRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (title: string, briefing: string, desiredDeadline?: string) => Promise<void>;
+  onSubmit: (title: string, briefing: string) => Promise<void>;
 }
 
 export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
@@ -30,7 +25,6 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [briefing, setBriefing] = useState('');
-  const [desiredDeadline, setDesiredDeadline] = useState<Date | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,14 +33,9 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmit(
-        title.trim(), 
-        briefing.trim(), 
-        desiredDeadline ? format(desiredDeadline, 'yyyy-MM-dd') : undefined
-      );
+      await onSubmit(title.trim(), briefing.trim());
       setTitle('');
       setBriefing('');
-      setDesiredDeadline(undefined);
       onOpenChange(false);
     } finally {
       setSubmitting(false);
@@ -78,45 +67,13 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
                 id="briefing"
                 value={briefing}
                 onChange={(e) => setBriefing(e.target.value)}
-                placeholder="Descreva o projeto em detalhes: objetivos, escopo, referências, etc."
-                rows={5}
+                placeholder="Descreva o projeto em detalhes: objetivos, escopo, prazo desejado, referências, etc."
+                rows={6}
                 required
                 disabled={submitting}
               />
               <p className="text-xs text-muted-foreground">
                 Quanto mais detalhes você fornecer, melhor conseguiremos entender suas necessidades.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo Desejado (opcional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !desiredDeadline && "text-muted-foreground"
-                    )}
-                    disabled={submitting}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {desiredDeadline ? format(desiredDeadline, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={desiredDeadline}
-                    onSelect={setDesiredDeadline}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                    locale={ptBR}
-                  />
-                </PopoverContent>
-              </Popover>
-              <p className="text-xs text-muted-foreground">
-                Informe a data ideal para entrega do projeto.
               </p>
             </div>
           </div>

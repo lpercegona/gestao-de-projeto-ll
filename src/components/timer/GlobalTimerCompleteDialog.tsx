@@ -128,7 +128,6 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
             description: null,
             status: 'active',
             custom_fields: {},
-            due_date: null,
           });
 
           if (!newProject) {
@@ -149,7 +148,6 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
             project_id: newProject.id,
             description: null,
             status: 'in_progress',
-            due_date: null,
           });
 
           if (!newTask) {
@@ -172,7 +170,6 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
             project_id: selectedProjectId,
             description: null,
             status: 'in_progress',
-            due_date: null,
           });
 
           if (!newTask) {

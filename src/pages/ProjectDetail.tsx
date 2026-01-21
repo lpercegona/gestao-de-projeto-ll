@@ -32,9 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2, ClipboardList, Users, MoreVertical, CalendarIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Clock, Loader2, ClipboardList, Users, MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +45,6 @@ import { Task } from '@/types';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 export const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -91,7 +88,6 @@ export const ProjectDetail: React.FC = () => {
     name: '',
     description: '',
     status: 'pending',
-    due_date: '',
   });
   
   const [timeForm, setTimeForm] = useState({
@@ -141,11 +137,10 @@ export const ProjectDetail: React.FC = () => {
         name: task.name,
         description: task.description || '',
         status: task.status,
-        due_date: task.due_date || '',
       });
     } else {
       setEditingTask(null);
-      setTaskForm({ name: '', description: '', status: 'pending', due_date: '' });
+      setTaskForm({ name: '', description: '', status: 'pending' });
     }
     setIsTaskDialogOpen(true);
   };
@@ -153,12 +148,11 @@ export const ProjectDetail: React.FC = () => {
   const handleSubmitTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const taskData = { ...taskForm, due_date: taskForm.due_date || null };
     if (editingTask) {
-      await updateTask(editingTask.id, taskData);
+      await updateTask(editingTask.id, taskForm);
       toast.success('Tarefa atualizada com sucesso!');
     } else {
-      await createTask({ ...taskData, project_id: project.id });
+      await createTask({ ...taskForm, project_id: project.id });
       toast.success('Tarefa criada com sucesso!');
     }
     setSubmitting(false);
@@ -460,20 +454,6 @@ export const ProjectDetail: React.FC = () => {
                     <SelectItem value="completed">Concluída</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Prazo de Entrega</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !taskForm.due_date && "text-muted-foreground")} disabled={submitting}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {taskForm.due_date ? format(parseISO(taskForm.due_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar prazo"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={taskForm.due_date ? parseISO(taskForm.due_date) : undefined} onSelect={(date) => setTaskForm({ ...taskForm, due_date: date ? format(date, 'yyyy-MM-dd') : '' })} initialFocus className={cn("p-3 pointer-events-auto")} locale={ptBR} />
-                  </PopoverContent>
-                </Popover>
               </div>
             </div>
             <DialogFooter>

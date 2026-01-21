@@ -36,7 +36,6 @@ interface Project {
   description: string | null;
   status: string;
   custom_fields: Record<string, string>;
-  due_date: string | null;
   owner_id: string | null;
   created_by: string | null;
   created_at: string;
@@ -48,7 +47,6 @@ interface Task {
   name: string;
   description: string | null;
   status: string;
-  due_date: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -199,12 +197,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         projects: (projectsRes.data || []).map(p => ({
           ...p,
           custom_fields: (p.custom_fields as Record<string, string>) || {},
-          due_date: (p as any).due_date || null,
         })) as Project[],
-        tasks: (tasksRes.data || []).map(t => ({
-          ...t,
-          due_date: (t as any).due_date || null,
-        })) as Task[],
+        tasks: (tasksRes.data || []) as Task[],
         timeEntries: (entriesRes.data || []).map(e => ({
           ...e,
           hours: Number(e.hours),
@@ -324,7 +318,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const projectWithFields = {
       ...newProject,
       custom_fields: (newProject.custom_fields as Record<string, string>) || {},
-      due_date: (newProject as any).due_date || null,
     } as Project;
     
     // Update local state immediately
@@ -351,7 +344,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const projectWithFields = {
       ...updated,
       custom_fields: (updated.custom_fields as Record<string, string>) || {},
-      due_date: (updated as any).due_date || null,
     } as Project;
     
     // Update local state immediately
@@ -394,13 +386,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    const taskWithDueDate = { ...newTask, due_date: (newTask as any).due_date || null } as Task;
     // Update local state immediately
     setData(prev => ({
       ...prev,
-      tasks: [taskWithDueDate, ...prev.tasks],
+      tasks: [newTask as Task, ...prev.tasks],
     }));
-    return taskWithDueDate;
+    return newTask as Task;
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
@@ -416,13 +407,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    const taskWithDueDate = { ...updated, due_date: (updated as any).due_date || null } as Task;
     // Update local state immediately
     setData(prev => ({
       ...prev,
-      tasks: prev.tasks.map(t => t.id === id ? taskWithDueDate : t),
+      tasks: prev.tasks.map(t => t.id === id ? updated as Task : t),
     }));
-    return taskWithDueDate;
+    return updated as Task;
   };
 
   const deleteTask = async (id: string) => {
