@@ -1106,9 +1106,19 @@ export type Database = {
           is_public: boolean
         }[]
       }
+      get_shared_report_project_columns: {
+        Args: { p_token: string }
+        Returns: {
+          column_id: string
+          column_name: string
+          column_options: string[]
+          column_type: string
+        }[]
+      }
       get_shared_report_projects: {
         Args: { p_token: string }
         Returns: {
+          custom_fields: Json
           project_id: string
           project_name: string
           project_status: string
