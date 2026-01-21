@@ -132,6 +132,7 @@ export const ProjectRequests: React.FC = () => {
         description: projectDescription.trim() || convertRequest.briefing,
         status: 'active',
         custom_fields: {},
+        due_date: null,
       });
 
       if (!newProject) {

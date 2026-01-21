@@ -20,6 +20,7 @@ interface ProjectRequest {
   status: string;
   admin_notes: string | null;
   converted_project_id: string | null;
+  desired_deadline: string | null;
   created_at: string;
 }
 
@@ -43,7 +44,7 @@ export const ClientProjects: React.FC = () => {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setRequests(requestsData || []);
+        setRequests((requestsData || []).map(r => ({ ...r, desired_deadline: (r as any).desired_deadline || null })));
       } catch (error) {
         console.error('Error fetching requests:', error);
       } finally {
@@ -54,7 +55,7 @@ export const ClientProjects: React.FC = () => {
     fetchRequests();
   }, []);
 
-  const handleSubmitRequest = async (title: string, briefing: string) => {
+  const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
     if (!user) return;
 
     // Get client_id from the clients table using user_id
@@ -76,6 +77,7 @@ export const ClientProjects: React.FC = () => {
         title,
         briefing,
         created_by: user.id,
+        desired_deadline: desiredDeadline || null,
       })
       .select()
       .single();
@@ -86,7 +88,7 @@ export const ClientProjects: React.FC = () => {
       return;
     }
 
-    setRequests(prev => [newRequest, ...prev]);
+    setRequests(prev => [{ ...newRequest, desired_deadline: (newRequest as any).desired_deadline || null }, ...prev]);
     toast.success('Solicitação enviada com sucesso!');
   };
 
@@ -166,6 +168,9 @@ export const ClientProjects: React.FC = () => {
                         <p className="text-sm text-muted-foreground line-clamp-2">{request.briefing}</p>
                         <p className="text-xs text-muted-foreground">
                           Enviado em {format(new Date(request.created_at), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
+                          {request.desired_deadline && (
+                            <> • Prazo desejado: {format(new Date(request.desired_deadline), "dd/MM/yyyy")}</>
+                          )}
                         </p>
                         {request.admin_notes && (
                           <div className="mt-2 p-2 bg-muted rounded-md">
