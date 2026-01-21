@@ -22,6 +22,7 @@ export interface Project {
   description: string | null;
   status: string;
   custom_fields: Record<string, string> | null;
+  due_date: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -32,6 +33,7 @@ export interface Task {
   name: string;
   description: string | null;
   status: string;
+  due_date: string | null;
   created_at: string;
 }
 

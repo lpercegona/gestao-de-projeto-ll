@@ -79,6 +79,7 @@ export const ClientPortal: React.FC = () => {
         status: p.project_status,
         client_id: clientRecord.client_id,
         custom_fields: (p.custom_fields as Record<string, string>) || {},
+        due_date: p.project_due_date || null,
         created_at: '',
         updated_at: '',
       }));
@@ -95,6 +96,7 @@ export const ClientPortal: React.FC = () => {
           description: t.task_description,
           status: t.task_status,
           project_id: t.project_id,
+          due_date: t.task_due_date || null,
           created_at: '',
           updated_at: '',
         }));

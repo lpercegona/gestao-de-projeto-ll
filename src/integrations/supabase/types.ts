@@ -1026,6 +1026,7 @@ export type Database = {
         Returns: {
           custom_fields: Json
           project_description: string
+          project_due_date: string
           project_id: string
           project_name: string
           project_status: string
@@ -1036,6 +1037,7 @@ export type Database = {
         Returns: {
           project_id: string
           task_description: string
+          task_due_date: string
           task_id: string
           task_name: string
           task_status: string
@@ -1119,6 +1121,7 @@ export type Database = {
         Args: { p_token: string }
         Returns: {
           custom_fields: Json
+          project_due_date: string
           project_id: string
           project_name: string
           project_status: string
@@ -1129,6 +1132,7 @@ export type Database = {
         Returns: {
           project_id: string
           task_description: string
+          task_due_date: string
           task_id: string
           task_name: string
         }[]

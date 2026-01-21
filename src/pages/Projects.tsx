@@ -16,13 +16,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Plus, Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList, CalendarIcon } from 'lucide-react';
 import { Users as UsersIcon } from 'lucide-react';
-import { Project, Task } from '@/types';
+import type { Project, Task } from '@/types';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 // New components
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
@@ -88,7 +92,7 @@ export const Projects: React.FC = () => {
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: '', description: '', client_id: '', status: 'active', custom_fields: {} as Record<string, string>,
+    name: '', description: '', client_id: '', status: 'active', custom_fields: {} as Record<string, string>, due_date: '',
   });
   
   // Task dialog state
@@ -97,7 +101,7 @@ export const Projects: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [taskProjectId, setTaskProjectId] = useState<string>('');
-  const [taskFormData, setTaskFormData] = useState({ name: '', description: '', status: 'pending' });
+  const [taskFormData, setTaskFormData] = useState({ name: '', description: '', status: 'pending', due_date: '' });
 
   // Time entry dialog state
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
@@ -194,7 +198,7 @@ export const Projects: React.FC = () => {
   const handleOpenDialog = async (project?: Project) => {
     if (project) {
       setEditingProject(project);
-      setFormData({ name: project.name, description: project.description || '', client_id: project.client_id, status: project.status, custom_fields: { ...project.custom_fields } });
+      setFormData({ name: project.name, description: project.description || '', client_id: project.client_id, status: project.status, custom_fields: { ...project.custom_fields }, due_date: project.due_date || '' });
       const projectAccess = data.projectAccess.filter(a => a.project_id === project.id);
       setSelectedCollaborators(projectAccess.map(a => a.user_id));
     } else {
@@ -203,7 +207,7 @@ export const Projects: React.FC = () => {
       const clientCols = defaultClientId ? getClientColumns(defaultClientId) : [];
       const defaultCustomFields: Record<string, string> = {};
       clientCols.forEach(col => { defaultCustomFields[col.id] = col.options?.[0] || ''; });
-      setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', custom_fields: defaultCustomFields });
+      setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', custom_fields: defaultCustomFields, due_date: '' });
       setSelectedCollaborators([]);
     }
     setCustomFieldsOpen(false);
@@ -222,12 +226,13 @@ export const Projects: React.FC = () => {
     setSubmitting(true);
     try {
       let projectId: string | undefined;
+      const projectData = { ...formData, due_date: formData.due_date || null };
       if (editingProject) {
-        await updateProject(editingProject.id, formData);
+        await updateProject(editingProject.id, projectData);
         projectId = editingProject.id;
         toast.success('Projeto atualizado!');
       } else {
-        const newProject = await createProject(formData);
+        const newProject = await createProject(projectData);
         projectId = newProject?.id;
         toast.success('Projeto criado!');
       }
@@ -268,10 +273,10 @@ export const Projects: React.FC = () => {
     setTaskProjectId(projectId);
     if (task) {
       setEditingTask(task);
-      setTaskFormData({ name: task.name, description: task.description || '', status: task.status });
+      setTaskFormData({ name: task.name, description: task.description || '', status: task.status, due_date: task.due_date || '' });
     } else {
       setEditingTask(null);
-      setTaskFormData({ name: '', description: '', status: initialStatus || 'pending' });
+      setTaskFormData({ name: '', description: '', status: initialStatus || 'pending', due_date: '' });
     }
     setIsTaskDialogOpen(true);
   };
@@ -279,11 +284,12 @@ export const Projects: React.FC = () => {
   const handleSubmitTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    const taskData = { ...taskFormData, due_date: taskFormData.due_date || null };
     if (editingTask) {
-      await updateTask(editingTask.id, taskFormData);
+      await updateTask(editingTask.id, taskData);
       toast.success('Tarefa atualizada!');
     } else {
-      await createTask({ ...taskFormData, project_id: taskProjectId });
+      await createTask({ ...taskData, project_id: taskProjectId });
       toast.success('Tarefa criada!');
     }
     setSubmitting(false);
@@ -499,10 +505,10 @@ export const Projects: React.FC = () => {
           getActiveTimer={getActiveTimer}
           getClientColumns={getClientColumns}
           onEditProject={handleOpenDialog}
-          onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
+          onDeleteProject={(project) => { setDeletingProject(project as unknown as Project); setIsDeleteDialogOpen(true); }}
           onCreateTask={(projectId) => handleOpenTaskDialog(projectId)}
-          onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
-          onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
+          onEditTask={(task) => handleOpenTaskDialog(task.project_id, task as unknown as Task)}
+          onDeleteTask={(task) => { setDeletingTask(task as unknown as Task); setIsDeleteTaskDialogOpen(true); }}
           onRegisterTime={handleOpenTimeDialog}
           onStartTimer={handleStartTimer}
           onStopTimer={handleStopTimer}
@@ -521,8 +527,8 @@ export const Projects: React.FC = () => {
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
           getActiveTimer={getActiveTimer}
-          onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
-          onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
+          onEditTask={(task) => handleOpenTaskDialog(task.project_id, task as unknown as Task)}
+          onDeleteTask={(task) => { setDeletingTask(task as unknown as Task); setIsDeleteTaskDialogOpen(true); }}
           onRegisterTime={handleOpenTimeDialog}
           onStartTimer={handleStartTimer}
           onStopTimer={handleStopTimer}
@@ -563,6 +569,22 @@ export const Projects: React.FC = () => {
                   )}
                 </div>
               )}
+
+              {/* Due Date Field */}
+              <div className="space-y-2">
+                <Label>Prazo de Entrega</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formData.due_date && "text-muted-foreground")} disabled={submitting}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.due_date ? format(parseISO(formData.due_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar prazo"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={formData.due_date ? parseISO(formData.due_date) : undefined} onSelect={(date) => setFormData({ ...formData, due_date: date ? format(date, 'yyyy-MM-dd') : '' })} initialFocus className={cn("p-3 pointer-events-auto")} locale={ptBR} />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               {isAdminOrMaster && formData.client_id && (
                 <Collapsible open={customFieldsOpen} onOpenChange={setCustomFieldsOpen}>
@@ -627,6 +649,20 @@ export const Projects: React.FC = () => {
               <div className="space-y-2"><Label>Nome da Tarefa</Label><Input value={taskFormData.name} onChange={(e) => setTaskFormData({ ...taskFormData, name: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Descrição</Label><Textarea value={taskFormData.description} onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })} rows={3} disabled={submitting} /></div>
               <div className="space-y-2"><Label>Status</Label><Select value={taskFormData.status} onValueChange={(v) => setTaskFormData({ ...taskFormData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="in_progress">Em Andamento</SelectItem><SelectItem value="completed">Concluída</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2">
+                <Label>Prazo de Entrega</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !taskFormData.due_date && "text-muted-foreground")} disabled={submitting}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {taskFormData.due_date ? format(parseISO(taskFormData.due_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar prazo"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={taskFormData.due_date ? parseISO(taskFormData.due_date) : undefined} onSelect={(date) => setTaskFormData({ ...taskFormData, due_date: date ? format(date, 'yyyy-MM-dd') : '' })} initialFocus className={cn("p-3 pointer-events-auto")} locale={ptBR} />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setIsTaskDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTask ? 'Salvar' : 'Criar'}</Button></DialogFooter>
           </form>
