@@ -59,6 +59,7 @@ export type Database = {
           created_by: string | null
           email: string
           id: string
+          logo_url: string | null
           name: string
           notes: string | null
           owner_id: string | null
@@ -78,6 +79,7 @@ export type Database = {
           created_by?: string | null
           email: string
           id?: string
+          logo_url?: string | null
           name: string
           notes?: string | null
           owner_id?: string | null
@@ -97,6 +99,7 @@ export type Database = {
           created_by?: string | null
           email?: string
           id?: string
+          logo_url?: string | null
           name?: string
           notes?: string | null
           owner_id?: string | null
@@ -1102,7 +1105,9 @@ export type Database = {
       get_shared_report: {
         Args: { p_token: string }
         Returns: {
+          client_company: string
           client_id: string
+          client_logo_url: string
           client_name: string
           contracted_hours: number
           is_public: boolean

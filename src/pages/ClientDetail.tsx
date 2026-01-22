@@ -154,6 +154,7 @@ export const ClientDetail: React.FC = () => {
     pipeline_status: 'lead',
     source: '',
     notes: '',
+    logo_url: '',
   });
 
   // Client user management state
@@ -556,6 +557,7 @@ export const ClientDetail: React.FC = () => {
         pipeline_status: client.pipeline_status || 'lead',
         source: client.source || '',
         notes: client.notes || '',
+        logo_url: (client as any).logo_url || '',
       });
     }
   }, [client]);
@@ -1606,6 +1608,21 @@ export const ClientDetail: React.FC = () => {
                   required
                   disabled={editSubmitting}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-logo">URL do Logo</Label>
+                <Input
+                  id="edit-logo"
+                  type="url"
+                  placeholder="https://exemplo.com/logo.png"
+                  value={editFormData.logo_url}
+                  onChange={(e) => setEditFormData({ ...editFormData, logo_url: e.target.value })}
+                  disabled={editSubmitting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  URL de uma imagem para exibir como logo nos relatórios.
+                </p>
               </div>
 
               <div className="space-y-2">

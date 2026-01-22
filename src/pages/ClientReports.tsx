@@ -31,6 +31,7 @@ import { Input } from '@/components/ui/input';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { formatHours } from '@/lib/formatHours';
 
 interface ProjectColumn {
   id: string;
@@ -99,12 +100,32 @@ export const ClientReports: React.FC = () => {
       
       setLoading(true);
       try {
-        // Fetch client associated with user
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('*')
+        // Fetch client associated with user through client_users table
+        const { data: clientUserData } = await supabase
+          .from('client_users')
+          .select('client_id')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        let clientData = null;
+
+        if (clientUserData?.client_id) {
+          // User is in client_users table, fetch the client
+          const { data: fetchedClient } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('id', clientUserData.client_id)
+            .maybeSingle();
+          clientData = fetchedClient;
+        } else {
+          // Fallback: check legacy user_id field on clients table
+          const { data: legacyClient } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          clientData = legacyClient;
+        }
 
         if (clientData) {
           setClient(clientData);
@@ -527,16 +548,16 @@ export const ClientReports: React.FC = () => {
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <p className="text-sm text-muted-foreground">Horas Contratadas</p>
-              <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(client.contracted_hours)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas Utilizadas</p>
-              <p className="text-2xl font-bold text-foreground">{totalAllHours}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(totalAllHours)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas Restantes</p>
               <p className="text-2xl font-bold text-foreground">
-                {Math.max(0, client.contracted_hours - totalAllHours)}h
+                {formatHours(Math.max(0, client.contracted_hours - totalAllHours))}
               </p>
             </div>
           </div>
@@ -587,15 +608,15 @@ export const ClientReports: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total de horas</p>
-              <p className="text-2xl font-bold text-foreground">{totalMonthHours.toFixed(2)}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(totalMonthHours)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas em tarefas</p>
-              <p className="text-2xl font-bold text-primary">{totalMonthTaskHours.toFixed(2)}h</p>
+              <p className="text-2xl font-bold text-primary">{formatHours(totalMonthTaskHours)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas em reuniões</p>
-              <p className="text-2xl font-bold text-accent-foreground">{totalMonthMeetingHours.toFixed(2)}h</p>
+              <p className="text-2xl font-bold text-accent-foreground">{formatHours(totalMonthMeetingHours)}</p>
             </div>
           </div>
         </CardContent>
@@ -632,8 +653,10 @@ export const ClientReports: React.FC = () => {
                           <CardTitle className="text-base">{project.name}</CardTitle>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-foreground">{project.monthHours}h</p>
-                          <p className="text-xs text-muted-foreground">no período</p>
+                          <div className="flex gap-2 text-sm font-medium">
+                            {project.monthTaskHours > 0 && <span className="text-primary">{formatHours(project.monthTaskHours)} tarefas</span>}
+                            {project.monthMeetingHours > 0 && <span className="text-accent-foreground">{formatHours(project.monthMeetingHours)} reuniões</span>}
+                          </div>
                         </div>
                       </div>
                     </CardHeader>
@@ -679,10 +702,9 @@ export const ClientReports: React.FC = () => {
                                 )}
                               </div>
                               <div className="text-right">
-                                <p className="font-medium text-foreground">{task.monthHours.toFixed(2)}h</p>
-                                <div className="flex gap-2 text-xs text-muted-foreground">
-                                  {task.monthTaskHours > 0 && <span className="text-primary">{task.monthTaskHours.toFixed(2)}h tarefas</span>}
-                                  {task.monthMeetingHours > 0 && <span className="text-accent-foreground">{task.monthMeetingHours.toFixed(2)}h reuniões</span>}
+                                <div className="flex gap-2 text-xs">
+                                  {task.monthTaskHours > 0 && <span className="text-primary font-medium">{formatHours(task.monthTaskHours)} tarefas</span>}
+                                  {task.monthMeetingHours > 0 && <span className="text-accent-foreground font-medium">{formatHours(task.monthMeetingHours)} reuniões</span>}
                                 </div>
                               </div>
                             </div>

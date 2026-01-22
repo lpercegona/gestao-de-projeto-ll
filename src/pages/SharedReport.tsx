@@ -15,12 +15,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Clock, Loader2, Lock, KeyRound, FileDown } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Lock, KeyRound, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatHours } from '@/lib/formatHours';
+import orasLogo from '@/assets/logo-oras.svg';
 
 interface ProjectColumn {
   id: string;
@@ -54,6 +56,8 @@ interface TimeEntry {
 interface ClientInfo {
   client_id: string;
   client_name: string;
+  client_company: string | null;
+  client_logo_url: string | null;
   contracted_hours: number;
   is_public: boolean;
 }
@@ -179,7 +183,15 @@ export const SharedReport: React.FC = () => {
           return;
         }
         
-        setClientInfo(reportData[0]);
+        const clientData = reportData[0] as any;
+        setClientInfo({
+          client_id: clientData.client_id,
+          client_name: clientData.client_name,
+          client_company: clientData.client_company || null,
+          client_logo_url: clientData.client_logo_url || null,
+          contracted_hours: clientData.contracted_hours,
+          is_public: clientData.is_public,
+        });
         
         const { data: projectsData } = await supabase.rpc('get_shared_report_projects', {
           p_token: token
@@ -386,19 +398,29 @@ export const SharedReport: React.FC = () => {
     );
   }
 
+  const displayName = clientInfo.client_company || clientInfo.client_name;
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background">
         <div className="border-b border-border bg-card print:hidden">
           <div className="container py-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-primary-foreground" />
-                </div>
-                <div>
+              <div className="flex items-center gap-4">
+                <img src={orasLogo} alt="Oras" className="h-8" />
+                {clientInfo.client_logo_url && (
+                  <>
+                    <div className="h-6 w-px bg-border" />
+                    <img 
+                      src={clientInfo.client_logo_url} 
+                      alt={displayName} 
+                      className="h-8 max-w-[120px] object-contain"
+                    />
+                  </>
+                )}
+                <div className={clientInfo.client_logo_url ? 'ml-2' : ''}>
                   <h1 className="text-xl font-semibold text-foreground">Relatório de Horas</h1>
-                  <p className="text-sm text-muted-foreground">{clientInfo.client_name}</p>
+                  <p className="text-sm text-muted-foreground">{displayName}</p>
                 </div>
               </div>
               <Tooltip>
@@ -416,10 +438,21 @@ export const SharedReport: React.FC = () => {
         {/* Print header - only visible when printing */}
         <div className="hidden print:block border-b border-border bg-card">
           <div className="container py-6">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              <img src={orasLogo} alt="Oras" className="h-8" />
+              {clientInfo.client_logo_url && (
+                <>
+                  <div className="h-6 w-px bg-border" />
+                  <img 
+                    src={clientInfo.client_logo_url} 
+                    alt={displayName} 
+                    className="h-8 max-w-[120px] object-contain"
+                  />
+                </>
+              )}
               <div>
                 <h1 className="text-xl font-semibold text-foreground">Relatório de Horas</h1>
-                <p className="text-sm text-muted-foreground">{clientInfo.client_name}</p>
+                <p className="text-sm text-muted-foreground">{displayName}</p>
               </div>
             </div>
           </div>
@@ -435,16 +468,16 @@ export const SharedReport: React.FC = () => {
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
               <div>
                 <p className="text-sm text-muted-foreground">Horas Contratadas</p>
-                <p className="text-2xl font-bold text-foreground">{clientInfo.contracted_hours}h</p>
+                <p className="text-2xl font-bold text-foreground">{formatHours(clientInfo.contracted_hours)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Horas Utilizadas</p>
-                <p className="text-2xl font-bold text-foreground">{totalAllHours}h</p>
+                <p className="text-2xl font-bold text-foreground">{formatHours(totalAllHours)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Horas Restantes</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {Math.max(0, clientInfo.contracted_hours - totalAllHours)}h
+                  {formatHours(Math.max(0, clientInfo.contracted_hours - totalAllHours))}
                 </p>
               </div>
             </div>
@@ -495,15 +528,15 @@ export const SharedReport: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total de horas</p>
-                <p className="text-2xl font-bold text-foreground">{totalMonthHours.toFixed(2)}h</p>
+                <p className="text-2xl font-bold text-foreground">{formatHours(totalMonthHours)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Horas em tarefas</p>
-                <p className="text-2xl font-bold text-primary">{totalMonthTaskHours.toFixed(2)}h</p>
+                <p className="text-2xl font-bold text-primary">{formatHours(totalMonthTaskHours)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Horas em reuniões</p>
-                <p className="text-2xl font-bold text-accent-foreground">{totalMonthMeetingHours.toFixed(2)}h</p>
+                <p className="text-2xl font-bold text-accent-foreground">{formatHours(totalMonthMeetingHours)}</p>
               </div>
             </div>
           </CardContent>
@@ -540,8 +573,10 @@ export const SharedReport: React.FC = () => {
                             <CardTitle className="text-base">{project.name}</CardTitle>
                           </div>
                           <div className="text-right">
-                            <p className="text-lg font-bold text-foreground">{project.monthHours}h</p>
-                            <p className="text-xs text-muted-foreground">no período</p>
+                            <div className="flex gap-2 text-sm font-medium">
+                              {project.monthTaskHours > 0 && <span className="text-primary">{formatHours(project.monthTaskHours)} tarefas</span>}
+                              {project.monthMeetingHours > 0 && <span className="text-accent-foreground">{formatHours(project.monthMeetingHours)} reuniões</span>}
+                            </div>
                           </div>
                         </div>
                       </CardHeader>
@@ -587,10 +622,9 @@ export const SharedReport: React.FC = () => {
                                   )}
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-medium text-foreground">{task.monthHours.toFixed(2)}h</p>
-                                  <div className="flex gap-2 text-xs text-muted-foreground">
-                                    {task.monthTaskHours > 0 && <span className="text-primary">{task.monthTaskHours.toFixed(2)}h tarefas</span>}
-                                    {task.monthMeetingHours > 0 && <span className="text-accent-foreground">{task.monthMeetingHours.toFixed(2)}h reuniões</span>}
+                                  <div className="flex gap-2 text-xs">
+                                    {task.monthTaskHours > 0 && <span className="text-primary font-medium">{formatHours(task.monthTaskHours)} tarefas</span>}
+                                    {task.monthMeetingHours > 0 && <span className="text-accent-foreground font-medium">{formatHours(task.monthMeetingHours)} reuniões</span>}
                                   </div>
                                 </div>
                               </div>
