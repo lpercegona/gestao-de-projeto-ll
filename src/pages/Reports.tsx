@@ -33,6 +33,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'da
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { formatHours } from '@/lib/formatHours';
 
 interface ReportShare {
   id: string;
@@ -476,8 +477,10 @@ export const Reports: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-foreground">{project.monthHours}h</p>
-                  <p className="text-xs text-muted-foreground">no período</p>
+                  <div className="flex gap-2 text-sm font-medium">
+                    {project.monthTaskHours > 0 && <span className="text-primary">{formatHours(project.monthTaskHours)} tarefas</span>}
+                    {project.monthMeetingHours > 0 && <span className="text-accent-foreground">{formatHours(project.monthMeetingHours)} reuniões</span>}
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -523,10 +526,9 @@ export const Reports: React.FC = () => {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-foreground">{task.monthHours.toFixed(2)}h</p>
-                        <div className="flex gap-2 text-xs text-muted-foreground">
-                          {task.monthTaskHours > 0 && <span className="text-primary">{task.monthTaskHours.toFixed(2)}h tarefas</span>}
-                          {task.monthMeetingHours > 0 && <span className="text-accent-foreground">{task.monthMeetingHours.toFixed(2)}h reuniões</span>}
+                        <div className="flex gap-2 text-xs">
+                          {task.monthTaskHours > 0 && <span className="text-primary font-medium">{formatHours(task.monthTaskHours)} tarefas</span>}
+                          {task.monthMeetingHours > 0 && <span className="text-accent-foreground font-medium">{formatHours(task.monthMeetingHours)} reuniões</span>}
                         </div>
                       </div>
                     </div>
@@ -604,20 +606,20 @@ export const Reports: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total de horas</p>
-              <p className="text-2xl font-bold text-foreground">{totalMonthHours.toFixed(2)}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(totalMonthHours)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas em tarefas</p>
-              <p className="text-2xl font-bold text-primary">{totalMonthTaskHours.toFixed(2)}h</p>
+              <p className="text-2xl font-bold text-primary">{formatHours(totalMonthTaskHours)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Horas em reuniões</p>
-              <p className="text-2xl font-bold text-accent-foreground">{totalMonthMeetingHours.toFixed(2)}h</p>
+              <p className="text-2xl font-bold text-accent-foreground">{formatHours(totalMonthMeetingHours)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Média por cliente</p>
               <p className="text-2xl font-bold text-foreground">
-                {totalClients > 0 ? (totalMonthHours / totalClients).toFixed(1) : 0}h
+                {totalClients > 0 ? formatHours(totalMonthHours / totalClients) : '0h'}
               </p>
             </div>
           </div>
@@ -689,8 +691,10 @@ export const Reports: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="text-right">
-                                <p className="text-xl font-bold text-foreground">{clientData.monthHours}h</p>
-                                <p className="text-xs text-muted-foreground">no período</p>
+                                <div className="flex gap-2 text-sm font-medium">
+                                  {clientData.monthTaskHours > 0 && <span className="text-primary">{formatHours(clientData.monthTaskHours)} tarefas</span>}
+                                  {clientData.monthMeetingHours > 0 && <span className="text-accent-foreground">{formatHours(clientData.monthMeetingHours)} reuniões</span>}
+                                </div>
                               </div>
                               <div onClick={(e) => e.stopPropagation()}>
                                 {renderShareDialog(clientData.id, clientData.name)}
@@ -706,24 +710,24 @@ export const Reports: React.FC = () => {
                           <div className="grid gap-4 grid-cols-2 md:grid-cols-5 p-4 bg-muted/50 rounded-lg">
                             <div>
                               <p className="text-sm text-muted-foreground">Horas Contratadas</p>
-                              <p className="text-lg font-bold text-foreground">{clientData.contracted_hours}h</p>
+                              <p className="text-lg font-bold text-foreground">{formatHours(clientData.contracted_hours)}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Total Utilizado</p>
-                              <p className="text-lg font-bold text-foreground">{clientData.totalHours}h</p>
+                              <p className="text-lg font-bold text-foreground">{formatHours(clientData.totalHours)}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Horas em Tarefas</p>
-                              <p className="text-lg font-bold text-primary">{clientData.monthTaskHours.toFixed(2)}h</p>
+                              <p className="text-lg font-bold text-primary">{formatHours(clientData.monthTaskHours)}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Horas em Reuniões</p>
-                              <p className="text-lg font-bold text-accent-foreground">{clientData.monthMeetingHours.toFixed(2)}h</p>
+                              <p className="text-lg font-bold text-accent-foreground">{formatHours(clientData.monthMeetingHours)}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Restante</p>
                               <p className="text-lg font-bold text-foreground">
-                                {Math.max(0, clientData.contracted_hours - clientData.totalHours)}h
+                                {formatHours(Math.max(0, clientData.contracted_hours - clientData.totalHours))}
                               </p>
                             </div>
                           </div>
