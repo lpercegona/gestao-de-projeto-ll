@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { formatHours } from '@/lib/formatHours';
 
 export const Dashboard: React.FC = () => {
   const { data, loading, getClientHours } = useData();
@@ -47,9 +48,9 @@ export const Dashboard: React.FC = () => {
     },
     {
       title: 'Horas Registradas',
-      value: `${totalHours}h`,
+      value: formatHours(totalHours),
       icon: Clock,
-      description: `de ${totalContractedHours}h contratadas`,
+      description: `de ${formatHours(totalContractedHours)} contratadas`,
     },
   ];
 
@@ -67,13 +68,6 @@ export const Dashboard: React.FC = () => {
       clientName: client?.company || client?.name || 'Cliente não encontrado',
     };
   });
-
-  const formatHoursDisplay = (hours: number) => {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    if (m === 0) return `${h}h`;
-    return `${h}h ${m}min`;
-  };
 
   return (
     <div>
@@ -183,7 +177,7 @@ export const Dashboard: React.FC = () => {
                           <div className="flex justify-between mb-1">
                             <span className="font-medium text-foreground text-sm truncate">{client.company || client.name}</span>
                             <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                              {usedHours}h / {client.contracted_hours}h
+                              {formatHours(usedHours)} / {formatHours(client.contracted_hours)}
                             </span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-2">
@@ -239,7 +233,7 @@ export const Dashboard: React.FC = () => {
                           {format(parseISO(entry.date), "dd 'de' MMM", { locale: ptBR })}
                         </span>
                         <span className="text-sm font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                          {formatHoursDisplay(entry.hours)}
+                          {formatHours(entry.hours)}
                         </span>
                       </div>
                     </li>

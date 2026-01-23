@@ -45,6 +45,7 @@ import { Task } from '@/types';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatHours } from '@/lib/formatHours';
 
 export const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -375,7 +376,7 @@ export const ProjectDetail: React.FC = () => {
                 <CardContent>
                   {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
                   <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm mb-4">
-                    <span className="font-medium text-foreground">{taskHours}h registradas</span>
+                    <span className="font-medium text-foreground">{formatHours(taskHours)} registradas</span>
                     <span className="text-muted-foreground text-xs">Criada por: {getCreatorName(task.created_by)}</span>
                   </div>
                   {taskTimeEntries.length > 0 && (
@@ -412,7 +413,7 @@ export const ProjectDetail: React.FC = () => {
                             </div>
                             <div className="flex flex-col gap-0.5">
                               <div className="flex flex-wrap items-center gap-1">
-                                <span className="font-medium text-foreground">{entry.hours}h</span>
+                                <span className="font-medium text-foreground">{formatHours(entry.hours)}</span>
                                 <span className="text-muted-foreground">•</span>
                                 <span className="text-muted-foreground">{format(parseISO(entry.date), "dd 'de' MMM", { locale: ptBR })}</span>
                                 {entry.description && <><span className="text-muted-foreground hidden sm:inline">•</span><span className="text-muted-foreground block sm:inline">{entry.description}</span></>}
