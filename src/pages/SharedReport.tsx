@@ -41,6 +41,7 @@ interface TimeEntry {
   hours: number;
   date: string;
   entry_type?: string;
+  description?: string;
 }
 
 interface ClientInfo {
@@ -230,6 +231,7 @@ export const SharedReport: React.FC = () => {
           hours: Number(e.hours),
           date: e.entry_date,
           entry_type: e.entry_type,
+          description: e.entry_description,
         }));
         setTimeEntries(mappedEntries);
       } catch (error) {
