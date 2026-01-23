@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { formatHours } from '@/lib/formatHours';
 import { 
   FolderKanban, 
   CheckSquare, 
@@ -111,7 +112,7 @@ export const ClientDashboard: React.FC = () => {
     { label: 'Projetos Ativos', value: activeProjects.length, icon: FolderKanban },
     { label: 'Tarefas Pendentes', value: pendingTasks.length, icon: CheckSquare },
     { label: 'Solicitações Pendentes', value: pendingRequests.length + analyzingRequests.length, icon: FileText },
-    { label: 'Horas Utilizadas', value: `${usedHours.toFixed(1)}h`, icon: Clock, extra: contractedHours > 0 ? `de ${contractedHours}h` : undefined },
+    { label: 'Horas Utilizadas', value: formatHours(usedHours), icon: Clock, extra: contractedHours > 0 ? `de ${formatHours(contractedHours)}` : undefined },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -167,12 +168,12 @@ export const ClientDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Horas Contratadas</span>
               <span className="text-sm text-muted-foreground">
-                {usedHours.toFixed(1)}h / {contractedHours}h
+                {formatHours(usedHours)} / {formatHours(contractedHours)}
               </span>
             </div>
             <Progress value={hoursPercentage} className="h-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              {(contractedHours - usedHours).toFixed(1)}h restantes
+              {formatHours(contractedHours - usedHours)} restantes
             </p>
           </CardContent>
         </Card>
