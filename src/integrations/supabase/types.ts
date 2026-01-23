@@ -1137,7 +1137,6 @@ export type Database = {
         Returns: {
           project_id: string
           task_description: string
-          task_due_date: string
           task_id: string
           task_name: string
         }[]
@@ -1146,6 +1145,7 @@ export type Database = {
         Args: { p_token: string }
         Returns: {
           entry_date: string
+          entry_description: string
           entry_id: string
           entry_type: string
           hours: number
