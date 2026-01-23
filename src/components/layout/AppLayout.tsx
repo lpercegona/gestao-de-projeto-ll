@@ -30,8 +30,11 @@ import LogoOras from '@/assets/logo-oras.svg';
 import SimboloOras from '@/assets/simbolo-oras.svg';
 
 // Mobile Header Component with animated logo/task info
-const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void }> = ({ setSidebarOpen }) => {
+const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void; hideTimer?: boolean }> = ({ setSidebarOpen, hideTimer = false }) => {
   const { hasActiveTimer } = useGlobalTimer();
+  
+  // Only show timer animation when timer is active AND not hidden for clients
+  const showTimerAnimation = hasActiveTimer && !hideTimer;
   
   return (
     <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 sm:px-6 py-3 lg:hidden flex-shrink-0">
@@ -46,28 +49,30 @@ const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void }> = ({ s
           </svg>
         </button>
         
-        {/* Animated container for logo/task info */}
+        {/* Animated container for logo/task info - only animate if not hidden */}
         <div className="relative flex-1 h-6 overflow-hidden">
-          {/* Logo - slides up when timer active */}
+          {/* Logo - slides up when timer active (only if timer not hidden) */}
           <div className={cn(
             "absolute inset-0 flex items-center transition-transform duration-300 ease-in-out",
-            hasActiveTimer ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
+            showTimerAnimation ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
           )}>
             <img src={LogoOras} alt="ORAS" className="h-6 w-auto" />
           </div>
           
-          {/* Task info - slides in from left when timer active */}
-          <div className={cn(
-            "absolute inset-0 flex items-center transition-all duration-300 ease-in-out",
-            hasActiveTimer ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
-          )}>
-            <HeaderTimerTaskInfo />
-          </div>
+          {/* Task info - slides in from left when timer active (only if timer not hidden) */}
+          {!hideTimer && (
+            <div className={cn(
+              "absolute inset-0 flex items-center transition-all duration-300 ease-in-out",
+              showTimerAnimation ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
+            )}>
+              <HeaderTimerTaskInfo />
+            </div>
+          )}
         </div>
       </div>
       
       <div className="flex items-center gap-1 flex-shrink-0">
-        <HeaderTimerDisplay />
+        {!hideTimer && <HeaderTimerDisplay />}
         <NotificationBell />
       </div>
     </div>
@@ -75,20 +80,22 @@ const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void }> = ({ s
 };
 
 // Desktop Header Component with animated logo/task info
-const DesktopHeader: React.FC = () => {
+const DesktopHeader: React.FC<{ hideTimer?: boolean }> = ({ hideTimer = false }) => {
   const { hasActiveTimer } = useGlobalTimer();
   
   return (
     <div className="hidden lg:flex fixed top-4 right-6 z-30 items-center gap-3">
-      {/* Task info - slides in from left when timer active */}
-      <div className={cn(
-        "transition-all duration-300 ease-in-out overflow-hidden",
-        hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
-      )}>
-        <HeaderTimerTaskInfo />
-      </div>
+      {/* Task info - slides in from left when timer active (only if timer not hidden) */}
+      {!hideTimer && (
+        <div className={cn(
+          "transition-all duration-300 ease-in-out overflow-hidden",
+          hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
+        )}>
+          <HeaderTimerTaskInfo />
+        </div>
+      )}
       
-      <HeaderTimerDisplay />
+      {!hideTimer && <HeaderTimerDisplay />}
       <NotificationBell />
     </div>
   );
@@ -167,8 +174,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/projects', icon: FolderKanban, label: 'Meus Projetos' },
   ];
 
-  // Client nav items (reports and projects)
+  // Client nav items (dashboard, reports and projects)
   const clientNavItems = [
+    { path: '/client-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/my-reports', icon: FileBarChart, label: 'Meus Relatórios' },
     { path: '/my-projects', icon: FolderKanban, label: 'Meus Projetos' },
   ];
@@ -478,13 +486,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         {/* Main Content - Scrollable */}
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          {/* Mobile header */}
+          {/* Mobile header - hide timer for clients */}
           <MobileHeader 
             setSidebarOpen={setSidebarOpen}
+            hideTimer={isClient}
           />
 
-          {/* Desktop header buttons */}
-          <DesktopHeader />
+          {/* Desktop header buttons - hide timer for clients */}
+          <DesktopHeader hideTimer={isClient} />
           
           {/* Content area - Scrollable */}
           <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
