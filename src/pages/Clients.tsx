@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatHours } from '@/lib/formatHours';
 import {
   Select,
   SelectContent,
@@ -260,7 +261,7 @@ export const Clients: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Horas usadas:</span>
-                      <span className="font-medium text-foreground">{usedHours}h / {client.contracted_hours}h</span>
+                      <span className="font-medium text-foreground">{formatHours(usedHours)} / {formatHours(client.contracted_hours)}</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2 mt-2">
                       <div
