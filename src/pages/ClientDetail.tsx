@@ -67,6 +67,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { UserEditDialog } from '@/components/users/UserEditDialog';
 import { UserCreateDialog } from '@/components/users/UserCreateDialog';
+import { formatHours } from '@/lib/formatHours';
 
 interface ProjectRequest {
   id: string;
@@ -837,7 +838,7 @@ export const ClientDetail: React.FC = () => {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Horas Usadas</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{usedHours.toFixed(2)}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(usedHours)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -846,7 +847,7 @@ export const ClientDetail: React.FC = () => {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Horas Contratadas</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(client.contracted_hours)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -856,7 +857,7 @@ export const ClientDetail: React.FC = () => {
                 <span className="text-sm">Disponível</span>
               </div>
               <p className="text-2xl font-bold text-foreground">
-                {Math.max(client.contracted_hours - usedHours, 0).toFixed(2)}h
+                {formatHours(Math.max(client.contracted_hours - usedHours, 0))}
               </p>
             </CardContent>
           </Card>
@@ -868,7 +869,7 @@ export const ClientDetail: React.FC = () => {
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-muted-foreground">Utilização de Horas</span>
               <span className="font-medium text-foreground">
-                {usedHours.toFixed(2)}h de {client.contracted_hours}h ({progressPercentage.toFixed(1)}%)
+                {formatHours(usedHours)} de {formatHours(client.contracted_hours)} ({progressPercentage.toFixed(1)}%)
               </span>
             </div>
             <Progress value={progressPercentage} className="h-2" />
@@ -1014,7 +1015,7 @@ export const ClientDetail: React.FC = () => {
                             <span>R$ {contract.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                           )}
                           {contract.total_hours && (
-                            <span>{contract.total_hours}h</span>
+                            <span>{formatHours(contract.total_hours)}</span>
                           )}
                           <span>Criado em {format(new Date(contract.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
                           {contract.signed_at && (
@@ -1183,19 +1184,19 @@ export const ClientDetail: React.FC = () => {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Total do Mês</p>
-                <p className="text-2xl font-bold text-foreground">{reportData.totalHours.toFixed(2)}h</p>
+                <p className="text-2xl font-bold text-foreground">{formatHours(reportData.totalHours)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Tarefas</p>
-                <p className="text-2xl font-bold text-foreground">{reportData.taskHours.toFixed(2)}h</p>
+                <p className="text-2xl font-bold text-foreground">{formatHours(reportData.taskHours)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Reuniões</p>
-                <p className="text-2xl font-bold text-foreground">{reportData.meetingHours.toFixed(2)}h</p>
+                <p className="text-2xl font-bold text-foreground">{formatHours(reportData.meetingHours)}</p>
               </CardContent>
             </Card>
           </div>
@@ -1224,7 +1225,7 @@ export const ClientDetail: React.FC = () => {
                             )}
                             <CardTitle className="text-base">{project.name}</CardTitle>
                           </div>
-                          <span className="font-bold text-foreground">{project.monthHours.toFixed(2)}h</span>
+                          <span className="font-bold text-foreground">{formatHours(project.monthHours)}</span>
                         </div>
                       </CardHeader>
                     </CollapsibleTrigger>
@@ -1234,7 +1235,7 @@ export const ClientDetail: React.FC = () => {
                           {project.tasks.map((task) => (
                             <div key={task.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                               <span className="text-sm text-foreground">{task.name}</span>
-                              <span className="text-sm font-medium text-muted-foreground">{task.monthHours.toFixed(2)}h</span>
+                              <span className="text-sm font-medium text-muted-foreground">{formatHours(task.monthHours)}</span>
                             </div>
                           ))}
                         </div>

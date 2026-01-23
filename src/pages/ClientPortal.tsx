@@ -15,10 +15,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Clock, FolderKanban, ListTodo, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderKanban, ListTodo, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Client, Project, Task, TimeEntry } from '@/types';
+import { formatHours } from '@/lib/formatHours';
 
 export const ClientPortal: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -239,7 +240,7 @@ export const ClientPortal: React.FC = () => {
         <div className="container py-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <Clock className="w-6 h-6 text-primary-foreground" />
+              <FolderKanban className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-xl font-semibold text-foreground">Portal do Cliente</h1>
@@ -254,25 +255,23 @@ export const ClientPortal: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Horas Contratadas
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-foreground">{client.contracted_hours}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(client.contracted_hours)}</p>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Clock className="w-4 h-4" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Horas Utilizadas
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-foreground">{totalUsedHours}h</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(totalUsedHours)}</p>
               <div className="w-full bg-muted rounded-full h-2 mt-2">
                 <div
                   className="bg-primary h-2 rounded-full transition-all"
@@ -340,7 +339,7 @@ export const ClientPortal: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-foreground">{totalMonthHours}h</p>
+            <p className="text-3xl font-bold text-foreground">{formatHours(totalMonthHours)}</p>
             <p className="text-sm text-muted-foreground">registradas no período</p>
           </CardContent>
         </Card>
@@ -381,9 +380,9 @@ export const ClientPortal: React.FC = () => {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-lg font-bold text-foreground">{project.monthHours}h</p>
+                            <p className="text-lg font-bold text-foreground">{formatHours(project.monthHours)}</p>
                             <p className="text-xs text-muted-foreground">
-                              Total: {project.totalHours}h
+                              Total: {formatHours(project.totalHours)}
                             </p>
                           </div>
                         </div>
@@ -411,9 +410,9 @@ export const ClientPortal: React.FC = () => {
                                     )}
                                   </div>
                                   <div className="text-right">
-                                    <p className="font-medium text-foreground">{task.monthHours}h</p>
+                                    <p className="font-medium text-foreground">{formatHours(task.monthHours)}</p>
                                     <p className="text-xs text-muted-foreground">
-                                      Total: {task.totalHours}h
+                                      Total: {formatHours(task.totalHours)}
                                     </p>
                                   </div>
                                 </div>

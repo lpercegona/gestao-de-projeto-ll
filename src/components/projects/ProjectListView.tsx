@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { TaskCard } from './TaskCard';
 import { Badge } from '@/components/ui/badge';
+import { formatHours } from '@/lib/formatHours';
 
 interface Project {
   id: string;
@@ -201,7 +202,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                           <div><span className="text-muted-foreground">Cliente: </span><span className="font-medium text-foreground">{client?.company || client?.name}</span></div>
                           <div><span className="text-muted-foreground">Tarefas: </span><span className="font-medium text-foreground">{projectTasks.length}</span></div>
-                          <div><span className="text-muted-foreground">Horas: </span><span className="font-medium text-foreground">{hours}h</span></div>
+                          <div><span className="text-muted-foreground">Horas: </span><span className="font-medium text-foreground">{formatHours(hours)}</span></div>
                           {projectColumns.map(col => project.custom_fields[col.id] && (
                             <div key={col.id}><span className="text-muted-foreground">{col.name}: </span><span className="font-medium text-foreground">{project.custom_fields[col.id]}</span></div>
                           ))}

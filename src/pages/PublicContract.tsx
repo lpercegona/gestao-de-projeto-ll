@@ -30,6 +30,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { formatHours } from '@/lib/formatHours';
 
 interface ServiceItem {
   id: string;
@@ -276,7 +277,7 @@ export const PublicContract: React.FC = () => {
               )}
               <div>
                 <p className="text-xs text-muted-foreground">Horas</p>
-                <p className="font-medium">{contract.total_hours}h</p>
+                <p className="font-medium">{formatHours(contract.total_hours)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Valor Total</p>
@@ -304,7 +305,7 @@ export const PublicContract: React.FC = () => {
                         <p className="text-sm text-muted-foreground">{item.description}</p>
                       )}
                       <p className="text-sm text-muted-foreground mt-1">
-                        {item.hours}h × {item.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        {formatHours(item.hours)} × {item.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </p>
                     </div>
                     <p className="font-medium">

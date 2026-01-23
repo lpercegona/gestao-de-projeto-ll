@@ -25,6 +25,7 @@ import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { formatHours } from '@/lib/formatHours';
 
 interface GlobalTimerCompleteDialogProps {
   open: boolean;
@@ -106,7 +107,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       if (timerState.taskId) {
         await stopTaskTimer(timerState.taskId, description || 'Timer global', entryType);
         resetTimer();
-        toast.success(`${hours.toFixed(2)}h registradas com sucesso.`);
+        toast.success(`${formatHours(hours)} registradas com sucesso.`);
         handleSuccessClose();
         return;
       }
@@ -198,7 +199,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       });
 
       resetTimer();
-      toast.success(`${hours.toFixed(2)}h registradas com sucesso.`);
+      toast.success(`${formatHours(hours)} registradas com sucesso.`);
       handleSuccessClose();
     } catch (error) {
       console.error('Error completing timer:', error);
@@ -235,7 +236,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           <DialogTitle>Concluir Registro</DialogTitle>
           <DialogDescription>
             Tempo decorrido: <span className="font-mono font-semibold text-primary">{formatTime(timerState.elapsedSeconds)}</span>
-            {' '}({getElapsedHours().toFixed(2)}h)
+            {' '}({formatHours(getElapsedHours())})
           </DialogDescription>
         </DialogHeader>
 

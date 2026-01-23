@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { TaskTimer } from '@/components/tasks/TaskTimer';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatHours } from '@/lib/formatHours';
 
 interface TimeEntry {
   id: string;
@@ -166,7 +167,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{taskHours}h</span>
+          <span className="font-medium text-foreground">{formatHours(taskHours)}</span>
           <span>por {getCreatorName(task.created_by)}</span>
         </div>
       </div>
@@ -191,7 +192,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   </Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-1">
-                  <span className="font-medium text-foreground">{entry.hours}h</span>
+                  <span className="font-medium text-foreground">{formatHours(entry.hours)}</span>
                   <span className="text-muted-foreground">•</span>
                   <span className="text-muted-foreground">{format(parseISO(entry.date), "dd/MM", { locale: ptBR })}</span>
                   {entry.entry_type === 'meeting' && (

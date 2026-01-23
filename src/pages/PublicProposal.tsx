@@ -34,6 +34,7 @@ import { format, parseISO, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import LogoOras from '@/assets/logo-oras.svg';
+import { formatHours } from '@/lib/formatHours';
 
 interface ProposalItem {
   id: string;
@@ -351,7 +352,7 @@ export const PublicProposal: React.FC = () => {
               <div className="flex items-center gap-6">
                 <div>
                   <p className="text-sm text-muted-foreground">Total de Horas</p>
-                  <p className="text-xl font-bold text-foreground">{proposal.total_hours}h</p>
+                  <p className="text-xl font-bold text-foreground">{formatHours(proposal.total_hours)}</p>
                 </div>
               </div>
               <div className="text-right">
