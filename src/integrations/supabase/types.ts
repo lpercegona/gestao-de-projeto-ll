@@ -1126,7 +1126,6 @@ export type Database = {
         Args: { p_token: string }
         Returns: {
           custom_fields: Json
-          project_due_date: string
           project_id: string
           project_name: string
           project_status: string
