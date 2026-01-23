@@ -259,9 +259,10 @@ export const SharedReport: React.FC = () => {
   // Filter and calculate report data - only show projects with hours > 0 in period
   const reportData = useMemo(() => {
     const [year, month] = selectedMonth.split("-").map(Number);
-    // Definimos o início e fim do mês de forma segura
-    const monthStart = startOfMonth(new Date(year, month - 1, 1));
-    const monthEnd = endOfMonth(new Date(year, month - 1, 1));
+
+    const monthStart = startOfMonth(new Date(year, month - 1));
+
+    const monthEnd = endOfMonth(new Date(year, month - 1));
 
     return projects
       .map((project) => {
@@ -272,55 +273,68 @@ export const SharedReport: React.FC = () => {
             const taskEntries = timeEntries.filter((te) => {
               if (te.task_id !== task.id) return false;
 
-              // CORREÇÃO 1: Trata a data caso ela venha com timestamp (ISOString)
-              // O split('T')[0] garante que pegamos apenas 'YYYY-MM-DD'
-              const entryDate = parseISO(te.date.includes("T") ? te.date.split("T")[0] : te.date);
+              const entryDate = parseISO(te.date);
 
               return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
             });
 
             const monthHours = taskEntries.reduce((sum, te) => sum + te.hours, 0);
 
-            // CORREÇÃO 2: Filtro de tipo mais robusto (aceita 'task', 'Task', 'TASK')
             const monthTaskHours = taskEntries
-              .filter((te) => te.entry_type && String(te.entry_type).toLowerCase() === "task")
+
+              .filter((te) => te.entry_type === "task")
+
               .reduce((sum, te) => sum + te.hours, 0);
 
             const monthMeetingHours = taskEntries
-              .filter((te) => te.entry_type && String(te.entry_type).toLowerCase() === "meeting")
+
+              .filter((te) => te.entry_type === "meeting")
+
               .reduce((sum, te) => sum + te.hours, 0);
 
-            // MANTIDO: Total histórico da tarefa
             const totalHours = timeEntries
+
               .filter((te) => te.task_id === task.id)
+
               .reduce((sum, te) => sum + te.hours, 0);
 
             return {
               ...task,
+
               monthHours,
+
               monthTaskHours,
+
               monthMeetingHours,
+
               totalHours,
             };
           })
-          .filter((t) => t.monthHours > 0); // Filtra apenas tarefas com horas no mês
+          .filter((t) => t.monthHours > 0); // Only tasks with hours in period
 
-        // Cálculos consolidados do projeto
         const monthHours = tasksWithHours.reduce((sum, t) => sum + t.monthHours, 0);
+
         const monthTaskHours = tasksWithHours.reduce((sum, t) => sum + t.monthTaskHours, 0);
+
         const monthMeetingHours = tasksWithHours.reduce((sum, t) => sum + t.monthMeetingHours, 0);
+
         const totalHours = tasksWithHours.reduce((sum, t) => sum + t.totalHours, 0);
 
         return {
           ...project,
+
           tasks: tasksWithHours,
+
           monthHours,
+
           monthTaskHours,
+
           monthMeetingHours,
+
           totalHours,
         };
       })
-      .filter((p) => p.monthHours > 0); // Filtra apenas projetos com horas no mês
+      .filter((p) => p.monthHours > 0); // Only projects with hours in period
   }, [projects, tasks, timeEntries, selectedMonth]);
 
   const toggleProject = (projectId: string) => {
