@@ -54,12 +54,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!hasAccess) {
       // Redirect based on role
       if (isClient) {
-        return <Navigate to="/my-reports" replace />;
+        return <Navigate to="/client-dashboard" replace />;
       }
       if (isCollaborator) {
         return <Navigate to="/projects" replace />;
       }
       return <Navigate to="/login" replace />;
+    }
+  } else {
+    // No requiredRole specified - redirect based on role for root access
+    if (isClient) {
+      // Redirect clients to their dashboard if they try to access a generic protected route
+      const location = window.location.pathname;
+      if (location === '/') {
+        return <Navigate to="/client-dashboard" replace />;
+      }
     }
   }
 

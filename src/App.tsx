@@ -18,6 +18,7 @@ import { Reports } from "@/pages/Reports";
 import { Users } from "@/pages/Users";
 import { ClientReports } from "@/pages/ClientReports";
 import { ClientProjects } from "@/pages/ClientProjects";
+import { ClientDashboard } from "@/pages/ClientDashboard";
 import { ProjectRequests } from "@/pages/ProjectRequests";
 import { ClientPortal } from "@/pages/ClientPortal";
 import { SharedReport } from "@/pages/SharedReport";
@@ -119,6 +120,12 @@ const App = () => (
               } />
               
               {/* Client routes */}
+              <Route path="/client-dashboard" element={
+                <ProtectedRoute requiredRole="client">
+                  <ClientDashboard />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/my-reports" element={
                 <ProtectedRoute requiredRole="client">
                   <ClientReports />

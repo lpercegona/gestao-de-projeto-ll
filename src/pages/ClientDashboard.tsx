@@ -1,0 +1,281 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { supabase } from '@/integrations/supabase/client';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { QuickRequestCard } from '@/components/dashboard/QuickRequestCard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { 
+  FolderKanban, 
+  CheckSquare, 
+  Clock, 
+  FileText,
+  ChevronDown,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Loader2
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface ProjectRequest {
+  id: string;
+  client_id: string;
+  title: string;
+  briefing: string;
+  status: string;
+  admin_notes: string | null;
+  created_at: string;
+}
+
+export const ClientDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const { data, loading, getClientHours } = useData();
+  const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [clientInfo, setClientInfo] = useState<{ id: string; contracted_hours: number } | null>(null);
+  const [recentRequestsOpen, setRecentRequestsOpen] = useState(true);
+  const [activeProjectsOpen, setActiveProjectsOpen] = useState(true);
+
+  // Fetch client info and requests
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      try {
+        // Get client_id from client_users
+        const { data: clientUserData } = await supabase
+          .from('client_users')
+          .select('client_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (clientUserData?.client_id) {
+          // Get client info
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('id, contracted_hours')
+            .eq('id', clientUserData.client_id)
+            .single();
+
+          if (clientData) {
+            setClientInfo(clientData);
+          }
+
+          // Get project requests
+          const { data: requestsData } = await supabase
+            .from('project_requests')
+            .select('*')
+            .eq('client_id', clientUserData.client_id)
+            .order('created_at', { ascending: false });
+
+          if (requestsData) {
+            setProjectRequests(requestsData);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching client data:', err);
+      } finally {
+        setLoadingRequests(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  if (loading || loadingRequests) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Calculate statistics
+  const activeProjects = data.projects.filter(p => p.status === 'active');
+  const pendingTasks = data.tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
+  const contractedHours = clientInfo?.contracted_hours || 0;
+  const usedHours = clientInfo?.id ? getClientHours(clientInfo.id) : 0;
+  const hoursPercentage = contractedHours > 0 ? Math.min((usedHours / contractedHours) * 100, 100) : 0;
+
+  // Request statistics
+  const pendingRequests = projectRequests.filter(r => r.status === 'pending');
+  const analyzingRequests = projectRequests.filter(r => r.status === 'analyzing');
+  const convertedRequests = projectRequests.filter(r => r.status === 'converted');
+
+  const stats = [
+    { label: 'Projetos Ativos', value: activeProjects.length, icon: FolderKanban },
+    { label: 'Tarefas Pendentes', value: pendingTasks.length, icon: CheckSquare },
+    { label: 'Solicitações Pendentes', value: pendingRequests.length + analyzingRequests.length, icon: FileText },
+    { label: 'Horas Utilizadas', value: `${usedHours.toFixed(1)}h`, icon: Clock, extra: contractedHours > 0 ? `de ${contractedHours}h` : undefined },
+  ];
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline"><AlertCircle className="w-3 h-3 mr-1" />Pendente</Badge>;
+      case 'analyzing':
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Em Análise</Badge>;
+      case 'converted':
+        return <Badge variant="default"><CheckCircle2 className="w-3 h-3 mr-1" />Convertido</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejeitado</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const recentRequests = projectRequests.slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Meu Painel"
+        description="Acompanhe seus projetos, tarefas e solicitações"
+      />
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => (
+          <Card key={index}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <stat.icon className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  {stat.extra && (
+                    <p className="text-xs text-muted-foreground">{stat.extra}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Hours Progress */}
+      {contractedHours > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Horas Contratadas</span>
+              <span className="text-sm text-muted-foreground">
+                {usedHours.toFixed(1)}h / {contractedHours}h
+              </span>
+            </div>
+            <Progress value={hoursPercentage} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              {(contractedHours - usedHours).toFixed(1)}h restantes
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Request Card */}
+      <QuickRequestCard 
+        pendingCount={pendingRequests.length + analyzingRequests.length}
+      />
+
+      {/* Recent Requests */}
+      <Collapsible open={recentRequestsOpen} onOpenChange={setRecentRequestsOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Solicitações Recentes
+                </CardTitle>
+                <ChevronDown className={`w-5 h-5 transition-transform ${recentRequestsOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              {recentRequests.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">
+                  Nenhuma solicitação realizada ainda
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {recentRequests.map((request) => (
+                    <div 
+                      key={request.id} 
+                      className="flex items-center justify-between p-3 rounded-lg border border-border"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{request.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(request.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                      {getStatusBadge(request.status)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      {/* Active Projects */}
+      <Collapsible open={activeProjectsOpen} onOpenChange={setActiveProjectsOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FolderKanban className="w-5 h-5" />
+                  Projetos Ativos
+                </CardTitle>
+                <ChevronDown className={`w-5 h-5 transition-transform ${activeProjectsOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              {activeProjects.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">
+                  Nenhum projeto ativo no momento
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {activeProjects.slice(0, 5).map((project) => {
+                    const projectTasks = data.tasks.filter(t => t.project_id === project.id);
+                    const completedTasks = projectTasks.filter(t => t.status === 'completed');
+                    const progress = projectTasks.length > 0 
+                      ? (completedTasks.length / projectTasks.length) * 100 
+                      : 0;
+
+                    return (
+                      <div 
+                        key={project.id} 
+                        className="p-3 rounded-lg border border-border"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-medium">{project.name}</p>
+                          <Badge variant="outline">
+                            {completedTasks.length}/{projectTasks.length} tarefas
+                          </Badge>
+                        </div>
+                        <Progress value={progress} className="h-1.5" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+    </div>
+  );
+};
