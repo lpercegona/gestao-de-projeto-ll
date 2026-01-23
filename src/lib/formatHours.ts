@@ -1,45 +1,36 @@
 /**
- * Format hours in a standardized way across the application
- * Shows hours and minutes (e.g., "2h 30min" instead of "2.5h")
+ * Formata horas de forma padronizada (ex: 2.5 vira "2h30")
  */
-export const formatHours = (hours: number): string => {
-  if (hours === 0) return '0h';
-  
-  const h = Math.floor(Math.abs(hours));
-  const m = Math.round((Math.abs(hours) - h) * 60);
-  
-  // Handle case where rounding brings minutes to 60
-  if (m === 60) {
-    return `${h + 1}h`;
+export const formatHours = (decimalHours: number): string => {
+  const hours = Math.floor(Math.abs(decimalHours));
+  const minutes = Math.round((Math.abs(decimalHours) - hours) * 60);
+  const sign = decimalHours < 0 ? '-' : '';
+
+  // Trata o caso onde o arredondamento chega a 60 minutos
+  if (minutes === 60) {
+    return `${sign}${hours + 1}h`;
   }
-  
-  const sign = hours < 0 ? '-' : '';
-  
-  if (m === 0) return `${sign}${h}h`;
-  if (h === 0) return `${sign}${m}min`;
-  
-  return `${sign}${h}h ${m}min`;
+
+  if (minutes === 0) {
+    return `${sign}${hours}h`;
+  }
+
+  // Formato compacto: 2h30 em vez de 2h 30min
+  return `${sign}${hours}h${minutes}`;
 };
 
 /**
- * Format hours with detailed labels (alias for formatHours for backward compatibility)
- * Example: 2.5 becomes "2h 30min"
+ * Mantido por compatibilidade, agora usando o novo formato compacto
  */
 export const formatHoursDetailed = formatHours;
 
 /**
- * Format hours as decimal (for cases where decimal format is explicitly needed)
- * Shows hours without decimal places when it's a round number,
- * otherwise shows with one decimal place
+ * Formata como decimal (ex: 2.5h) - Mantido sem alterações
  */
 export const formatHoursDecimal = (hours: number): string => {
   if (hours === 0) return '0h';
-  
   const roundedHours = Math.round(hours * 10) / 10;
-  
-  if (Number.isInteger(roundedHours)) {
-    return `${roundedHours}h`;
-  }
-  
-  return `${roundedHours.toFixed(1)}h`;
+  return Number.isInteger(roundedHours) 
+    ? `${roundedHours}h` 
+    : `${roundedHours.toFixed(1)}h`;
 };
