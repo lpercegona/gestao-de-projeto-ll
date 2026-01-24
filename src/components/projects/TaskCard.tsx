@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Clock, ChevronDown, MoreVertical } from 'lucide-react';
+import { Pencil, Trash2, Clock, ChevronDown, MoreVertical, Calendar } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   DropdownMenu,
@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TaskTimer } from '@/components/tasks/TaskTimer';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
+import { cn } from '@/lib/utils';
 
 interface TimeEntry {
   id: string;
@@ -43,6 +44,7 @@ interface TaskCardProps {
     name: string;
     description: string | null;
     status: string;
+    due_date?: string | null;
     created_by: string | null;
   };
   taskHours: number;
@@ -79,6 +81,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   iconOnly = false,
 }) => {
   const [entriesOpen, setEntriesOpen] = React.useState(false);
+
+  // Due date status calculation
+  const getDueDateStatus = () => {
+    if (!task.due_date) return null;
+    
+    const dueDate = parseISO(task.due_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (isPast(dueDate) && !isToday(dueDate)) {
+      return 'overdue';
+    }
+    
+    const daysUntilDue = differenceInDays(dueDate, today);
+    if (daysUntilDue <= 3) {
+      return 'near';
+    }
+    
+    return 'normal';
+  };
+
+  const dueDateStatus = getDueDateStatus();
 
   // Find the kanban stage for this task's status
   const getStageInfo = (status: string) => {
@@ -166,9 +190,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </Tooltip>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-foreground">{formatHours(taskHours)}</span>
           <span>por {getCreatorName(task.created_by)}</span>
+          {task.due_date && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={cn(
+                  "flex items-center gap-1 font-medium",
+                  dueDateStatus === 'overdue' && "text-red-500",
+                  dueDateStatus === 'near' && "text-amber-500",
+                  dueDateStatus === 'normal' && "text-muted-foreground"
+                )}>
+                  <Calendar className="w-3 h-3" />
+                  {format(parseISO(task.due_date), "dd/MM", { locale: ptBR })}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {dueDateStatus === 'overdue' && "Prazo vencido: "}
+                  {dueDateStatus === 'near' && "Prazo próximo: "}
+                  {format(parseISO(task.due_date), "dd 'de' MMMM", { locale: ptBR })}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
 

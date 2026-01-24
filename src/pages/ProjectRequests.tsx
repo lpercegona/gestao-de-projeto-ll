@@ -32,7 +32,8 @@ import {
   XCircle, 
   FolderPlus,
   Clock,
-  Search
+  Search,
+  Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -46,6 +47,7 @@ interface ProjectRequest {
   status: string;
   admin_notes: string | null;
   converted_project_id: string | null;
+  desired_deadline: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -334,9 +336,17 @@ export const ProjectRequests: React.FC = () => {
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                       {request.briefing}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Enviado em {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>
+                        Enviado em {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                      {request.desired_deadline && (
+                        <span className="flex items-center gap-1 font-medium text-foreground">
+                          <Calendar className="w-3 h-3" />
+                          Prazo desejado: {format(new Date(request.desired_deadline), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     <Button
@@ -420,6 +430,15 @@ export const ProjectRequests: React.FC = () => {
               <div>
                 <Label className="text-muted-foreground">Notas do Admin</Label>
                 <p className="mt-1 text-foreground">{viewRequest.admin_notes}</p>
+              </div>
+            )}
+            {viewRequest?.desired_deadline && (
+              <div>
+                <Label className="text-muted-foreground">Prazo Desejado</Label>
+                <p className="mt-1 text-foreground flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  {format(new Date(viewRequest.desired_deadline), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </p>
               </div>
             )}
             <div>

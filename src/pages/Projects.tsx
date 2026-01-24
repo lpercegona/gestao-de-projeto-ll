@@ -88,7 +88,7 @@ export const Projects: React.FC = () => {
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: '', description: '', client_id: '', status: 'active', custom_fields: {} as Record<string, string>,
+    name: '', description: '', client_id: '', status: 'active', due_date: '', custom_fields: {} as Record<string, string>,
   });
   
   // Task dialog state
@@ -97,7 +97,7 @@ export const Projects: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [taskProjectId, setTaskProjectId] = useState<string>('');
-  const [taskFormData, setTaskFormData] = useState({ name: '', description: '', status: 'pending' });
+  const [taskFormData, setTaskFormData] = useState({ name: '', description: '', status: 'pending', due_date: '' });
 
   // Time entry dialog state
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
@@ -194,7 +194,14 @@ export const Projects: React.FC = () => {
   const handleOpenDialog = async (project?: Project) => {
     if (project) {
       setEditingProject(project);
-      setFormData({ name: project.name, description: project.description || '', client_id: project.client_id, status: project.status, custom_fields: { ...project.custom_fields } });
+      setFormData({ 
+        name: project.name, 
+        description: project.description || '', 
+        client_id: project.client_id, 
+        status: project.status, 
+        due_date: project.due_date || '',
+        custom_fields: { ...project.custom_fields } 
+      });
       const projectAccess = data.projectAccess.filter(a => a.project_id === project.id);
       setSelectedCollaborators(projectAccess.map(a => a.user_id));
     } else {
@@ -203,7 +210,7 @@ export const Projects: React.FC = () => {
       const clientCols = defaultClientId ? getClientColumns(defaultClientId) : [];
       const defaultCustomFields: Record<string, string> = {};
       clientCols.forEach(col => { defaultCustomFields[col.id] = col.options?.[0] || ''; });
-      setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', custom_fields: defaultCustomFields });
+      setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', due_date: '', custom_fields: defaultCustomFields });
       setSelectedCollaborators([]);
     }
     setCustomFieldsOpen(false);
@@ -221,13 +228,17 @@ export const Projects: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const projectData = {
+        ...formData,
+        due_date: formData.due_date || null,
+      };
       let projectId: string | undefined;
       if (editingProject) {
-        await updateProject(editingProject.id, formData);
+        await updateProject(editingProject.id, projectData);
         projectId = editingProject.id;
         toast.success('Projeto atualizado!');
       } else {
-        const newProject = await createProject(formData);
+        const newProject = await createProject(projectData);
         projectId = newProject?.id;
         toast.success('Projeto criado!');
       }
@@ -268,10 +279,10 @@ export const Projects: React.FC = () => {
     setTaskProjectId(projectId);
     if (task) {
       setEditingTask(task);
-      setTaskFormData({ name: task.name, description: task.description || '', status: task.status });
+      setTaskFormData({ name: task.name, description: task.description || '', status: task.status, due_date: task.due_date || '' });
     } else {
       setEditingTask(null);
-      setTaskFormData({ name: '', description: '', status: initialStatus || 'pending' });
+      setTaskFormData({ name: '', description: '', status: initialStatus || 'pending', due_date: '' });
     }
     setIsTaskDialogOpen(true);
   };
@@ -279,11 +290,15 @@ export const Projects: React.FC = () => {
   const handleSubmitTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    const taskData = {
+      ...taskFormData,
+      due_date: taskFormData.due_date || null,
+    };
     if (editingTask) {
-      await updateTask(editingTask.id, taskFormData);
+      await updateTask(editingTask.id, taskData);
       toast.success('Tarefa atualizada!');
     } else {
-      await createTask({ ...taskFormData, project_id: taskProjectId });
+      await createTask({ ...taskData, project_id: taskProjectId });
       toast.success('Tarefa criada!');
     }
     setSubmitting(false);
@@ -541,8 +556,11 @@ export const Projects: React.FC = () => {
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
               <div className="space-y-2"><Label htmlFor="name">Nome do Projeto</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label htmlFor="description">Descrição</Label><Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} disabled={submitting} /></div>
-              <div className="space-y-2"><Label>Cliente</Label><Select value={formData.client_id} onValueChange={handleClientChange} disabled={submitting}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{data.clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem></SelectContent></Select></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Cliente</Label><Select value={formData.client_id} onValueChange={handleClientChange} disabled={submitting}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{data.clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem></SelectContent></Select></div>
+              </div>
+              <div className="space-y-2"><Label htmlFor="due_date">Prazo (opcional)</Label><Input id="due_date" type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} disabled={submitting} /></div>
               
               {isAdminOrMaster && (
                 <div className="space-y-2">
@@ -626,7 +644,10 @@ export const Projects: React.FC = () => {
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Nome da Tarefa</Label><Input value={taskFormData.name} onChange={(e) => setTaskFormData({ ...taskFormData, name: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Descrição</Label><Textarea value={taskFormData.description} onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })} rows={3} disabled={submitting} /></div>
-              <div className="space-y-2"><Label>Status</Label><Select value={taskFormData.status} onValueChange={(v) => setTaskFormData({ ...taskFormData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="in_progress">Em Andamento</SelectItem><SelectItem value="completed">Concluída</SelectItem></SelectContent></Select></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Status</Label><Select value={taskFormData.status} onValueChange={(v) => setTaskFormData({ ...taskFormData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="in_progress">Em Andamento</SelectItem><SelectItem value="completed">Concluída</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={taskFormData.due_date} onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })} disabled={submitting} /></div>
+              </div>
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setIsTaskDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTask ? 'Salvar' : 'Criar'}</Button></DialogFooter>
           </form>
