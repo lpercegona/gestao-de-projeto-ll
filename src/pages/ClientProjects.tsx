@@ -54,7 +54,7 @@ export const ClientProjects: React.FC = () => {
     fetchRequests();
   }, []);
 
-  const handleSubmitRequest = async (title: string, briefing: string) => {
+  const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
     if (!user) return;
 
     // Get client_id from the clients table using user_id
@@ -75,6 +75,7 @@ export const ClientProjects: React.FC = () => {
         client_id: clientData.id,
         title,
         briefing,
+        desired_deadline: desiredDeadline || null,
         created_by: user.id,
       })
       .select()

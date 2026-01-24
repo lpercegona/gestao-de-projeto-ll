@@ -295,6 +295,54 @@ export type Database = {
           },
         ]
       }
+      edit_requests: {
+        Row: {
+          admin_notes: string | null
+          client_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          original_data: Json
+          processed_at: string | null
+          processed_by: string | null
+          proposed_data: Json
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          client_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          original_data: Json
+          processed_at?: string | null
+          processed_by?: string | null
+          proposed_data: Json
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          client_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          original_data?: Json
+          processed_at?: string | null
+          processed_by?: string | null
+          proposed_data?: Json
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kanban_stages: {
         Row: {
           color: string | null
@@ -442,6 +490,7 @@ export type Database = {
           converted_project_id: string | null
           created_at: string
           created_by: string
+          desired_deadline: string | null
           id: string
           status: string
           title: string
@@ -454,6 +503,7 @@ export type Database = {
           converted_project_id?: string | null
           created_at?: string
           created_by: string
+          desired_deadline?: string | null
           id?: string
           status?: string
           title: string
@@ -466,6 +516,7 @@ export type Database = {
           converted_project_id?: string | null
           created_at?: string
           created_by?: string
+          desired_deadline?: string | null
           id?: string
           status?: string
           title?: string
@@ -495,6 +546,7 @@ export type Database = {
           created_by: string | null
           custom_fields: Json | null
           description: string | null
+          due_date: string | null
           id: string
           name: string
           owner_id: string | null
@@ -507,6 +559,7 @@ export type Database = {
           created_by?: string | null
           custom_fields?: Json | null
           description?: string | null
+          due_date?: string | null
           id?: string
           name: string
           owner_id?: string | null
@@ -519,6 +572,7 @@ export type Database = {
           created_by?: string | null
           custom_fields?: Json | null
           description?: string | null
+          due_date?: string | null
           id?: string
           name?: string
           owner_id?: string | null
@@ -794,6 +848,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          due_date: string | null
           id: string
           name: string
           project_id: string
@@ -804,6 +859,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           name: string
           project_id: string
@@ -814,6 +870,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           name?: string
           project_id?: string

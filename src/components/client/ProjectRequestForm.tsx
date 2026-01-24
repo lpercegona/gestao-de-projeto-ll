@@ -11,11 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface ProjectRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (title: string, briefing: string) => Promise<void>;
+  onSubmit: (title: string, briefing: string, desiredDeadline?: string) => Promise<void>;
 }
 
 export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
@@ -25,6 +26,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [briefing, setBriefing] = useState('');
+  const [desiredDeadline, setDesiredDeadline] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,14 +35,18 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), briefing.trim());
+      await onSubmit(title.trim(), briefing.trim(), desiredDeadline || undefined);
       setTitle('');
       setBriefing('');
+      setDesiredDeadline('');
       onOpenChange(false);
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Minimum date is tomorrow
+  const minDate = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -74,6 +80,20 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
               />
               <p className="text-xs text-muted-foreground">
                 Quanto mais detalhes você fornecer, melhor conseguiremos entender suas necessidades.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deadline">Prazo Desejado (opcional)</Label>
+              <Input
+                id="deadline"
+                type="date"
+                value={desiredDeadline}
+                onChange={(e) => setDesiredDeadline(e.target.value)}
+                min={minDate}
+                disabled={submitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                Se você tem uma data limite, informe aqui.
               </p>
             </div>
           </div>

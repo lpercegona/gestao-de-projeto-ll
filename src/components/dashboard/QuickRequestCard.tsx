@@ -16,7 +16,7 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
   const { user } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const handleSubmitRequest = async (title: string, briefing: string) => {
+  const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
     if (!user) return;
 
     try {
@@ -38,6 +38,7 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
           client_id: clientUserData.client_id,
           title,
           briefing,
+          desired_deadline: desiredDeadline || null,
           created_by: user.id,
           status: 'pending',
         });

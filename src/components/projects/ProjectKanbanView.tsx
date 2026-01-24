@@ -16,6 +16,7 @@ interface Project {
   name: string;
   description: string | null;
   status: string;
+  due_date?: string | null;
   custom_fields: Record<string, string>;
   created_at: string;
 }
@@ -26,6 +27,7 @@ interface Task {
   name: string;
   description: string | null;
   status: string;
+  due_date?: string | null;
   created_by: string | null;
   created_at: string;
 }
