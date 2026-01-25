@@ -29,6 +29,7 @@ import { Proposals } from "@/pages/Proposals";
 import { PublicProposal } from "@/pages/PublicProposal";
 import { Contracts } from "@/pages/Contracts";
 import { PublicContract } from "@/pages/PublicContract";
+import { EditRequests } from "@/pages/EditRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -109,6 +110,13 @@ const App = () => (
               <Route path="/contracts" element={
                 <ProtectedRoute requiredRole="admin">
                   <Contracts />
+                </ProtectedRoute>
+              } />
+              
+              {/* Edit Requests - admin only */}
+              <Route path="/edit-requests" element={
+                <ProtectedRoute requiredRole="admin">
+                  <EditRequests />
                 </ProtectedRoute>
               } />
               
