@@ -19,6 +19,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   FileCheck,
+  Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -157,6 +158,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
+    { path: '/edit-requests', icon: Edit, label: 'Edições' },
     { path: '/proposals', icon: FileCheck, label: 'Propostas' },
   ];
 
@@ -166,6 +168,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
+    { path: '/edit-requests', icon: Edit, label: 'Edições' },
     { path: '/proposals', icon: FileCheck, label: 'Propostas' },
   ];
 

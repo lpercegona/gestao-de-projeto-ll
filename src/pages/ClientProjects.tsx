@@ -6,10 +6,12 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
-import { Plus, FolderKanban, Clock, Loader2, FileText, CheckCircle, XCircle, Search, ArrowRight } from 'lucide-react';
+import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm';
+import { Plus, FolderKanban, Clock, Loader2, FileText, CheckCircle, XCircle, Search, ArrowRight, MoreVertical, Pencil, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface ProjectRequest {
@@ -27,16 +29,39 @@ export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
   const { data, getProjectHours } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
+  const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  // Edit request form state
+  const [editFormOpen, setEditFormOpen] = useState(false);
+  const [editEntity, setEditEntity] = useState<{
+    type: 'project' | 'project_request';
+    id: string;
+    data: Record<string, unknown>;
+  } | null>(null);
 
   // Get client's projects from DataContext
   const clientProjects = data.projects;
 
-  // Fetch project requests
+  // Fetch project requests and client ID
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchData = async () => {
+      if (!user) return;
+      
       try {
+        // Get client_id
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (clientData) {
+          setClientId(clientData.id);
+        }
+        
+        // Fetch requests
         const { data: requestsData, error } = await supabase
           .from('project_requests')
           .select('*')
@@ -45,14 +70,14 @@ export const ClientProjects: React.FC = () => {
         if (error) throw error;
         setRequests(requestsData || []);
       } catch (error) {
-        console.error('Error fetching requests:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRequests();
-  }, []);
+    fetchData();
+  }, [user]);
 
   const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
     if (!user) return;
@@ -151,38 +176,70 @@ export const ClientProjects: React.FC = () => {
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-foreground mb-4">Solicitações</h2>
           <div className="space-y-4">
-            {requests.map((request) => (
-              <Card key={request.id}>
-                <CardContent className="py-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-                    <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-                      <div className="mt-0.5 flex-shrink-0">
-                        {getStatusIcon(request.status)}
-                      </div>
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-medium text-foreground">{request.title}</h3>
-                          <div className="sm:hidden">{getStatusBadge(request.status)}</div>
+            {requests.map((request) => {
+              const canEdit = request.status === 'pending' || request.status === 'in_review';
+              
+              return (
+                <Card key={request.id}>
+                  <CardContent className="py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div className="mt-0.5 flex-shrink-0">
+                          {getStatusIcon(request.status)}
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{request.briefing}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Enviado em {format(new Date(request.created_at), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
-                        </p>
-                        {request.admin_notes && (
-                          <div className="mt-2 p-2 bg-muted rounded-md">
-                            <p className="text-xs font-medium text-muted-foreground">Observação:</p>
-                            <p className="text-sm text-foreground">{request.admin_notes}</p>
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-medium text-foreground">{request.title}</h3>
+                            <div className="sm:hidden">{getStatusBadge(request.status)}</div>
                           </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{request.briefing}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Enviado em {format(new Date(request.created_at), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
+                          </p>
+                          {request.admin_notes && (
+                            <div className="mt-2 p-2 bg-muted rounded-md">
+                              <p className="text-xs font-medium text-muted-foreground">Observação:</p>
+                              <p className="text-sm text-foreground">{request.admin_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="hidden sm:block">
+                          {getStatusBadge(request.status)}
+                        </div>
+                        {canEdit && clientId && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setEditEntity({
+                                  type: 'project_request',
+                                  id: request.id,
+                                  data: {
+                                    title: request.title,
+                                    briefing: request.briefing,
+                                    desired_deadline: (request as unknown as { desired_deadline?: string }).desired_deadline || null,
+                                  },
+                                });
+                                setEditFormOpen(true);
+                              }}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Solicitar Edição
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </div>
                     </div>
-                    <div className="hidden sm:block flex-shrink-0">
-                      {getStatusBadge(request.status)}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
@@ -215,10 +272,44 @@ export const ClientProjects: React.FC = () => {
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <CardTitle className="text-base">{project.name}</CardTitle>
-                      <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                        {project.status === 'active' ? 'Ativo' : project.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                          {project.status === 'active' ? 'Ativo' : project.status}
+                        </Badge>
+                        {clientId && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setEditEntity({
+                                  type: 'project',
+                                  id: project.id,
+                                  data: {
+                                    name: project.name,
+                                    description: project.description || '',
+                                    due_date: project.due_date || null,
+                                  },
+                                });
+                                setEditFormOpen(true);
+                              }}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Solicitar Edição
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
                     </div>
+                    {project.due_date && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <Calendar className="w-3 h-3" />
+                        Prazo: {format(parseISO(project.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {project.description && (
@@ -252,6 +343,24 @@ export const ClientProjects: React.FC = () => {
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitRequest}
       />
+      
+      {/* Edit Request Form Dialog */}
+      {editEntity && clientId && (
+        <ClientEditRequestForm
+          entityType={editEntity.type}
+          entityId={editEntity.id}
+          clientId={clientId}
+          currentData={editEntity.data}
+          open={editFormOpen}
+          onOpenChange={(open) => {
+            setEditFormOpen(open);
+            if (!open) setEditEntity(null);
+          }}
+          onSuccess={() => {
+            // Optionally refresh data
+          }}
+        />
+      )}
     </div>
   );
 };
