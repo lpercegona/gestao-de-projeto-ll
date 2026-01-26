@@ -10,6 +10,7 @@ import { GlobalTimerProvider } from "@/contexts/GlobalTimerContext";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
+import { CollaboratorDashboard } from "@/pages/CollaboratorDashboard";
 import { Clients } from "@/pages/Clients";
 import { ClientDetail } from "@/pages/ClientDetail";
 import { Projects } from "@/pages/Projects";
@@ -82,6 +83,13 @@ const App = () => (
               <Route path="/projects/:projectId" element={
                 <ProtectedRoute requiredRole="collaborator">
                   <ProjectDetail />
+                </ProtectedRoute>
+              } />
+              
+              {/* Collaborator Dashboard */}
+              <Route path="/collaborator-dashboard" element={
+                <ProtectedRoute requiredRole="collaborator">
+                  <CollaboratorDashboard />
                 </ProtectedRoute>
               } />
               
