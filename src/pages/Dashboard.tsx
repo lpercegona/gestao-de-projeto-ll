@@ -1,20 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FolderKanban, ListTodo, Clock, Loader2, ChevronDown } from 'lucide-react';
+import { Users, FolderKanban, ListTodo, Clock, Loader2, ChevronDown, CalendarClock } from 'lucide-react';
 import { QuickTimeTracker } from '@/components/dashboard/QuickTimeTracker';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { formatHours } from '@/lib/formatHours';
+import { Badge } from '@/components/ui/badge';
+import { UpcomingDeadlines, DeadlineItem } from '@/components/dashboard/UpcomingDeadlines';
+import { getDeadlineStatus } from '@/lib/deadlineUtils';
 
 export const Dashboard: React.FC = () => {
   const { data, loading, getClientHours } = useData();
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [hoursClientOpen, setHoursClientOpen] = useState(false);
   const [recentEntriesOpen, setRecentEntriesOpen] = useState(false);
+  const [deadlinesOpen, setDeadlinesOpen] = useState(true);
+
+  // Build upcoming deadlines from projects and tasks - useMemo must be before early return
+  const upcomingDeadlines = useMemo((): DeadlineItem[] => {
+    if (loading) return [];
+    
+    const items: DeadlineItem[] = [];
+    
+    // Add projects with due_date (only active ones)
+    data.projects
+      .filter(p => p.due_date && p.status !== 'completed')
+      .forEach(p => {
+        const client = data.clients.find(c => c.id === p.client_id);
+        const status = getDeadlineStatus(p.due_date);
+        if (status) {
+          items.push({
+            id: p.id,
+            type: 'project',
+            name: p.name,
+            due_date: p.due_date!,
+            clientName: client?.company || client?.name,
+            status
+          });
+        }
+      });
+    
+    // Add tasks with due_date (only non-completed ones)
+    data.tasks
+      .filter(t => t.due_date && t.status !== 'completed' && t.status !== 'done')
+      .forEach(t => {
+        const project = data.projects.find(p => p.id === t.project_id);
+        const client = project ? data.clients.find(c => c.id === project.client_id) : null;
+        const status = getDeadlineStatus(t.due_date);
+        if (status) {
+          items.push({
+            id: t.id,
+            type: 'task',
+            name: t.name,
+            due_date: t.due_date!,
+            projectId: t.project_id,
+            projectName: project?.name,
+            clientName: client?.company || client?.name,
+            status
+          });
+        }
+      });
+    
+    // Sort by due date (closest first)
+    return items
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+      .slice(0, 10);
+  }, [data.projects, data.tasks, data.clients, loading]);
 
   if (loading) {
     return (
@@ -97,6 +152,35 @@ export const Dashboard: React.FC = () => {
       {/* Quick Timer - Always visible */}
       <div className="mb-6">
         <QuickTimeTracker />
+      </div>
+
+      {/* Upcoming Deadlines - Open by default */}
+      <div className="mb-4">
+        <Collapsible open={deadlinesOpen} onOpenChange={setDeadlinesOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4" />
+                    Próximas Entregas
+                    {upcomingDeadlines.length > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {upcomingDeadlines.length}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", deadlinesOpen && "rotate-180")} />
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <UpcomingDeadlines items={upcomingDeadlines} />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
 
       {/* Collapsible Sections */}
