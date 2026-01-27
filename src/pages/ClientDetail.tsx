@@ -11,7 +11,6 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -45,11 +44,6 @@ import {
   ChevronDown,
   ChevronRight,
   Share2,
-  Copy,
-  Check,
-  Globe,
-  Lock,
-  KeyRound,
   Eye,
   Search,
   FolderPlus,
@@ -68,6 +62,7 @@ import { toast } from 'sonner';
 import { UserEditDialog } from '@/components/users/UserEditDialog';
 import { UserCreateDialog } from '@/components/users/UserCreateDialog';
 import { formatHours } from '@/lib/formatHours';
+import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
 
 interface ProjectRequest {
   id: string;
@@ -81,13 +76,6 @@ interface ProjectRequest {
   updated_at: string;
 }
 
-interface ReportShare {
-  id: string;
-  client_id: string;
-  share_token: string;
-  is_public: boolean;
-  share_password: string | null;
-}
 
 interface UserProfile {
   user_id: string;
@@ -134,10 +122,6 @@ export const ClientDetail: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [reportShare, setReportShare] = useState<ReportShare | null>(null);
-  const [shareLoading, setShareLoading] = useState(false);
-  const [sharePassword, setSharePassword] = useState('');
-  const [copiedToken, setCopiedToken] = useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   
   // Contracts state
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -426,89 +410,6 @@ export const ClientDetail: React.FC = () => {
     setExpandedProjects(newExpanded);
   };
 
-  // Share handlers
-  const handleCreateShare = async (password: string) => {
-    if (!user || !clientId) return;
-    if (!password || password.length < 4) {
-      toast.error('A senha deve ter pelo menos 4 caracteres');
-      return;
-    }
-    
-    setShareLoading(true);
-    try {
-      const { data: shareData, error } = await supabase
-        .from('report_shares')
-        .insert({
-          client_id: clientId,
-          created_by: user.id,
-          is_public: false,
-          share_password: password
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setReportShare(shareData);
-      setSharePassword('');
-      toast.success('Link de compartilhamento criado!');
-    } catch (error) {
-      console.error('Error creating share:', error);
-      toast.error('Erro ao criar link de compartilhamento');
-    } finally {
-      setShareLoading(false);
-    }
-  };
-
-  const handleTogglePublic = async () => {
-    if (!reportShare) return;
-    setShareLoading(true);
-    try {
-      const { data: updatedShare, error } = await supabase
-        .from('report_shares')
-        .update({ is_public: !reportShare.is_public })
-        .eq('id', reportShare.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      setReportShare(updatedShare);
-      toast.success(updatedShare.is_public ? 'Relatório agora é público' : 'Relatório agora é privado');
-    } catch (error) {
-      console.error('Error updating share:', error);
-      toast.error('Erro ao atualizar configuração');
-    } finally {
-      setShareLoading(false);
-    }
-  };
-
-  const handleUpdatePassword = async () => {
-    if (!reportShare || sharePassword.length < 4) return;
-    setShareLoading(true);
-    try {
-      const { error } = await supabase
-        .from('report_shares')
-        .update({ share_password: sharePassword })
-        .eq('id', reportShare.id);
-
-      if (error) throw error;
-      setSharePassword('');
-      toast.success('Senha atualizada com sucesso!');
-    } catch (error) {
-      console.error('Error updating password:', error);
-      toast.error('Erro ao atualizar senha');
-    } finally {
-      setShareLoading(false);
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (!reportShare) return;
-    const shareUrl = `${window.location.origin}/report/${reportShare.share_token}`;
-    await navigator.clipboard.writeText(shareUrl);
-    setCopiedToken(true);
-    toast.success('Link copiado!');
-    setTimeout(() => setCopiedToken(false), 2000);
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -1052,131 +953,21 @@ export const ClientDetail: React.FC = () => {
               </Select>
             </div>
             
-            <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Compartilhar
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Compartilhar Relatório</DialogTitle>
-                  <DialogDescription>
-                    Gere um link protegido por senha para compartilhar o relatório de {client.company || client.name}.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 pt-4">
-                  {!reportShare ? (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="share-password" className="flex items-center gap-2">
-                          <KeyRound className="w-4 h-4" />
-                          Senha de acesso (obrigatória)
-                        </Label>
-                        <Input
-                          id="share-password"
-                          type="password"
-                          placeholder="Mínimo 4 caracteres"
-                          value={sharePassword}
-                          onChange={(e) => setSharePassword(e.target.value)}
-                        />
-                      </div>
-                      <Button 
-                        onClick={() => handleCreateShare(sharePassword)} 
-                        disabled={shareLoading || sharePassword.length < 4}
-                        className="w-full"
-                      >
-                        {shareLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Criando...
-                          </>
-                        ) : (
-                          'Criar Link de Compartilhamento'
-                        )}
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                        <div className="flex items-center gap-3">
-                          {reportShare.is_public ? (
-                            <Globe className="w-5 h-5 text-primary" />
-                          ) : (
-                            <Lock className="w-5 h-5 text-muted-foreground" />
-                          )}
-                          <div>
-                            <p className="font-medium text-foreground">
-                              {reportShare.is_public ? 'Público' : 'Privado'}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {reportShare.is_public 
-                                ? 'Qualquer pessoa com o link e senha pode ver' 
-                                : 'Link desabilitado'}
-                            </p>
-                          </div>
-                        </div>
-                        <Switch
-                          checked={reportShare.is_public}
-                          onCheckedChange={handleTogglePublic}
-                          disabled={shareLoading}
-                        />
-                      </div>
-                      
-                      {/* Alterar senha */}
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-share-password" className="flex items-center gap-2">
-                          <KeyRound className="w-4 h-4" />
-                          Alterar senha de acesso
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="edit-share-password"
-                            type="password"
-                            placeholder="Nova senha (mínimo 4 caracteres)"
-                            value={sharePassword}
-                            onChange={(e) => setSharePassword(e.target.value)}
-                          />
-                          <Button 
-                            variant="outline"
-                            onClick={handleUpdatePassword}
-                            disabled={shareLoading || sharePassword.length < 4}
-                          >
-                            {shareLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              'Salvar'
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {reportShare.is_public && (
-                        <div className="flex gap-2 items-center">
-                          <div className="flex-1 p-3 bg-muted rounded-lg text-sm text-muted-foreground overflow-hidden">
-                            <span className="block truncate">Link de compartilhamento</span>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            size="icon"
-                            className="shrink-0"
-                            onClick={handleCopyLink}
-                          >
-                            {copiedToken ? (
-                              <Check className="w-4 h-4 text-primary" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+            {user && clientId && (
+              <ReportShareDialog
+                clientId={clientId}
+                clientName={client.company || client.name}
+                userId={user.id}
+                share={reportShare}
+                onShareChange={setReportShare}
+                triggerButton={
+                  <Button variant="outline" size="sm">
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Compartilhar
+                  </Button>
+                }
+              />
+            )}
           </div>
 
           {/* Report Summary */}

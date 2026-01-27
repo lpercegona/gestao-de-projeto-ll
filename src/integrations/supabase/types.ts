@@ -805,7 +805,7 @@ export type Database = {
           {
             foreignKeyName: "report_shares_client_id_fkey"
             columns: ["client_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
