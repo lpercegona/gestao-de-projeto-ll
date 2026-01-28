@@ -55,11 +55,19 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, fullName, role } = await req.json();
+    const { email, password, fullName, role, clientId } = await req.json();
 
     if (!email || !password) {
       return new Response(
         JSON.stringify({ error: 'Email and password are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If role is client, clientId is required
+    if (role === 'client' && !clientId) {
+      return new Response(
+        JSON.stringify({ error: 'Client must be selected when creating a client user' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -71,6 +79,24 @@ Deno.serve(async (req) => {
         persistSession: false
       }
     });
+
+    // If clientId is provided, verify it exists and get owner_id
+    let clientOwnerId: string | null = null;
+    if (clientId) {
+      const { data: clientData, error: clientError } = await supabaseAdmin
+        .from('clients')
+        .select('id, owner_id')
+        .eq('id', clientId)
+        .maybeSingle();
+
+      if (clientError || !clientData) {
+        return new Response(
+          JSON.stringify({ error: 'Client not found' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      clientOwnerId = clientData.owner_id;
+    }
 
     // Create the new user via Admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -97,11 +123,12 @@ Deno.serve(async (req) => {
 
     const newUserId = newUser.user.id;
 
-    // Update profile with owner_id
+    // Update profile with owner_id (use client's owner for client users, or caller for others)
+    const ownerIdToSet = role === 'client' && clientOwnerId ? clientOwnerId : callingUser.id;
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({ 
-        owner_id: callingUser.id,
+        owner_id: ownerIdToSet,
         full_name: fullName?.trim() || null
       })
       .eq('user_id', newUserId);
@@ -118,6 +145,38 @@ Deno.serve(async (req) => {
 
       if (roleInsertError) {
         console.error('Error assigning role:', roleInsertError);
+      }
+    }
+
+    // If role is client and clientId is provided, link user to client
+    if (role === 'client' && clientId) {
+      // Check if there are any existing users for this client
+      const { data: existingUsers } = await supabaseAdmin
+        .from('client_users')
+        .select('id')
+        .eq('client_id', clientId);
+
+      const isPrimary = !existingUsers || existingUsers.length === 0;
+
+      const { error: clientUserError } = await supabaseAdmin
+        .from('client_users')
+        .insert({
+          client_id: clientId,
+          user_id: newUserId,
+          is_primary: isPrimary,
+          created_by: callingUser.id
+        });
+
+      if (clientUserError) {
+        console.error('Error linking user to client:', clientUserError);
+      }
+
+      // If this is a primary user, also update the clients table user_id field
+      if (isPrimary) {
+        await supabaseAdmin
+          .from('clients')
+          .update({ user_id: newUserId })
+          .eq('id', clientId);
       }
     }
 

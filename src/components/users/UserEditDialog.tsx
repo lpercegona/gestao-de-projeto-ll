@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, User, Globe, Shield } from 'lucide-react';
+import { Loader2, User, Globe, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
@@ -32,6 +32,13 @@ interface UserProfile {
   full_name: string | null;
   email: string | null;
   role: string | null;
+  client_id?: string | null;
+}
+
+interface ClientOption {
+  id: string;
+  name: string;
+  company: string | null;
 }
 
 interface UserEditDialogProps {
@@ -92,7 +99,7 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   showRoleEdit = true,
   showPreferences = true,
 }) => {
-  const { isMasterAdmin, isAdmin } = useAuth();
+  const { isMasterAdmin, isAdmin, user: currentUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   
@@ -100,22 +107,35 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AppRole | 'none'>('none');
+  const [clientId, setClientId] = useState<string>('none');
+  const [clients, setClients] = useState<ClientOption[]>([]);
   
   // Preferences form
   const [timezone, setTimezone] = useState('America/Sao_Paulo');
   const [preferencesLoading, setPreferencesLoading] = useState(false);
+
+  // Fetch available clients
+  const fetchClients = async () => {
+    const { data } = await supabase
+      .from('clients')
+      .select('id, name, company')
+      .order('company', { ascending: true });
+    setClients(data || []);
+  };
 
   useEffect(() => {
     if (user && open) {
       setFullName(user.full_name || '');
       setEmail(user.email || '');
       setRole((user.role as AppRole) || 'none');
+      setClientId(user.client_id || 'none');
       setActiveTab('profile');
       
-      // Load user preferences
+      // Load user preferences and clients
       if (showPreferences) {
         loadPreferences();
       }
+      fetchClients();
     }
   }, [user, open]);
 
@@ -164,6 +184,12 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
       return;
     }
 
+    // Require client selection for client role
+    if (role === 'client' && clientId === 'none') {
+      toast.error('Selecione uma empresa para vincular o usuário cliente');
+      return;
+    }
+
     setSaving(true);
     try {
       // Update profile
@@ -202,6 +228,56 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
               .insert({ user_id: user.user_id, role });
           }
         }
+      }
+
+      // Handle client linking for client users
+      if (role === 'client' && clientId !== 'none') {
+        // Get old client_id
+        const oldClientId = user.client_id;
+        
+        if (oldClientId !== clientId) {
+          // Remove from old client if exists
+          if (oldClientId) {
+            await supabase
+              .from('client_users')
+              .delete()
+              .eq('user_id', user.user_id)
+              .eq('client_id', oldClientId);
+          }
+          
+          // Check if user is already linked to new client
+          const { data: existingLink } = await supabase
+            .from('client_users')
+            .select('id')
+            .eq('user_id', user.user_id)
+            .eq('client_id', clientId)
+            .maybeSingle();
+          
+          if (!existingLink) {
+            // Check if there are existing users for this client
+            const { data: existingUsers } = await supabase
+              .from('client_users')
+              .select('id')
+              .eq('client_id', clientId);
+            
+            const isPrimary = !existingUsers || existingUsers.length === 0;
+            
+            await supabase
+              .from('client_users')
+              .insert({
+                client_id: clientId,
+                user_id: user.user_id,
+                is_primary: isPrimary,
+                created_by: currentUser?.id
+              });
+          }
+        }
+      } else if (role !== 'client' && user.role === 'client' && user.client_id) {
+        // If changing from client to another role, remove client link
+        await supabase
+          .from('client_users')
+          .delete()
+          .eq('user_id', user.user_id);
       }
 
       // Update preferences
@@ -245,6 +321,116 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
 
   const showTabs = showPreferences && (showRoleEdit && canEditRole());
 
+  const renderProfileFields = () => (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="user-name">Nome Completo</Label>
+        <Input
+          id="user-name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Nome do usuário"
+          disabled={saving}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="user-email">Email</Label>
+        <Input
+          id="user-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="email@exemplo.com"
+          disabled={saving}
+        />
+      </div>
+
+      {showRoleEdit && canEditRole() && (
+        <div className="space-y-2">
+          <Label htmlFor="user-role">Função</Label>
+          <Select 
+            value={role} 
+            onValueChange={(v) => {
+              setRole(v as AppRole | 'none');
+              if (v !== 'client') setClientId('none');
+            }} 
+            disabled={saving}
+          >
+            <SelectTrigger id="user-role">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {getAvailableRoles().map(r => (
+                <SelectItem key={r.value} value={r.value}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Client selection - only shows when role is client */}
+      {role === 'client' && (
+        <div className="space-y-2">
+          <Label htmlFor="user-client">Empresa *</Label>
+          <Select
+            value={clientId}
+            onValueChange={setClientId}
+            disabled={saving}
+          >
+            <SelectTrigger id="user-client">
+              <SelectValue placeholder="Selecione uma empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Selecione uma empresa</SelectItem>
+              {clients.map(client => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.company || client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            O usuário terá acesso ao dashboard, relatórios e solicitações desta empresa.
+          </p>
+        </div>
+      )}
+    </>
+  );
+
+  const renderPreferencesFields = () => (
+    <>
+      {preferencesLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="user-timezone">Fuso Horário</Label>
+          <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
+            <SelectTrigger id="user-timezone">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {WORLD_TIMEZONES.map((group) => (
+                <SelectGroup key={group.region}>
+                  <SelectLabel>{group.region}</SelectLabel>
+                  {group.zones.map((zone) => (
+                    <SelectItem key={zone.value} value={zone.value}>
+                      {zone.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -269,142 +455,17 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
             </TabsList>
 
             <TabsContent value="profile" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="user-name">Nome Completo</Label>
-                <Input
-                  id="user-name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Nome do usuário"
-                  disabled={saving}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="user-email">Email</Label>
-                <Input
-                  id="user-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
-                  disabled={saving}
-                />
-              </div>
-
-              {showRoleEdit && canEditRole() && (
-                <div className="space-y-2">
-                  <Label htmlFor="user-role">Função</Label>
-                  <Select value={role} onValueChange={(v) => setRole(v as AppRole | 'none')} disabled={saving}>
-                    <SelectTrigger id="user-role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableRoles().map(r => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {renderProfileFields()}
             </TabsContent>
 
             <TabsContent value="preferences" className="space-y-4 mt-4">
-              {preferencesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="user-timezone">Fuso Horário</Label>
-                  <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
-                    <SelectTrigger id="user-timezone">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {WORLD_TIMEZONES.map((group) => (
-                        <SelectGroup key={group.region}>
-                          <SelectLabel>{group.region}</SelectLabel>
-                          {group.zones.map((zone) => (
-                            <SelectItem key={zone.value} value={zone.value}>
-                              {zone.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {renderPreferencesFields()}
             </TabsContent>
           </Tabs>
         ) : (
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="user-name">Nome Completo</Label>
-              <Input
-                id="user-name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nome do usuário"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="user-email">Email</Label>
-              <Input
-                id="user-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@exemplo.com"
-                disabled={saving}
-              />
-            </div>
-
-            {showRoleEdit && canEditRole() && (
-              <div className="space-y-2">
-                <Label htmlFor="user-role">Função</Label>
-                <Select value={role} onValueChange={(v) => setRole(v as AppRole | 'none')} disabled={saving}>
-                  <SelectTrigger id="user-role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableRoles().map(r => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {showPreferences && !preferencesLoading && (
-              <div className="space-y-2">
-                <Label htmlFor="user-timezone">Fuso Horário</Label>
-                <Select value={timezone} onValueChange={setTimezone} disabled={saving}>
-                  <SelectTrigger id="user-timezone">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    {WORLD_TIMEZONES.map((group) => (
-                      <SelectGroup key={group.region}>
-                        <SelectLabel>{group.region}</SelectLabel>
-                        {group.zones.map((zone) => (
-                          <SelectItem key={zone.value} value={zone.value}>
-                            {zone.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {renderProfileFields()}
+            {showPreferences && renderPreferencesFields()}
           </div>
         )}
 

@@ -58,6 +58,14 @@ interface UserProfile {
   role: AppRole | null;
   owner_id: string | null;
   owner_name?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+}
+
+interface ClientOption {
+  id: string;
+  name: string;
+  company: string | null;
 }
 
 interface CreateFormData {
@@ -65,12 +73,14 @@ interface CreateFormData {
   email: string;
   password: string;
   role: AppRole | 'none';
+  client_id: string;
 }
 
 export const UserManagementTab: React.FC = () => {
   const { user, isMasterAdmin, isAdmin } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   
   // Create dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -78,7 +88,8 @@ export const UserManagementTab: React.FC = () => {
     full_name: '', 
     email: '', 
     password: '',
-    role: 'none' 
+    role: 'none',
+    client_id: 'none'
   });
   const [creating, setCreating] = useState(false);
   
@@ -94,10 +105,11 @@ export const UserManagementTab: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const [profilesRes, rolesRes, clientsRes] = await Promise.all([
+      const [profilesRes, rolesRes, clientsRes, clientUsersRes] = await Promise.all([
         supabase.from('profiles').select('user_id, full_name, email, owner_id'),
         supabase.from('user_roles').select('user_id, role'),
-        supabase.from('clients').select('email, created_by'),
+        supabase.from('clients').select('id, name, company, email, created_by'),
+        supabase.from('client_users').select('user_id, client_id'),
       ]);
 
       if (profilesRes.error) throw profilesRes.error;
@@ -105,19 +117,49 @@ export const UserManagementTab: React.FC = () => {
       
       const profiles = profilesRes.data || [];
       const roles = rolesRes.data || [];
-      const clients = clientsRes.data || [];
+      const clientsList = clientsRes.data || [];
+      const clientUsersList = clientUsersRes.data || [];
+
+      // Set available clients for selection
+      setClients(clientsList.map(c => ({
+        id: c.id,
+        name: c.name,
+        company: c.company
+      })));
 
       const combinedUsers = profiles.map(profile => {
         const userRole = roles.find(r => r.user_id === profile.user_id);
         const role = userRole?.role as AppRole | null || null;
         
         let owner_name: string | null = null;
+        let client_id: string | null = null;
+        let client_name: string | null = null;
         
         if (role === 'client') {
-          const clientRecord = clients.find(c => c.email?.toLowerCase() === profile.email?.toLowerCase());
-          if (clientRecord?.created_by) {
-            const creator = profiles.find(p => p.user_id === clientRecord.created_by);
-            owner_name = creator?.full_name || null;
+          // Find client via client_users table first
+          const clientUserLink = clientUsersList.find(cu => cu.user_id === profile.user_id);
+          if (clientUserLink) {
+            const linkedClient = clientsList.find(c => c.id === clientUserLink.client_id);
+            if (linkedClient) {
+              client_id = linkedClient.id;
+              client_name = linkedClient.company || linkedClient.name;
+              // Get owner from client's created_by
+              if (linkedClient.created_by) {
+                const creator = profiles.find(p => p.user_id === linkedClient.created_by);
+                owner_name = creator?.full_name || null;
+              }
+            }
+          } else {
+            // Fallback to email match
+            const clientRecord = clientsList.find(c => c.email?.toLowerCase() === profile.email?.toLowerCase());
+            if (clientRecord) {
+              client_id = clientRecord.id;
+              client_name = clientRecord.company || clientRecord.name;
+              if (clientRecord.created_by) {
+                const creator = profiles.find(p => p.user_id === clientRecord.created_by);
+                owner_name = creator?.full_name || null;
+              }
+            }
           }
         } else {
           const owner = profiles.find(p => p.user_id === profile.owner_id);
@@ -128,6 +170,8 @@ export const UserManagementTab: React.FC = () => {
           ...profile,
           role,
           owner_name,
+          client_id,
+          client_name,
         };
       });
 
@@ -153,7 +197,7 @@ export const UserManagementTab: React.FC = () => {
   }, [isMasterAdmin, isAdmin, user]);
 
   const openCreateDialog = () => {
-    setCreateForm({ full_name: '', email: '', password: '', role: 'none' });
+    setCreateForm({ full_name: '', email: '', password: '', role: 'none', client_id: 'none' });
     setCreateDialogOpen(true);
   };
 
@@ -168,6 +212,11 @@ export const UserManagementTab: React.FC = () => {
     }
     if (!createForm.password || createForm.password.length < 6) {
       toast.error('Senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+    // Require client selection for client role
+    if (createForm.role === 'client' && createForm.client_id === 'none') {
+      toast.error('Selecione uma empresa para vincular o usuário cliente');
       return;
     }
 
@@ -192,6 +241,7 @@ export const UserManagementTab: React.FC = () => {
             password: createForm.password,
             fullName: createForm.full_name.trim(),
             role: createForm.role !== 'none' ? createForm.role : null,
+            clientId: createForm.role === 'client' && createForm.client_id !== 'none' ? createForm.client_id : null,
           }),
         }
       );
@@ -373,6 +423,7 @@ export const UserManagementTab: React.FC = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Função</TableHead>
+                    <TableHead>Empresa</TableHead>
                     {isMasterAdmin && <TableHead>Proprietário</TableHead>}
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -391,6 +442,9 @@ export const UserManagementTab: React.FC = () => {
                         </TableCell>
                         <TableCell>{u.email}</TableCell>
                         <TableCell>{getRoleBadge(u.role)}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {u.role === 'client' && u.client_name ? u.client_name : '-'}
+                        </TableCell>
                         {isMasterAdmin && (
                           <TableCell className="text-muted-foreground">
                             {u.owner_name || (u.role === 'master_admin' ? '-' : 'Sistema')}
@@ -475,6 +529,9 @@ export const UserManagementTab: React.FC = () => {
                       <p className="text-sm text-muted-foreground mb-2">{u.email}</p>
                       <div className="flex flex-wrap items-center gap-2">
                         {getRoleBadge(u.role)}
+                        {u.role === 'client' && u.client_name && (
+                          <span className="text-xs text-muted-foreground">• {u.client_name}</span>
+                        )}
                         {isMasterAdmin && u.owner_name && (
                           <span className="text-xs text-muted-foreground">• Proprietário: {u.owner_name}</span>
                         )}
@@ -538,7 +595,7 @@ export const UserManagementTab: React.FC = () => {
               <Label htmlFor="create-role">Função</Label>
               <Select
                 value={createForm.role}
-                onValueChange={(value) => setCreateForm({ ...createForm, role: value as AppRole | 'none' })}
+                onValueChange={(value) => setCreateForm({ ...createForm, role: value as AppRole | 'none', client_id: value !== 'client' ? 'none' : createForm.client_id })}
                 disabled={creating}
               >
                 <SelectTrigger id="create-role">
@@ -553,6 +610,33 @@ export const UserManagementTab: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Client selection - only shows when role is client */}
+            {createForm.role === 'client' && (
+              <div className="space-y-2">
+                <Label htmlFor="create-client">Empresa *</Label>
+                <Select
+                  value={createForm.client_id}
+                  onValueChange={(value) => setCreateForm({ ...createForm, client_id: value })}
+                  disabled={creating}
+                >
+                  <SelectTrigger id="create-client">
+                    <SelectValue placeholder="Selecione uma empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecione uma empresa</SelectItem>
+                    {clients.map(client => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.company || client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  O usuário terá acesso ao dashboard, relatórios e solicitações desta empresa.
+                </p>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
