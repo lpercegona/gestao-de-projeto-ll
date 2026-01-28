@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -24,11 +24,18 @@ import { toast } from 'sonner';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
 
+interface Client {
+  id: string;
+  name: string;
+  company: string | null;
+}
+
 interface UserCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void;
   defaultRole?: AppRole | 'none';
+  defaultClientId?: string;
   title?: string;
   description?: string;
 }
@@ -38,6 +45,7 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
   onOpenChange,
   onCreated,
   defaultRole = 'none',
+  defaultClientId,
   title = 'Novo Usuário',
   description = 'Crie um novo usuário preenchendo as informações abaixo.',
 }) => {
@@ -47,12 +55,47 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<AppRole | 'none'>(defaultRole);
+  const [selectedClientId, setSelectedClientId] = useState<string>(defaultClientId || '');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+
+  // Load clients when role is 'client' and no defaultClientId
+  useEffect(() => {
+    if (role === 'client' && !defaultClientId) {
+      loadClients();
+    }
+  }, [role, defaultClientId]);
+
+  // Reset selectedClientId when defaultClientId changes
+  useEffect(() => {
+    if (defaultClientId) {
+      setSelectedClientId(defaultClientId);
+    }
+  }, [defaultClientId]);
+
+  const loadClients = async () => {
+    setLoadingClients(true);
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, company')
+        .order('name');
+      
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error) {
+      console.error('Error loading clients:', error);
+    } finally {
+      setLoadingClients(false);
+    }
+  };
 
   const resetForm = () => {
     setFullName('');
     setEmail('');
     setPassword('');
     setRole(defaultRole);
+    setSelectedClientId(defaultClientId || '');
   };
 
   const getAvailableRoles = (): Array<{ value: string; label: string }> => {
@@ -85,6 +128,11 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
       toast.error('Senha deve ter no mínimo 6 caracteres');
       return;
     }
+    // Validação: cliente requer empresa selecionada
+    if (role === 'client' && !selectedClientId) {
+      toast.error('Selecione uma empresa para vincular o usuário cliente');
+      return;
+    }
 
     setCreating(true);
     try {
@@ -107,6 +155,7 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
             password,
             fullName: fullName.trim(),
             role: role !== 'none' ? role : null,
+            clientId: role === 'client' ? selectedClientId : null,
           }),
         }
       );
@@ -184,8 +233,14 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
             <Label htmlFor="create-role">Função</Label>
             <Select
               value={role}
-              onValueChange={(value) => setRole(value as AppRole | 'none')}
-              disabled={creating}
+              onValueChange={(value) => {
+                setRole(value as AppRole | 'none');
+                // Limpar seleção de cliente se mudar de função
+                if (value !== 'client') {
+                  setSelectedClientId('');
+                }
+              }}
+              disabled={creating || !!defaultClientId}
             >
               <SelectTrigger id="create-role">
                 <SelectValue />
@@ -199,6 +254,42 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Seletor de empresa obrigatório para função Cliente */}
+          {role === 'client' && !defaultClientId && (
+            <div className="space-y-2">
+              <Label htmlFor="create-client">Empresa Vinculada *</Label>
+              <Select
+                value={selectedClientId}
+                onValueChange={setSelectedClientId}
+                disabled={creating || loadingClients}
+              >
+                <SelectTrigger id="create-client">
+                  <SelectValue placeholder={loadingClients ? "Carregando..." : "Selecione uma empresa"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.company || client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                O usuário terá acesso aos dados desta empresa
+              </p>
+            </div>
+          )}
+
+          {/* Mostrar empresa pré-selecionada quando defaultClientId */}
+          {role === 'client' && defaultClientId && (
+            <div className="space-y-2">
+              <Label>Empresa Vinculada</Label>
+              <div className="p-2 bg-muted rounded text-sm text-muted-foreground">
+                O usuário será vinculado automaticamente a esta empresa
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
