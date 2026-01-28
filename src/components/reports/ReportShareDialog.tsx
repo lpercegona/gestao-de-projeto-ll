@@ -317,8 +317,8 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
                 <div className="space-y-2">
                   <Label>Link de compartilhamento</Label>
                   <div className="flex gap-2 items-center">
-                    <div className="flex-1 p-3 bg-muted rounded-lg text-sm text-muted-foreground overflow-hidden">
-                      <span className="block truncate font-mono text-xs">
+                    <div className="flex-1 min-w-0 p-3 bg-muted rounded-lg overflow-hidden">
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
                         {`${window.location.origin}/report/${share.share_token}`}
                       </span>
                     </div>
