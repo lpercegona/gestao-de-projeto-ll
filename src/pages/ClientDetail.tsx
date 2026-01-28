@@ -82,6 +82,7 @@ interface UserProfile {
   full_name: string | null;
   email: string | null;
   role: string | null;
+  client_id?: string | null;
 }
 
 interface ClientUser {
@@ -258,6 +259,7 @@ export const ClientDetail: React.FC = () => {
               full_name: profile?.full_name || null,
               email: profile?.email || null,
               role: role?.role || null,
+              client_id: cu.client_id,
             }
           };
         });
