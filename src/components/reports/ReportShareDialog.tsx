@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Loader2, Share2, Copy, Check, Globe, Lock, KeyRound, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 
 export interface ReportShare {
@@ -317,11 +318,18 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
                 <div className="space-y-2">
                   <Label>Link de compartilhamento</Label>
                   <div className="flex gap-2 items-center">
-                    <div className="flex-1 min-w-0 p-3 bg-muted rounded-lg overflow-hidden">
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        {`${window.location.origin}/report/${share.share_token}`}
-                      </span>
-                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex-1 min-w-0 p-3 bg-muted rounded-lg overflow-hidden cursor-help">
+                          <span className="block truncate font-mono text-xs text-muted-foreground">
+                            /report/{share.share_token.slice(0, 8)}...
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs break-all">
+                        <p className="font-mono text-xs">{`${window.location.origin}/report/${share.share_token}`}</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <Button 
                       variant="outline" 
                       size="icon"
