@@ -29,6 +29,7 @@ interface ProjectColumn {
   type: string;
   options: string[] | null;
   client_id: string | null;
+  show_in_report: boolean;
 }
 
 interface Project {
@@ -430,14 +431,14 @@ export const ClientReports: React.FC = () => {
                   
                   <CollapsibleContent>
                     <CardContent className="pt-0">
-                      {/* Custom Fields */}
-                      {projectColumns.length > 0 && Object.keys(customFields).length > 0 && (
+                      {/* Custom Fields - only show fields marked as show_in_report */}
+                      {projectColumns.filter(col => col.show_in_report).length > 0 && Object.keys(customFields).length > 0 && (
                         <div className="border-t border-border pt-4 mb-4">
                           <p className="text-sm font-medium text-muted-foreground mb-3">
                             Campos do Projeto
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {projectColumns.map(col => {
+                            {projectColumns.filter(col => col.show_in_report).map(col => {
                               const value = customFields[col.id];
                               if (!value) return null;
                               return (

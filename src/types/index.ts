@@ -13,6 +13,7 @@ export interface ProjectColumn {
   name: string;
   type: 'text' | 'select';
   options?: string[] | null;
+  show_in_report?: boolean;
 }
 
 export interface Project {

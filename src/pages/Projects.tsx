@@ -42,6 +42,7 @@ interface ProjectColumn {
   type: string;
   options: string[] | null;
   client_id: string | null;
+  show_in_report: boolean;
 }
 
 export const Projects: React.FC = () => {
@@ -426,7 +427,7 @@ export const Projects: React.FC = () => {
     if (columnFormData.type === 'select' && columnFormData.options.length === 0) { toast.error('Adicione pelo menos uma opção.'); return; }
     if (!formData.client_id) { toast.error('Selecione um cliente primeiro.'); return; }
     setSubmittingColumn(true);
-    const columnData = { name: columnFormData.name, type: columnFormData.type, options: columnFormData.type === 'select' ? columnFormData.options : null, client_id: formData.client_id };
+    const columnData = { name: columnFormData.name, type: columnFormData.type, options: columnFormData.type === 'select' ? columnFormData.options : null, client_id: formData.client_id, show_in_report: false };
     if (editingColumn) { 
       await updateColumn(editingColumn.id, columnData); 
       toast.success('Campo atualizado!'); 
