@@ -31,3 +31,21 @@ export const CARD_PADDING = {
   compact: 'p-4',
   nested: 'p-3',
 } as const;
+
+export const SPACING = {
+  page: 'p-4 sm:p-6 lg:p-8',
+  section: 'space-y-4 sm:space-y-6',
+  card: 'p-4 sm:p-6',
+} as const;
+
+export const BREAKPOINTS = {
+  mobile: 'max-w-full',
+  tablet: 'sm:max-w-xl',
+  desktop: 'lg:max-w-4xl',
+} as const;
+
+export const LOGO_CONTAINER = {
+  size: 'w-20 h-20',
+  wrapper: 'flex items-center justify-center bg-muted rounded-lg overflow-hidden border border-border',
+  image: 'max-w-full max-h-full object-contain',
+} as const;

@@ -27,6 +27,7 @@ interface ProjectColumn {
   type: string;
   options: string[] | null;
   client_id: string | null;
+  show_in_report: boolean;
 }
 
 interface Project {

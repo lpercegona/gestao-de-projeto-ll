@@ -454,6 +454,7 @@ export type Database = {
           id: string
           name: string
           options: string[] | null
+          show_in_report: boolean
           type: string
         }
         Insert: {
@@ -462,6 +463,7 @@ export type Database = {
           id?: string
           name: string
           options?: string[] | null
+          show_in_report?: boolean
           type?: string
         }
         Update: {
@@ -470,6 +472,7 @@ export type Database = {
           id?: string
           name?: string
           options?: string[] | null
+          show_in_report?: boolean
           type?: string
         }
         Relationships: [

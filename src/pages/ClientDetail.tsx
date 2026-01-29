@@ -63,6 +63,8 @@ import { UserEditDialog } from '@/components/users/UserEditDialog';
 import { UserCreateDialog } from '@/components/users/UserCreateDialog';
 import { formatHours } from '@/lib/formatHours';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
+import { ClientLogoUpload } from '@/components/client/ClientLogoUpload';
+import { ClientCustomFieldsSection } from '@/components/client/ClientCustomFieldsSection';
 
 interface ProjectRequest {
   id: string;
@@ -1309,139 +1311,145 @@ export const ClientDetail: React.FC = () => {
 
       {/* Edit Client Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEditClient}>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Nome</Label>
-                  <Input
-                    id="edit-name"
-                    value={editFormData.name}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    required
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="general">Dados Gerais</TabsTrigger>
+              <TabsTrigger value="custom-fields">Campos Personalizados</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="general">
+              <form onSubmit={handleEditClient}>
+                <div className="space-y-4 py-4">
+                  {/* Logo Upload */}
+                  <ClientLogoUpload
+                    clientId={clientId || ''}
+                    currentLogoUrl={editFormData.logo_url}
+                    onLogoChange={(url) => setEditFormData({ ...editFormData, logo_url: url })}
                     disabled={editSubmitting}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-company">Empresa</Label>
-                  <Input
-                    id="edit-company"
-                    value={editFormData.company}
-                    onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
-                    disabled={editSubmitting}
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={editFormData.email}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    required
-                    disabled={editSubmitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Telefone</Label>
-                  <Input
-                    id="edit-phone"
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    disabled={editSubmitting}
-                  />
-                </div>
-              </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Nome</Label>
+                      <Input
+                        id="edit-name"
+                        value={editFormData.name}
+                        onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                        required
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-company">Empresa</Label>
+                      <Input
+                        id="edit-company"
+                        value={editFormData.company}
+                        onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editFormData.email}
+                        onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                        required
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">Telefone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={editFormData.phone}
+                        onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-pipeline">Status do Pipeline</Label>
-                  <Select 
-                    value={editFormData.pipeline_status} 
-                    onValueChange={(value) => setEditFormData({ ...editFormData, pipeline_status: value })}
-                    disabled={editSubmitting}
-                  >
-                    <SelectTrigger id="edit-pipeline">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lead">Lead</SelectItem>
-                      <SelectItem value="proposal">Em Negociação</SelectItem>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="churned">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-pipeline">Status do Pipeline</Label>
+                      <Select 
+                        value={editFormData.pipeline_status} 
+                        onValueChange={(value) => setEditFormData({ ...editFormData, pipeline_status: value })}
+                        disabled={editSubmitting}
+                      >
+                        <SelectTrigger id="edit-pipeline">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="lead">Lead</SelectItem>
+                          <SelectItem value="proposal">Em Negociação</SelectItem>
+                          <SelectItem value="active">Ativo</SelectItem>
+                          <SelectItem value="churned">Inativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-source">Origem</Label>
+                      <Input
+                        id="edit-source"
+                        placeholder="Ex: Indicação, Google, etc."
+                        value={editFormData.source}
+                        onChange={(e) => setEditFormData({ ...editFormData, source: e.target.value })}
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-contracted-hours">Horas Contratadas</Label>
+                    <Input
+                      id="edit-contracted-hours"
+                      type="number"
+                      min="0"
+                      value={editFormData.contracted_hours}
+                      onChange={(e) => setEditFormData({ ...editFormData, contracted_hours: Number(e.target.value) })}
+                      required
+                      disabled={editSubmitting}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-notes">Observações</Label>
+                    <Input
+                      id="edit-notes"
+                      placeholder="Notas sobre o cliente..."
+                      value={editFormData.notes}
+                      onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                      disabled={editSubmitting}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-source">Origem</Label>
-                  <Input
-                    id="edit-source"
-                    placeholder="Ex: Indicação, Google, etc."
-                    value={editFormData.source}
-                    onChange={(e) => setEditFormData({ ...editFormData, source: e.target.value })}
-                    disabled={editSubmitting}
-                  />
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={editSubmitting}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={editSubmitting}>
+                    {editSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : null}
+                    Salvar
+                  </Button>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-contracted-hours">Horas Contratadas</Label>
-                <Input
-                  id="edit-contracted-hours"
-                  type="number"
-                  min="0"
-                  value={editFormData.contracted_hours}
-                  onChange={(e) => setEditFormData({ ...editFormData, contracted_hours: Number(e.target.value) })}
-                  required
-                  disabled={editSubmitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-logo">URL do Logo</Label>
-                <Input
-                  id="edit-logo"
-                  type="url"
-                  placeholder="https://exemplo.com/logo.png"
-                  value={editFormData.logo_url}
-                  onChange={(e) => setEditFormData({ ...editFormData, logo_url: e.target.value })}
-                  disabled={editSubmitting}
-                />
-                <p className="text-xs text-muted-foreground">
-                  URL de uma imagem para exibir como logo nos relatórios.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Observações</Label>
-                <Input
-                  id="edit-notes"
-                  placeholder="Notas sobre o cliente..."
-                  value={editFormData.notes}
-                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                  disabled={editSubmitting}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={editSubmitting}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={editSubmitting}>
-                {editSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : null}
-                Salvar
-              </Button>
-            </div>
-          </form>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="custom-fields" className="py-4">
+              <ClientCustomFieldsSection clientId={clientId || ''} />
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
