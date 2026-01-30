@@ -24,51 +24,84 @@ export const Dashboard: React.FC = () => {
   const upcomingDeadlines = useMemo((): DeadlineItem[] => {
     if (loading) return [];
     
-    const items: DeadlineItem[] = [];
+    const itemsWithDeadline: DeadlineItem[] = [];
+    const itemsWithoutDeadline: DeadlineItem[] = [];
     
-    // Add projects with due_date (only active ones)
+    // Add projects (only non-completed ones)
     data.projects
-      .filter(p => p.due_date && p.status !== 'completed')
+      .filter(p => p.status !== 'completed')
       .forEach(p => {
         const client = data.clients.find(c => c.id === p.client_id);
-        const status = getDeadlineStatus(p.due_date);
-        if (status) {
-          items.push({
+        
+        if (p.due_date) {
+          const status = getDeadlineStatus(p.due_date);
+          if (status) {
+            itemsWithDeadline.push({
+              id: p.id,
+              type: 'project',
+              name: p.name,
+              due_date: p.due_date,
+              clientName: client?.company || client?.name,
+              status,
+              created_at: p.created_at
+            });
+          }
+        } else {
+          itemsWithoutDeadline.push({
             id: p.id,
             type: 'project',
             name: p.name,
-            due_date: p.due_date!,
+            due_date: '',
             clientName: client?.company || client?.name,
-            status
+            status: 'normal',
+            created_at: p.created_at
           });
         }
       });
     
-    // Add tasks with due_date (only non-completed ones)
+    // Add tasks (only non-completed ones)
     data.tasks
-      .filter(t => t.due_date && t.status !== 'completed' && t.status !== 'done')
+      .filter(t => t.status !== 'completed' && t.status !== 'done')
       .forEach(t => {
         const project = data.projects.find(p => p.id === t.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;
-        const status = getDeadlineStatus(t.due_date);
-        if (status) {
-          items.push({
+        
+        if (t.due_date) {
+          const status = getDeadlineStatus(t.due_date);
+          if (status) {
+            itemsWithDeadline.push({
+              id: t.id,
+              type: 'task',
+              name: t.name,
+              due_date: t.due_date,
+              projectId: t.project_id,
+              projectName: project?.name,
+              clientName: client?.company || client?.name,
+              status,
+              created_at: t.created_at
+            });
+          }
+        } else {
+          itemsWithoutDeadline.push({
             id: t.id,
             type: 'task',
             name: t.name,
-            due_date: t.due_date!,
+            due_date: '',
             projectId: t.project_id,
             projectName: project?.name,
             clientName: client?.company || client?.name,
-            status
+            status: 'normal',
+            created_at: t.created_at
           });
         }
       });
     
-    // Sort by due date (closest first)
-    return items
-      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-      .slice(0, 10);
+    // Sort with deadline by proximity, without deadline by creation date (newest first)
+    itemsWithDeadline.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+    itemsWithoutDeadline.sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+    
+    // Combine: items with deadline first, then items without
+    return [...itemsWithDeadline, ...itemsWithoutDeadline].slice(0, 10);
   }, [data.projects, data.tasks, data.clients, loading]);
 
   if (loading) {
