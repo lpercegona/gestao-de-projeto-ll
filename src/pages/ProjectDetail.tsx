@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import {
   Select,
   SelectContent,
@@ -443,7 +444,7 @@ export const ProjectDetail: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="taskDescription">Descrição</Label>
-                <Textarea id="taskDescription" value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={3} disabled={submitting} />
+                <WysiwygEditor value={taskForm.description} onChange={(value) => setTaskForm({ ...taskForm, description: value })} disabled={submitting} minHeight="80px" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="taskStatus">Status</Label>

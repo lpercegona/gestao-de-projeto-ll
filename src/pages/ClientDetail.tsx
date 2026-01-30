@@ -56,6 +56,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { WysiwygEditor, WysiwygContent } from '@/components/ui/wysiwyg-editor';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -1423,12 +1424,12 @@ export const ClientDetail: React.FC = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-notes">Observações</Label>
-                    <Input
-                      id="edit-notes"
-                      placeholder="Notas sobre o cliente..."
+                    <WysiwygEditor
                       value={editFormData.notes}
-                      onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                      onChange={(value) => setEditFormData({ ...editFormData, notes: value })}
+                      placeholder="Notas sobre o cliente..."
                       disabled={editSubmitting}
+                      minHeight="100px"
                     />
                   </div>
                 </div>

@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -556,7 +557,7 @@ export const Projects: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
               <div className="space-y-2"><Label htmlFor="name">Nome do Projeto</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={submitting} /></div>
-              <div className="space-y-2"><Label htmlFor="description">Descrição</Label><Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} disabled={submitting} /></div>
+              <div className="space-y-2"><Label htmlFor="description">Descrição</Label><WysiwygEditor value={formData.description} onChange={(value) => setFormData({ ...formData, description: value })} disabled={submitting} minHeight="80px" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Cliente</Label><Select value={formData.client_id} onValueChange={handleClientChange} disabled={submitting}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{data.clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>)}</SelectContent></Select></div>
                 <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem></SelectContent></Select></div>
@@ -644,7 +645,7 @@ export const Projects: React.FC = () => {
           <form onSubmit={handleSubmitTask}>
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Nome da Tarefa</Label><Input value={taskFormData.name} onChange={(e) => setTaskFormData({ ...taskFormData, name: e.target.value })} required disabled={submitting} /></div>
-              <div className="space-y-2"><Label>Descrição</Label><Textarea value={taskFormData.description} onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })} rows={3} disabled={submitting} /></div>
+              <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskFormData.description} onChange={(value) => setTaskFormData({ ...taskFormData, description: value })} disabled={submitting} minHeight="80px" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Status</Label><Select value={taskFormData.status} onValueChange={(v) => setTaskFormData({ ...taskFormData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="in_progress">Em Andamento</SelectItem><SelectItem value="completed">Concluída</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={taskFormData.due_date} onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })} disabled={submitting} /></div>
