@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatHours } from '@/lib/formatHours';
 import {
@@ -391,13 +392,12 @@ export const Clients: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="notes">Observações</Label>
-                    <Textarea
-                      id="notes"
+                    <WysiwygEditor
                       value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      onChange={(value) => setFormData({ ...formData, notes: value })}
                       placeholder="Anotações sobre o cliente..."
-                      rows={2}
                       disabled={submitting}
+                      minHeight="80px"
                     />
                   </div>
                 </div>

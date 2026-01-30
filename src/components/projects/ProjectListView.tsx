@@ -12,6 +12,7 @@ import {
 import { TaskCard } from './TaskCard';
 import { Badge } from '@/components/ui/badge';
 import { formatHours } from '@/lib/formatHours';
+import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
 
 interface Project {
   id: string;
@@ -200,7 +201,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             </span>
                           )}
                         </div>
-                        {project.description && <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{project.description}</p>}
+                        {project.description && <WysiwygContent content={project.description} className="text-sm text-muted-foreground mb-2 line-clamp-1" />}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                           <div><span className="text-muted-foreground">Cliente: </span><span className="font-medium text-foreground">{client?.company || client?.name}</span></div>
                           <div><span className="text-muted-foreground">Tarefas: </span><span className="font-medium text-foreground">{projectTasks.length}</span></div>
