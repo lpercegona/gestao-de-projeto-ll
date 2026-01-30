@@ -11,11 +11,12 @@ export interface DeadlineItem {
   id: string;
   type: 'task' | 'project';
   name: string;
-  due_date: string;
+  due_date: string; // Empty string for items without deadline
   projectId?: string;
   projectName?: string;
   clientName?: string;
   status: DeadlineStatus;
+  created_at?: string; // For ordering items without deadline
 }
 
 interface UpcomingDeadlinesProps {
@@ -67,13 +68,19 @@ export const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({
               </div>
               
               <div className="flex items-center gap-2 flex-shrink-0">
-                <div className={cn(
-                  "flex items-center gap-1 text-xs px-2 py-1 rounded-full",
-                  getDeadlineClasses(item.status)
-                )}>
-                  <Calendar className="h-3 w-3" />
-                  <span>{format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}</span>
-                </div>
+                {item.due_date ? (
+                  <div className={cn(
+                    "flex items-center gap-1 text-xs px-2 py-1 rounded-full",
+                    getDeadlineClasses(item.status)
+                  )}>
+                    <Calendar className="h-3 w-3" />
+                    <span>{format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-muted-foreground bg-muted">
+                    <span>Sem prazo</span>
+                  </div>
+                )}
                 
                 <Badge variant="outline" className="text-xs">
                   {item.type === 'project' ? 'Projeto' : 'Tarefa'}

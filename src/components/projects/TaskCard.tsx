@@ -193,7 +193,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-foreground">{formatHours(taskHours)}</span>
           <span>por {getCreatorName(task.created_by)}</span>
-          {task.due_date && (
+          {task.due_date && task.status !== 'completed' && task.status !== 'done' && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className={cn(
