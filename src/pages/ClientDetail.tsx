@@ -745,7 +745,7 @@ export const ClientDetail: React.FC = () => {
 
         {/* Descrição do cliente - modo visualização ou edição */}
         {isEditingNotes ? (
-          <div className="ml-12 space-y-2">
+          <div className="space-y-2">
             <WysiwygEditor
               value={inlineNotes}
               onChange={setInlineNotes}
@@ -775,7 +775,7 @@ export const ClientDetail: React.FC = () => {
           </div>
         ) : (
           <div 
-            className="ml-12 cursor-pointer group"
+            className="cursor-pointer group"
             onClick={() => {
               setInlineNotes(client.notes || '');
               setIsEditingNotes(true);
