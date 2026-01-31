@@ -782,13 +782,10 @@ export const ClientDetail: React.FC = () => {
             }}
           >
             {client.notes ? (
-              <div className="relative inline-block">
-                <WysiwygContent 
-                  content={client.notes} 
-                  className="text-muted-foreground"
-                />
-                <Pencil className="w-3.5 h-3.5 absolute top-0 -right-5 opacity-0 group-hover:opacity-50 transition-opacity" />
-              </div>
+              <WysiwygContent 
+                content={client.notes} 
+                className="text-muted-foreground"
+              />
             ) : (
               <p className="text-muted-foreground italic text-sm hover:text-foreground transition-colors">
                 Clique para adicionar uma descrição...
