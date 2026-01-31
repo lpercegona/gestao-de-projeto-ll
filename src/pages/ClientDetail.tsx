@@ -116,6 +116,8 @@ export const ClientDetail: React.FC = () => {
   const { data, loading, getClientHours, getProjectHours, getTaskHours, updateClient } = useData();
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [inlineNotes, setInlineNotes] = useState('');
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
@@ -488,6 +490,21 @@ export const ClientDetail: React.FC = () => {
     );
   }
 
+  const handleSaveInlineNotes = async () => {
+    if (!clientId) return;
+    setEditSubmitting(true);
+    try {
+      await updateClient(clientId, { notes: inlineNotes });
+      toast.success('Descrição atualizada!');
+      setIsEditingNotes(false);
+    } catch (error) {
+      console.error('Error updating notes:', error);
+      toast.error('Erro ao atualizar descrição');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   const handleEditClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientId) return;
@@ -711,18 +728,74 @@ export const ClientDetail: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header com título e botão de editar */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex items-center gap-3 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {client.company || client.name}
-          </h1>
-          <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}>
-            <Pencil className="w-4 h-4" />
+      <div className="space-y-2">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
+          <div className="flex items-center gap-3 flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              {client.company || client.name}
+            </h1>
+            <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}>
+              <Pencil className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
+
+        {/* Descrição do cliente - modo visualização ou edição */}
+        {isEditingNotes ? (
+          <div className="ml-12 space-y-2">
+            <WysiwygEditor
+              value={inlineNotes}
+              onChange={setInlineNotes}
+              placeholder="Adicione uma descrição para o cliente..."
+              minHeight="80px"
+            />
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                onClick={handleSaveInlineNotes}
+                disabled={editSubmitting}
+              >
+                {editSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditingNotes(false);
+                  setInlineNotes(client.notes || '');
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="ml-12 cursor-pointer group"
+            onClick={() => {
+              setInlineNotes(client.notes || '');
+              setIsEditingNotes(true);
+            }}
+          >
+            {client.notes ? (
+              <div className="relative inline-block">
+                <WysiwygContent 
+                  content={client.notes} 
+                  className="text-muted-foreground"
+                />
+                <Pencil className="w-3.5 h-3.5 absolute top-0 -right-5 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </div>
+            ) : (
+              <p className="text-muted-foreground italic text-sm hover:text-foreground transition-colors">
+                Clique para adicionar uma descrição...
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Seção fixa com informações gerais e dados do cliente */}
