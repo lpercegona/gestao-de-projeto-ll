@@ -1169,6 +1169,7 @@ export type Database = {
           client_id: string
           client_logo_url: string
           client_name: string
+          contract_type: string
           contracted_hours: number
           is_public: boolean
         }[]

@@ -289,10 +289,16 @@ export const Dashboard: React.FC = () => {
                       const percentage = client.contracted_hours > 0 
                         ? Math.min((usedHours / client.contracted_hours) * 100, 100)
                         : 0;
+                      const isMonthly = (client as any).contract_type === 'monthly';
                       return (
                         <li key={client.id} className="py-2 border-b border-border last:border-0">
                           <div className="flex justify-between mb-1">
-                            <span className="font-medium text-foreground text-sm truncate">{client.company || client.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground text-sm truncate">{client.company || client.name}</span>
+                              {isMonthly && (
+                                <Badge variant="outline" className="text-xs">Mensal</Badge>
+                              )}
+                            </div>
                             <span className="text-xs text-muted-foreground shrink-0 ml-2">
                               {formatHours(usedHours)} / {formatHours(client.contracted_hours)}
                             </span>

@@ -19,6 +19,7 @@ interface Client {
   source: string | null;
   notes: string | null;
   converted_at: string | null;
+  contract_type: 'one_time' | 'monthly';
 }
 
 interface ProjectColumn {
@@ -141,6 +142,7 @@ interface DataContextType {
   // Utilities
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
+  getClientMonthlyHours: (clientId: string, year?: number, month?: number) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
 }
@@ -196,7 +198,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfilesMap(profiles);
 
       setData({
-        clients: (clientsRes.data || []) as Client[],
+        clients: (clientsRes.data || []).map(c => ({
+          ...c,
+          contract_type: (c as any).contract_type || 'one_time',
+        })) as Client[],
         projects: (projectsRes.data || []).map(p => ({
           ...p,
           custom_fields: (p.custom_fields as Record<string, string>) || {},
@@ -247,12 +252,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
+    const clientWithDefaults = {
+      ...newClient,
+      contract_type: (newClient as any).contract_type || 'one_time',
+    } as Client;
+
     // Update local state immediately
     setData(prev => ({
       ...prev,
-      clients: [newClient as Client, ...prev.clients],
+      clients: [clientWithDefaults, ...prev.clients],
     }));
-    return newClient as Client;
+    return clientWithDefaults;
   };
 
   const updateClient = async (id: string, updates: Partial<Client>) => {
@@ -268,12 +278,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
+    const clientWithDefaults = {
+      ...updated,
+      contract_type: (updated as any).contract_type || 'one_time',
+    } as Client;
+
     // Update local state immediately
     setData(prev => ({
       ...prev,
-      clients: prev.clients.map(c => c.id === id ? updated as Client : c),
+      clients: prev.clients.map(c => c.id === id ? clientWithDefaults : c),
     }));
-    return updated as Client;
+    return clientWithDefaults;
   };
 
   const deleteClient = async (id: string) => {
@@ -736,6 +751,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return clientProjects.reduce((sum, project) => sum + getProjectHours(project.id), 0);
   };
 
+  const getClientMonthlyHours = (clientId: string, year?: number, month?: number): number => {
+    const now = new Date();
+    const targetYear = year ?? now.getFullYear();
+    const targetMonth = month ?? now.getMonth() + 1;
+    
+    const monthStart = new Date(targetYear, targetMonth - 1, 1);
+    const monthEnd = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
+    
+    const clientProjects = data.projects.filter(p => p.client_id === clientId);
+    const projectIds = new Set(clientProjects.map(p => p.id));
+    const clientTaskIds = new Set(data.tasks.filter(t => projectIds.has(t.project_id)).map(t => t.id));
+    
+    return data.timeEntries
+      .filter(e => {
+        if (!clientTaskIds.has(e.task_id)) return false;
+        const entryDate = new Date(e.date);
+        return entryDate >= monthStart && entryDate <= monthEnd;
+      })
+      .reduce((sum, e) => sum + Number(e.hours), 0);
+  };
+
   const getClientColumns = (clientId: string): ProjectColumn[] => {
     return data.projectColumns.filter(col => col.client_id === clientId);
   };
@@ -811,6 +847,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveKanbanStages,
         getProjectHours,
         getClientHours,
+        getClientMonthlyHours,
         getTaskHours,
         getCreatorName,
       }}
