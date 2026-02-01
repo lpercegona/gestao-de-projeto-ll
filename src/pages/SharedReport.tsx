@@ -50,6 +50,7 @@ interface ClientInfo {
   client_company: string | null;
   client_logo_url: string | null;
   contracted_hours: number;
+  contract_type: 'one_time' | 'monthly';
   is_public: boolean;
 }
 
@@ -181,6 +182,7 @@ export const SharedReport: React.FC = () => {
           client_company: clientData.client_company || null,
           client_logo_url: clientData.client_logo_url || null,
           contracted_hours: clientData.contracted_hours,
+          contract_type: clientData.contract_type || 'one_time',
           is_public: clientData.is_public,
         });
 
@@ -479,7 +481,13 @@ export const SharedReport: React.FC = () => {
               <CardTitle>Resumo do Contrato</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipo de Contrato</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    {clientInfo.contract_type === 'monthly' ? 'Plano Mensal' : 'Serviço Único'}
+                  </p>
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Horas Contratadas</p>
                   <p className="text-2xl font-bold text-foreground">{formatHours(clientInfo.contracted_hours)}</p>

@@ -113,7 +113,7 @@ export const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data, loading, getClientHours, getProjectHours, getTaskHours, updateClient } = useData();
+  const { data, loading, getClientHours, getClientMonthlyHours, getProjectHours, getTaskHours, updateClient } = useData();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -146,6 +146,7 @@ export const ClientDetail: React.FC = () => {
     source: '',
     notes: '',
     logo_url: '',
+    contract_type: 'one_time' as 'one_time' | 'monthly',
   });
 
   // Client user management state
@@ -166,6 +167,9 @@ export const ClientDetail: React.FC = () => {
   const client = data.clients.find(c => c.id === clientId);
   const clientProjects = data.projects.filter(p => p.client_id === clientId);
   const usedHours = clientId ? getClientHours(clientId) : 0;
+  const monthlyUsedHours = clientId ? getClientMonthlyHours(clientId) : 0;
+  const isMonthly = client?.contract_type === 'monthly';
+  const displayedHours = isMonthly ? monthlyUsedHours : usedHours;
 
   // Fetch client requests
   useEffect(() => {
@@ -451,7 +455,7 @@ export const ClientDetail: React.FC = () => {
   };
 
   const progressPercentage = client && client.contracted_hours > 0 
-    ? Math.min((usedHours / client.contracted_hours) * 100, 100) 
+    ? Math.min((displayedHours / client.contracted_hours) * 100, 100) 
     : 0;
 
   // Initialize edit form when client data is available
@@ -467,6 +471,7 @@ export const ClientDetail: React.FC = () => {
         source: client.source || '',
         notes: client.notes || '',
         logo_url: (client as any).logo_url || '',
+        contract_type: (client as any).contract_type || 'one_time',
       });
     }
   }, [client]);
@@ -812,16 +817,16 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">Horas Usadas</span>
+                <span className="text-sm">{isMonthly ? 'Horas do Mês' : 'Horas Usadas'}</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{formatHours(usedHours)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(displayedHours)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">Horas Contratadas</span>
+                <span className="text-sm">{isMonthly ? 'Horas/Mês' : 'Horas Contratadas'}</span>
               </div>
               <p className="text-2xl font-bold text-foreground">{formatHours(client.contracted_hours)}</p>
             </CardContent>
@@ -830,10 +835,10 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">Disponível</span>
+                <span className="text-sm">{isMonthly ? 'Restante do Mês' : 'Disponível'}</span>
               </div>
               <p className="text-2xl font-bold text-foreground">
-                {formatHours(Math.max(client.contracted_hours - usedHours, 0))}
+                {formatHours(Math.max(client.contracted_hours - displayedHours, 0))}
               </p>
             </CardContent>
           </Card>
@@ -843,12 +848,24 @@ export const ClientDetail: React.FC = () => {
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Utilização de Horas</span>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">
+                  {isMonthly ? `Utilização - ${format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}` : 'Utilização de Horas'}
+                </span>
+                {isMonthly && (
+                  <Badge variant="outline" className="text-xs">Plano Mensal</Badge>
+                )}
+              </div>
               <span className="font-medium text-foreground">
-                {formatHours(usedHours)} de {formatHours(client.contracted_hours)} ({progressPercentage.toFixed(1)}%)
+                {formatHours(displayedHours)} de {formatHours(client.contracted_hours)} ({progressPercentage.toFixed(1)}%)
               </span>
             </div>
             <Progress value={progressPercentage} className="h-2" />
+            {isMonthly && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Total acumulado: {formatHours(usedHours)} desde o início do contrato
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -1479,17 +1496,40 @@ export const ClientDetail: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-contracted-hours">Horas Contratadas</Label>
-                    <Input
-                      id="edit-contracted-hours"
-                      type="number"
-                      min="0"
-                      value={editFormData.contracted_hours}
-                      onChange={(e) => setEditFormData({ ...editFormData, contracted_hours: Number(e.target.value) })}
-                      required
-                      disabled={editSubmitting}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-contracted-hours">Horas Contratadas</Label>
+                      <Input
+                        id="edit-contracted-hours"
+                        type="number"
+                        min="0"
+                        value={editFormData.contracted_hours}
+                        onChange={(e) => setEditFormData({ ...editFormData, contracted_hours: Number(e.target.value) })}
+                        required
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-contract-type">Modelo de Contratação</Label>
+                      <Select 
+                        value={editFormData.contract_type} 
+                        onValueChange={(value: 'one_time' | 'monthly') => setEditFormData({ ...editFormData, contract_type: value })}
+                        disabled={editSubmitting}
+                      >
+                        <SelectTrigger id="edit-contract-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="one_time">Serviço Único</SelectItem>
+                          <SelectItem value="monthly">Plano Mensal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {editFormData.contract_type === 'monthly' 
+                          ? 'Horas renovam automaticamente a cada mês' 
+                          : 'Horas acumulativas desde o início do contrato'}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

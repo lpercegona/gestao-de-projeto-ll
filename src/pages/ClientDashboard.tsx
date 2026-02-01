@@ -38,7 +38,7 @@ export const ClientDashboard: React.FC = () => {
   const { data, loading, getClientHours } = useData();
   const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [clientInfo, setClientInfo] = useState<{ id: string; contracted_hours: number } | null>(null);
+  const [clientInfo, setClientInfo] = useState<{ id: string; contracted_hours: number; contract_type: 'one_time' | 'monthly' } | null>(null);
   const [recentRequestsOpen, setRecentRequestsOpen] = useState(true);
   const [activeProjectsOpen, setActiveProjectsOpen] = useState(true);
 
@@ -59,12 +59,16 @@ export const ClientDashboard: React.FC = () => {
           // Get client info
           const { data: clientData } = await supabase
             .from('clients')
-            .select('id, contracted_hours')
+            .select('id, contracted_hours, contract_type')
             .eq('id', clientUserData.client_id)
             .single();
 
           if (clientData) {
-            setClientInfo(clientData);
+            setClientInfo({
+              id: (clientData as any).id,
+              contracted_hours: (clientData as any).contracted_hours,
+              contract_type: ((clientData as any).contract_type as 'one_time' | 'monthly') || 'one_time',
+            });
           }
 
           // Get project requests
@@ -88,20 +92,36 @@ export const ClientDashboard: React.FC = () => {
     fetchData();
   }, [user]);
 
-  if (loading || loadingRequests) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Calculate statistics
+  // Calculate statistics (moved before early return to avoid hook order issues)
   const activeProjects = data.projects.filter(p => p.status === 'active');
   const pendingTasks = data.tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
   const contractedHours = clientInfo?.contracted_hours || 0;
   const usedHours = clientInfo?.id ? getClientHours(clientInfo.id) : 0;
-  const hoursPercentage = contractedHours > 0 ? Math.min((usedHours / contractedHours) * 100, 100) : 0;
+  const isMonthly = clientInfo?.contract_type === 'monthly';
+  
+  // Calculate monthly hours for monthly clients
+  const monthlyUsedHours = React.useMemo(() => {
+    if (!clientInfo?.id || !isMonthly) return usedHours;
+    
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    const clientProjectsFiltered = data.projects.filter(p => p.client_id === clientInfo.id);
+    const projectIds = new Set(clientProjectsFiltered.map(p => p.id));
+    const clientTaskIds = new Set(data.tasks.filter(t => projectIds.has(t.project_id)).map(t => t.id));
+    
+    return data.timeEntries
+      .filter(e => {
+        if (!clientTaskIds.has(e.task_id)) return false;
+        const entryDate = new Date(e.date);
+        return entryDate >= monthStart && entryDate <= monthEnd;
+      })
+      .reduce((sum, e) => sum + Number(e.hours), 0);
+  }, [clientInfo?.id, isMonthly, data.projects, data.tasks, data.timeEntries, usedHours]);
+  
+  const displayedHours = isMonthly ? monthlyUsedHours : usedHours;
+  const hoursPercentage = contractedHours > 0 ? Math.min((displayedHours / contractedHours) * 100, 100) : 0;
 
   // Request statistics
   const pendingRequests = projectRequests.filter(r => r.status === 'pending');
@@ -112,7 +132,7 @@ export const ClientDashboard: React.FC = () => {
     { label: 'Projetos Ativos', value: activeProjects.length, icon: FolderKanban },
     { label: 'Tarefas Pendentes', value: pendingTasks.length, icon: CheckSquare },
     { label: 'Solicitações Pendentes', value: pendingRequests.length + analyzingRequests.length, icon: FileText },
-    { label: 'Horas Utilizadas', value: formatHours(usedHours), icon: Clock, extra: contractedHours > 0 ? `de ${formatHours(contractedHours)}` : undefined },
+    { label: isMonthly ? 'Horas do Mês' : 'Horas Utilizadas', value: formatHours(displayedHours), icon: Clock, extra: contractedHours > 0 ? `de ${formatHours(contractedHours)}` : undefined },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -131,6 +151,14 @@ export const ClientDashboard: React.FC = () => {
   };
 
   const recentRequests = projectRequests.slice(0, 5);
+
+  if (loading || loadingRequests) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -166,14 +194,21 @@ export const ClientDashboard: React.FC = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Horas Contratadas</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  {isMonthly ? `Horas do Mês - ${format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}` : 'Horas Contratadas'}
+                </span>
+                {isMonthly && (
+                  <Badge variant="outline" className="text-xs">Plano Mensal</Badge>
+                )}
+              </div>
               <span className="text-sm text-muted-foreground">
-                {formatHours(usedHours)} / {formatHours(contractedHours)}
+                {formatHours(displayedHours)} / {formatHours(contractedHours)}
               </span>
             </div>
             <Progress value={hoursPercentage} className="h-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              {formatHours(contractedHours - usedHours)} restantes
+              {formatHours(Math.max(contractedHours - displayedHours, 0))} restantes{isMonthly ? ' este mês' : ''}
             </p>
           </CardContent>
         </Card>
