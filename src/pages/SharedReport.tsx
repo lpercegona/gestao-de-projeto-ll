@@ -51,6 +51,9 @@ interface ClientInfo {
   client_logo_url: string | null;
   contracted_hours: number;
   contract_type: 'one_time' | 'monthly';
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  contract_months: number | null;
   is_public: boolean;
 }
 
@@ -183,6 +186,9 @@ export const SharedReport: React.FC = () => {
           client_logo_url: clientData.client_logo_url || null,
           contracted_hours: clientData.contracted_hours,
           contract_type: clientData.contract_type || 'one_time',
+          contract_start_date: clientData.contract_start_date || null,
+          contract_end_date: clientData.contract_end_date || null,
+          contract_months: clientData.contract_months || 1,
           is_public: clientData.is_public,
         });
 
@@ -481,40 +487,72 @@ export const SharedReport: React.FC = () => {
               <CardTitle>Resumo do Contrato</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tipo de Contrato</p>
-                  <p className="text-lg font-semibold text-foreground">
-                    {clientInfo.contract_type === 'monthly' ? 'Plano Mensal' : 'Serviço Único'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Horas Contratadas</p>
-                  <p className="text-2xl font-bold text-foreground">{formatHours(clientInfo.contracted_hours)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Horas Utilizadas</p>
-                  <p className="text-2xl font-bold text-foreground">{formatHours(totalAllHours)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Horas Restantes</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatHours(Math.max(0, clientInfo.contracted_hours - totalAllHours))}
-                  </p>
-                </div>
-              </div>
-              <div className="w-full bg-muted rounded-full h-3 mt-4">
-                <div
-                  className="bg-primary h-3 rounded-full transition-all"
-                  style={{
-                    width: `${
-                      clientInfo.contracted_hours > 0
-                        ? Math.min((totalAllHours / clientInfo.contracted_hours) * 100, 100)
-                        : 0
-                    }%`,
-                  }}
-                />
-              </div>
+              {(() => {
+                const isMonthly = clientInfo.contract_type === 'monthly';
+                const contractMonths = clientInfo.contract_months || 1;
+                const totalContractHours = isMonthly ? clientInfo.contracted_hours * contractMonths : clientInfo.contracted_hours;
+                const displayedUsedHours = isMonthly ? totalMonthHours : totalAllHours;
+                const displayedContractedHours = isMonthly ? clientInfo.contracted_hours : clientInfo.contracted_hours;
+                const remainingHours = isMonthly ? Math.max(0, clientInfo.contracted_hours - totalMonthHours) : Math.max(0, totalContractHours - totalAllHours);
+                const progressPercentage = isMonthly 
+                  ? (clientInfo.contracted_hours > 0 ? Math.min((totalMonthHours / clientInfo.contracted_hours) * 100, 100) : 0)
+                  : (totalContractHours > 0 ? Math.min((totalAllHours / totalContractHours) * 100, 100) : 0);
+                
+                return (
+                  <>
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tipo de Contrato</p>
+                        <p className="text-lg font-semibold text-foreground">
+                          {isMonthly ? 'Plano Mensal' : 'Serviço Único'}
+                        </p>
+                        {isMonthly && clientInfo.contract_end_date && (
+                          <p className="text-xs text-muted-foreground">
+                            até {format(new Date(clientInfo.contract_end_date), "MMM/yyyy", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {isMonthly ? 'Horas/Mês' : 'Horas Contratadas'}
+                        </p>
+                        <p className="text-2xl font-bold text-foreground">{formatHours(displayedContractedHours)}</p>
+                        {isMonthly && (
+                          <p className="text-xs text-muted-foreground">Total: {formatHours(totalContractHours)}</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {isMonthly ? 'Horas do Mês' : 'Horas Utilizadas'}
+                        </p>
+                        <p className="text-2xl font-bold text-foreground">{formatHours(displayedUsedHours)}</p>
+                        {isMonthly && (
+                          <p className="text-xs text-muted-foreground">Total: {formatHours(totalAllHours)}</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {isMonthly ? 'Restante do Mês' : 'Horas Restantes'}
+                        </p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {formatHours(remainingHours)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-3 mt-4">
+                      <div
+                        className="bg-primary h-3 rounded-full transition-all"
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                    </div>
+                    {isMonthly && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Progresso do mês selecionado ({format(new Date(selectedMonth + '-01'), "MMMM 'de' yyyy", { locale: ptBR })})
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
 

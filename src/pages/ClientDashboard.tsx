@@ -38,7 +38,7 @@ export const ClientDashboard: React.FC = () => {
   const { data, loading, getClientHours } = useData();
   const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [clientInfo, setClientInfo] = useState<{ id: string; contracted_hours: number; contract_type: 'one_time' | 'monthly' } | null>(null);
+  const [clientInfo, setClientInfo] = useState<{ id: string; contracted_hours: number; contract_type: 'one_time' | 'monthly'; contract_end_date: string | null } | null>(null);
   const [recentRequestsOpen, setRecentRequestsOpen] = useState(true);
   const [activeProjectsOpen, setActiveProjectsOpen] = useState(true);
 
@@ -59,7 +59,7 @@ export const ClientDashboard: React.FC = () => {
           // Get client info
           const { data: clientData } = await supabase
             .from('clients')
-            .select('id, contracted_hours, contract_type')
+            .select('id, contracted_hours, contract_type, contract_end_date')
             .eq('id', clientUserData.client_id)
             .single();
 
@@ -68,6 +68,7 @@ export const ClientDashboard: React.FC = () => {
               id: (clientData as any).id,
               contracted_hours: (clientData as any).contracted_hours,
               contract_type: ((clientData as any).contract_type as 'one_time' | 'monthly') || 'one_time',
+              contract_end_date: (clientData as any).contract_end_date || null,
             });
           }
 

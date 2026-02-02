@@ -66,6 +66,10 @@ export const ClientPortal: React.FC = () => {
         access_token: '', // Not exposed for security
         user_id: null,
         created_at: '',
+        contract_type: 'one_time',
+        contract_start_date: null,
+        contract_end_date: null,
+        contract_months: null,
       };
       setClient(displayClient);
 
