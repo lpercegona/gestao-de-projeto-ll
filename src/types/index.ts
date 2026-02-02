@@ -6,6 +6,10 @@ export interface Client {
   access_token: string;
   user_id: string | null;
   created_at: string;
+  contract_type: 'one_time' | 'monthly';
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  contract_months: number | null;
 }
 
 export interface ProjectColumn {

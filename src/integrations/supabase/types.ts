@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_hours_history: {
+        Row: {
+          client_id: string
+          contracted_hours: number
+          created_at: string | null
+          id: string
+          period_month: number
+          period_year: number
+          used_hours: number
+        }
+        Insert: {
+          client_id: string
+          contracted_hours: number
+          created_at?: string | null
+          id?: string
+          period_month: number
+          period_year: number
+          used_hours?: number
+        }
+        Update: {
+          client_id?: string
+          contracted_hours?: number
+          created_at?: string | null
+          id?: string
+          period_month?: number
+          period_year?: number
+          used_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_hours_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           client_id: string
@@ -53,6 +91,10 @@ export type Database = {
         Row: {
           access_token: string
           company: string | null
+          contract_end_date: string | null
+          contract_months: number | null
+          contract_start_date: string | null
+          contract_type: string
           contracted_hours: number
           converted_at: string | null
           created_at: string
@@ -73,6 +115,10 @@ export type Database = {
         Insert: {
           access_token?: string
           company?: string | null
+          contract_end_date?: string | null
+          contract_months?: number | null
+          contract_start_date?: string | null
+          contract_type?: string
           contracted_hours?: number
           converted_at?: string | null
           created_at?: string
@@ -93,6 +139,10 @@ export type Database = {
         Update: {
           access_token?: string
           company?: string | null
+          contract_end_date?: string | null
+          contract_months?: number | null
+          contract_start_date?: string | null
+          contract_type?: string
           contracted_hours?: number
           converted_at?: string | null
           created_at?: string
@@ -1169,6 +1219,9 @@ export type Database = {
           client_id: string
           client_logo_url: string
           client_name: string
+          contract_end_date: string
+          contract_months: number
+          contract_start_date: string
           contract_type: string
           contracted_hours: number
           is_public: boolean

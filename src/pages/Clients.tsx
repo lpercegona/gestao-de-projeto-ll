@@ -12,6 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatHours } from '@/lib/formatHours';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
   Select,
   SelectContent,
@@ -36,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX, Calendar, RefreshCw, Clock } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,11 +58,15 @@ interface Client {
   phone?: string | null;
   source?: string | null;
   notes?: string | null;
+  contract_type?: 'one_time' | 'monthly';
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
+  contract_months?: number | null;
 }
 
 export const Clients: React.FC = () => {
   const navigate = useNavigate();
-  const { data, loading, createClient, updateClient, deleteClient, getClientHours } = useData();
+  const { data, loading, createClient, updateClient, deleteClient, getClientHours, getClientMonthlyHours } = useData();
   const [activeTab, setActiveTab] = useState<'lead' | 'proposal' | 'active' | 'churned'>('lead');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -76,6 +82,7 @@ export const Clients: React.FC = () => {
     pipeline_status: 'lead',
     source: '',
     notes: '',
+    contract_type: 'one_time' as 'one_time' | 'monthly',
   });
 
   // Filter clients by pipeline status
@@ -100,6 +107,7 @@ export const Clients: React.FC = () => {
         pipeline_status: client.pipeline_status || 'lead',
         source: client.source || '',
         notes: client.notes || '',
+        contract_type: client.contract_type || 'one_time',
       });
     } else {
       setEditingClient(null);
@@ -112,6 +120,7 @@ export const Clients: React.FC = () => {
         pipeline_status: 'lead',
         source: '',
         notes: '',
+        contract_type: 'one_time',
       });
     }
     setIsDialogOpen(true);
@@ -214,8 +223,13 @@ export const Clients: React.FC = () => {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredClients.map((client) => {
-            const usedHours = getClientHours(client.id);
+            const isMonthly = (client as any).contract_type === 'monthly';
+            const totalUsedHours = getClientHours(client.id);
+            const monthlyUsedHours = getClientMonthlyHours(client.id);
+            const displayedHours = isMonthly ? monthlyUsedHours : totalUsedHours;
             const projectCount = data.projects.filter(p => p.client_id === client.id).length;
+            const contractEndDate = (client as any).contract_end_date;
+            
             return (
               <Card 
                 key={client.id} 
@@ -223,7 +237,7 @@ export const Clients: React.FC = () => {
                 onClick={() => navigate(`/clients/${client.id}`)}
               >
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-foreground">{client.company || client.name}</h3>
                       <p className="text-sm text-muted-foreground">{client.email}</p>
@@ -255,21 +269,42 @@ export const Clients: React.FC = () => {
                     </div>
                   </div>
                   
+                  {/* Contract type and period badges */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <Badge variant={isMonthly ? "default" : "secondary"} className="text-xs">
+                      {isMonthly ? (
+                        <><RefreshCw className="w-3 h-3 mr-1" />Plano Mensal</>
+                      ) : (
+                        <><Clock className="w-3 h-3 mr-1" />Serviço Único</>
+                      )}
+                    </Badge>
+                    {contractEndDate && (
+                      <Badge variant="outline" className="text-xs">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        até {format(new Date(contractEndDate), "MMM/yy", { locale: ptBR })}
+                      </Badge>
+                    )}
+                  </div>
+                  
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Projetos:</span>
                       <span className="font-medium text-foreground">{projectCount}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Horas usadas:</span>
-                      <span className="font-medium text-foreground">{formatHours(usedHours)} / {formatHours(client.contracted_hours)}</span>
+                      <span className="text-muted-foreground">
+                        {isMonthly ? `Horas (${format(new Date(), "MMM/yy", { locale: ptBR })})` : 'Horas usadas'}:
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {formatHours(displayedHours)} / {formatHours(client.contracted_hours)}
+                      </span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2 mt-2">
                       <div
                         className="bg-primary h-2 rounded-full transition-all"
                         style={{ 
                           width: `${client.contracted_hours > 0 
-                            ? Math.min((usedHours / client.contracted_hours) * 100, 100) 
+                            ? Math.min((displayedHours / client.contracted_hours) * 100, 100) 
                             : 0}%` 
                         }}
                       />
@@ -356,15 +391,36 @@ export const Clients: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="source">Origem</Label>
-                    <Input
-                      id="source"
-                      value={formData.source}
-                      onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                      placeholder="Ex: Indicação, Google, etc."
+                    <Label htmlFor="contract_type">Modelo de Contratação</Label>
+                    <Select
+                      value={formData.contract_type}
+                      onValueChange={(value: 'one_time' | 'monthly') => setFormData({ ...formData, contract_type: value })}
                       disabled={submitting}
-                    />
+                    >
+                      <SelectTrigger id="contract_type">
+                        <SelectValue placeholder="Selecione o modelo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="one_time">Serviço Único</SelectItem>
+                        <SelectItem value="monthly">Plano Mensal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.contract_type === 'monthly' 
+                        ? 'Horas renovam a cada mês' 
+                        : 'Horas acumulativas desde o início'}
+                    </p>
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="source">Origem</Label>
+                  <Input
+                    id="source"
+                    value={formData.source}
+                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                    placeholder="Ex: Indicação, Google, etc."
+                    disabled={submitting}
+                  />
                 </div>
               </div>
 

@@ -18,10 +18,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Loader2, Users, User } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Users, User, RefreshCw, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
+import { Badge } from '@/components/ui/badge';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
 
 export const Reports: React.FC = () => {
@@ -438,6 +439,9 @@ export const Reports: React.FC = () => {
             <div className="space-y-6">
               {reportDataByClient.map((clientData) => {
                 const isExpanded = expandedClients.has(clientData.id);
+                const isMonthly = (clientData as any).contract_type === 'monthly';
+                const displayedUsedHours = isMonthly ? clientData.monthHours : clientData.totalHours;
+                const remainingHours = Math.max(0, clientData.contracted_hours - displayedUsedHours);
                 
                 return (
                   <Card key={clientData.id} className="overflow-hidden">
@@ -452,10 +456,19 @@ export const Reports: React.FC = () => {
                                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
                               )}
                               <div>
-                                <CardTitle className="text-lg">{clientData.company || clientData.name}</CardTitle>
+                                <div className="flex items-center gap-2">
+                                  <CardTitle className="text-lg">{clientData.company || clientData.name}</CardTitle>
+                                  <Badge variant={isMonthly ? "default" : "secondary"} className="text-xs">
+                                    {isMonthly ? (
+                                      <><RefreshCw className="w-3 h-3 mr-1" />Mensal</>
+                                    ) : (
+                                      <><Clock className="w-3 h-3 mr-1" />Único</>
+                                    )}
+                                  </Badge>
+                                </div>
                                 <p className="text-sm text-muted-foreground">
                                   {clientData.projects.length} projeto{clientData.projects.length !== 1 ? 's' : ''} • 
-                                  Contratado: {clientData.contracted_hours}h
+                                  Contratado: {formatHours(clientData.contracted_hours)}{isMonthly ? '/mês' : ''}
                                 </p>
                               </div>
                             </div>
@@ -479,12 +492,12 @@ export const Reports: React.FC = () => {
                           {/* Client summary */}
                           <div className="grid gap-4 grid-cols-2 md:grid-cols-5 p-4 bg-muted/50 rounded-lg">
                             <div>
-                              <p className="text-sm text-muted-foreground">Horas Contratadas</p>
+                              <p className="text-sm text-muted-foreground">{isMonthly ? 'Horas/Mês' : 'Horas Contratadas'}</p>
                               <p className="text-lg font-bold text-foreground">{formatHours(clientData.contracted_hours)}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">Total Utilizado</p>
-                              <p className="text-lg font-bold text-foreground">{formatHours(clientData.totalHours)}</p>
+                              <p className="text-sm text-muted-foreground">{isMonthly ? 'Usado no Mês' : 'Total Utilizado'}</p>
+                              <p className="text-lg font-bold text-foreground">{formatHours(displayedUsedHours)}</p>
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">Horas em Tarefas</p>
@@ -495,10 +508,8 @@ export const Reports: React.FC = () => {
                               <p className="text-lg font-bold text-accent-foreground">{formatHours(clientData.monthMeetingHours)}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-muted-foreground">Restante</p>
-                              <p className="text-lg font-bold text-foreground">
-                                {formatHours(Math.max(0, clientData.contracted_hours - clientData.totalHours))}
-                              </p>
+                              <p className="text-sm text-muted-foreground">{isMonthly ? 'Restante do Mês' : 'Restante'}</p>
+                              <p className="text-lg font-bold text-foreground">{formatHours(remainingHours)}</p>
                             </div>
                           </div>
                           
@@ -508,7 +519,7 @@ export const Reports: React.FC = () => {
                               className="bg-primary h-2 rounded-full transition-all"
                               style={{ 
                                 width: `${clientData.contracted_hours > 0 
-                                  ? Math.min((clientData.totalHours / clientData.contracted_hours) * 100, 100) 
+                                  ? Math.min((displayedUsedHours / clientData.contracted_hours) * 100, 100) 
                                   : 0}%` 
                               }}
                             />

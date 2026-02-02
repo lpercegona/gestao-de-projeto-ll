@@ -20,6 +20,9 @@ interface Client {
   notes: string | null;
   converted_at: string | null;
   contract_type: 'one_time' | 'monthly';
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  contract_months: number | null;
 }
 
 interface ProjectColumn {
@@ -201,6 +204,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clients: (clientsRes.data || []).map(c => ({
           ...c,
           contract_type: (c as any).contract_type || 'one_time',
+          contract_start_date: (c as any).contract_start_date || null,
+          contract_end_date: (c as any).contract_end_date || null,
+          contract_months: (c as any).contract_months || 1,
         })) as Client[],
         projects: (projectsRes.data || []).map(p => ({
           ...p,
@@ -255,6 +261,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const clientWithDefaults = {
       ...newClient,
       contract_type: (newClient as any).contract_type || 'one_time',
+      contract_start_date: (newClient as any).contract_start_date || null,
+      contract_end_date: (newClient as any).contract_end_date || null,
+      contract_months: (newClient as any).contract_months || 1,
     } as Client;
 
     // Update local state immediately
@@ -281,6 +290,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const clientWithDefaults = {
       ...updated,
       contract_type: (updated as any).contract_type || 'one_time',
+      contract_start_date: (updated as any).contract_start_date || null,
+      contract_end_date: (updated as any).contract_end_date || null,
+      contract_months: (updated as any).contract_months || 1,
     } as Client;
 
     // Update local state immediately

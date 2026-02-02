@@ -14,7 +14,7 @@ import { UpcomingDeadlines, DeadlineItem } from '@/components/dashboard/Upcoming
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
 
 export const Dashboard: React.FC = () => {
-  const { data, loading, getClientHours } = useData();
+  const { data, loading, getClientHours, getClientMonthlyHours } = useData();
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [hoursClientOpen, setHoursClientOpen] = useState(false);
   const [recentEntriesOpen, setRecentEntriesOpen] = useState(false);
@@ -285,11 +285,13 @@ export const Dashboard: React.FC = () => {
                 ) : (
                   <ul className="space-y-3">
                     {data.clients.slice(0, 5).map((client) => {
-                      const usedHours = getClientHours(client.id);
-                      const percentage = client.contracted_hours > 0 
-                        ? Math.min((usedHours / client.contracted_hours) * 100, 100)
-                        : 0;
                       const isMonthly = (client as any).contract_type === 'monthly';
+                      const totalUsedHours = getClientHours(client.id);
+                      const monthlyUsedHours = getClientMonthlyHours(client.id);
+                      const displayedHours = isMonthly ? monthlyUsedHours : totalUsedHours;
+                      const percentage = client.contracted_hours > 0 
+                        ? Math.min((displayedHours / client.contracted_hours) * 100, 100)
+                        : 0;
                       return (
                         <li key={client.id} className="py-2 border-b border-border last:border-0">
                           <div className="flex justify-between mb-1">
@@ -300,7 +302,7 @@ export const Dashboard: React.FC = () => {
                               )}
                             </div>
                             <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                              {formatHours(usedHours)} / {formatHours(client.contracted_hours)}
+                              {formatHours(displayedHours)} / {formatHours(client.contracted_hours)}
                             </span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-2">
