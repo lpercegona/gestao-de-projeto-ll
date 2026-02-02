@@ -1,340 +1,241 @@
 
+## Plano: Correções do Sistema de Modelo de Contratação e Adição de Duração de Contrato
 
-## Plano: Sistema de Modelo de Contratação (Serviço Único vs Plano Mensal)
+### Problema Identificado
 
-Este plano implementa a diferenciação entre dois modelos de contratação de clientes, afetando a forma como as horas são calculadas, exibidas e registradas historicamente.
+A coluna `contract_type` **não existe no banco de dados**. A migração anterior atualizou apenas a função RPC mas não adicionou a coluna à tabela `clients`. Isso está causando comportamentos inconsistentes em toda a plataforma.
 
----
-
-### Visão Geral dos Modelos
-
-| Modelo | Comportamento |
-|--------|---------------|
-| **Serviço Único (one_time)** | Horas contratadas são fixas e acumulativas. Consumo total desde o início. |
-| **Plano Mensal (monthly)** | Horas renovam a cada mês. Histórico mantido por período. Reset automático. |
+Além disso, faltam campos para gerenciar a duração do contrato (início, término, meses) que são necessários para calcular corretamente as horas totais em contratos mensais.
 
 ---
 
-### Alterações no Banco de Dados
+### Alterações Necessárias
 
-#### 1. Nova coluna na tabela `clients`
+#### 1. Migração do Banco de Dados
+
+Adicionar as seguintes colunas à tabela `clients`:
 
 ```sql
-ALTER TABLE clients 
-ADD COLUMN contract_type TEXT NOT NULL DEFAULT 'one_time';
+-- Adicionar coluna de tipo de contrato
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS contract_type TEXT NOT NULL DEFAULT 'one_time';
 
--- Valores válidos: 'one_time' (serviço único) ou 'monthly' (plano mensal)
+-- Adicionar campos de período do contrato
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS contract_start_date DATE;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS contract_end_date DATE;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS contract_months INTEGER DEFAULT 1;
 ```
 
-#### 2. Nova tabela para histórico mensal de horas
+Também criar a tabela de histórico mensal:
 
 ```sql
-CREATE TABLE client_hours_history (
+CREATE TABLE IF NOT EXISTS client_hours_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   period_year INTEGER NOT NULL,
   period_month INTEGER NOT NULL,
   contracted_hours INTEGER NOT NULL,
   used_hours NUMERIC NOT NULL DEFAULT 0,
-  task_hours NUMERIC NOT NULL DEFAULT 0,
-  meeting_hours NUMERIC NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(client_id, period_year, period_month)
 );
-
--- Habilitar RLS
-ALTER TABLE client_hours_history ENABLE ROW LEVEL SECURITY;
-
--- Políticas
-CREATE POLICY "Admin can manage own client history"
-ON client_hours_history FOR ALL
-USING (has_role(auth.uid(), 'admin') AND EXISTS (
-  SELECT 1 FROM clients c WHERE c.id = client_hours_history.client_id AND c.owner_id = auth.uid()
-));
-
-CREATE POLICY "Master admin can manage all history"
-ON client_hours_history FOR ALL
-USING (is_master_admin(auth.uid()));
-
-CREATE POLICY "Clients can view own history"
-ON client_hours_history FOR SELECT
-USING (client_id = get_user_client_id(auth.uid()));
-```
-
-#### 3. Trigger para consolidar histórico mensal
-
-```sql
-CREATE OR REPLACE FUNCTION consolidate_monthly_hours()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_client_id UUID;
-  v_month INTEGER;
-  v_year INTEGER;
-  v_contract_type TEXT;
-  v_contracted_hours INTEGER;
-BEGIN
-  -- Obter client_id através de task -> project -> client
-  SELECT p.client_id, c.contract_type, c.contracted_hours
-  INTO v_client_id, v_contract_type, v_contracted_hours
-  FROM tasks t
-  JOIN projects p ON p.id = t.project_id
-  JOIN clients c ON c.id = p.client_id
-  WHERE t.id = NEW.task_id;
-
-  IF v_client_id IS NULL OR v_contract_type != 'monthly' THEN
-    RETURN NEW;
-  END IF;
-
-  v_year := EXTRACT(YEAR FROM NEW.date);
-  v_month := EXTRACT(MONTH FROM NEW.date);
-
-  -- Upsert histórico mensal
-  INSERT INTO client_hours_history (client_id, period_year, period_month, contracted_hours, used_hours, task_hours, meeting_hours)
-  VALUES (v_client_id, v_year, v_month, v_contracted_hours, NEW.hours, 
-    CASE WHEN NEW.entry_type = 'task' THEN NEW.hours ELSE 0 END,
-    CASE WHEN NEW.entry_type = 'meeting' THEN NEW.hours ELSE 0 END)
-  ON CONFLICT (client_id, period_year, period_month)
-  DO UPDATE SET
-    used_hours = client_hours_history.used_hours + NEW.hours,
-    task_hours = client_hours_history.task_hours + CASE WHEN NEW.entry_type = 'task' THEN NEW.hours ELSE 0 END,
-    meeting_hours = client_hours_history.meeting_hours + CASE WHEN NEW.entry_type = 'meeting' THEN NEW.hours ELSE 0 END,
-    updated_at = now();
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_consolidate_monthly_hours
-AFTER INSERT ON time_entries
-FOR EACH ROW EXECUTE FUNCTION consolidate_monthly_hours();
 ```
 
 ---
 
-### Alterações na Interface do Cliente
+#### 2. Interface Client (DataContext.tsx)
 
-#### Arquivo: `src/contexts/DataContext.tsx`
-
-Atualizar interface do Client:
-
-```typescript
-interface Client {
-  // ... campos existentes
-  contract_type: 'one_time' | 'monthly';
-}
-```
-
-Adicionar nova função para horas do mês atual:
-
-```typescript
-const getClientMonthlyHours = (clientId: string, year?: number, month?: number): number => {
-  const now = new Date();
-  const targetYear = year ?? now.getFullYear();
-  const targetMonth = month ?? now.getMonth() + 1;
-  
-  const monthStart = new Date(targetYear, targetMonth - 1, 1);
-  const monthEnd = new Date(targetYear, targetMonth, 0);
-  
-  return data.timeEntries
-    .filter(e => {
-      const entryDate = new Date(e.date);
-      const task = data.tasks.find(t => t.id === e.task_id);
-      const project = task ? data.projects.find(p => p.id === task.project_id) : null;
-      return project?.client_id === clientId && 
-             entryDate >= monthStart && 
-             entryDate <= monthEnd;
-    })
-    .reduce((sum, e) => sum + Number(e.hours), 0);
-};
-```
+Atualizar a interface `Client` para incluir:
+- `contract_type`
+- `contract_start_date`
+- `contract_end_date`  
+- `contract_months`
 
 ---
 
-### Alterações na UI
+#### 3. Página de Listagem de Clientes (Clients.tsx)
 
-#### 1. Formulário de Edição de Cliente (`ClientDetail.tsx`)
-
-Adicionar campo de seleção do tipo de contratação:
-
-```tsx
-<div className="space-y-2">
-  <Label>Modelo de Contratação</Label>
-  <Select 
-    value={editFormData.contract_type} 
-    onValueChange={(v) => setEditFormData({...editFormData, contract_type: v})}
-  >
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="one_time">Serviço Único</SelectItem>
-      <SelectItem value="monthly">Plano Mensal</SelectItem>
-    </SelectContent>
-  </Select>
-  <p className="text-xs text-muted-foreground">
-    {editFormData.contract_type === 'monthly' 
-      ? 'Horas renovam automaticamente a cada mês' 
-      : 'Horas acumulativas desde o início do contrato'}
-  </p>
-</div>
-```
-
-#### 2. Exibição de Horas no ClientDetail
-
-Modificar a seção de métricas para mostrar diferente baseado no tipo:
-
-```tsx
-{/* Para clientes mensais */}
-{client.contract_type === 'monthly' ? (
-  <Card>
-    <CardContent className="py-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">Plano Mensal</Badge>
-          <span className="text-sm text-muted-foreground">
-            {format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
-          </span>
-        </div>
-        <span className="font-medium">
-          {formatHours(monthlyUsedHours)} / {formatHours(client.contracted_hours)}
-        </span>
-      </div>
-      <Progress value={monthlyPercentage} />
-      <p className="text-xs text-muted-foreground mt-1">
-        {formatHours(client.contracted_hours - monthlyUsedHours)} restantes este mês
-      </p>
-    </CardContent>
-  </Card>
-) : (
-  // Exibição atual para serviço único
-)}
-```
-
-#### 3. Dashboard Admin (`Dashboard.tsx`)
-
-Modificar exibição de horas por cliente para respeitar o tipo:
-
-```tsx
-{client.contract_type === 'monthly' && (
-  <Badge variant="outline" className="text-xs ml-2">Mensal</Badge>
-)}
-```
-
-#### 4. ClientDashboard (área do cliente)
-
-Modificar para exibir horas do mês atual quando aplicável:
-
-```tsx
-const monthlyUsedHours = clientInfo?.contract_type === 'monthly' 
-  ? getClientMonthlyHours(clientInfo.id)
-  : usedHours;
-```
-
-#### 5. Relatórios (`Reports.tsx`)
-
-Adicionar indicador visual do tipo de contratação e exibir histórico mensal quando aplicável.
-
-#### 6. SharedReport
-
-Atualizar a função RPC `get_shared_report` para incluir `contract_type`:
-
-```sql
--- Adicionar ao retorno da função
-SELECT 
-  c.id as client_id,
-  c.name as client_name,
-  c.company as client_company,
-  c.logo_url as client_logo_url,
-  c.contracted_hours,
-  c.contract_type,  -- NOVO
-  rs.is_public
-FROM report_shares rs
-JOIN clients c ON c.id = rs.client_id
-WHERE rs.share_token = p_token AND rs.is_public = true;
-```
-
-Exibir no relatório compartilhado:
-
-```tsx
-<div>
-  <p className="text-sm text-muted-foreground">Tipo de Contrato</p>
-  <p className="text-lg font-semibold">
-    {clientInfo.contract_type === 'monthly' ? 'Plano Mensal' : 'Serviço Único'}
-  </p>
-</div>
-```
-
-#### 7. Contrato Público (`PublicContract.tsx`)
-
-Exibir o tipo de contratação no resumo do contrato.
-
----
-
-### Arquivos a Serem Modificados
-
-| Arquivo | Alteração |
-|---------|-----------|
-| **Migrations** | Nova coluna `contract_type` em clients, nova tabela `client_hours_history`, trigger |
-| `src/contexts/DataContext.tsx` | Adicionar interface e função `getClientMonthlyHours` |
-| `src/pages/ClientDetail.tsx` | Campo de seleção do tipo + exibição condicional de horas |
-| `src/pages/Dashboard.tsx` | Badge indicando tipo de contratação |
-| `src/pages/ClientDashboard.tsx` | Exibir horas do mês quando mensal |
-| `src/pages/Reports.tsx` | Indicador visual e suporte a histórico |
-| `src/pages/SharedReport.tsx` | Exibir tipo de contratação |
-| `src/pages/PublicContract.tsx` | Exibir tipo de contratação |
-| Funções RPC | Atualizar `get_shared_report` para incluir `contract_type` |
-
----
-
-### Fluxo de Exibição por Modelo
+**Modificações nos Cards:**
+- Calcular horas utilizadas baseado no tipo de contrato (mensal = mês atual)
+- Adicionar badge de tipo de contrato (Serviço Único / Plano Mensal)
+- Mostrar período do contrato quando definido
+- Ajustar barra de progresso para responder ao tipo de contrato
 
 ```text
-SERVIÇO ÚNICO (one_time):
-┌────────────────────────────────────────┐
-│ Horas Contratadas: 100h                │
-│ Horas Utilizadas: 45h (desde início)   │
-│ Disponível: 55h                        │
-│ [████████████░░░░░░░░░░░░░░░░░] 45%   │
-└────────────────────────────────────────┘
-
-PLANO MENSAL (monthly):
-┌────────────────────────────────────────┐
-│ 🔄 Plano Mensal - Janeiro 2026         │
-│ Horas do Mês: 20h contratadas          │
-│ Utilizadas: 8h / 20h                   │
-│ Disponível este mês: 12h               │
-│ [████████░░░░░░░░░░░░░░░░░░░░░] 40%   │
-│                                        │
-│ 📊 Ver histórico de meses anteriores   │
-└────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Nome da Empresa                         │
+│ email@empresa.com                       │
+│                                         │
+│ 🏷️ Plano Mensal  📅 Jan/26 - Dez/26    │
+│                                         │
+│ Projetos: 5                             │
+│ Horas: 15h / 20h (mês atual)           │
+│ [████████████░░░░░░░░░░░░░░░░░] 75%    │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-### Comportamento do Reset Mensal
+#### 4. Formulário de Edição de Cliente (Clients.tsx + ClientDetail.tsx)
 
-Para clientes com `contract_type = 'monthly'`:
+Adicionar campos ao formulário:
+- Modelo de Contratação (Select: Serviço Único / Plano Mensal)
+- Data de Início do Contrato (DatePicker)
+- Data de Término do Contrato (DatePicker)
+- Duração em Meses (Input number - calculado automaticamente ou manual)
 
-1. **Cálculo de horas**: Filtra `time_entries` pelo mês/ano atual
-2. **Histórico**: A tabela `client_hours_history` mantém registro consolidado por período
-3. **Relatórios**: Podem mostrar comparativo mês a mês
-4. **Não há ação automática de reset** - o cálculo é dinâmico baseado na data
+---
+
+#### 5. Dashboard Admin (Dashboard.tsx)
+
+**Seção "Horas por Cliente":**
+- Para clientes mensais: mostrar horas do mês atual
+- Adicionar badge "Mensal" no card
+- Ajustar cálculo da barra de progresso
+
+---
+
+#### 6. Dashboard do Cliente (ClientDashboard.tsx)
+
+Já implementado parcialmente, mas precisa:
+- Buscar campos de período do banco
+- Mostrar informações de período quando disponível
+
+---
+
+#### 7. Perfil do Cliente (ClientDetail.tsx)
+
+**Visão Geral (Cards de métricas):**
+- Para planos mensais: calcular total de horas do contrato
+  ```
+  Total do Contrato = contracted_hours × contract_months
+  ```
+- Barra de progresso responde ao total (não apenas ao mês)
+- Exibir período do contrato
+
+---
+
+#### 8. Relatório Compartilhado (SharedReport.tsx)
+
+**Resumo do Contrato:**
+- Para planos mensais: exibir horas do mês selecionado vs horas contratadas/mês
+- Adicionar período do contrato
+- Progress bar responde ao filtro de mês
+
+---
+
+#### 9. Relatórios Admin (Reports.tsx)
+
+**Vista por Cliente:**
+- Para clientes mensais: exibir horas do mês selecionado
+- Badge indicando tipo de contrato
+- Ajustar cálculo de "Restante" para considerar mês
+
+---
+
+#### 10. Contrato Público (PublicContract.tsx)
+
+- Adicionar exibição do tipo de contratação
+- Mostrar duração do contrato
+
+---
+
+### Arquivos a Modificar
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `Nova migração SQL` | Adicionar colunas `contract_type`, `contract_start_date`, `contract_end_date`, `contract_months` |
+| `src/contexts/DataContext.tsx` | Atualizar interface Client com novos campos |
+| `src/types/index.ts` | Atualizar interface Client |
+| `src/pages/Clients.tsx` | Cards com tipo de contrato, período e horas mensais |
+| `src/pages/ClientDetail.tsx` | Campos no formulário de edição + métricas ajustadas |
+| `src/pages/Dashboard.tsx` | Horas por cliente respeitando tipo de contrato |
+| `src/pages/ClientDashboard.tsx` | Ajustes para período do contrato |
+| `src/pages/Reports.tsx` | Badge de tipo e horas mensais para clientes mensais |
+| `src/pages/SharedReport.tsx` | Resumo do contrato com horas do mês selecionado |
+| `src/pages/PublicContract.tsx` | Exibir tipo de contratação |
+
+---
+
+### Lógica de Cálculo
+
+**Para Serviço Único (one_time):**
+```
+Horas Totais = Todas as time_entries desde o início
+Contratado = contracted_hours
+```
+
+**Para Plano Mensal (monthly):**
+```
+Horas do Mês = time_entries filtradas pelo mês/ano selecionado
+Contratado/Mês = contracted_hours
+Total do Contrato = contracted_hours × contract_months
+```
+
+---
+
+### Fluxo Visual
+
+```text
+CARDS NA LISTAGEM:
+┌──────────────────────────────────────────┐
+│ Empresa ABC                              │
+│ contato@empresaabc.com                   │
+│                                          │
+│ 🔄 Plano Mensal    📅 Jan - Dez 2026    │
+│                                          │
+│ Projetos: 3                              │
+│ Horas (Fev/2026): 12h / 20h             │
+│ [█████████████░░░░░░░░░░░░░░░░░] 60%    │
+└──────────────────────────────────────────┘
+
+PERFIL DO CLIENTE:
+┌──────────────────────────────────────────┐
+│ VISÃO GERAL DO CONTRATO                  │
+│                                          │
+│ Tipo: Plano Mensal                       │
+│ Período: Jan/2026 - Dez/2026 (12 meses) │
+│                                          │
+│ Horas/Mês: 20h                           │
+│ Total do Contrato: 240h (12 × 20h)       │
+│                                          │
+│ Utilizado até agora: 45h                 │
+│ [███░░░░░░░░░░░░░░░░░░░░░░░░░░░] 19%    │
+└──────────────────────────────────────────┘
+```
 
 ---
 
 ### Seção Técnica
 
-**Lógica de cálculo dinâmico (sem job):**
-- Horas mensais são calculadas em tempo real filtrando `time_entries` pelo período
-- A tabela `client_hours_history` serve apenas para histórico/relatórios rápidos
-- Trigger consolida automaticamente quando novo time_entry é inserido
+**Nova lógica de cálculo de horas totais do contrato:**
+```typescript
+const getTotalContractHours = (client: Client) => {
+  if (client.contract_type === 'monthly') {
+    const months = client.contract_months || 1;
+    return client.contracted_hours * months;
+  }
+  return client.contracted_hours;
+};
+```
 
-**Compatibilidade retroativa:**
-- Clientes existentes terão `contract_type = 'one_time'` por padrão
-- Comportamento atual permanece inalterado para esses clientes
+**Função para calcular horas restantes considerando período:**
+```typescript
+const getContractRemainingHours = (client: Client, totalUsed: number) => {
+  const totalContract = getTotalContractHours(client);
+  return Math.max(0, totalContract - totalUsed);
+};
+```
 
-**Performance:**
-- Índice recomendado: `CREATE INDEX idx_time_entries_date ON time_entries(date);`
-- Histórico pré-calculado evita recálculos pesados em relatórios
+---
 
+### Ordem de Implementação
+
+1. **Migração do banco** - Adicionar colunas faltantes
+2. **DataContext.tsx** - Atualizar interface e busca de dados
+3. **ClientDetail.tsx** - Campos de edição + exibição ajustada
+4. **Clients.tsx** - Cards com informações de contrato
+5. **Dashboard.tsx** - Horas mensais para clientes mensais
+6. **Reports.tsx** - Ajustes na vista por cliente
+7. **SharedReport.tsx** - Resumo do contrato com mês
+8. **ClientDashboard.tsx** - Verificar consistência
+9. **PublicContract.tsx** - Tipo de contratação
