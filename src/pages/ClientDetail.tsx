@@ -54,7 +54,10 @@ import {
   UserPlus,
   Mail,
   Trash2,
+  CalendarIcon,
 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import { WysiwygEditor, WysiwygContent } from '@/components/ui/wysiwyg-editor';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
@@ -147,6 +150,9 @@ export const ClientDetail: React.FC = () => {
     notes: '',
     logo_url: '',
     contract_type: 'one_time' as 'one_time' | 'monthly',
+    contract_start_date: null as string | null,
+    contract_end_date: null as string | null,
+    contract_months: 1 as number | null,
   });
 
   // Client user management state
@@ -471,7 +477,10 @@ export const ClientDetail: React.FC = () => {
         source: client.source || '',
         notes: client.notes || '',
         logo_url: (client as any).logo_url || '',
-        contract_type: (client as any).contract_type || 'one_time',
+        contract_type: client.contract_type || 'one_time',
+        contract_start_date: client.contract_start_date || null,
+        contract_end_date: client.contract_end_date || null,
+        contract_months: client.contract_months || 1,
       });
     }
   }, [client]);
@@ -895,6 +904,20 @@ export const ClientDetail: React.FC = () => {
                   {getPipelineStatusBadge(client.pipeline_status)}
                 </div>
               </div>
+              {isMonthly && (
+                <div>
+                  <span className="text-xs text-muted-foreground">Modelo</span>
+                  <p className="text-sm font-medium text-foreground">Plano Mensal</p>
+                </div>
+              )}
+              {client.contract_end_date && (
+                <div>
+                  <span className="text-xs text-muted-foreground">Contrato vai até</span>
+                  <p className="text-sm font-medium text-foreground">
+                    {format(new Date(client.contract_end_date), "MMM/yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1531,6 +1554,75 @@ export const ClientDetail: React.FC = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* Período do contrato - apenas para planos mensais */}
+                  {editFormData.contract_type === 'monthly' && (
+                    <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
+                      <h4 className="text-sm font-medium">Período do Contrato</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Data de Início */}
+                        <div className="space-y-2">
+                          <Label>Data de Início</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={editSubmitting}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {editFormData.contract_start_date 
+                                  ? format(new Date(editFormData.contract_start_date + 'T00:00:00'), "dd/MM/yyyy")
+                                  : "Selecionar data"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={editFormData.contract_start_date ? new Date(editFormData.contract_start_date + 'T00:00:00') : undefined}
+                                onSelect={(date) => setEditFormData({...editFormData, contract_start_date: date?.toISOString().split('T')[0] || null})}
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        
+                        {/* Data de Término */}
+                        <div className="space-y-2">
+                          <Label>Data de Término</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={editSubmitting}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {editFormData.contract_end_date 
+                                  ? format(new Date(editFormData.contract_end_date + 'T00:00:00'), "dd/MM/yyyy")
+                                  : "Selecionar data"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={editFormData.contract_end_date ? new Date(editFormData.contract_end_date + 'T00:00:00') : undefined}
+                                onSelect={(date) => setEditFormData({...editFormData, contract_end_date: date?.toISOString().split('T')[0] || null})}
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      
+                      {/* Duração em meses */}
+                      <div className="space-y-2">
+                        <Label>Duração (meses)</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={editFormData.contract_months || 1}
+                          onChange={(e) => setEditFormData({...editFormData, contract_months: Number(e.target.value)})}
+                          disabled={editSubmitting}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Total do contrato: {formatHours((editFormData.contracted_hours || 0) * (editFormData.contract_months || 1))} ({editFormData.contracted_hours}h × {editFormData.contract_months || 1} meses)
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-notes">Observações</Label>
