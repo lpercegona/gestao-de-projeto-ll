@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -314,11 +313,7 @@ export const Reports: React.FC = () => {
   };
 
   return (
-    <div>
-      <PageHeader
-        title="Relatórios"
-        description="Visualize as horas registradas por projeto e período"
-      />
+    <div className="space-y-6">
 
       {/* Filters */}
       <Card className="mb-6">
