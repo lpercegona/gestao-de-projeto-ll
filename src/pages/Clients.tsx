@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX, Calendar, RefreshCw, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX, Calendar, RefreshCw, Clock, AlertCircle, FileCheck, Users } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { ProposalsTab } from '@/components/clients/ProposalsTab';
 
 interface Client {
   id: string;
@@ -67,6 +67,7 @@ interface Client {
 export const Clients: React.FC = () => {
   const navigate = useNavigate();
   const { data, loading, createClient, updateClient, deleteClient, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow } = useData();
+  const [mainTab, setMainTab] = useState<'clients' | 'proposals'>('clients');
   const [activeTab, setActiveTab] = useState<'lead' | 'proposal' | 'active' | 'churned'>('lead');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -173,13 +174,21 @@ export const Clients: React.FC = () => {
   };
 
   return (
-    <div>
-      <PageHeader
-        title="Clientes"
-        description="Gerencie seus clientes e horas contratadas"
-      />
-
-      <div className="flex items-center justify-between mb-4 gap-4">
+    <div className="space-y-4">
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'clients' | 'proposals')}>
+        <TabsList>
+          <TabsTrigger value="clients" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Clientes
+          </TabsTrigger>
+          <TabsTrigger value="proposals" className="flex items-center gap-2">
+            <FileCheck className="w-4 h-4" />
+            Propostas
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="clients" className="mt-6">
+          <div className="flex items-center justify-between gap-4">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'lead' | 'proposal' | 'active' | 'churned')} className="flex-1 overflow-x-auto">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2">
@@ -331,6 +340,12 @@ export const Clients: React.FC = () => {
           })}
         </div>
       )}
+        </TabsContent>
+        
+        <TabsContent value="proposals" className="mt-6">
+          <ProposalsTab />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>

@@ -14,12 +14,9 @@ import {
   UsersRound,
   Shield,
   UserCog,
-  FileText,
   User,
   PanelLeftClose,
   PanelLeft,
-  FileCheck,
-  Edit,
   Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -174,9 +171,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/', icon: LayoutDashboard, label: 'Painel' },
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-    { path: '/requests', icon: FileText, label: 'Solicitações' },
-    { path: '/edit-requests', icon: Edit, label: 'Edições' },
-    { path: '/proposals', icon: FileCheck, label: 'Propostas' },
     { path: '/calendar', icon: Calendar, label: 'Calendário' },
   ];
 
@@ -185,9 +179,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/', icon: LayoutDashboard, label: 'Painel' },
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-    { path: '/requests', icon: FileText, label: 'Solicitações' },
-    { path: '/edit-requests', icon: Edit, label: 'Edições' },
-    { path: '/proposals', icon: FileCheck, label: 'Propostas' },
     { path: '/calendar', icon: Calendar, label: 'Calendário' },
   ];
 

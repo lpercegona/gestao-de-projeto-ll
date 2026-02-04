@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -108,11 +107,6 @@ export const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Calendário"
-        description="Visualize todas as entregas e prazos"
-      />
-
       <div className="grid lg:grid-cols-[1fr_400px] gap-6">
         {/* Calendar View */}
         <Card>

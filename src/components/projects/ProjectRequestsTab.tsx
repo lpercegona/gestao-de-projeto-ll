@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -30,7 +29,6 @@ import {
   CheckCircle, 
   XCircle, 
   FolderPlus,
-  Clock,
   Search,
   Calendar
 } from 'lucide-react';
@@ -51,8 +49,7 @@ interface ProjectRequest {
   updated_at: string;
 }
 
-export const ProjectRequests: React.FC = () => {
-  const { user } = useAuth();
+export const ProjectRequestsTab: React.FC = () => {
   const { data, createProject, refreshData } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +87,7 @@ export const ProjectRequests: React.FC = () => {
 
   const getClientName = (clientId: string) => {
     const client = data.clients.find(c => c.id === clientId);
-    return client?.company || client?.name || 'Cliente desconhecido';
+    return (client as any)?.company || client?.name || 'Cliente desconhecido';
   };
 
   const updateRequestStatus = async (requestId: string, status: string, notes?: string) => {
@@ -126,7 +123,6 @@ export const ProjectRequests: React.FC = () => {
 
     setSubmitting(true);
     try {
-      // Create the project
       const newProject = await createProject({
         client_id: convertRequest.client_id,
         name: projectName.trim(),
@@ -140,7 +136,6 @@ export const ProjectRequests: React.FC = () => {
         throw new Error('Failed to create project');
       }
 
-      // Update request status
       const { error } = await supabase
         .from('project_requests')
         .update({
@@ -186,11 +181,11 @@ export const ProjectRequests: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Aguardando</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Aguardando</Badge>;
       case 'in_review':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Em análise</Badge>;
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Em análise</Badge>;
       case 'approved':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Aprovado</Badge>;
+        return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Aprovado</Badge>;
       case 'rejected':
         return <Badge variant="destructive">Rejeitado</Badge>;
       case 'converted':
@@ -221,7 +216,7 @@ export const ProjectRequests: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <Card className="mb-6">
+      <Card>
         <CardContent className="py-4">
           <div className="flex flex-wrap gap-4">
             <div className="w-48">
@@ -261,7 +256,7 @@ export const ProjectRequests: React.FC = () => {
       </Card>
 
       {/* Summary */}
-      <div className="grid gap-4 md:grid-cols-5 mb-6">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground">Total</p>
@@ -479,30 +474,23 @@ export const ProjectRequests: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="adminNotes">Notas para o Cliente (opcional)</Label>
+              <Label htmlFor="adminNotes">Notas (opcional)</Label>
               <Textarea
                 id="adminNotes"
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Mensagem que será visível para o cliente"
+                placeholder="Observações internas..."
                 rows={2}
                 disabled={submitting}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConvertRequest(null)}
-              disabled={submitting}
-            >
+            <Button variant="outline" onClick={() => setConvertRequest(null)} disabled={submitting}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleConvertToProject}
-              disabled={submitting || !projectName.trim()}
-            >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            <Button onClick={handleConvertToProject} disabled={submitting || !projectName.trim()}>
+              {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderPlus className="w-4 h-4 mr-2" />}
               Criar Projeto
             </Button>
           </DialogFooter>

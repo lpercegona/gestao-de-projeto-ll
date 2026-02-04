@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,14 +26,13 @@ interface EditRequest {
   processed_at: string | null;
   created_at: string;
   updated_at: string;
-  // Joined data
   client?: {
     name: string;
     company: string | null;
   };
 }
 
-export const EditRequests: React.FC = () => {
+export const EditRequestsTab: React.FC = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState<EditRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +54,6 @@ export const EditRequests: React.FC = () => {
 
       if (error) throw error;
       
-      // Fetch client info separately
       const requestsWithClients: EditRequest[] = [];
       for (const req of (data || [])) {
         const { data: clientData } = await supabase
@@ -90,7 +88,6 @@ export const EditRequests: React.FC = () => {
     
     setProcessing(true);
     try {
-      // If approving, apply the changes to the original entity
       if (action === 'approved') {
         if (selectedRequest.entity_type === 'project') {
           const { error: updateError } = await supabase
@@ -109,7 +106,6 @@ export const EditRequests: React.FC = () => {
         }
       }
 
-      // Update the edit request status
       const { error } = await supabase
         .from('edit_requests')
         .update({
@@ -122,7 +118,6 @@ export const EditRequests: React.FC = () => {
 
       if (error) throw error;
 
-      // Create notification for client
       const { data: clientData } = await supabase
         .from('clients')
         .select('user_id')
@@ -154,9 +149,9 @@ export const EditRequests: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pendente</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Pendente</Badge>;
       case 'approved':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Aprovada</Badge>;
+        return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Aprovada</Badge>;
       case 'rejected':
         return <Badge variant="destructive">Rejeitada</Badge>;
       default:
@@ -248,7 +243,7 @@ export const EditRequests: React.FC = () => {
               </h2>
               <div className="space-y-3">
                 {requests.filter(r => r.status === 'pending').map((request) => (
-                  <Card key={request.id} className="border-yellow-200">
+                  <Card key={request.id} className="border-yellow-200 dark:border-yellow-800">
                     <CardContent className="py-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                         <div className="flex items-start gap-3 flex-1">
@@ -441,7 +436,10 @@ export const EditRequests: React.FC = () => {
                 </Button>
               </>
             ) : (
-              <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsReviewDialogOpen(false)}
+              >
                 Fechar
               </Button>
             )}
