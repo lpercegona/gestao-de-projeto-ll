@@ -41,7 +41,7 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({ isCollapse
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" className="p-1 h-auto">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
             <Avatar className="h-7 w-7">
               <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                 {getInitials()}

@@ -331,7 +331,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       isActive
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      isCollapsed && 'lg:justify-center lg:px-2'
+                      isCollapsed && 'lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto'
                     )}
                   >
                     <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
@@ -374,9 +374,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {user && (
               <div className={cn(
                 "flex items-center gap-3 px-2 py-2",
-                isCollapsed && "lg:justify-center lg:px-0"
+                isCollapsed && "lg:justify-center lg:px-0 lg:py-1"
               )}>
-                <Avatar className="h-9 w-9 flex-shrink-0">
+                <Avatar className={cn("flex-shrink-0", isCollapsed ? "h-8 w-8" : "h-9 w-9")}>
                   <AvatarImage src={userAvatar || undefined} alt="Avatar" />
                   <AvatarFallback className="bg-primary/10 text-primary text-sm">
                     {getUserInitials()}
@@ -406,14 +406,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to="/preferences"
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors w-full',
+                      'flex items-center justify-center h-8 w-8 mx-auto rounded-md text-sm font-medium transition-colors',
                       location.pathname === '/preferences'
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      'lg:justify-center lg:px-2'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                     )}
                   >
-                    <Settings className="w-3.5 h-3.5 flex-shrink-0" />
+                    <Settings className="w-3.5 h-3.5" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">Configurações</TooltipContent>
@@ -453,7 +452,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <TooltipTrigger asChild className="hidden lg:flex">
                   <Button
                     variant="ghost"
-                    className="w-full justify-center text-muted-foreground hover:text-foreground px-2"
+                    size="icon"
+                    className="h-8 w-8 mx-auto text-muted-foreground hover:text-foreground"
                     onClick={handleSignOut}
                   >
                     <LogOut className="w-3.5 h-3.5" />
