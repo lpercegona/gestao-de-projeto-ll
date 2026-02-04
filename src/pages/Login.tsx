@@ -289,8 +289,8 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-3">
           <img src="/logo-oras.svg" alt="ORAS" className="h-10 mx-auto" />
           <CardDescription>Gestão de Projetos e Horas</CardDescription>

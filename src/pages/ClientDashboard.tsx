@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { QuickRequestCard } from '@/components/dashboard/QuickRequestCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -173,28 +172,21 @@ export const ClientDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Meu Painel"
-        description="Acompanhe seus projetos, tarefas e solicitações"
-      />
-
       {/* Statistics Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
           <Card key={index}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <stat.icon className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  {stat.extra && (
-                    <p className="text-xs text-muted-foreground">{stat.extra}</p>
-                  )}
-                </div>
-              </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {stat.label}
+              </CardTitle>
+              <stat.icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              {stat.extra && (
+                <p className="text-xs text-muted-foreground">{stat.extra}</p>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -220,8 +212,8 @@ export const ClientDashboard: React.FC = () => {
             
             {/* Previous month overflow indicator */}
             {isMonthly && previousMonthOverflow > 0 && (
-              <div className="mb-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <div className="mb-3 p-2 rounded-md bg-destructive/10 border border-destructive/30">
+                <div className="flex items-center gap-2 text-destructive">
                   <AlertCircle className="w-4 h-4" />
                   <span className="text-sm font-medium">Saldo Anterior: {formatHours(previousMonthOverflow)}</span>
                 </div>
@@ -237,7 +229,7 @@ export const ClientDashboard: React.FC = () => {
                 {formatHours(remainingHours)} restantes{isMonthly ? ' este mês' : ''}
               </p>
               {isMonthly && displayedHours > availableHours && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
+                <p className="text-xs text-destructive">
                   ⚠️ {formatHours(displayedHours - availableHours)} serão descontadas do próximo mês
                 </p>
               )}
