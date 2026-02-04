@@ -90,7 +90,7 @@ const DesktopHeader: React.FC<{ hideTimer?: boolean }> = ({ hideTimer = false })
   
   return (
     <div className="hidden lg:flex fixed top-0 left-0 right-0 z-30 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center justify-between w-full px-6 ml-16">
+      <div className="flex items-center justify-between w-full px-6 ml-12">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />
         
@@ -265,7 +265,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <aside 
           className={cn(
             "fixed inset-y-0 left-0 z-50 h-screen border-r border-border bg-card flex flex-col transition-all duration-300 lg:static",
-            isCollapsed ? "lg:w-16" : "lg:w-64",
+            isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64", // Mobile always full width
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
@@ -274,19 +274,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         >
           {/* Header with workspace selector and collapse button */}
           <div className={cn(
-            "relative p-4 border-b border-border flex-shrink-0",
-            isCollapsed && "lg:px-2"
+            "relative h-14 flex items-center border-b border-border flex-shrink-0",
+            isCollapsed ? "lg:px-2 lg:justify-center" : "px-4"
           )}>
-            <div className="flex items-center justify-center">
-              {/* Desktop: Workspace selector or logo */}
-              <div className="hidden lg:block w-full">
-                {isCollapsed ? (
-                  <div className="flex items-center justify-center">
-                    <img src={SimboloOras} alt="ORAS" className="h-8 w-8" />
-                  </div>
-                ) : (
-                  <WorkspaceSelector isCollapsed={isCollapsed} />
-                )}
+            <div className="flex items-center justify-center w-full">
+              {/* Desktop: Workspace selector */}
+              <div className="hidden lg:flex w-full justify-center">
+                <WorkspaceSelector isCollapsed={isCollapsed} />
               </div>
               {/* Mobile: always show full logo centered */}
               <img 
@@ -349,7 +343,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       isCollapsed && 'lg:justify-center lg:px-2'
                     )}
                   >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <item.icon className="w-3 h-3 flex-shrink-0" />
                     <span className={cn(
                       "transition-opacity duration-300",
                       isCollapsed && "lg:hidden"
@@ -428,7 +422,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       'lg:justify-center lg:px-2'
                     )}
                   >
-                    <Settings className="w-5 h-5 flex-shrink-0" />
+                    <Settings className="w-3 h-3 flex-shrink-0" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">Configurações</TooltipContent>
@@ -442,7 +436,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
                 >
-                  <Settings className="w-5 h-5" />
+                  <Settings className="w-3 h-3" />
                   Configurações
                 </Link>
               </Tooltip>
@@ -457,7 +451,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-3 h-3" />
                 Configurações
               </Link>
             )}
@@ -471,7 +465,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     className="w-full justify-center text-muted-foreground hover:text-foreground px-2"
                     onClick={handleSignOut}
                   >
-                    <LogOut className="w-5 h-5" />
+                    <LogOut className="w-3 h-3" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Sair</TooltipContent>
@@ -480,7 +474,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   className="lg:hidden w-full justify-start text-muted-foreground hover:text-foreground"
                   onClick={handleSignOut}
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
+                  <LogOut className="w-3 h-3 mr-2" />
                   Sair
                 </Button>
               </Tooltip>
@@ -490,7 +484,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 className="w-full justify-start text-muted-foreground hover:text-foreground"
                 onClick={handleSignOut}
               >
-                <LogOut className="w-4 h-4 mr-2" />
+                <LogOut className="w-3 h-3 mr-2" />
                 Sair
               </Button>
             )}

@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -35,15 +36,35 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({ isCollapse
     return 'Workspace';
   };
 
+  // Collapsed mode: show only avatar with tooltip
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" className="p-1 h-auto">
+            <Avatar className="h-7 w-7">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <div>
+            <p className="font-medium">{getWorkspaceName()}</p>
+            <p className="text-xs text-muted-foreground">{user?.email}</p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className={cn(
-            "w-full justify-between h-auto hover:bg-accent/50",
-            isCollapsed ? "p-2" : "p-2"
-          )}
+          className="w-full justify-between h-auto hover:bg-accent/50 p-2"
         >
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8 shrink-0">
@@ -51,16 +72,12 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({ isCollapse
                 {getInitials()}
               </AvatarFallback>
             </Avatar>
-            {!isCollapsed && (
-              <div className="text-left min-w-0">
-                <p className="text-sm font-medium truncate">{getWorkspaceName()}</p>
-                <p className="text-xs text-muted-foreground truncate">Plano Profissional</p>
-              </div>
-            )}
+            <div className="text-left min-w-0">
+              <p className="text-sm font-medium truncate">{getWorkspaceName()}</p>
+              <p className="text-xs text-muted-foreground truncate">Plano Profissional</p>
+            </div>
           </div>
-          {!isCollapsed && (
-            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-          )}
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
