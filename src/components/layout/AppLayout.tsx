@@ -188,11 +188,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/projects', icon: FolderKanban, label: 'Meus Projetos' },
   ];
 
-  // Client nav items (dashboard, reports and projects)
+  // Client nav items (dashboard, reports, projects and calendar)
   const clientNavItems = [
     { path: '/client-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/my-reports', icon: FileBarChart, label: 'Meus Relatórios' },
     { path: '/my-projects', icon: FolderKanban, label: 'Meus Projetos' },
+    { path: '/calendar', icon: Calendar, label: 'Calendário' },
   ];
 
   // Select nav items based on role
