@@ -3,8 +3,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,6 +25,7 @@ interface CalendarItem {
 
 export const CalendarPage: React.FC = () => {
   const { data } = useData();
+  const { isClient } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -43,7 +44,8 @@ export const CalendarPage: React.FC = () => {
           type: 'project',
           name: p.name,
           due_date: p.due_date!,
-          clientName: (client as any)?.company || client?.name,
+          // Only show client name for non-client users
+          clientName: isClient ? undefined : ((client as any)?.company || client?.name),
           status: status || 'normal',
         });
       });
@@ -61,7 +63,8 @@ export const CalendarPage: React.FC = () => {
           due_date: t.due_date!,
           projectId: t.project_id,
           projectName: project?.name,
-          clientName: (client as any)?.company || client?.name,
+          // Only show client name for non-client users
+          clientName: isClient ? undefined : ((client as any)?.company || client?.name),
           status: status || 'normal',
         });
       });
@@ -87,10 +90,13 @@ export const CalendarPage: React.FC = () => {
   }, [currentMonth]);
 
   const handleNavigate = (item: CalendarItem) => {
+    // For clients, navigate to /my-projects instead of /projects
+    const basePath = isClient ? '/my-projects' : '/projects';
+    
     if (item.type === 'project') {
-      navigate(`/projects/${item.id}`);
+      navigate(`${basePath}/${item.id}`);
     } else if (item.projectId) {
-      navigate(`/projects/${item.projectId}`);
+      navigate(`${basePath}/${item.projectId}`);
     }
   };
 
