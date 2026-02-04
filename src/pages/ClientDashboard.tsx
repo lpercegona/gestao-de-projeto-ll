@@ -35,10 +35,10 @@ interface ProjectRequest {
 
 export const ClientDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { data, loading, getClientHours } = useData();
+  const { data, loading, getClientHours, getClientPreviousMonthOverflow } = useData();
   const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [clientInfo, setClientInfo] = useState<{ id: string; contracted_hours: number; contract_type: 'one_time' | 'monthly'; contract_end_date: string | null } | null>(null);
+  const [clientInfo, setClientInfo] = useState<{ id: string; contracted_hours: number; contract_type: 'one_time' | 'monthly'; contract_end_date: string | null; contract_start_date: string | null } | null>(null);
   const [recentRequestsOpen, setRecentRequestsOpen] = useState(true);
   const [activeProjectsOpen, setActiveProjectsOpen] = useState(true);
 
@@ -59,7 +59,7 @@ export const ClientDashboard: React.FC = () => {
           // Get client info
           const { data: clientData } = await supabase
             .from('clients')
-            .select('id, contracted_hours, contract_type, contract_end_date')
+            .select('id, contracted_hours, contract_type, contract_end_date, contract_start_date')
             .eq('id', clientUserData.client_id)
             .single();
 
@@ -69,6 +69,7 @@ export const ClientDashboard: React.FC = () => {
               contracted_hours: (clientData as any).contracted_hours,
               contract_type: ((clientData as any).contract_type as 'one_time' | 'monthly') || 'one_time',
               contract_end_date: (clientData as any).contract_end_date || null,
+              contract_start_date: (clientData as any).contract_start_date || null,
             });
           }
 
@@ -100,6 +101,12 @@ export const ClientDashboard: React.FC = () => {
   const usedHours = clientInfo?.id ? getClientHours(clientInfo.id) : 0;
   const isMonthly = clientInfo?.contract_type === 'monthly';
   
+  // Calculate monthly hours and overflow for monthly clients
+  const previousMonthOverflow = React.useMemo(() => {
+    if (!clientInfo?.id || !isMonthly) return 0;
+    return getClientPreviousMonthOverflow(clientInfo.id);
+  }, [clientInfo?.id, isMonthly, getClientPreviousMonthOverflow]);
+  
   // Calculate monthly hours for monthly clients
   const monthlyUsedHours = React.useMemo(() => {
     if (!clientInfo?.id || !isMonthly) return usedHours;
@@ -121,8 +128,11 @@ export const ClientDashboard: React.FC = () => {
       .reduce((sum, e) => sum + Number(e.hours), 0);
   }, [clientInfo?.id, isMonthly, data.projects, data.tasks, data.timeEntries, usedHours]);
   
+  // Calculate available hours (contracted - saldo anterior)
+  const availableHours = isMonthly ? Math.max(0, contractedHours - previousMonthOverflow) : contractedHours;
   const displayedHours = isMonthly ? monthlyUsedHours : usedHours;
-  const hoursPercentage = contractedHours > 0 ? Math.min((displayedHours / contractedHours) * 100, 100) : 0;
+  const remainingHours = Math.max(0, availableHours - displayedHours);
+  const hoursPercentage = availableHours > 0 ? Math.min((displayedHours / availableHours) * 100, 100) : 0;
 
   // Request statistics
   const pendingRequests = projectRequests.filter(r => r.status === 'pending');
@@ -133,7 +143,7 @@ export const ClientDashboard: React.FC = () => {
     { label: 'Projetos Ativos', value: activeProjects.length, icon: FolderKanban },
     { label: 'Tarefas Pendentes', value: pendingTasks.length, icon: CheckSquare },
     { label: 'Solicitações Pendentes', value: pendingRequests.length + analyzingRequests.length, icon: FileText },
-    { label: isMonthly ? 'Horas do Mês' : 'Horas Utilizadas', value: formatHours(displayedHours), icon: Clock, extra: contractedHours > 0 ? `de ${formatHours(contractedHours)}` : undefined },
+    { label: isMonthly ? 'Disponível este Mês' : 'Horas Utilizadas', value: isMonthly ? formatHours(availableHours) : formatHours(displayedHours), icon: Clock, extra: isMonthly && previousMonthOverflow > 0 ? `${formatHours(contractedHours)} - ${formatHours(previousMonthOverflow)} saldo ant.` : (contractedHours > 0 ? `de ${formatHours(contractedHours)}` : undefined) },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -204,13 +214,34 @@ export const ClientDashboard: React.FC = () => {
                 )}
               </div>
               <span className="text-sm text-muted-foreground">
-                {formatHours(displayedHours)} / {formatHours(contractedHours)}
+                {formatHours(displayedHours)} / {formatHours(availableHours)}
               </span>
             </div>
+            
+            {/* Previous month overflow indicator */}
+            {isMonthly && previousMonthOverflow > 0 && (
+              <div className="mb-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Saldo Anterior: {formatHours(previousMonthOverflow)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Horas excedentes do mês anterior descontadas do limite deste mês
+                </p>
+              </div>
+            )}
+            
             <Progress value={hoursPercentage} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {formatHours(Math.max(contractedHours - displayedHours, 0))} restantes{isMonthly ? ' este mês' : ''}
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">
+                {formatHours(remainingHours)} restantes{isMonthly ? ' este mês' : ''}
+              </p>
+              {isMonthly && displayedHours > availableHours && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ {formatHours(displayedHours - availableHours)} serão descontadas do próximo mês
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

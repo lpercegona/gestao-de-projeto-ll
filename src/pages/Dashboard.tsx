@@ -14,7 +14,7 @@ import { UpcomingDeadlines, DeadlineItem } from '@/components/dashboard/Upcoming
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
 
 export const Dashboard: React.FC = () => {
-  const { data, loading, getClientHours, getClientMonthlyHours } = useData();
+  const { data, loading, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow } = useData();
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [hoursClientOpen, setHoursClientOpen] = useState(false);
   const [recentEntriesOpen, setRecentEntriesOpen] = useState(false);
@@ -288,21 +288,31 @@ export const Dashboard: React.FC = () => {
                       const isMonthly = (client as any).contract_type === 'monthly';
                       const totalUsedHours = getClientHours(client.id);
                       const monthlyUsedHours = getClientMonthlyHours(client.id);
+                      const previousOverflow = isMonthly ? getClientPreviousMonthOverflow(client.id) : 0;
+                      const availableHours = isMonthly ? Math.max(0, client.contracted_hours - previousOverflow) : client.contracted_hours;
                       const displayedHours = isMonthly ? monthlyUsedHours : totalUsedHours;
-                      const percentage = client.contracted_hours > 0 
-                        ? Math.min((displayedHours / client.contracted_hours) * 100, 100)
+                      const percentage = availableHours > 0 
+                        ? Math.min((displayedHours / availableHours) * 100, 100)
                         : 0;
                       return (
                         <li key={client.id} className="py-2 border-b border-border last:border-0">
                           <div className="flex justify-between mb-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-medium text-foreground text-sm truncate">{client.company || client.name}</span>
                               {isMonthly && (
                                 <Badge variant="outline" className="text-xs">Mensal</Badge>
                               )}
+                              {isMonthly && previousOverflow > 0 && (
+                                <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                                  Saldo: {formatHours(previousOverflow)}
+                                </Badge>
+                              )}
                             </div>
                             <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                              {formatHours(displayedHours)} / {formatHours(client.contracted_hours)}
+                              {formatHours(displayedHours)} / {formatHours(availableHours)}
+                              {isMonthly && previousOverflow > 0 && (
+                                <span className="text-muted-foreground/70"> ({formatHours(client.contracted_hours)} - {formatHours(previousOverflow)})</span>
+                              )}
                             </span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-2">
