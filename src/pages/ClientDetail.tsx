@@ -116,7 +116,7 @@ export const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data, loading, getClientHours, getClientMonthlyHours, getProjectHours, getTaskHours, updateClient } = useData();
+  const { data, loading, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow, getProjectHours, getTaskHours, updateClient } = useData();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -175,6 +175,8 @@ export const ClientDetail: React.FC = () => {
   const usedHours = clientId ? getClientHours(clientId) : 0;
   const monthlyUsedHours = clientId ? getClientMonthlyHours(clientId) : 0;
   const isMonthly = client?.contract_type === 'monthly';
+  const previousOverflow = clientId && isMonthly ? getClientPreviousMonthOverflow(clientId) : 0;
+  const availableHours = isMonthly ? Math.max(0, (client?.contracted_hours || 0) - previousOverflow) : (client?.contracted_hours || 0);
   const displayedHours = isMonthly ? monthlyUsedHours : usedHours;
 
   // Fetch client requests
@@ -460,8 +462,8 @@ export const ClientDetail: React.FC = () => {
     }
   };
 
-  const progressPercentage = client && client.contracted_hours > 0 
-    ? Math.min((displayedHours / client.contracted_hours) * 100, 100) 
+  const progressPercentage = client && availableHours > 0 
+    ? Math.min((displayedHours / availableHours) * 100, 100) 
     : 0;
 
   // Initialize edit form when client data is available
@@ -835,9 +837,14 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">{isMonthly ? 'Horas/Mês' : 'Horas Contratadas'}</span>
+                <span className="text-sm">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{formatHours(client.contracted_hours)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatHours(availableHours)}</p>
+              {isMonthly && previousOverflow > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} saldo
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -847,13 +854,12 @@ export const ClientDetail: React.FC = () => {
                 <span className="text-sm">{isMonthly ? 'Restante do Mês' : 'Disponível'}</span>
               </div>
               <p className="text-2xl font-bold text-foreground">
-                {formatHours(Math.max(client.contracted_hours - displayedHours, 0))}
+                {formatHours(Math.max(availableHours - displayedHours, 0))}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Barra de progresso */}
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center justify-between text-sm mb-2">
@@ -866,15 +872,36 @@ export const ClientDetail: React.FC = () => {
                 )}
               </div>
               <span className="font-medium text-foreground">
-                {formatHours(displayedHours)} de {formatHours(client.contracted_hours)} ({progressPercentage.toFixed(1)}%)
+                {formatHours(displayedHours)} de {formatHours(availableHours)} ({progressPercentage.toFixed(1)}%)
               </span>
             </div>
-            <Progress value={progressPercentage} className="h-2" />
-            {isMonthly && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Total acumulado: {formatHours(usedHours)} desde o início do contrato
-              </p>
+            
+            {/* Saldo Anterior indicator */}
+            {isMonthly && previousOverflow > 0 && (
+              <div className="mb-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                  Saldo Anterior: {formatHours(previousOverflow)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Horas excedentes do mês anterior descontadas do limite deste mês ({formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} = {formatHours(availableHours)} disponíveis)
+                </p>
+              </div>
             )}
+            
+            <Progress value={progressPercentage} className="h-2" />
+            
+            <div className="flex items-center justify-between mt-2">
+              {isMonthly && (
+                <p className="text-xs text-muted-foreground">
+                  Total acumulado: {formatHours(usedHours)} desde o início do contrato
+                </p>
+              )}
+              {isMonthly && displayedHours > availableHours && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ {formatHours(displayedHours - availableHours)} serão descontadas do próximo mês
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 

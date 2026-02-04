@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX, Calendar, RefreshCw, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX, Calendar, RefreshCw, Clock, AlertCircle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +66,7 @@ interface Client {
 
 export const Clients: React.FC = () => {
   const navigate = useNavigate();
-  const { data, loading, createClient, updateClient, deleteClient, getClientHours, getClientMonthlyHours } = useData();
+  const { data, loading, createClient, updateClient, deleteClient, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow } = useData();
   const [activeTab, setActiveTab] = useState<'lead' | 'proposal' | 'active' | 'churned'>('lead');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -226,6 +226,8 @@ export const Clients: React.FC = () => {
             const isMonthly = (client as any).contract_type === 'monthly';
             const totalUsedHours = getClientHours(client.id);
             const monthlyUsedHours = getClientMonthlyHours(client.id);
+            const previousOverflow = isMonthly ? getClientPreviousMonthOverflow(client.id) : 0;
+            const availableHours = isMonthly ? Math.max(0, client.contracted_hours - previousOverflow) : client.contracted_hours;
             const displayedHours = isMonthly ? monthlyUsedHours : totalUsedHours;
             const projectCount = data.projects.filter(p => p.client_id === client.id).length;
             const contractEndDate = (client as any).contract_end_date;
@@ -286,6 +288,14 @@ export const Clients: React.FC = () => {
                     )}
                   </div>
                   
+                  {/* Previous month overflow indicator */}
+                  {isMonthly && previousOverflow > 0 && (
+                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-2">
+                      <AlertCircle className="w-3 h-3" />
+                      <span className="text-xs font-medium">Saldo anterior: {formatHours(previousOverflow)}</span>
+                    </div>
+                  )}
+                  
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Projetos:</span>
@@ -296,15 +306,20 @@ export const Clients: React.FC = () => {
                         {isMonthly ? `Horas (${format(new Date(), "MMM/yy", { locale: ptBR })})` : 'Horas usadas'}:
                       </span>
                       <span className="font-medium text-foreground">
-                        {formatHours(displayedHours)} / {formatHours(client.contracted_hours)}
+                        {formatHours(displayedHours)} / {formatHours(availableHours)}
                       </span>
                     </div>
+                    {isMonthly && previousOverflow > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Disponível: {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} saldo
+                      </div>
+                    )}
                     <div className="w-full bg-muted rounded-full h-2 mt-2">
                       <div
                         className="bg-primary h-2 rounded-full transition-all"
                         style={{ 
-                          width: `${client.contracted_hours > 0 
-                            ? Math.min((displayedHours / client.contracted_hours) * 100, 100) 
+                          width: `${availableHours > 0 
+                            ? Math.min((displayedHours / availableHours) * 100, 100) 
                             : 0}%` 
                         }}
                       />

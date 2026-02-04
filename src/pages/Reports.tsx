@@ -18,7 +18,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Loader2, Users, User, RefreshCw, Clock } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Users, User, RefreshCw, Clock, AlertCircle } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
@@ -27,7 +27,7 @@ import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShare
 
 export const Reports: React.FC = () => {
   const { user } = useAuth();
-  const { data, loading, getProjectHours, getTaskHours, getClientHours, getClientColumns } = useData();
+  const { data, loading, getProjectHours, getTaskHours, getClientHours, getClientColumns, getClientMonthlyHours, getClientPreviousMonthOverflow } = useData();
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -440,8 +440,15 @@ export const Reports: React.FC = () => {
               {reportDataByClient.map((clientData) => {
                 const isExpanded = expandedClients.has(clientData.id);
                 const isMonthly = (clientData as any).contract_type === 'monthly';
-                const displayedUsedHours = isMonthly ? clientData.monthHours : clientData.totalHours;
-                const remainingHours = Math.max(0, clientData.contracted_hours - displayedUsedHours);
+                
+                // Get selected month's overflow
+                const [year, month] = selectedMonth.split('-').map(Number);
+                const previousOverflow = isMonthly ? getClientPreviousMonthOverflow(clientData.id, year, month) : 0;
+                const monthlyHours = isMonthly ? getClientMonthlyHours(clientData.id, year, month) : 0;
+                
+                const availableHours = isMonthly ? Math.max(0, clientData.contracted_hours - previousOverflow) : clientData.contracted_hours;
+                const displayedUsedHours = isMonthly ? monthlyHours : clientData.totalHours;
+                const remainingHours = Math.max(0, availableHours - displayedUsedHours);
                 
                 return (
                   <Card key={clientData.id} className="overflow-hidden">
@@ -492,8 +499,11 @@ export const Reports: React.FC = () => {
                           {/* Client summary */}
                           <div className="grid gap-4 grid-cols-2 md:grid-cols-5 p-4 bg-muted/50 rounded-lg">
                             <div>
-                              <p className="text-sm text-muted-foreground">{isMonthly ? 'Horas/Mês' : 'Horas Contratadas'}</p>
-                              <p className="text-lg font-bold text-foreground">{formatHours(clientData.contracted_hours)}</p>
+                              <p className="text-sm text-muted-foreground">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</p>
+                              <p className="text-lg font-bold text-foreground">{formatHours(availableHours)}</p>
+                              {isMonthly && previousOverflow > 0 && (
+                                <p className="text-xs text-muted-foreground">{formatHours(clientData.contracted_hours)} - {formatHours(previousOverflow)}</p>
+                              )}
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">{isMonthly ? 'Usado no Mês' : 'Total Utilizado'}</p>
@@ -513,13 +523,28 @@ export const Reports: React.FC = () => {
                             </div>
                           </div>
                           
+                          {/* Saldo Anterior alert */}
+                          {isMonthly && previousOverflow > 0 && (
+                            <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
+                              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                                  Saldo Anterior: {formatHours(previousOverflow)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Horas excedentes do mês anterior descontadas do limite deste mês
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          
                           {/* Progress bar */}
                           <div className="w-full bg-muted rounded-full h-2">
                             <div
                               className="bg-primary h-2 rounded-full transition-all"
                               style={{ 
-                                width: `${clientData.contracted_hours > 0 
-                                  ? Math.min((displayedUsedHours / clientData.contracted_hours) * 100, 100) 
+                                width: `${availableHours > 0 
+                                  ? Math.min((displayedUsedHours / availableHours) * 100, 100) 
                                   : 0}%` 
                               }}
                             />

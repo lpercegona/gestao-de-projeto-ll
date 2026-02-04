@@ -146,6 +146,7 @@ interface DataContextType {
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
   getClientMonthlyHours: (clientId: string, year?: number, month?: number) => number;
+  getClientPreviousMonthOverflow: (clientId: string, year?: number, month?: number) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
 }
@@ -788,6 +789,61 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data.projectColumns.filter(col => col.client_id === clientId);
   };
 
+  // Calculate overflow hours from previous months for monthly contracts
+  const getClientPreviousMonthOverflow = (clientId: string, year?: number, month?: number): number => {
+    const client = data.clients.find(c => c.id === clientId);
+    if (!client || client.contract_type !== 'monthly') return 0;
+
+    const now = new Date();
+    const targetYear = year ?? now.getFullYear();
+    const targetMonth = month ?? now.getMonth() + 1;
+
+    // Check if contract has started
+    if (client.contract_start_date) {
+      const startDate = new Date(client.contract_start_date);
+      const startYear = startDate.getFullYear();
+      const startMonth = startDate.getMonth() + 1;
+      
+      // If target month is the contract start month or before, no overflow
+      if (targetYear < startYear || (targetYear === startYear && targetMonth <= startMonth)) {
+        return 0;
+      }
+    }
+
+    // Calculate previous month
+    let prevYear = targetYear;
+    let prevMonth = targetMonth - 1;
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear -= 1;
+    }
+
+    // Check if previous month is before contract start
+    if (client.contract_start_date) {
+      const startDate = new Date(client.contract_start_date);
+      const startYear = startDate.getFullYear();
+      const startMonth = startDate.getMonth() + 1;
+      
+      if (prevYear < startYear || (prevYear === startYear && prevMonth < startMonth)) {
+        return 0;
+      }
+    }
+
+    // Get hours used in the previous month
+    const prevMonthHours = getClientMonthlyHours(clientId, prevYear, prevMonth);
+    
+    // Get overflow from even earlier months (recursive)
+    const prevOverflow = getClientPreviousMonthOverflow(clientId, prevYear, prevMonth);
+    
+    // Calculate available hours for the previous month
+    const prevAvailable = Math.max(0, client.contracted_hours - prevOverflow);
+    
+    // Calculate overflow from the previous month
+    const overflow = Math.max(0, prevMonthHours - prevAvailable);
+
+    return overflow;
+  };
+
   // Kanban stages operations
   const saveKanbanStages = async (stages: Omit<KanbanStage, 'id' | 'is_default' | 'owner_id'>[]): Promise<void> => {
     if (!user) return;
@@ -860,6 +916,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getProjectHours,
         getClientHours,
         getClientMonthlyHours,
+        getClientPreviousMonthOverflow,
         getTaskHours,
         getCreatorName,
       }}
