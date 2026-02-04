@@ -1,21 +1,18 @@
 import React from 'react';
 import { useData } from '@/contexts/DataContext';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FolderKanban, ListTodo, Clock, Loader2, FileCheck } from 'lucide-react';
-import { QuickTimeTracker } from '@/components/dashboard/QuickTimeTracker';
+import { Users, FolderKanban, ListTodo, Loader2, FileCheck, Plus } from 'lucide-react';
 import { QuickActionsPanel } from '@/components/dashboard/QuickActionsPanel';
 import { DashboardCalendar } from '@/components/dashboard/DashboardCalendar';
 import { SolicitacoesPanel } from '@/components/dashboard/SolicitacoesPanel';
 import { HorasPorClientePanel } from '@/components/dashboard/HorasPorClientePanel';
 import { ProximasEntregasPanel } from '@/components/dashboard/ProximasEntregasPanel';
 import { UltimosRegistrosPanel } from '@/components/dashboard/UltimosRegistrosPanel';
-import { formatHours } from '@/lib/formatHours';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const Dashboard: React.FC = () => {
-  const { data, loading, getClientHours } = useData();
+  const { data, loading } = useData();
   const [proposalCount, setProposalCount] = useState(0);
 
   // Fetch proposal count
@@ -38,8 +35,9 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  const totalHours = data.clients.reduce((sum, client) => sum + getClientHours(client.id), 0);
-  const totalContractedHours = data.clients.reduce((sum, client) => sum + client.contracted_hours, 0);
+  // Filtros de dados
+  const activeProjects = data.projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled');
+  const pendingTasks = data.tasks.filter(t => t.status !== 'completed' && t.status !== 'done');
 
   const stats = [
     {
@@ -50,15 +48,15 @@ export const Dashboard: React.FC = () => {
     },
     {
       title: 'Projetos',
-      value: data.projects.length,
+      value: activeProjects.length,
       icon: FolderKanban,
-      description: 'Projetos ativos e concluídos',
+      description: 'Projetos ativos',
     },
     {
       title: 'Tarefas',
-      value: data.tasks.length,
+      value: pendingTasks.length,
       icon: ListTodo,
-      description: 'Total de tarefas',
+      description: 'Tarefas pendentes',
     },
     {
       title: 'Propostas',
@@ -66,28 +64,16 @@ export const Dashboard: React.FC = () => {
       icon: FileCheck,
       description: 'Pendentes ou enviadas',
     },
-    {
-      title: 'Horas',
-      value: formatHours(totalHours),
-      icon: Clock,
-      description: `de ${formatHours(totalContractedHours)} contratadas`,
-    },
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Painel"
-        description="Visão geral do sistema de gestão de projetos"
-      />
-
       {/* Layout Principal: 70% / 30% */}
       <div className="grid lg:grid-cols-[1fr_380px] gap-6">
         
         {/* COLUNA DIREITA - Aparece PRIMEIRO no mobile */}
         <div className="space-y-6 order-first lg:order-last">
           <QuickActionsPanel />
-          <QuickTimeTracker />
           <DashboardCalendar />
         </div>
         
@@ -110,6 +96,16 @@ export const Dashboard: React.FC = () => {
                 </CardContent>
               </Card>
             ))}
+            
+            {/* Card customizável com bordas pontilhadas */}
+            <Card className="border-dashed border-2 border-muted-foreground/30 hover:border-primary/50 transition-colors cursor-pointer">
+              <CardContent className="flex items-center justify-center h-full p-4 min-h-[100px]">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Plus className="h-6 w-6" />
+                  <span className="text-xs">Personalizar</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
           
           {/* Content Area - 2 colunas desktop, 1 mobile */}
