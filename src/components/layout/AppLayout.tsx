@@ -327,7 +327,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                      'flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors',
                       isActive
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -406,7 +406,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to="/preferences"
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      'flex items-center justify-center h-8 w-8 mx-auto rounded-md text-sm font-medium transition-colors',
+                      'flex items-center justify-center h-8 w-8 mx-auto rounded-md text-xs font-medium transition-colors',
                       location.pathname === '/preferences'
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -419,8 +419,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <Link
                   to="/preferences"
                   onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    'lg:hidden flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                    className={cn(
+                      'lg:hidden flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors',
                     location.pathname === '/preferences'
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -435,7 +435,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 to="/preferences"
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors',
                   location.pathname === '/preferences'
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
