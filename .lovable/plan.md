@@ -1,187 +1,221 @@
 
 
-## Plano: Sistema de Banco de Horas para Contratos Mensais
+## Plano Consolidado: Redesign do Painel com Header Atualizado
 
-### Contexto
+### Visão Geral
 
-Para clientes com contratos mensais que ultrapassam as horas contratadas em um mês, o sistema precisa:
-1. Identificar e exibir as horas excedentes como "banco de horas negativo" ou "saldo devedor"
-2. Contabilizar essas horas no próximo mês como "horas herdadas"
-3. Segmentar claramente entre horas do mês atual e horas herdadas de meses anteriores
-
-### Nomenclatura Sugerida
-
-Sugiro utilizar o termo **"Saldo Anterior"** para as horas excedentes que são transportadas:
-- **Saldo Anterior**: Horas que excederam o limite do mês passado e são descontadas do mês atual
-- **Horas do Mês**: Horas utilizadas especificamente neste mês
-- **Horas Disponíveis**: Total de horas que podem ser usadas (contratadas - saldo anterior)
-
-Alternativas consideradas:
-- "Horas Acumuladas" - pode confundir com horas já usadas
-- "Débito de Horas" - tem conotação negativa
-- "Crédito Utilizado" - pode confundir com crédito positivo
+Este plano abrange a reformulação completa do layout do Dashboard (renomeado para "Painel"), incluindo alterações no header global, sidebar e novo layout em colunas 70/30, mantendo o timer fixo no header já implementado.
 
 ---
 
-### Alterações Necessárias
+### Layout Desktop Final
 
-#### 1. Criar Função de Cálculo de Saldo Anterior (DataContext.tsx)
+```text
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ HEADER FIXO                                                                          │
+│ [Painel > Resumo]  [🔍 Em qual projeto trabalhará hoje?]  [Tarefa•Projeto] [⏱] 🔔   │
+│  ↑ Breadcrumb       ↑ Pesquisa Universal                   ↑ Timer (MANTIDO)        │
+├───────────────────────────────────────────────────────────────────────────────────────┤
+│ SIDEBAR                    │ CONTEÚDO PRINCIPAL                                      │
+│ ┌─────────────────────────┐│                                                         │
+│ │ [🏢 Acme Inc]        ▼ ││ ┌─────────────────── 70% ──────────────────────────────┐│
+│ │    Enterprise           ││ │ STATS (5 colunas)                                    ││
+│ ├─────────────────────────┤│ │ [Clientes][Projetos][Tarefas][Propostas][Horas/Mês] ││
+│ │ 🏠 Painel              ││ │                                                       ││
+│ │ 👥 Clientes            ││ │ CONTEÚDO (2 colunas)                                  ││
+│ │ 📁 Projetos            ││ │ ┌─────────────────┬─────────────────┐                 ││
+│ │ 📋 Propostas           ││ │ │ Solicitações    │ Horas/Cliente   │                 ││
+│ │ 📅 Calendário ← NOVO   ││ │ ├─────────────────┼─────────────────┤                 ││
+│ │                        ││ │ │ Próx. Entregas  │ Últimos Registros│                ││
+│ │                        ││ │ └─────────────────┴─────────────────┘                 ││
+│ ├─────────────────────────┤│ └───────────────────────────────────────────────────────┘│
+│ │ [Avatar] [Email]       ││                                                         │
+│ │ ⚙️ Configurações       ││ ┌─────────── 30% ───────────────────┐                   │
+│ │ 🚪 Sair                ││ │ [+ Novo Cliente][+ Nova Proposta] │                   │
+│ └─────────────────────────┘│ │                                   │                   │
+│                            │ │ 🕐 Registro Rápido               │                   │
+│                            │ │ [Timer com selects]              │                   │
+│                            │ │                                   │                   │
+│                            │ │ 📅 Calendário                    │                   │
+│                            │ │ [Mini calendário mensal]         │                   │
+│                            │ └───────────────────────────────────┘                   │
+└────────────────────────────┴─────────────────────────────────────────────────────────┘
+```
 
-Adicionar nova função `getClientPreviousMonthOverflow`:
+---
+
+### Layout Mobile/Tablet (Prioridade nas Ações Rápidas)
+
+```text
+┌────────────────────────────────────┐
+│ [☰] [Logo/Tarefa]     [⏱ Timer] 🔔│  ← Header (MANTIDO)
+├────────────────────────────────────┤
+│ [+ Novo Cliente] [+ Nova Proposta] │  ← PRIORIZADO
+│ 🕐 Registro Rápido [Timer]         │  ← PRIORIZADO
+│ 📅 Calendário                      │  ← PRIORIZADO
+├────────────────────────────────────┤
+│ [Stats: 2-3 colunas]               │
+│ [Solicitações]                     │
+│ [Horas por Cliente]                │
+│ [Próximas Entregas]                │
+│ [Últimos Registros]                │
+└────────────────────────────────────┘
+```
+
+---
+
+### Alterações no Header
+
+#### Manter Timer Fixo (Sem Alteração)
+
+Os componentes `HeaderTimerDisplay` e `HeaderTimerTaskInfo` permanecem inalterados, mantendo:
+- Botão Play inicial
+- Exibição do projeto/tarefa vinculada quando ativo
+- Botões Pause/Resume e Stop
+- Animação slide-in
+
+#### Novo DesktopHeader
+
+Adicionar breadcrumb e pesquisa universal, mantendo o timer no mesmo local:
 
 ```typescript
-// Calcula as horas que excederam no mês anterior (saldo negativo transportado)
-const getClientPreviousMonthOverflow = (clientId: string, year?: number, month?: number): number => {
-  const now = new Date();
-  const targetYear = year ?? now.getFullYear();
-  const targetMonth = month ?? now.getMonth() + 1;
+const DesktopHeader: React.FC<{ hideTimer?: boolean }> = ({ hideTimer = false }) => {
+  const { hasActiveTimer } = useGlobalTimer();
   
-  // Calcula para o mês anterior
-  let prevYear = targetYear;
-  let prevMonth = targetMonth - 1;
-  if (prevMonth === 0) {
-    prevMonth = 12;
-    prevYear -= 1;
-  }
-  
-  // Verifica se o cliente tem contrato mensal
-  const client = data.clients.find(c => c.id === clientId);
-  if (!client || client.contract_type !== 'monthly') return 0;
-  
-  // Calcula horas usadas no mês anterior
-  const prevMonthHours = getClientMonthlyHours(clientId, prevYear, prevMonth);
-  const overflow = Math.max(0, prevMonthHours - client.contracted_hours);
-  
-  // Recursivamente adiciona overflow de meses anteriores
-  const prevOverflow = getClientPreviousMonthOverflow(clientId, prevYear, prevMonth);
-  
-  return overflow + prevOverflow;
+  return (
+    <div className="hidden lg:flex fixed top-0 left-0 right-0 z-30 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex items-center justify-between w-full px-6">
+        {/* Lado Esquerdo: Breadcrumb */}
+        <BreadcrumbNav />
+        
+        {/* Centro: Barra de Pesquisa */}
+        <UniversalSearchBar />
+        
+        {/* Lado Direito: Timer (MANTIDO) + Notificações */}
+        <div className="flex items-center gap-3">
+          {!hideTimer && (
+            <div className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
+            )}>
+              <HeaderTimerTaskInfo />
+            </div>
+          )}
+          {!hideTimer && <HeaderTimerDisplay />}
+          <NotificationBell />
+        </div>
+      </div>
+    </div>
+  );
 };
 ```
 
 ---
 
-#### 2. Interface do DataContext
+### Alterações na Sidebar
 
-Atualizar a interface `DataContextType`:
+#### Workspace Selector (Substituir Logo)
 
 ```typescript
-interface DataContextType {
-  // ... existentes
-  getClientPreviousMonthOverflow: (clientId: string, year?: number, month?: number) => number;
-}
+// src/components/layout/WorkspaceSelector.tsx
+const WorkspaceSelector: React.FC = () => {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="w-full justify-between p-2 h-auto">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                AI
+              </AvatarFallback>
+            </Avatar>
+            <div className="text-left">
+              <p className="text-sm font-medium">Acme Inc</p>
+              <p className="text-xs text-muted-foreground">Enterprise</p>
+            </div>
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56">
+        {/* Lista de workspaces */}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+```
+
+#### Novo Item de Navegação: Calendário
+
+Adicionar na lista de navegação:
+```typescript
+{ path: '/calendar', icon: Calendar, label: 'Calendário' }
 ```
 
 ---
 
-#### 3. Dashboard do Cliente (ClientDashboard.tsx)
+### Novo Layout do Dashboard (70/30)
 
-**Modificar o card de horas para mostrar:**
-
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│ Horas do Mês - Fevereiro de 2026                    [Plano Mensal] │
-│                                                                    │
-│ Horas Disponíveis: 15h (20h contratadas - 5h saldo anterior)      │
-│                                                                    │
-│ ┌──────────────────────────────────────────────────────────────┐  │
-│ │ Horas do Mês: 12h                                            │  │
-│ │ Saldo Anterior: 5h                                           │  │
-│ │ Total Utilizado: 17h                                         │  │
-│ └──────────────────────────────────────────────────────────────┘  │
-│                                                                    │
-│ [███████████████████████████████████████████░░░░░░░░░░] 85%       │
-│ 3h restantes este mês                                              │
-│                                                                    │
-│ ⚠️ Se exceder, 2h serão descontadas do próximo mês                │
-└────────────────────────────────────────────────────────────────────┘
-```
-
-**Campos a exibir:**
-- **Saldo Anterior**: X horas (quando > 0)
-- **Horas do Mês**: Y horas
-- **Horas Disponíveis**: contracted_hours - saldo_anterior
-- **Restantes**: disponíveis - horas_do_mês
-
----
-
-#### 4. Perfil do Cliente (ClientDetail.tsx)
-
-**Card de utilização mensal:**
-
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│ Utilização - Fevereiro de 2026                      [Plano Mensal] │
-│                                                                    │
-│ Contratado: 20h/mês                                                │
-│ Saldo Anterior: 5h (excedente de Janeiro)                         │
-│ Disponível este mês: 15h                                          │
-│                                                                    │
-│ Horas do Mês: 12h                                                  │
-│ [████████████████████░░░░░░] 80%                                   │
-│                                                                    │
-│ 3h restantes este mês                                              │
-└────────────────────────────────────────────────────────────────────┘
+```typescript
+// src/pages/Dashboard.tsx
+return (
+  <div className="space-y-6">
+    {/* Layout Principal: 70% / 30% */}
+    <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+      
+      {/* COLUNA DIREITA - Aparece PRIMEIRO no mobile */}
+      <div className="space-y-6 order-first lg:order-last">
+        <QuickActionsPanel />      {/* Botões: Novo Cliente, Nova Proposta */}
+        <QuickTimeTracker />       {/* Registro rápido de horas */}
+        <DashboardCalendar />      {/* Mini calendário */}
+      </div>
+      
+      {/* COLUNA ESQUERDA - Aparece DEPOIS no mobile */}
+      <div className="space-y-6 order-last lg:order-first">
+        {/* Stats Row - 5 colunas desktop, 2-3 mobile */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <StatCard title="Clientes" value={clientCount} icon={Users} />
+          <StatCard title="Projetos" value={projectCount} icon={FolderKanban} />
+          <StatCard title="Tarefas" value={taskCount} icon={ListTodo} />
+          <StatCard title="Propostas" value={proposalCount} icon={FileText} />
+          <StatCard title="Horas/Mês" value={monthlyHours} icon={Clock} />
+        </div>
+        
+        {/* Content Area - 2 colunas desktop, 1 mobile */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            <SolicitacoesPanel />
+            <ProximasEntregasPanel />
+          </div>
+          <div className="space-y-6">
+            <HorasPorClientePanel />
+            <UltimosRegistrosPanel />
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+);
 ```
 
 ---
 
-#### 5. Dashboard Admin (Dashboard.tsx)
+### Arquivos a Criar
 
-**Seção "Horas por Cliente" - adicionar indicador de saldo:**
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Empresa ABC                              [Mensal] [⚠️ Saldo: 5h] │
-│ 12h / 20h (15h disponíveis)                                     │
-│ [████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 80%         │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-#### 6. Listagem de Clientes (Clients.tsx)
-
-**Cards com indicador de saldo anterior:**
-
-```text
-┌──────────────────────────────────────────┐
-│ Empresa ABC                              │
-│ contato@empresaabc.com                   │
-│                                          │
-│ 🔄 Plano Mensal    📅 Jan - Dez 2026    │
-│ ⚠️ Saldo anterior: 5h                   │
-│                                          │
-│ Projetos: 3                              │
-│ Horas (Fev/2026): 12h / 15h disponíveis │
-│ [█████████████░░░░░░░░░░░░░░░░░] 80%    │
-└──────────────────────────────────────────┘
-```
-
----
-
-#### 7. Relatório Compartilhado (SharedReport.tsx)
-
-**Resumo do contrato com saldo:**
-
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│ RESUMO DO CONTRATO                                                 │
-│                                                                    │
-│ Tipo: Plano Mensal                                                 │
-│ Período: Jan/2026 - Dez/2026                                      │
-│ Horas/Mês: 20h                                                     │
-│                                                                    │
-│ ── Mês Selecionado: Fevereiro de 2026 ──                          │
-│                                                                    │
-│ Saldo Anterior: 5h                                                 │
-│ Horas Disponíveis: 15h                                             │
-│ Horas Utilizadas: 12h                                              │
-│ Restantes: 3h                                                      │
-│                                                                    │
-│ [████████████████████░░░░░░░] 80%                                  │
-└────────────────────────────────────────────────────────────────────┘
-```
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/layout/WorkspaceSelector.tsx` | Dropdown de workspace no topo da sidebar |
+| `src/components/layout/UniversalSearchBar.tsx` | Barra de pesquisa universal (Cmd+K) |
+| `src/components/layout/BreadcrumbNav.tsx` | Navegação breadcrumb dinâmica |
+| `src/components/dashboard/QuickActionsPanel.tsx` | Botões: Novo Cliente + Nova Proposta |
+| `src/components/dashboard/SolicitacoesPanel.tsx` | Lista de solicitações pendentes |
+| `src/components/dashboard/ProximasEntregasPanel.tsx` | Próximas entregas (extraído do existente) |
+| `src/components/dashboard/HorasPorClientePanel.tsx` | Horas por cliente (extraído do existente) |
+| `src/components/dashboard/UltimosRegistrosPanel.tsx` | Últimos registros (extraído do existente) |
+| `src/components/dashboard/DashboardCalendar.tsx` | Mini calendário para o painel |
+| `src/pages/CalendarPage.tsx` | Página de calendário expandido |
+| `src/components/calendar/GanttView.tsx` | Visualização Gantt |
 
 ---
 
@@ -189,121 +223,150 @@ interface DataContextType {
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/contexts/DataContext.tsx` | Adicionar função `getClientPreviousMonthOverflow` |
-| `src/pages/ClientDashboard.tsx` | Exibir saldo anterior e horas do mês separadamente |
-| `src/pages/ClientDetail.tsx` | Card de utilização com saldo anterior |
-| `src/pages/Dashboard.tsx` | Indicador de saldo na seção "Horas por Cliente" |
-| `src/pages/Clients.tsx` | Cards com informação de saldo anterior |
-| `src/pages/SharedReport.tsx` | Resumo do contrato com saldo por mês |
-| `src/pages/Reports.tsx` | Vista por cliente com saldo |
-
----
-
-### Lógica de Cálculo
-
-```typescript
-// Para um cliente mensal:
-const contractedHours = client.contracted_hours;         // 20h
-const previousOverflow = getClientPreviousMonthOverflow(clientId); // 5h (do mês passado)
-const availableHours = Math.max(0, contractedHours - previousOverflow); // 15h
-const currentMonthHours = getClientMonthlyHours(clientId);  // 12h
-const remainingHours = Math.max(0, availableHours - currentMonthHours); // 3h
-
-// Se currentMonthHours > availableHours:
-const newOverflow = currentMonthHours - availableHours; // Será transportado pro próximo mês
-```
-
----
-
-### Fluxo Visual
-
-```text
-MÊS JANEIRO (20h contratadas):
-├── Utilizado: 25h
-├── Excedente: 5h → Transportado para Fevereiro
-└── Saldo para Fevereiro: -5h
-
-MÊS FEVEREIRO (20h contratadas):
-├── Saldo Anterior: 5h
-├── Disponível: 15h (20h - 5h)
-├── Utilizado no mês: 12h
-├── Restante: 3h
-└── Total considerado: 17h (12h + 5h saldo)
-
-MÊS MARÇO (se Fevereiro não exceder):
-├── Saldo Anterior: 0h
-├── Disponível: 20h
-└── ...
-```
-
----
-
-### Seção Técnica
-
-**Nova função no DataContext:**
-
-```typescript
-const getClientPreviousMonthOverflow = (
-  clientId: string, 
-  year?: number, 
-  month?: number
-): number => {
-  const client = data.clients.find(c => c.id === clientId);
-  if (!client || client.contract_type !== 'monthly') return 0;
-
-  const now = new Date();
-  const targetYear = year ?? now.getFullYear();
-  const targetMonth = month ?? now.getMonth() + 1;
-
-  // Verifica se o contrato já começou
-  if (client.contract_start_date) {
-    const startDate = new Date(client.contract_start_date);
-    const targetDate = new Date(targetYear, targetMonth - 1, 1);
-    if (targetDate <= startDate) return 0; // Antes do início do contrato
-  }
-
-  // Calcula mês anterior
-  let prevYear = targetYear;
-  let prevMonth = targetMonth - 1;
-  if (prevMonth === 0) {
-    prevMonth = 12;
-    prevYear -= 1;
-  }
-
-  // Horas usadas no mês anterior
-  const prevMonthHours = getClientMonthlyHours(clientId, prevYear, prevMonth);
-  
-  // Saldo anterior do mês anterior (recursivo até início do contrato)
-  const prevOverflow = getClientPreviousMonthOverflow(clientId, prevYear, prevMonth);
-  
-  // Horas disponíveis no mês anterior
-  const prevAvailable = Math.max(0, client.contracted_hours - prevOverflow);
-  
-  // Excedente do mês anterior
-  const overflow = Math.max(0, prevMonthHours - prevAvailable);
-
-  return overflow;
-};
-```
-
-**Atualização da interface:**
-
-```typescript
-interface DataContextType {
-  // ... existentes
-  getClientPreviousMonthOverflow: (clientId: string, year?: number, month?: number) => number;
-}
-```
+| `src/components/layout/AppLayout.tsx` | Workspace selector, header com breadcrumb/search, manter timer |
+| `src/pages/Dashboard.tsx` | Novo layout 70/30 com ordem responsiva |
+| `src/App.tsx` | Adicionar rota `/calendar` |
 
 ---
 
 ### Ordem de Implementação
 
-1. **DataContext.tsx** - Adicionar função `getClientPreviousMonthOverflow`
-2. **ClientDashboard.tsx** - Exibir saldo anterior e segmentação de horas
-3. **ClientDetail.tsx** - Card de utilização com saldo
-4. **Dashboard.tsx** - Indicador de saldo na lista de clientes
-5. **Clients.tsx** - Cards com informação de saldo
-6. **SharedReport.tsx** - Resumo do contrato com saldo por mês
-7. **Reports.tsx** - Vista por cliente com saldo
+**Fase 1: Header e Sidebar**
+1. Criar `WorkspaceSelector.tsx`
+2. Criar `BreadcrumbNav.tsx`
+3. Criar `UniversalSearchBar.tsx`
+4. Modificar `AppLayout.tsx` - novo header com breadcrumb/search, manter timer
+
+**Fase 2: Dashboard**
+1. Extrair painéis existentes para componentes separados
+2. Criar `QuickActionsPanel.tsx`
+3. Criar `DashboardCalendar.tsx`
+4. Criar `SolicitacoesPanel.tsx`
+5. Refatorar `Dashboard.tsx` com layout 70/30
+
+**Fase 3: Calendário**
+1. Criar `CalendarPage.tsx`
+2. Criar `GanttView.tsx`
+3. Adicionar rota em `App.tsx`
+
+---
+
+### Seção Tecnica
+
+#### Classes CSS para Ordem Responsiva
+
+```css
+/* Coluna direita (ações) - primeiro no mobile */
+.order-first { order: -1; }
+.lg\:order-last { @media (min-width: 1024px) { order: 1; } }
+
+/* Coluna esquerda (conteúdo) - depois no mobile */
+.order-last { order: 1; }
+.lg\:order-first { @media (min-width: 1024px) { order: -1; } }
+```
+
+#### UniversalSearchBar com Cmd+K
+
+```typescript
+const UniversalSearchBar: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const { data } = useData();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
+  
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)} className="w-80 justify-start">
+        <Search className="h-4 w-4 mr-2 text-muted-foreground" />
+        <span className="text-muted-foreground">Em qual projeto trabalhará hoje?</span>
+        <kbd className="ml-auto pointer-events-none text-xs text-muted-foreground">⌘K</kbd>
+      </Button>
+      
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Pesquisar projetos, clientes, tarefas..." />
+        <CommandList>
+          <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+          <CommandGroup heading="Projetos">
+            {data.projects.slice(0, 5).map(project => (
+              <CommandItem 
+                key={project.id} 
+                onSelect={() => { navigate(`/projects/${project.id}`); setOpen(false); }}
+              >
+                <FolderKanban className="h-4 w-4 mr-2" />
+                {project.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandGroup heading="Clientes">
+            {data.clients.slice(0, 5).map(client => (
+              <CommandItem 
+                key={client.id} 
+                onSelect={() => { navigate(`/clients/${client.id}`); setOpen(false); }}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                {client.company || client.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+    </>
+  );
+};
+```
+
+#### DashboardCalendar com Link para Expandir
+
+```typescript
+const DashboardCalendar: React.FC = () => {
+  const navigate = useNavigate();
+  const [date, setDate] = useState<Date>(new Date());
+  
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4" />
+            Calendário
+          </CardTitle>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
+            Expandir
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(d) => d && setDate(d)}
+          className="rounded-md"
+        />
+      </CardContent>
+    </Card>
+  );
+};
+```
+
+---
+
+### Componentes que Permanecem Inalterados
+
+| Componente | Motivo |
+|------------|--------|
+| `HeaderTimerDisplay` | Timer no header já funciona conforme solicitado |
+| `HeaderTimerTaskInfo` | Informações da tarefa já funcionam |
+| `MobileHeader` | Animação logo/tarefa já implementada |
+| `GlobalTimerContext` | Lógica de estado do timer |
+| `QuickTimeTracker` | Será movido para coluna direita, sem alteração de código |
 
