@@ -343,7 +343,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       isCollapsed && 'lg:justify-center lg:px-2'
                     )}
                   >
-                    <item.icon className="w-3 h-3 flex-shrink-0" />
+                    <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className={cn(
                       "transition-opacity duration-300",
                       isCollapsed && "lg:hidden"
@@ -422,7 +422,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       'lg:justify-center lg:px-2'
                     )}
                   >
-                    <Settings className="w-3 h-3 flex-shrink-0" />
+                    <Settings className="w-3.5 h-3.5 flex-shrink-0" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">Configurações</TooltipContent>
@@ -436,7 +436,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
                 >
-                  <Settings className="w-3 h-3" />
+                  <Settings className="w-3.5 h-3.5" />
                   Configurações
                 </Link>
               </Tooltip>
@@ -451,7 +451,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <Settings className="w-3 h-3" />
+                <Settings className="w-3.5 h-3.5" />
                 Configurações
               </Link>
             )}
@@ -465,7 +465,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     className="w-full justify-center text-muted-foreground hover:text-foreground px-2"
                     onClick={handleSignOut}
                   >
-                    <LogOut className="w-3 h-3" />
+                    <LogOut className="w-3.5 h-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Sair</TooltipContent>
@@ -474,7 +474,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   className="lg:hidden w-full justify-start text-muted-foreground hover:text-foreground"
                   onClick={handleSignOut}
                 >
-                  <LogOut className="w-3 h-3 mr-2" />
+                  <LogOut className="w-3.5 h-3.5 mr-2" />
                   Sair
                 </Button>
               </Tooltip>
@@ -484,7 +484,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 className="w-full justify-start text-muted-foreground hover:text-foreground"
                 onClick={handleSignOut}
               >
-                <LogOut className="w-3 h-3 mr-2" />
+                <LogOut className="w-3.5 h-3.5 mr-2" />
                 Sair
               </Button>
             )}

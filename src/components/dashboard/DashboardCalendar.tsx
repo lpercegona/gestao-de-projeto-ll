@@ -83,13 +83,13 @@ export const DashboardCalendar: React.FC = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-2">
         <Calendar
           mode="single"
           selected={date}
           onSelect={(d) => d && setDate(d)}
           locale={ptBR}
-          className="rounded-md"
+          className="rounded-md w-full"
           modifiers={modifiers}
           modifiersStyles={modifiersStyles}
           components={{
