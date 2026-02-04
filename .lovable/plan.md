@@ -1,136 +1,16 @@
 
 
-## Plano: Ajustes Visuais no Menu e Cards
+## Plano: Remocao de PageHeader e Reorganizacao do Menu
 
-### Alteracoes Solicitadas
+### Objetivo
 
-1. **Icones do menu** - Alterar para 12px (w-3 h-3)
-2. **Largura do menu colapsado** - Ajustar proporcionalmente (de 16 para 12)
-3. **Remover sombras dos cards** - Manter apenas bordas sutis
-4. **Workspace no header** - Ajustar altura para alinhar com header fixo
-5. **Menu colapsado** - Mostrar icone do workspace ao inves do simbolo Oras
-
----
-
-### 1. Icones do Menu (12px)
-
-**Arquivo:** `src/components/layout/AppLayout.tsx`
-
-**Alteracoes:**
-- Icones de navegacao: `w-5 h-5` → `w-3 h-3`
-- Icones de configuracoes e logout: `w-5 h-5` → `w-3 h-3`
-
-**Linhas afetadas:**
-- Linha 352: `<item.icon className="w-5 h-5 flex-shrink-0" />`
-- Linha 431: `<Settings className="w-5 h-5 flex-shrink-0" />`
-- Linha 445, 460: `<Settings className="w-5 h-5" />`
-- Linha 474, 483, 493: `<LogOut className="w-5 h-5" />` e `<LogOut className="w-4 h-4 mr-2" />`
-- Linhas 310-313: Icones do collapse button
-
----
-
-### 2. Largura do Menu Colapsado
-
-**Arquivo:** `src/components/layout/AppLayout.tsx`
-
-**Alteracao:**
-- Sidebar colapsada: `lg:w-16` → `lg:w-12` (48px para acomodar icones de 12px)
-- Header margin-left: `ml-16` → `ml-12`
-
-**Linhas afetadas:**
-- Linha 268: `isCollapsed ? "lg:w-16" : "lg:w-64"`
-- Linha 93: `ml-16` no DesktopHeader
-
----
-
-### 3. Remover Sombras dos Cards
-
-**Arquivo:** `src/components/ui/card.tsx`
-
-**Alteracao:**
-```typescript
-// Antes
-className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)}
-
-// Depois
-className={cn("rounded-lg border bg-card text-card-foreground", className)}
-```
-
----
-
-### 4. Workspace Alinhado com Header
-
-**Arquivo:** `src/components/layout/AppLayout.tsx`
-
-**Alteracao no container do workspace:**
-```typescript
-// Antes
-<div className={cn(
-  "relative p-4 border-b border-border flex-shrink-0",
-  isCollapsed && "lg:px-2"
-)}>
-
-// Depois - altura fixa de 14 (h-14 = 56px, mesma do header)
-<div className={cn(
-  "relative h-14 flex items-center border-b border-border flex-shrink-0",
-  isCollapsed ? "lg:px-2 lg:justify-center" : "px-4"
-)}>
-```
-
----
-
-### 5. Menu Colapsado - Icone do Workspace
-
-**Arquivo:** `src/components/layout/AppLayout.tsx`
-
-**Alteracao:**
-Quando colapsado, mostrar Avatar do workspace (com iniciais) ao inves do simbolo Oras
-
-```typescript
-// Antes (linha 283-286)
-{isCollapsed ? (
-  <div className="flex items-center justify-center">
-    <img src={SimboloOras} alt="ORAS" className="h-8 w-8" />
-  </div>
-) : (
-
-// Depois
-{isCollapsed ? (
-  <WorkspaceSelector isCollapsed={isCollapsed} />
-) : (
-```
-
-**Arquivo:** `src/components/layout/WorkspaceSelector.tsx`
-
-**Ajustar para modo colapsado mostrar apenas o Avatar:**
-```typescript
-// Avatar menor quando colapsado
-<Avatar className={cn("shrink-0", isCollapsed ? "h-7 w-7" : "h-8 w-8")}>
-```
-
----
-
-### Resumo Visual
-
-**Antes:**
-```text
-┌────────────────┐
-│ [Simbolo Oras] │  ← Menu colapsado (w-16)
-├────────────────┤
-│ [🏠] Painel    │  ← Icone 20px
-│ [👥] Clientes  │
-└────────────────┘
-```
-
-**Depois:**
-```text
-┌────────────┐
-│    [A]     │  ← Avatar do workspace (w-12)
-├────────────┤
-│ [🏠]       │  ← Icone 12px
-│ [👥]       │
-└────────────┘
-```
+1. Remover a linha de titulo e descricao (PageHeader) de todas as paginas
+2. Remover a opcao "Solicitacoes" do menu lateral
+3. Mover a funcionalidade de Solicitacoes para dentro da pagina de Projetos (Projects.tsx)
+4. Remover a opcao "Propostas" do menu lateral
+5. Mover a funcionalidade de Propostas para dentro da pagina Clientes (Clients.tsx)
+6. Remover a opcao "Edicoes" do menu lateral
+7. Mover a funcionalidade de Edicoes para dentro da pagina de Projetos (Projects.tsx)
 
 ---
 
@@ -138,57 +18,317 @@ Quando colapsado, mostrar Avatar do workspace (com iniciais) ao inves do simbolo
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/ui/card.tsx` | Remover `shadow-sm` |
-| `src/components/layout/AppLayout.tsx` | Icones 12px, sidebar w-12, header ml-12, workspace height |
-| `src/components/layout/WorkspaceSelector.tsx` | Avatar responsivo para modo colapsado |
-| `src/lib/design-tokens.ts` | Atualizar ICON_SIZES.md para 12px |
+| `src/components/layout/AppLayout.tsx` | Remover "Solicitacoes", "Propostas" e "Edicoes" do menu |
+| `src/pages/Clients.tsx` | Remover PageHeader, adicionar tab "Propostas" |
+| `src/pages/Projects.tsx` | Remover PageHeader, adicionar tabs "Solicitacoes" e "Edicoes" |
+| `src/pages/ProjectRequests.tsx` | Remover PageHeader |
+| `src/pages/Proposals.tsx` | Remover PageHeader |
+| `src/pages/EditRequests.tsx` | Remover PageHeader |
+| `src/pages/CalendarPage.tsx` | Remover PageHeader |
+| `src/pages/Reports.tsx` | Remover PageHeader |
+
+---
+
+### 1. Remover do Menu (AppLayout.tsx)
+
+**Linhas afetadas:** 173-192
+
+**Alteracoes:**
+- Remover `{ path: '/requests', icon: FileText, label: 'Solicitacoes' }` (linha 177)
+- Remover `{ path: '/edit-requests', icon: Edit, label: 'Edicoes' }` (linha 178)
+- Remover `{ path: '/proposals', icon: FileCheck, label: 'Propostas' }` (linha 179)
+- Aplicar mesmas remocoes em adminNavItems (linhas 188-190)
+- Remover imports nao utilizados: `FileText`, `FileCheck`, `Edit` (linhas 17, 21, 22)
+
+**Menu final:**
+```text
+- Painel
+- Clientes (com tab Propostas)
+- Projetos (com tabs Solicitacoes e Edicoes)
+- Calendario
+```
+
+---
+
+### 2. Remover PageHeader de Todas as Paginas
+
+| Pagina | Linhas | O que remover |
+|--------|--------|---------------|
+| `Clients.tsx` | 5, 177-180 | Import e componente PageHeader |
+| `Projects.tsx` | 6, ~467-477 | Import e componente PageHeader |
+| `ProjectRequests.tsx` | 5, 224-227 | Import e componente PageHeader |
+| `Proposals.tsx` | 6, ~575-578 | Import e componente PageHeader |
+| `EditRequests.tsx` | 2, 235-238 | Import e componente PageHeader |
+| `CalendarPage.tsx` | 2, 111-114 | Import e componente PageHeader |
+| `Reports.tsx` | 5, ~318-321 | Import e componente PageHeader |
+
+---
+
+### 3. Adicionar Tabs de Solicitacoes e Edicoes em Projects.tsx
+
+**Nova estrutura com 3 tabs principais:**
+```text
+Filtros: [Cliente] [Status]
+
+[Projetos] [Solicitacoes] [Edicoes]
+
+<Conteudo da tab selecionada>
+```
+
+**Implementacao:**
+
+1. Adicionar imports necessarios:
+   - `Tabs, TabsContent, TabsList, TabsTrigger` de @/components/ui/tabs
+   - Estados e funcoes do ProjectRequests.tsx e EditRequests.tsx
+
+2. Adicionar novos states:
+   ```typescript
+   const [activeMainTab, setActiveMainTab] = useState<'projects' | 'requests' | 'edits'>('projects');
+   const [requests, setRequests] = useState<ProjectRequest[]>([]);
+   const [editRequests, setEditRequests] = useState<EditRequest[]>([]);
+   const [requestsLoading, setRequestsLoading] = useState(false);
+   const [editsLoading, setEditsLoading] = useState(false);
+   ```
+
+3. Adicionar funcoes de fetch:
+   ```typescript
+   const fetchRequests = async () => { /* logica do ProjectRequests */ };
+   const fetchEditRequests = async () => { /* logica do EditRequests */ };
+   ```
+
+4. Estrutura JSX:
+   ```typescript
+   <Tabs value={activeMainTab} onValueChange={setActiveMainTab}>
+     <TabsList className="mb-4">
+       <TabsTrigger value="projects">
+         <FolderKanban className="w-4 h-4 mr-2" />
+         Projetos
+       </TabsTrigger>
+       <TabsTrigger value="requests">
+         <FileText className="w-4 h-4 mr-2" />
+         Solicitacoes
+         {pendingRequestsCount > 0 && <Badge>{pendingRequestsCount}</Badge>}
+       </TabsTrigger>
+       <TabsTrigger value="edits">
+         <Edit className="w-4 h-4 mr-2" />
+         Edicoes
+         {pendingEditsCount > 0 && <Badge>{pendingEditsCount}</Badge>}
+       </TabsTrigger>
+     </TabsList>
+     
+     <TabsContent value="projects">
+       {/* Conteudo existente de projetos */}
+     </TabsContent>
+     
+     <TabsContent value="requests">
+       {/* Conteudo de solicitacoes (adaptado de ProjectRequests.tsx) */}
+     </TabsContent>
+     
+     <TabsContent value="edits">
+       {/* Conteudo de edicoes (adaptado de EditRequests.tsx) */}
+     </TabsContent>
+   </Tabs>
+   ```
+
+---
+
+### 4. Adicionar Tab de Propostas em Clients.tsx
+
+**Nova estrutura:**
+```text
+[Clientes] [Propostas]
+
+<Conteudo da tab selecionada>
+```
+
+**Implementacao:**
+
+1. Adicionar imports de Proposals.tsx:
+   - Estados: `proposals`, `templates`, `loading`, `searchTerm`, `statusFilter`
+   - Dialogs: `proposalDialogOpen`, `templateDialogOpen`, etc.
+   - Funcoes: `fetchData`, `handleSaveProposal`, etc.
+
+2. Adicionar novo state:
+   ```typescript
+   const [mainTab, setMainTab] = useState<'clients' | 'proposals'>('clients');
+   ```
+
+3. Estrutura JSX:
+   ```typescript
+   <Tabs value={mainTab} onValueChange={setMainTab}>
+     <div className="flex items-center justify-between mb-4">
+       <TabsList>
+         <TabsTrigger value="clients">
+           <Users className="w-4 h-4 mr-2" />
+           Clientes
+         </TabsTrigger>
+         <TabsTrigger value="proposals">
+           <FileCheck className="w-4 h-4 mr-2" />
+           Propostas
+         </TabsTrigger>
+       </TabsList>
+       {/* Botao dinamico baseado na tab */}
+     </div>
+     
+     <TabsContent value="clients">
+       {/* Conteudo existente de clientes */}
+     </TabsContent>
+     
+     <TabsContent value="proposals">
+       {/* Conteudo de propostas (adaptado de Proposals.tsx) */}
+     </TabsContent>
+   </Tabs>
+   ```
+
+---
+
+### 5. Manter Rotas Funcionais
+
+As rotas existentes serao mantidas para compatibilidade e acesso direto:
+- `/requests` - continua funcionando (ProjectRequests.tsx)
+- `/proposals` - continua funcionando (Proposals.tsx)
+- `/edit-requests` - continua funcionando (EditRequests.tsx)
+
+Apenas removidas do menu de navegacao.
+
+---
+
+### Estrutura Final
+
+**Menu de Navegacao (Admin):**
+```text
+├── Painel
+├── Clientes (com tab Propostas)
+├── Projetos (com tabs Solicitacoes + Edicoes)
+└── Calendario
+```
+
+**Pagina de Clientes:**
+```text
+[Clientes] [Propostas]
+
+→ Tab Clientes:
+   [Lead] [Negociacao] [Ativo] [Inativo]  [+ Novo Cliente]
+   <Grid de cards de clientes>
+
+→ Tab Propostas:
+   [Busca] [Filtro Status] [+ Nova Proposta]
+   [Propostas] [Templates]
+   <Lista de propostas/templates>
+```
+
+**Pagina de Projetos:**
+```text
+[Projetos] [Solicitacoes (3)] [Edicoes (2)]
+
+→ Tab Projetos:
+   Filtros: [Cliente]    Visualizacao: [Lista] [Kanban]
+   X projetos [+ Novo Projeto]
+   <Lista/Kanban de projetos>
+
+→ Tab Solicitacoes:
+   [Filtro Status] [Filtro Cliente]
+   [Cards de resumo]
+   <Lista de solicitacoes>
+
+→ Tab Edicoes:
+   <Lista de solicitacoes de edicao pendentes>
+   <Lista de solicitacoes processadas>
+```
 
 ---
 
 ### Secao Tecnica
 
-**Tamanho dos icones:**
-- 12px = `w-3 h-3` (0.75rem)
-- Sidebar colapsada: 48px = `w-12` (3rem)
-- Header altura: 56px = `h-14` (3.5rem)
+**AppLayout.tsx - Novo array de navegacao:**
+```typescript
+const masterAdminNavItems = [
+  { path: '/', icon: LayoutDashboard, label: 'Painel' },
+  { path: '/clients', icon: Users, label: 'Clientes' },
+  { path: '/projects', icon: FolderKanban, label: 'Projetos' },
+  { path: '/calendar', icon: Calendar, label: 'Calendario' },
+];
 
-**Card sem sombra:**
-```css
-.card {
-  border-radius: 0.5rem;
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
-  /* sem shadow */
+const adminNavItems = [
+  { path: '/', icon: LayoutDashboard, label: 'Painel' },
+  { path: '/clients', icon: Users, label: 'Clientes' },
+  { path: '/projects', icon: FolderKanban, label: 'Projetos' },
+  { path: '/calendar', icon: Calendar, label: 'Calendario' },
+];
+```
+
+**Projects.tsx - Interfaces adicionais:**
+```typescript
+interface ProjectRequest {
+  id: string;
+  client_id: string;
+  title: string;
+  briefing: string;
+  status: string;
+  admin_notes: string | null;
+  converted_project_id: string | null;
+  desired_deadline: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EditRequest {
+  id: string;
+  entity_type: 'project' | 'project_request';
+  entity_id: string;
+  client_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  original_data: Record<string, unknown>;
+  proposed_data: Record<string, unknown>;
+  admin_notes: string | null;
+  created_at: string;
+  client?: { name: string; company: string | null; };
 }
 ```
 
-**WorkspaceSelector colapsado:**
+**Clients.tsx - Interfaces adicionais:**
 ```typescript
-export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({ isCollapsed = false }) => {
-  // ...
-  
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="ghost" className="p-1">
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">{getWorkspaceName()}</TooltipContent>
-      </Tooltip>
-    );
-  }
-  
-  return (
-    <DropdownMenu>
-      {/* versao expandida */}
-    </DropdownMenu>
-  );
-};
+interface ProposalItem {
+  id: string;
+  service: string;
+  description: string;
+  hours: number;
+  pricePerHour: number;
+}
+
+interface Proposal {
+  id: string;
+  template_id: string | null;
+  share_token: string;
+  recipient_name: string;
+  recipient_email: string;
+  recipient_company: string | null;
+  title: string;
+  description: string | null;
+  items: ProposalItem[];
+  total_hours: number;
+  total_value: number;
+  status: string;
+  valid_until: string | null;
+  created_at: string;
+  client_id: string | null;
+}
+
+interface ProposalTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  items: ProposalItem[];
+}
 ```
+
+---
+
+### Ordem de Implementacao
+
+1. Remover PageHeader de todas as paginas (7 arquivos)
+2. Remover itens do menu em AppLayout.tsx
+3. Adicionar tabs de Solicitacoes e Edicoes em Projects.tsx
+4. Adicionar tab de Propostas em Clients.tsx
+5. Testar navegacao e funcionalidades
 
