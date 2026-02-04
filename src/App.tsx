@@ -129,9 +129,9 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Calendar - admin only */}
+              {/* Calendar - accessible by all authenticated users */}
               <Route path="/calendar" element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole="client">
                   <CalendarPage />
                 </ProtectedRoute>
               } />
