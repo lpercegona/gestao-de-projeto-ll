@@ -1,223 +1,340 @@
 
 
-## Plano: Ajustes no Layout do Painel
+## Plano: Adequacao Visual ao Design System Shadcn/UI
 
-### Alterações Solicitadas
+### Objetivo
 
-1. **QuickActionsPanel** - Combinar botões + timer em um único card
-2. **Remover PageHeader** - Sem título e descrição do painel
-3. **Stats** - Remover card de "Horas", adicionar card customizável com +
-4. **Projetos** - Mostrar apenas projetos ativos
-5. **Tarefas** - Mostrar apenas tarefas pendentes
+Padronizar toda a plataforma ORAS seguindo o Design System Shadcn/UI, utilizando a imagem de referencia como padrao visual. As alteracoes abrangem todas as telas (login, dashboards de todos os perfis, listagens, detalhes) garantindo consistencia em cores, espacamentos, tipografia, cards e componentes.
 
 ---
 
-### 1. QuickActionsPanel Reorganizado
+### Analise da Imagem de Referencia
 
-**Novo Layout:**
-```text
-┌────────────────────────────────────────┐
-│ + Ações Rápidas                        │
-├────────────────────────────────────────┤
-│ [+ Novo Cliente] [+ Nova Proposta]     │  ← Mesma linha
-│                                        │
-│       00:00:00                         │  ← Timer (sem título)
-│  [Tarefa vinculada info]               │
-│  [▶️ Iniciar] ou [⏸ Pausar][⏹ Concluir]│
-└────────────────────────────────────────┘
-```
+A imagem de referencia apresenta as seguintes caracteristicas visuais:
 
-**Modificação em `QuickActionsPanel.tsx`:**
-- Adicionar lógica do timer inline (importar de GlobalTimerContext)
-- Botões lado a lado: `grid grid-cols-2 gap-2`
-- Remover título "Registro Rápido" do timer
+| Elemento | Caracteristicas |
+|----------|-----------------|
+| **Background** | Fundo branco/neutro (#fff ou similar) |
+| **Cards** | Bordas sutis, sem sombra ou sombra minima, cantos arredondados (8px) |
+| **Stats Cards** | Layout limpo com titulo pequeno em muted, valor grande bold, icone muted |
+| **Typography** | Titulos escuros, descricoes em muted-foreground |
+| **Badges** | Bordas suaves, variantes outline para status neutros |
+| **Sidebar** | Background levemente diferenciado, navegacao com hover states |
+| **Header** | Fundo branco com borda inferior sutil, elementos bem espacados |
+| **Calendario** | Estilo minimalista com dia selecionado em fundo escuro |
+| **Listas** | Items com padding consistente, separadores sutis |
 
 ---
 
-### 2. Dashboard.tsx - Remover PageHeader
+### Alteracoes Globais (index.css)
 
-**Antes:**
-```typescript
-<PageHeader
-  title="Painel"
-  description="Visão geral do sistema de gestão de projetos"
-/>
+**1. Ajustar variaveis CSS para tema mais neutro:**
+
+```css
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --primary: 240 5.9% 10%;
+  --primary-foreground: 0 0% 98%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --border: 240 5.9% 90%;
+  --radius: 0.5rem;
+}
 ```
 
-**Depois:** Remover completamente este componente.
-
----
-
-### 3. Stats Row - Substituir "Horas" por Card Customizável
-
-**Novo array de stats (4 cards + 1 customizável):**
-```typescript
-const stats = [
-  {
-    title: 'Clientes',
-    value: data.clients.length,
-    icon: Users,
-    description: 'Total de clientes',
-  },
-  {
-    title: 'Projetos',
-    value: activeProjects.length,  // ← Apenas ativos
-    icon: FolderKanban,
-    description: 'Projetos ativos',
-  },
-  {
-    title: 'Tarefas',
-    value: pendingTasks.length,    // ← Apenas pendentes
-    icon: ListTodo,
-    description: 'Tarefas pendentes',
-  },
-  {
-    title: 'Propostas',
-    value: proposalCount,
-    icon: FileCheck,
-    description: 'Pendentes ou enviadas',
-  },
-];
-```
-
-**Card customizável (5ª posição):**
-```typescript
-{/* Card customizável com bordas pontilhadas */}
-<Card className="border-dashed border-2 border-muted-foreground/30 hover:border-primary/50 transition-colors cursor-pointer">
-  <CardContent className="flex items-center justify-center h-full p-4 min-h-[100px]">
-    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-      <Plus className="h-6 w-6" />
-      <span className="text-xs">Personalizar</span>
-    </div>
-  </CardContent>
-</Card>
-```
-
----
-
-### 4. Filtros de Dados
-
-**Projetos Ativos:**
-```typescript
-const activeProjects = data.projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled');
-```
-
-**Tarefas Pendentes:**
-```typescript
-const pendingTasks = data.tasks.filter(t => t.status !== 'completed' && t.status !== 'done');
-```
+- Cores mais neutras (cinza com subtom azulado ao inves de roxo)
+- Bordas mais suaves
+- Primary mais escuro (tons de cinza escuro/preto)
 
 ---
 
 ### Arquivos a Modificar
 
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/components/dashboard/QuickActionsPanel.tsx` | Integrar timer, botões na mesma linha |
-| `src/pages/Dashboard.tsx` | Remover PageHeader, ajustar stats, remover QuickTimeTracker separado |
+#### 1. `src/index.css` - Design Tokens Globais
+
+| Alteracao | Descricao |
+|-----------|-----------|
+| Variaveis :root | Atualizar cores para paleta neutra Shadcn |
+| Variaveis .dark | Manter consistencia no tema escuro |
+| Border radius | Padronizar em 0.5rem (8px) |
+| Shadows | Usar shadow-sm como padrao em cards |
 
 ---
 
-### Visualização Final
+#### 2. `src/components/ui/card.tsx` - Estilo dos Cards
 
-**Stats Row (5 colunas):**
-```text
-┌─────────┬─────────┬─────────┬─────────┬─────────┐
-│Clientes │Projetos │ Tarefas │Propostas│   [+]   │
-│ 5 total │ 7 ativos│12 pend. │ 3 pend. │Customiz.│
-└─────────┴─────────┴─────────┴─────────┴─────────┘
-```
+- Adicionar `shadow-sm` como padrao
+- Garantir `border-border` consistente
+- Hover states opcionais para cards clicaveis
 
-**Coluna Direita (Ações Rápidas combinado):**
+---
+
+#### 3. `src/pages/Login.tsx` - Tela de Login
+
+| Elemento | Alteracao |
+|----------|-----------|
+| Container | Centralizado com max-w-md, padding adequado |
+| Card | Sombra suave, bordas arredondadas |
+| Tabs | Estilo consistente com design system |
+| Inputs | Bordas neutras, focus states |
+| Buttons | Primary escuro, ghost para links |
+
+---
+
+#### 4. `src/pages/Dashboard.tsx` - Dashboard Admin
+
+| Elemento | Alteracao |
+|----------|-----------|
+| Stats Cards | Titulo xs muted, valor 2xl bold, icone muted no header |
+| Grid | Gap consistente (gap-4 para stats, gap-6 para paineis) |
+| Paineis | Headers com titulos e contagem, sem bordas excessivas |
+
+---
+
+#### 5. `src/pages/ClientDashboard.tsx` - Dashboard Cliente
+
+| Alteracao | Descricao |
+|-----------|-----------|
+| Remover PageHeader | Seguir padrao do dashboard admin |
+| Stats layout | Grid 2x2 ou 4 colunas |
+| Cards de progresso | Estilo consistente |
+
+---
+
+#### 6. `src/pages/CollaboratorDashboard.tsx` - Dashboard Colaborador
+
+| Alteracao | Descricao |
+|-----------|-----------|
+| Remover PageHeader | Seguir padrao do dashboard admin |
+| Stats layout | Grid responsivo |
+| Quick Timer | Estilo integrado |
+
+---
+
+#### 7. `src/pages/Clients.tsx` - Listagem de Clientes
+
+| Elemento | Alteracao |
+|----------|-----------|
+| Tabs | Estilo sutil com contagem em badge |
+| Cards de cliente | Hover suave, sombra minima |
+| Badges de status | Variantes corretas (outline, secondary, default) |
+
+---
+
+#### 8. `src/pages/Projects.tsx` - Listagem de Projetos
+
+| Alteracao | Descricao |
+|-----------|-----------|
+| Filtros | Componentes Select padronizados |
+| View Toggle | ToggleGroup com estilo consistente |
+| Cards/Lista | Espacamento e tipografia padronizados |
+
+---
+
+#### 9. `src/pages/Landing.tsx` - Pagina Inicial Publica
+
+| Elemento | Alteracao |
+|----------|-----------|
+| Hero | Tipografia e espacamento |
+| Feature Cards | Sombra e hover consistentes |
+| CTA Section | Cores primary atualizadas |
+
+---
+
+#### 10. `src/components/layout/AppLayout.tsx` - Layout Principal
+
+| Elemento | Alteracao |
+|----------|-----------|
+| Sidebar | Background card, hover states |
+| Header | Border-b sutil, blur/backdrop |
+| Nav items | Active state com bg-primary |
+
+---
+
+#### 11. `src/components/dashboard/*` - Paineis do Dashboard
+
+| Componente | Alteracao |
+|------------|-----------|
+| SolicitacoesPanel | Headers com icone + titulo + contagem |
+| ProximasEntregasPanel | Badges de status com cores corretas |
+| HorasPorClientePanel | Progress bars estilizadas |
+| UltimosRegistrosPanel | Layout de lista consistente |
+| QuickActionsPanel | Botoes outline, timer centralizado |
+| DashboardCalendar | Dia selecionado com contraste |
+
+---
+
+#### 12. Outras Paginas
+
+| Pagina | Alteracoes |
+|--------|------------|
+| `ClientDetail.tsx` | Cards e tabs padronizados |
+| `ProjectDetail.tsx` | Layout e componentes |
+| `Reports.tsx` | Tabelas e filtros |
+| `Proposals.tsx` | Cards e dialogs |
+| `Settings.tsx` | Tabs e formularios |
+| `Preferences.tsx` | Formularios de configuracao |
+| `Users.tsx` | Tabela de usuarios |
+| `ClientPortal.tsx` | Portal publico estilizado |
+| `PublicProposal.tsx` | Visualizacao publica |
+| `PublicContract.tsx` | Visualizacao publica |
+
+---
+
+### Componentes UI a Ajustar
+
+| Componente | Alteracao |
+|------------|-----------|
+| `button.tsx` | Garantir variant default escuro |
+| `badge.tsx` | Adicionar variantes de cor especificas |
+| `progress.tsx` | Cores consistentes |
+| `tabs.tsx` | Estilo sutil com indicadores |
+| `input.tsx` | Focus ring sutil |
+| `select.tsx` | Estilo consistente com inputs |
+| `dialog.tsx` | Overlay e sombras |
+| `table.tsx` | Headers e rows estilizados |
+
+---
+
+### Padrao Visual Final
+
 ```text
-┌────────────────────────────────────────┐
-│ + Ações Rápidas                        │
-├────────────────────────────────────────┤
-│ [+ Novo Cliente] [+ Nova Proposta]     │
-│                                        │
-│           00:00:00                     │
-│      [▶️ Iniciar Timer]                │
-└────────────────────────────────────────┘
-│                                        │
-│ 📅 Calendário                          │
-│ [Mini calendário]                      │
-└────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CORES                                                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Primary: Cinza escuro (#0f172a ou similar)                                  │
+│ Background: Branco puro (#ffffff)                                           │
+│ Muted: Cinza claro (#f8fafc)                                               │
+│ Border: Cinza sutil (#e2e8f0)                                              │
+│ Destructive: Laranja/Vermelho para alertas                                  │
+│ Success: Verde para confirmacoes                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TIPOGRAFIA                                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Titulos: font-semibold ou font-bold                                         │
+│ Subtitulos: text-muted-foreground                                           │
+│ Valores grandes: text-2xl font-bold                                         │
+│ Labels pequenos: text-xs text-muted-foreground                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ESPACAMENTO                                                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Cards: p-4 ou p-6                                                           │
+│ Gap entre cards: gap-4                                                      │
+│ Gap entre secoes: gap-6 ou space-y-6                                        │
+│ Padding de pagina: p-6 (mantido pelo AppLayout)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ SOMBRAS E BORDAS                                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Cards: border + shadow-sm (opcional)                                        │
+│ Hover: shadow-md ou bg-accent                                               │
+│ Border radius: rounded-lg (8px)                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Seção Técnica
+### Ordem de Implementacao
 
-**QuickActionsPanel atualizado:**
-```typescript
-export const QuickActionsPanel: React.FC = () => {
-  // ... estados do cliente dialog
-  const { 
-    timerState, startGlobalTimer, pauseGlobalTimer, 
-    resumeGlobalTimer, completeGlobalTimer, hasActiveTimer,
-    showCompleteDialog, setShowCompleteDialog
-  } = useGlobalTimer();
-  const { data } = useData();
-  
-  // ... funções do timer
-  
-  return (
-    <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Ações Rápidas
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Botões na mesma linha */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={() => setClientDialogOpen(true)}>
-              <Users className="h-4 w-4 mr-2" />
-              Novo Cliente
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/proposals')}>
-              <FileCheck className="h-4 w-4 mr-2" />
-              Nova Proposta
-            </Button>
-          </div>
-          
-          {/* Timer inline (sem título separado) */}
-          <div className="flex flex-col items-center gap-3 pt-2 border-t">
-            <div className={`text-3xl font-mono font-bold ${isRunning ? 'animate-pulse' : ''}`}>
-              {formatTime(timerState.elapsedSeconds)}
-            </div>
-            {/* Info da tarefa + botões */}
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Dialogs */}
-    </>
-  );
-};
+**Fase 1: Fundacao**
+1. Atualizar `index.css` com novas variaveis de cor
+2. Ajustar `tailwind.config.ts` se necessario
+3. Atualizar componentes UI base (card, button, badge)
+
+**Fase 2: Layout Principal**
+4. Atualizar `AppLayout.tsx` (sidebar, header)
+5. Ajustar componentes de navegacao
+
+**Fase 3: Telas de Acesso**
+6. Redesign `Login.tsx`
+7. Redesign `Landing.tsx`
+8. Ajustar `ResetPassword.tsx`
+
+**Fase 4: Dashboards**
+9. Finalizar `Dashboard.tsx` (admin)
+10. Atualizar `ClientDashboard.tsx`
+11. Atualizar `CollaboratorDashboard.tsx`
+12. Ajustar paineis do dashboard
+
+**Fase 5: Listagens e Detalhes**
+13. `Clients.tsx` e `ClientDetail.tsx`
+14. `Projects.tsx` e `ProjectDetail.tsx`
+15. `Proposals.tsx`
+16. `Reports.tsx`
+17. Demais paginas
+
+**Fase 6: Paginas Publicas**
+18. `ClientPortal.tsx`
+19. `PublicProposal.tsx`
+20. `PublicContract.tsx`
+21. `SharedReport.tsx`
+
+---
+
+### Secao Tecnica
+
+**Variaveis CSS atualizadas (index.css):**
+
+```css
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
+}
 ```
 
-**Dashboard.tsx - Stats atualizados:**
+**Padrao de Stats Card:**
+
 ```typescript
-// Filtros
-const activeProjects = data.projects.filter(p => 
-  p.status !== 'completed' && p.status !== 'cancelled'
-);
-const pendingTasks = data.tasks.filter(t => 
-  t.status !== 'completed' && t.status !== 'done'
-);
+<Card>
+  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+    <CardTitle className="text-sm font-medium text-muted-foreground">
+      Titulo
+    </CardTitle>
+    <Icon className="h-4 w-4 text-muted-foreground" />
+  </CardHeader>
+  <CardContent>
+    <div className="text-2xl font-bold">Valor</div>
+    <p className="text-xs text-muted-foreground">Descricao</p>
+  </CardContent>
+</Card>
+```
 
-// Stats sem Horas
-const stats = [
-  { title: 'Clientes', value: data.clients.length, icon: Users, description: 'Total de clientes' },
-  { title: 'Projetos', value: activeProjects.length, icon: FolderKanban, description: 'Projetos ativos' },
-  { title: 'Tarefas', value: pendingTasks.length, icon: ListTodo, description: 'Tarefas pendentes' },
-  { title: 'Propostas', value: proposalCount, icon: FileCheck, description: 'Pendentes ou enviadas' },
-];
+**Padrao de Lista com Items:**
 
-// No JSX - remover PageHeader e QuickTimeTracker separado
-// Adicionar card customizável após os stats
+```typescript
+<div className="space-y-3">
+  {items.map(item => (
+    <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+      <div className="flex items-center gap-3">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div>
+          <p className="font-medium">{item.title}</p>
+          <p className="text-sm text-muted-foreground">{item.subtitle}</p>
+        </div>
+      </div>
+      <Badge variant="outline">{item.status}</Badge>
+    </div>
+  ))}
+</div>
 ```
 
