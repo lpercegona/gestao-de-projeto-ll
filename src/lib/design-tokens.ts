@@ -55,3 +55,10 @@ export const LOGO_CONTAINER = {
   wrapper: 'flex items-center justify-center bg-muted rounded-lg overflow-hidden border border-border',
   image: 'max-w-full max-h-full object-contain',
 } as const;
+
+export const SIDEBAR_COLLAPSED = {
+  itemSize: 'h-8 w-8',           // 32px - tamanho padrão de item colapsado
+  avatarSize: 'h-7 w-7',         // 28px - avatar ligeiramente menor
+  iconSize: 'w-3.5 h-3.5',       // 14px - ícones
+  itemClasses: 'flex items-center justify-center rounded-md mx-auto',
+} as const;
