@@ -1,104 +1,187 @@
 
-## Plano: Adicionar Edição de Período de Contrato e Exibição "Contrato vai até..."
 
-### Problema Identificado
+## Plano: Sistema de Banco de Horas para Contratos Mensais
 
-Os campos de período do contrato (`contract_start_date`, `contract_end_date`, `contract_months`) já existem no banco de dados, mas:
+### Contexto
 
-1. **Não estão incluídos no formulário de edição do cliente** (`ClientDetail.tsx`)
-2. **Não são exibidos no perfil do cliente** (falta informação "Contrato vai até...")
-3. **O `editFormData` não inclui esses campos**, então não são salvos ao editar
+Para clientes com contratos mensais que ultrapassam as horas contratadas em um mês, o sistema precisa:
+1. Identificar e exibir as horas excedentes como "banco de horas negativo" ou "saldo devedor"
+2. Contabilizar essas horas no próximo mês como "horas herdadas"
+3. Segmentar claramente entre horas do mês atual e horas herdadas de meses anteriores
+
+### Nomenclatura Sugerida
+
+Sugiro utilizar o termo **"Saldo Anterior"** para as horas excedentes que são transportadas:
+- **Saldo Anterior**: Horas que excederam o limite do mês passado e são descontadas do mês atual
+- **Horas do Mês**: Horas utilizadas especificamente neste mês
+- **Horas Disponíveis**: Total de horas que podem ser usadas (contratadas - saldo anterior)
+
+Alternativas consideradas:
+- "Horas Acumuladas" - pode confundir com horas já usadas
+- "Débito de Horas" - tem conotação negativa
+- "Crédito Utilizado" - pode confundir com crédito positivo
 
 ---
 
 ### Alterações Necessárias
 
-#### 1. Atualizar Estado do Formulário de Edição (ClientDetail.tsx)
+#### 1. Criar Função de Cálculo de Saldo Anterior (DataContext.tsx)
 
-Adicionar os campos de período ao `editFormData`:
-
-```typescript
-const [editFormData, setEditFormData] = useState({
-  // ... campos existentes
-  contract_type: 'one_time' as 'one_time' | 'monthly',
-  contract_start_date: null as string | null,  // NOVO
-  contract_end_date: null as string | null,    // NOVO
-  contract_months: 1 as number | null,         // NOVO
-});
-```
-
----
-
-#### 2. Atualizar useEffect de Inicialização
-
-Modificar o `useEffect` que inicializa o formulário para incluir os novos campos:
+Adicionar nova função `getClientPreviousMonthOverflow`:
 
 ```typescript
-useEffect(() => {
-  if (client) {
-    setEditFormData({
-      // ... campos existentes
-      contract_type: (client as any).contract_type || 'one_time',
-      contract_start_date: (client as any).contract_start_date || null,  // NOVO
-      contract_end_date: (client as any).contract_end_date || null,      // NOVO
-      contract_months: (client as any).contract_months || 1,             // NOVO
-    });
+// Calcula as horas que excederam no mês anterior (saldo negativo transportado)
+const getClientPreviousMonthOverflow = (clientId: string, year?: number, month?: number): number => {
+  const now = new Date();
+  const targetYear = year ?? now.getFullYear();
+  const targetMonth = month ?? now.getMonth() + 1;
+  
+  // Calcula para o mês anterior
+  let prevYear = targetYear;
+  let prevMonth = targetMonth - 1;
+  if (prevMonth === 0) {
+    prevMonth = 12;
+    prevYear -= 1;
   }
-}, [client]);
+  
+  // Verifica se o cliente tem contrato mensal
+  const client = data.clients.find(c => c.id === clientId);
+  if (!client || client.contract_type !== 'monthly') return 0;
+  
+  // Calcula horas usadas no mês anterior
+  const prevMonthHours = getClientMonthlyHours(clientId, prevYear, prevMonth);
+  const overflow = Math.max(0, prevMonthHours - client.contracted_hours);
+  
+  // Recursivamente adiciona overflow de meses anteriores
+  const prevOverflow = getClientPreviousMonthOverflow(clientId, prevYear, prevMonth);
+  
+  return overflow + prevOverflow;
+};
 ```
 
 ---
 
-#### 3. Adicionar Campos no Diálogo de Edição
+#### 2. Interface do DataContext
 
-Incluir uma nova seção no formulário (dentro da aba "Dados Gerais") para editar o período do contrato:
+Atualizar a interface `DataContextType`:
 
-**Layout proposto:**
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ MODELO DE CONTRATAÇÃO                                  │
-│                                                        │
-│ [Plano Mensal ▼]     [Horas/Mês: 20]                  │
-│                                                        │
-│ ── Período do Contrato ──                              │
-│                                                        │
-│ Início: [📅 01/01/2026]    Término: [📅 31/12/2026]   │
-│                                                        │
-│ Duração: [12] meses                                    │
-│ (Total do contrato: 240h = 20h × 12 meses)            │
-└────────────────────────────────────────────────────────┘
+```typescript
+interface DataContextType {
+  // ... existentes
+  getClientPreviousMonthOverflow: (clientId: string, year?: number, month?: number) => number;
+}
 ```
-
-**Campos a adicionar:**
-- DatePicker para `contract_start_date`
-- DatePicker para `contract_end_date`
-- Input numérico para `contract_months`
-
-**Comportamento:**
-- Campos de período só aparecem quando `contract_type === 'monthly'`
-- Calcular automaticamente `contract_months` quando as datas são selecionadas
-- Mostrar resumo: "Total do contrato: Xh (horas × meses)"
 
 ---
 
-#### 4. Adicionar Exibição "Contrato vai até..." no Perfil
+#### 3. Dashboard do Cliente (ClientDashboard.tsx)
 
-Modificar a seção de dados básicos do cliente para incluir a informação de término do contrato:
-
-**Localização:** Card de dados básicos (linhas 872-900)
+**Modificar o card de horas para mostrar:**
 
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│ Responsável  │ E-mail          │ Telefone │ Origem │ Status      │
-│ João Silva   │ joao@email.com  │ (11)...  │ Google │ 🟢 Ativo   │
-│                                                                  │
-│ Modelo: Plano Mensal          │ Contrato vai até: Dez/2026      │
-└──────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│ Horas do Mês - Fevereiro de 2026                    [Plano Mensal] │
+│                                                                    │
+│ Horas Disponíveis: 15h (20h contratadas - 5h saldo anterior)      │
+│                                                                    │
+│ ┌──────────────────────────────────────────────────────────────┐  │
+│ │ Horas do Mês: 12h                                            │  │
+│ │ Saldo Anterior: 5h                                           │  │
+│ │ Total Utilizado: 17h                                         │  │
+│ └──────────────────────────────────────────────────────────────┘  │
+│                                                                    │
+│ [███████████████████████████████████████████░░░░░░░░░░] 85%       │
+│ 3h restantes este mês                                              │
+│                                                                    │
+│ ⚠️ Se exceder, 2h serão descontadas do próximo mês                │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-**Condição:**
-- Mostrar "Contrato vai até: MMM/YYYY" somente quando `contract_end_date` estiver definido
+**Campos a exibir:**
+- **Saldo Anterior**: X horas (quando > 0)
+- **Horas do Mês**: Y horas
+- **Horas Disponíveis**: contracted_hours - saldo_anterior
+- **Restantes**: disponíveis - horas_do_mês
+
+---
+
+#### 4. Perfil do Cliente (ClientDetail.tsx)
+
+**Card de utilização mensal:**
+
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ Utilização - Fevereiro de 2026                      [Plano Mensal] │
+│                                                                    │
+│ Contratado: 20h/mês                                                │
+│ Saldo Anterior: 5h (excedente de Janeiro)                         │
+│ Disponível este mês: 15h                                          │
+│                                                                    │
+│ Horas do Mês: 12h                                                  │
+│ [████████████████████░░░░░░] 80%                                   │
+│                                                                    │
+│ 3h restantes este mês                                              │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 5. Dashboard Admin (Dashboard.tsx)
+
+**Seção "Horas por Cliente" - adicionar indicador de saldo:**
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Empresa ABC                              [Mensal] [⚠️ Saldo: 5h] │
+│ 12h / 20h (15h disponíveis)                                     │
+│ [████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 80%         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 6. Listagem de Clientes (Clients.tsx)
+
+**Cards com indicador de saldo anterior:**
+
+```text
+┌──────────────────────────────────────────┐
+│ Empresa ABC                              │
+│ contato@empresaabc.com                   │
+│                                          │
+│ 🔄 Plano Mensal    📅 Jan - Dez 2026    │
+│ ⚠️ Saldo anterior: 5h                   │
+│                                          │
+│ Projetos: 3                              │
+│ Horas (Fev/2026): 12h / 15h disponíveis │
+│ [█████████████░░░░░░░░░░░░░░░░░] 80%    │
+└──────────────────────────────────────────┘
+```
+
+---
+
+#### 7. Relatório Compartilhado (SharedReport.tsx)
+
+**Resumo do contrato com saldo:**
+
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ RESUMO DO CONTRATO                                                 │
+│                                                                    │
+│ Tipo: Plano Mensal                                                 │
+│ Período: Jan/2026 - Dez/2026                                      │
+│ Horas/Mês: 20h                                                     │
+│                                                                    │
+│ ── Mês Selecionado: Fevereiro de 2026 ──                          │
+│                                                                    │
+│ Saldo Anterior: 5h                                                 │
+│ Horas Disponíveis: 15h                                             │
+│ Horas Utilizadas: 12h                                              │
+│ Restantes: 3h                                                      │
+│                                                                    │
+│ [████████████████████░░░░░░░] 80%                                  │
+└────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -106,178 +189,121 @@ Modificar a seção de dados básicos do cliente para incluir a informação de 
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/pages/ClientDetail.tsx` | Adicionar campos de período no formulário + exibição no perfil |
+| `src/contexts/DataContext.tsx` | Adicionar função `getClientPreviousMonthOverflow` |
+| `src/pages/ClientDashboard.tsx` | Exibir saldo anterior e horas do mês separadamente |
+| `src/pages/ClientDetail.tsx` | Card de utilização com saldo anterior |
+| `src/pages/Dashboard.tsx` | Indicador de saldo na seção "Horas por Cliente" |
+| `src/pages/Clients.tsx` | Cards com informação de saldo anterior |
+| `src/pages/SharedReport.tsx` | Resumo do contrato com saldo por mês |
+| `src/pages/Reports.tsx` | Vista por cliente com saldo |
 
 ---
 
-### Componentes Necessários
+### Lógica de Cálculo
 
-Os componentes já existem no projeto:
-- `Popover` + `Calendar` para DatePicker
-- `format` do date-fns para formatação de datas
-
-**Import adicional necessário:**
 ```typescript
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+// Para um cliente mensal:
+const contractedHours = client.contracted_hours;         // 20h
+const previousOverflow = getClientPreviousMonthOverflow(clientId); // 5h (do mês passado)
+const availableHours = Math.max(0, contractedHours - previousOverflow); // 15h
+const currentMonthHours = getClientMonthlyHours(clientId);  // 12h
+const remainingHours = Math.max(0, availableHours - currentMonthHours); // 3h
+
+// Se currentMonthHours > availableHours:
+const newOverflow = currentMonthHours - availableHours; // Será transportado pro próximo mês
 ```
 
 ---
 
-### Detalhes de Implementação
+### Fluxo Visual
 
-#### Estrutura do Formulário (nova seção após "Modelo de Contratação"):
+```text
+MÊS JANEIRO (20h contratadas):
+├── Utilizado: 25h
+├── Excedente: 5h → Transportado para Fevereiro
+└── Saldo para Fevereiro: -5h
 
-```tsx
-{/* Período do contrato - apenas para planos mensais */}
-{editFormData.contract_type === 'monthly' && (
-  <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
-    <h4 className="text-sm font-medium">Período do Contrato</h4>
-    <div className="grid grid-cols-2 gap-4">
-      {/* Data de Início */}
-      <div className="space-y-2">
-        <Label>Data de Início</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-start">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {editFormData.contract_start_date 
-                ? format(new Date(editFormData.contract_start_date), "dd/MM/yyyy")
-                : "Selecionar data"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={editFormData.contract_start_date ? new Date(editFormData.contract_start_date) : undefined}
-              onSelect={(date) => setEditFormData({...editFormData, contract_start_date: date?.toISOString().split('T')[0] || null})}
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      
-      {/* Data de Término */}
-      <div className="space-y-2">
-        <Label>Data de Término</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-start">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {editFormData.contract_end_date 
-                ? format(new Date(editFormData.contract_end_date), "dd/MM/yyyy")
-                : "Selecionar data"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={editFormData.contract_end_date ? new Date(editFormData.contract_end_date) : undefined}
-              onSelect={(date) => setEditFormData({...editFormData, contract_end_date: date?.toISOString().split('T')[0] || null})}
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-    </div>
-    
-    {/* Duração em meses */}
-    <div className="space-y-2">
-      <Label>Duração (meses)</Label>
-      <Input
-        type="number"
-        min="1"
-        value={editFormData.contract_months || 1}
-        onChange={(e) => setEditFormData({...editFormData, contract_months: Number(e.target.value)})}
-      />
-      <p className="text-xs text-muted-foreground">
-        Total do contrato: {formatHours((editFormData.contracted_hours || 0) * (editFormData.contract_months || 1))} 
-        ({editFormData.contracted_hours}h × {editFormData.contract_months || 1} meses)
-      </p>
-    </div>
-  </div>
-)}
-```
+MÊS FEVEREIRO (20h contratadas):
+├── Saldo Anterior: 5h
+├── Disponível: 15h (20h - 5h)
+├── Utilizado no mês: 12h
+├── Restante: 3h
+└── Total considerado: 17h (12h + 5h saldo)
 
-#### Exibição no Card de Dados Básicos:
-
-```tsx
-{/* Adicionar ao grid de informações básicas */}
-{isMonthly && (
-  <>
-    <div>
-      <span className="text-xs text-muted-foreground">Modelo</span>
-      <p className="text-sm font-medium text-foreground">Plano Mensal</p>
-    </div>
-    {(client as any).contract_end_date && (
-      <div>
-        <span className="text-xs text-muted-foreground">Contrato vai até</span>
-        <p className="text-sm font-medium text-foreground">
-          {format(new Date((client as any).contract_end_date), "MMM/yyyy", { locale: ptBR })}
-        </p>
-      </div>
-    )}
-  </>
-)}
+MÊS MARÇO (se Fevereiro não exceder):
+├── Saldo Anterior: 0h
+├── Disponível: 20h
+└── ...
 ```
 
 ---
 
-### Fluxo Visual Final
+### Seção Técnica
 
-**Perfil do Cliente:**
-```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│ EMPRESA ABC                                                    [✏️]     │
-│ Descrição do cliente...                                                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│ 📁 Projetos: 5  │ ⏱ Horas do Mês: 15h  │ ⏱ Horas/Mês: 20h  │ 🕐 Restante: 5h │
-├──────────────────────────────────────────────────────────────────────────┤
-│ Utilização - Fevereiro de 2026            [Plano Mensal]    15h de 20h  │
-│ [███████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 75%       │
-│ Total acumulado: 45h desde o início do contrato                         │
-├──────────────────────────────────────────────────────────────────────────┤
-│ Responsável  │ E-mail      │ Telefone │ Origem │ Status  │ Modelo       │ Contrato até │
-│ João Silva   │ joao@...    │ (11)...  │ Google │ Ativo   │ Plano Mensal │ Dez/2026    │
-└──────────────────────────────────────────────────────────────────────────┘
+**Nova função no DataContext:**
+
+```typescript
+const getClientPreviousMonthOverflow = (
+  clientId: string, 
+  year?: number, 
+  month?: number
+): number => {
+  const client = data.clients.find(c => c.id === clientId);
+  if (!client || client.contract_type !== 'monthly') return 0;
+
+  const now = new Date();
+  const targetYear = year ?? now.getFullYear();
+  const targetMonth = month ?? now.getMonth() + 1;
+
+  // Verifica se o contrato já começou
+  if (client.contract_start_date) {
+    const startDate = new Date(client.contract_start_date);
+    const targetDate = new Date(targetYear, targetMonth - 1, 1);
+    if (targetDate <= startDate) return 0; // Antes do início do contrato
+  }
+
+  // Calcula mês anterior
+  let prevYear = targetYear;
+  let prevMonth = targetMonth - 1;
+  if (prevMonth === 0) {
+    prevMonth = 12;
+    prevYear -= 1;
+  }
+
+  // Horas usadas no mês anterior
+  const prevMonthHours = getClientMonthlyHours(clientId, prevYear, prevMonth);
+  
+  // Saldo anterior do mês anterior (recursivo até início do contrato)
+  const prevOverflow = getClientPreviousMonthOverflow(clientId, prevYear, prevMonth);
+  
+  // Horas disponíveis no mês anterior
+  const prevAvailable = Math.max(0, client.contracted_hours - prevOverflow);
+  
+  // Excedente do mês anterior
+  const overflow = Math.max(0, prevMonthHours - prevAvailable);
+
+  return overflow;
+};
 ```
 
-**Formulário de Edição:**
-```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│ EDITAR CLIENTE                                               [X]        │
-├──────────────────────────────────────────────────────────────────────────┤
-│ [Dados Gerais] [Campos Personalizados]                                   │
-├──────────────────────────────────────────────────────────────────────────┤
-│ Nome: [João Silva]           Empresa: [ABC Ltda]                         │
-│ Email: [joao@...]            Telefone: [(11)...]                         │
-│ Status: [Ativo ▼]            Origem: [Google]                            │
-│                                                                          │
-│ Horas Contratadas: [20]      Modelo: [Plano Mensal ▼]                   │
-│                                                                          │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │ PERÍODO DO CONTRATO                                                 │ │
-│ │                                                                     │ │
-│ │ Início: [📅 01/01/2026]        Término: [📅 31/12/2026]            │ │
-│ │                                                                     │ │
-│ │ Duração: [12] meses                                                 │ │
-│ │ Total do contrato: 240h (20h × 12 meses)                           │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-│ Observações: [WYSIWYG Editor]                                            │
-│                                                                          │
-│                                        [Cancelar] [Salvar]               │
-└──────────────────────────────────────────────────────────────────────────┘
+**Atualização da interface:**
+
+```typescript
+interface DataContextType {
+  // ... existentes
+  getClientPreviousMonthOverflow: (clientId: string, year?: number, month?: number) => number;
+}
 ```
 
 ---
 
 ### Ordem de Implementação
 
-1. Adicionar imports necessários (Calendar, Popover, CalendarIcon)
-2. Atualizar `editFormData` com os campos de período
-3. Atualizar `useEffect` de inicialização do formulário
-4. Adicionar seção de período no formulário de edição
-5. Adicionar exibição "Contrato vai até" no card de dados básicos
-6. Testar salvamento e exibição dos dados
+1. **DataContext.tsx** - Adicionar função `getClientPreviousMonthOverflow`
+2. **ClientDashboard.tsx** - Exibir saldo anterior e segmentação de horas
+3. **ClientDetail.tsx** - Card de utilização com saldo
+4. **Dashboard.tsx** - Indicador de saldo na lista de clientes
+5. **Clients.tsx** - Cards com informação de saldo
+6. **SharedReport.tsx** - Resumo do contrato com saldo por mês
+7. **Reports.tsx** - Vista por cliente com saldo
+
