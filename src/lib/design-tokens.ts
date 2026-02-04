@@ -1,11 +1,17 @@
 // Design system tokens for consistent UI across the application
 
 export const ICON_SIZES = {
-  xs: 'w-3 h-3',
-  sm: 'w-3.5 h-3.5',
-  md: 'w-4 h-4',
-  lg: 'w-5 h-5',
-  xl: 'w-6 h-6',
+  xs: 'w-2.5 h-2.5',
+  sm: 'w-3 h-3',
+  md: 'w-3 h-3',
+  lg: 'w-4 h-4',
+  xl: 'w-5 h-5',
+} as const;
+
+export const SIDEBAR = {
+  collapsedWidth: 'lg:w-12',
+  expandedWidth: 'lg:w-64',
+  headerMarginCollapsed: 'ml-12',
 } as const;
 
 // Action button styles for edit/delete icons
