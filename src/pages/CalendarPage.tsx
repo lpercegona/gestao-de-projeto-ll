@@ -8,9 +8,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FolderKanban, ListTodo, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
+import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface CalendarItem {
   id: string;
@@ -25,10 +28,45 @@ interface CalendarItem {
 
 export const CalendarPage: React.FC = () => {
   const { data } = useData();
-  const { isClient } = useAuth();
+  const { isClient, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [showRequestForm, setShowRequestForm] = useState(false);
+
+  // Handle project request submission for clients
+  const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
+    if (!user) return;
+
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!clientData) {
+      toast.error('Erro: Cliente não encontrado');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('project_requests')
+      .insert({
+        client_id: clientData.id,
+        title,
+        briefing,
+        desired_deadline: desiredDeadline || null,
+        created_by: user.id,
+      });
+
+    if (error) {
+      console.error('Error creating request:', error);
+      toast.error('Erro ao enviar solicitação');
+      return;
+    }
+
+    toast.success('Solicitação enviada com sucesso!');
+  };
 
   // Get all items with deadlines
   const allItems = useMemo((): CalendarItem[] => {
@@ -207,9 +245,21 @@ export const CalendarPage: React.FC = () => {
         {/* Selected Date Details */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+              </CardTitle>
+              {isClient && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRequestForm(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Solicitar Projeto
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {selectedDateItems.length === 0 ? (
@@ -221,8 +271,11 @@ export const CalendarPage: React.FC = () => {
                 {selectedDateItems.map(item => (
                   <div
                     key={`${item.type}-${item.id}`}
-                    className="p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => handleNavigate(item)}
+                    className={cn(
+                      "p-3 rounded-lg border transition-colors",
+                      !isClient && "cursor-pointer hover:bg-accent/50"
+                    )}
+                    onClick={() => !isClient && handleNavigate(item)}
                   >
                     <div className="flex items-start gap-3">
                       <div className={cn("p-2 rounded-md", getStatusColor(item.status))}>
@@ -263,8 +316,11 @@ export const CalendarPage: React.FC = () => {
             {allItems.slice(0, 10).map(item => (
               <div
                 key={`${item.type}-${item.id}`}
-                className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => handleNavigate(item)}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-lg border transition-colors",
+                  !isClient && "cursor-pointer hover:bg-accent/50"
+                )}
+                onClick={() => !isClient && handleNavigate(item)}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={cn("p-1.5 rounded", getStatusColor(item.status))}>
@@ -299,6 +355,15 @@ export const CalendarPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Project Request Form for clients */}
+      {isClient && (
+        <ProjectRequestForm 
+          open={showRequestForm} 
+          onOpenChange={setShowRequestForm}
+          onSubmit={handleSubmitRequest}
+        />
+      )}
     </div>
   );
 };
