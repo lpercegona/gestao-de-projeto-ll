@@ -20,6 +20,7 @@ import {
   PanelLeft,
   FileCheck,
   Edit,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { HeaderTimerDisplay, HeaderTimerTaskInfo } from '@/components/timer/HeaderTimerDisplay';
+import { BreadcrumbNav } from '@/components/layout/BreadcrumbNav';
+import { UniversalSearchBar } from '@/components/layout/UniversalSearchBar';
+import { WorkspaceSelector } from '@/components/layout/WorkspaceSelector';
 import LogoOras from '@/assets/logo-oras.svg';
 import SimboloOras from '@/assets/simbolo-oras.svg';
 
@@ -80,24 +84,37 @@ const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void; hideTime
   );
 };
 
-// Desktop Header Component with animated logo/task info
+// Desktop Header Component with breadcrumb, search and timer
 const DesktopHeader: React.FC<{ hideTimer?: boolean }> = ({ hideTimer = false }) => {
   const { hasActiveTimer } = useGlobalTimer();
   
   return (
-    <div className="hidden lg:flex fixed top-4 right-6 z-30 items-center gap-3">
-      {/* Task info - slides in from left when timer active (only if timer not hidden) */}
-      {!hideTimer && (
-        <div className={cn(
-          "transition-all duration-300 ease-in-out overflow-hidden",
-          hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
-        )}>
-          <HeaderTimerTaskInfo />
+    <div className="hidden lg:flex fixed top-0 left-0 right-0 z-30 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex items-center justify-between w-full px-6 ml-16">
+        {/* Left: Breadcrumb */}
+        <BreadcrumbNav />
+        
+        {/* Center: Search */}
+        <div className="flex-1 flex justify-center px-4">
+          <UniversalSearchBar />
         </div>
-      )}
-      
-      {!hideTimer && <HeaderTimerDisplay />}
-      <NotificationBell />
+        
+        {/* Right: Timer + Notifications */}
+        <div className="flex items-center gap-3">
+          {/* Task info - slides in from left when timer active (only if timer not hidden) */}
+          {!hideTimer && (
+            <div className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
+            )}>
+              <HeaderTimerTaskInfo />
+            </div>
+          )}
+          
+          {!hideTimer && <HeaderTimerDisplay />}
+          <NotificationBell />
+        </div>
+      </div>
     </div>
   );
 };
@@ -154,22 +171,24 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   // Master Admin nav items (full access)
   const masterAdminNavItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/', icon: LayoutDashboard, label: 'Painel' },
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
     { path: '/edit-requests', icon: Edit, label: 'Edições' },
     { path: '/proposals', icon: FileCheck, label: 'Propostas' },
+    { path: '/calendar', icon: Calendar, label: 'Calendário' },
   ];
 
   // Admin nav items
   const adminNavItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/', icon: LayoutDashboard, label: 'Painel' },
     { path: '/clients', icon: Users, label: 'Clientes' },
     { path: '/projects', icon: FolderKanban, label: 'Projetos' },
     { path: '/requests', icon: FileText, label: 'Solicitações' },
     { path: '/edit-requests', icon: Edit, label: 'Edições' },
     { path: '/proposals', icon: FileCheck, label: 'Propostas' },
+    { path: '/calendar', icon: Calendar, label: 'Calendário' },
   ];
 
   // Collaborator nav items (dashboard and projects)
@@ -253,30 +272,28 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
         >
-          {/* Header with logo and collapse button */}
+          {/* Header with workspace selector and collapse button */}
           <div className={cn(
             "relative p-4 border-b border-border flex-shrink-0",
             isCollapsed && "lg:px-2"
           )}>
-            <div className="flex items-center justify-center h-8">
-              {/* Logo - centered */}
-              <div className="flex items-center justify-center w-full">
-                {/* Desktop: show symbol when collapsed, full logo when expanded */}
-                <img 
-                  src={isCollapsed ? SimboloOras : LogoOras} 
-                  alt="ORAS" 
-                  className={cn(
-                    "hidden lg:block h-8",
-                    isCollapsed ? "w-8" : "w-auto max-w-[120px]"
-                  )}
-                />
-                {/* Mobile: always show full logo centered */}
-                <img 
-                  src={LogoOras} 
-                  alt="ORAS" 
-                  className="lg:hidden h-8 w-auto max-w-[120px]"
-                />
+            <div className="flex items-center justify-center">
+              {/* Desktop: Workspace selector or logo */}
+              <div className="hidden lg:block w-full">
+                {isCollapsed ? (
+                  <div className="flex items-center justify-center">
+                    <img src={SimboloOras} alt="ORAS" className="h-8 w-8" />
+                  </div>
+                ) : (
+                  <WorkspaceSelector isCollapsed={isCollapsed} />
+                )}
               </div>
+              {/* Mobile: always show full logo centered */}
+              <img 
+                src={LogoOras} 
+                alt="ORAS" 
+                className="lg:hidden h-8 w-auto max-w-[120px]"
+              />
 
               {/* Collapse toggle (desktop only, positioned overlapping the border) */}
               <Tooltip>
@@ -499,8 +516,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Desktop header buttons - hide timer for clients */}
           <DesktopHeader hideTimer={isClient} />
           
-          {/* Content area - Scrollable */}
-          <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+          {/* Content area - Scrollable, with top padding for fixed header on desktop */}
+          <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 lg:pt-20">
             {children}
           </div>
         </main>
