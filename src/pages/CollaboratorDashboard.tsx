@@ -131,30 +131,25 @@ export const CollaboratorDashboard: React.FC = () => {
   ];
 
   return (
-    <div>
-      <PageHeader
-        title="Dashboard"
-        description="Visão geral dos seus projetos e entregas"
-      />
-
+    <div className="space-y-6">
       {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => (
           <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="p-4 pt-0">
+            <CardContent>
               <div className={cn(
-                "text-xl sm:text-2xl font-bold text-foreground",
+                "text-2xl font-bold",
                 stat.title === 'Prazos Vencidos' && overdueCount > 0 && 'text-destructive'
               )}>
                 {stat.value}
               </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+              <p className="text-xs text-muted-foreground">
                 {stat.description}
               </p>
             </CardContent>
@@ -163,9 +158,7 @@ export const CollaboratorDashboard: React.FC = () => {
       </div>
 
       {/* Quick Timer */}
-      <div className="mb-6">
-        <QuickTimeTracker />
-      </div>
+      <QuickTimeTracker />
 
       {/* Upcoming Deadlines */}
       <Collapsible open={deadlinesOpen} onOpenChange={setDeadlinesOpen}>

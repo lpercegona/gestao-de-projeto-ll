@@ -56,7 +56,7 @@ export const HorasPorClientePanel: React.FC = () => {
                             <Badge variant="outline" className="text-xs shrink-0">Mensal</Badge>
                           )}
                           {isMonthly && previousOverflow > 0 && (
-                            <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 shrink-0">
+                            <Badge variant="secondary" className="text-xs shrink-0">
                               Saldo: {formatHours(previousOverflow)}
                             </Badge>
                           )}
@@ -70,7 +70,7 @@ export const HorasPorClientePanel: React.FC = () => {
                           className={cn(
                             "h-2 rounded-full transition-all",
                             percentage >= 100 ? "bg-destructive" : 
-                            percentage >= 80 ? "bg-amber-500" : "bg-primary"
+                            percentage >= 80 ? "bg-muted-foreground" : "bg-primary"
                           )}
                           style={{ width: `${percentage}%` }}
                         />

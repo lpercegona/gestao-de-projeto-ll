@@ -90,8 +90,8 @@ export const ResetPassword: React.FC = () => {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-md shadow-lg">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
             <p className="text-muted-foreground">Verificando link de recuperação...</p>
@@ -103,8 +103,8 @@ export const ResetPassword: React.FC = () => {
 
   if (!isValidSession && !checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
@@ -131,8 +131,8 @@ export const ResetPassword: React.FC = () => {
 
   if (isComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -158,8 +158,8 @@ export const ResetPassword: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">

@@ -53,7 +53,7 @@ export const QuickTimeTracker: React.FC = () => {
 
   return (
     <>
-      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Clock className="h-4 w-4" />
