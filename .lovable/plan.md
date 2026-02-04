@@ -1,334 +1,264 @@
 
 
-## Plano: Remocao de PageHeader e Reorganizacao do Menu
+## Plano: Corrigir Consistência de Ícones e Botões no Sidebar Colapsado
 
-### Objetivo
+### Problema
 
-1. Remover a linha de titulo e descricao (PageHeader) de todas as paginas
-2. Remover a opcao "Solicitacoes" do menu lateral
-3. Mover a funcionalidade de Solicitacoes para dentro da pagina de Projetos (Projects.tsx)
-4. Remover a opcao "Propostas" do menu lateral
-5. Mover a funcionalidade de Propostas para dentro da pagina Clientes (Clients.tsx)
-6. Remover a opcao "Edicoes" do menu lateral
-7. Mover a funcionalidade de Edicoes para dentro da pagina de Projetos (Projects.tsx)
+Quando o sidebar está colapsado (48px de largura), os ícones, botões e avatares têm dimensões inconsistentes, causando desalinhamento visual.
+
+### Análise das Inconsistências
+
+| Elemento | Atual | Problema |
+|----------|-------|----------|
+| Nav items (colapsado) | `lg:px-2 py-2.5` | Sem dimensão fixa |
+| WorkspaceSelector avatar | `h-7 w-7` (28px) | Diferente do avatar do usuário |
+| Avatar do usuário | `h-9 w-9` (36px) | Muito grande para 48px |
+| Botão Settings (colapsado) | `lg:px-2 py-2.5` | Sem dimensão fixa |
+| Botão Logout (colapsado) | `px-2` | Sem dimensão fixa |
+
+### Solução
+
+Padronizar todos os elementos clicáveis para **32px x 32px** (h-8 w-8) quando colapsado:
+- Deixa 8px de margem em cada lado no sidebar de 48px
+- Centraliza perfeitamente os ícones
+- Mantém área de clique confortável
 
 ---
 
 ### Arquivos a Modificar
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/components/layout/AppLayout.tsx` | Remover "Solicitacoes", "Propostas" e "Edicoes" do menu |
-| `src/pages/Clients.tsx` | Remover PageHeader, adicionar tab "Propostas" |
-| `src/pages/Projects.tsx` | Remover PageHeader, adicionar tabs "Solicitacoes" e "Edicoes" |
-| `src/pages/ProjectRequests.tsx` | Remover PageHeader |
-| `src/pages/Proposals.tsx` | Remover PageHeader |
-| `src/pages/EditRequests.tsx` | Remover PageHeader |
-| `src/pages/CalendarPage.tsx` | Remover PageHeader |
-| `src/pages/Reports.tsx` | Remover PageHeader |
+| `src/components/layout/AppLayout.tsx` | Ajustar dimensões dos nav items, avatar, settings e logout |
+| `src/components/layout/WorkspaceSelector.tsx` | Padronizar botão/avatar colapsado |
+| `src/lib/design-tokens.ts` | Adicionar token para botão colapsado |
 
 ---
 
-### 1. Remover do Menu (AppLayout.tsx)
+### 1. Adicionar Tokens de Design (design-tokens.ts)
 
-**Linhas afetadas:** 173-192
-
-**Alteracoes:**
-- Remover `{ path: '/requests', icon: FileText, label: 'Solicitacoes' }` (linha 177)
-- Remover `{ path: '/edit-requests', icon: Edit, label: 'Edicoes' }` (linha 178)
-- Remover `{ path: '/proposals', icon: FileCheck, label: 'Propostas' }` (linha 179)
-- Aplicar mesmas remocoes em adminNavItems (linhas 188-190)
-- Remover imports nao utilizados: `FileText`, `FileCheck`, `Edit` (linhas 17, 21, 22)
-
-**Menu final:**
-```text
-- Painel
-- Clientes (com tab Propostas)
-- Projetos (com tabs Solicitacoes e Edicoes)
-- Calendario
-```
-
----
-
-### 2. Remover PageHeader de Todas as Paginas
-
-| Pagina | Linhas | O que remover |
-|--------|--------|---------------|
-| `Clients.tsx` | 5, 177-180 | Import e componente PageHeader |
-| `Projects.tsx` | 6, ~467-477 | Import e componente PageHeader |
-| `ProjectRequests.tsx` | 5, 224-227 | Import e componente PageHeader |
-| `Proposals.tsx` | 6, ~575-578 | Import e componente PageHeader |
-| `EditRequests.tsx` | 2, 235-238 | Import e componente PageHeader |
-| `CalendarPage.tsx` | 2, 111-114 | Import e componente PageHeader |
-| `Reports.tsx` | 5, ~318-321 | Import e componente PageHeader |
-
----
-
-### 3. Adicionar Tabs de Solicitacoes e Edicoes em Projects.tsx
-
-**Nova estrutura com 3 tabs principais:**
-```text
-Filtros: [Cliente] [Status]
-
-[Projetos] [Solicitacoes] [Edicoes]
-
-<Conteudo da tab selecionada>
-```
-
-**Implementacao:**
-
-1. Adicionar imports necessarios:
-   - `Tabs, TabsContent, TabsList, TabsTrigger` de @/components/ui/tabs
-   - Estados e funcoes do ProjectRequests.tsx e EditRequests.tsx
-
-2. Adicionar novos states:
-   ```typescript
-   const [activeMainTab, setActiveMainTab] = useState<'projects' | 'requests' | 'edits'>('projects');
-   const [requests, setRequests] = useState<ProjectRequest[]>([]);
-   const [editRequests, setEditRequests] = useState<EditRequest[]>([]);
-   const [requestsLoading, setRequestsLoading] = useState(false);
-   const [editsLoading, setEditsLoading] = useState(false);
-   ```
-
-3. Adicionar funcoes de fetch:
-   ```typescript
-   const fetchRequests = async () => { /* logica do ProjectRequests */ };
-   const fetchEditRequests = async () => { /* logica do EditRequests */ };
-   ```
-
-4. Estrutura JSX:
-   ```typescript
-   <Tabs value={activeMainTab} onValueChange={setActiveMainTab}>
-     <TabsList className="mb-4">
-       <TabsTrigger value="projects">
-         <FolderKanban className="w-4 h-4 mr-2" />
-         Projetos
-       </TabsTrigger>
-       <TabsTrigger value="requests">
-         <FileText className="w-4 h-4 mr-2" />
-         Solicitacoes
-         {pendingRequestsCount > 0 && <Badge>{pendingRequestsCount}</Badge>}
-       </TabsTrigger>
-       <TabsTrigger value="edits">
-         <Edit className="w-4 h-4 mr-2" />
-         Edicoes
-         {pendingEditsCount > 0 && <Badge>{pendingEditsCount}</Badge>}
-       </TabsTrigger>
-     </TabsList>
-     
-     <TabsContent value="projects">
-       {/* Conteudo existente de projetos */}
-     </TabsContent>
-     
-     <TabsContent value="requests">
-       {/* Conteudo de solicitacoes (adaptado de ProjectRequests.tsx) */}
-     </TabsContent>
-     
-     <TabsContent value="edits">
-       {/* Conteudo de edicoes (adaptado de EditRequests.tsx) */}
-     </TabsContent>
-   </Tabs>
-   ```
-
----
-
-### 4. Adicionar Tab de Propostas em Clients.tsx
-
-**Nova estrutura:**
-```text
-[Clientes] [Propostas]
-
-<Conteudo da tab selecionada>
-```
-
-**Implementacao:**
-
-1. Adicionar imports de Proposals.tsx:
-   - Estados: `proposals`, `templates`, `loading`, `searchTerm`, `statusFilter`
-   - Dialogs: `proposalDialogOpen`, `templateDialogOpen`, etc.
-   - Funcoes: `fetchData`, `handleSaveProposal`, etc.
-
-2. Adicionar novo state:
-   ```typescript
-   const [mainTab, setMainTab] = useState<'clients' | 'proposals'>('clients');
-   ```
-
-3. Estrutura JSX:
-   ```typescript
-   <Tabs value={mainTab} onValueChange={setMainTab}>
-     <div className="flex items-center justify-between mb-4">
-       <TabsList>
-         <TabsTrigger value="clients">
-           <Users className="w-4 h-4 mr-2" />
-           Clientes
-         </TabsTrigger>
-         <TabsTrigger value="proposals">
-           <FileCheck className="w-4 h-4 mr-2" />
-           Propostas
-         </TabsTrigger>
-       </TabsList>
-       {/* Botao dinamico baseado na tab */}
-     </div>
-     
-     <TabsContent value="clients">
-       {/* Conteudo existente de clientes */}
-     </TabsContent>
-     
-     <TabsContent value="proposals">
-       {/* Conteudo de propostas (adaptado de Proposals.tsx) */}
-     </TabsContent>
-   </Tabs>
-   ```
-
----
-
-### 5. Manter Rotas Funcionais
-
-As rotas existentes serao mantidas para compatibilidade e acesso direto:
-- `/requests` - continua funcionando (ProjectRequests.tsx)
-- `/proposals` - continua funcionando (Proposals.tsx)
-- `/edit-requests` - continua funcionando (EditRequests.tsx)
-
-Apenas removidas do menu de navegacao.
-
----
-
-### Estrutura Final
-
-**Menu de Navegacao (Admin):**
-```text
-├── Painel
-├── Clientes (com tab Propostas)
-├── Projetos (com tabs Solicitacoes + Edicoes)
-└── Calendario
-```
-
-**Pagina de Clientes:**
-```text
-[Clientes] [Propostas]
-
-→ Tab Clientes:
-   [Lead] [Negociacao] [Ativo] [Inativo]  [+ Novo Cliente]
-   <Grid de cards de clientes>
-
-→ Tab Propostas:
-   [Busca] [Filtro Status] [+ Nova Proposta]
-   [Propostas] [Templates]
-   <Lista de propostas/templates>
-```
-
-**Pagina de Projetos:**
-```text
-[Projetos] [Solicitacoes (3)] [Edicoes (2)]
-
-→ Tab Projetos:
-   Filtros: [Cliente]    Visualizacao: [Lista] [Kanban]
-   X projetos [+ Novo Projeto]
-   <Lista/Kanban de projetos>
-
-→ Tab Solicitacoes:
-   [Filtro Status] [Filtro Cliente]
-   [Cards de resumo]
-   <Lista de solicitacoes>
-
-→ Tab Edicoes:
-   <Lista de solicitacoes de edicao pendentes>
-   <Lista de solicitacoes processadas>
-```
-
----
-
-### Secao Tecnica
-
-**AppLayout.tsx - Novo array de navegacao:**
 ```typescript
-const masterAdminNavItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Painel' },
-  { path: '/clients', icon: Users, label: 'Clientes' },
-  { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-  { path: '/calendar', icon: Calendar, label: 'Calendario' },
-];
-
-const adminNavItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Painel' },
-  { path: '/clients', icon: Users, label: 'Clientes' },
-  { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-  { path: '/calendar', icon: Calendar, label: 'Calendario' },
-];
+export const SIDEBAR_COLLAPSED = {
+  itemSize: 'h-8 w-8',           // 32px - tamanho padrão de item colapsado
+  avatarSize: 'h-7 w-7',         // 28px - avatar ligeiramente menor
+  iconSize: 'w-3.5 h-3.5',       // 14px - ícones
+  itemClasses: 'flex items-center justify-center rounded-md',
+} as const;
 ```
 
-**Projects.tsx - Interfaces adicionais:**
-```typescript
-interface ProjectRequest {
-  id: string;
-  client_id: string;
-  title: string;
-  briefing: string;
-  status: string;
-  admin_notes: string | null;
-  converted_project_id: string | null;
-  desired_deadline: string | null;
-  created_at: string;
-  updated_at: string;
-}
+---
 
-interface EditRequest {
-  id: string;
-  entity_type: 'project' | 'project_request';
-  entity_id: string;
-  client_id: string;
-  status: 'pending' | 'approved' | 'rejected';
-  original_data: Record<string, unknown>;
-  proposed_data: Record<string, unknown>;
-  admin_notes: string | null;
-  created_at: string;
-  client?: { name: string; company: string | null; };
-}
+### 2. Ajustar Nav Items (AppLayout.tsx)
+
+**Antes (linhas 329-335):**
+```typescript
+className={cn(
+  'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+  isActive ? ... : ...,
+  isCollapsed && 'lg:justify-center lg:px-2'
+)}
 ```
 
-**Clients.tsx - Interfaces adicionais:**
+**Depois:**
 ```typescript
-interface ProposalItem {
-  id: string;
-  service: string;
-  description: string;
-  hours: number;
-  pricePerHour: number;
-}
+className={cn(
+  'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+  isActive ? ... : ...,
+  isCollapsed && 'lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto'
+)}
+```
 
-interface Proposal {
-  id: string;
-  template_id: string | null;
-  share_token: string;
-  recipient_name: string;
-  recipient_email: string;
-  recipient_company: string | null;
-  title: string;
-  description: string | null;
-  items: ProposalItem[];
-  total_hours: number;
-  total_value: number;
-  status: string;
-  valid_until: string | null;
-  created_at: string;
-  client_id: string | null;
-}
+---
 
-interface ProposalTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  items: ProposalItem[];
+### 3. Ajustar Avatar do Usuário (AppLayout.tsx)
+
+**Antes (linha 379):**
+```typescript
+<Avatar className="h-9 w-9 flex-shrink-0">
+```
+
+**Depois (tamanho condicional):**
+```typescript
+<Avatar className={cn(
+  "flex-shrink-0",
+  isCollapsed ? "h-8 w-8" : "h-9 w-9"
+)}>
+```
+
+---
+
+### 4. Ajustar Container do Usuário (AppLayout.tsx)
+
+**Antes (linhas 375-378):**
+```typescript
+<div className={cn(
+  "flex items-center gap-3 px-2 py-2",
+  isCollapsed && "lg:justify-center lg:px-0"
+)}>
+```
+
+**Depois:**
+```typescript
+<div className={cn(
+  "flex items-center gap-3 px-2 py-2",
+  isCollapsed && "lg:justify-center lg:px-0 lg:py-1"
+)}>
+```
+
+---
+
+### 5. Ajustar Botão Settings Colapsado (AppLayout.tsx)
+
+**Antes (linhas 408-417):**
+```typescript
+<Link
+  to="/preferences"
+  className={cn(
+    'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors w-full',
+    location.pathname === '/preferences' ? ... : ...,
+    'lg:justify-center lg:px-2'
+  )}
+>
+  <Settings className="w-3.5 h-3.5 flex-shrink-0" />
+</Link>
+```
+
+**Depois:**
+```typescript
+<Link
+  to="/preferences"
+  className={cn(
+    'flex items-center justify-center h-8 w-8 mx-auto rounded-md text-sm font-medium transition-colors',
+    location.pathname === '/preferences' ? ... : ...
+  )}
+>
+  <Settings className="w-3.5 h-3.5" />
+</Link>
+```
+
+---
+
+### 6. Ajustar Botão Logout Colapsado (AppLayout.tsx)
+
+**Antes (linhas 454-460):**
+```typescript
+<Button
+  variant="ghost"
+  className="w-full justify-center text-muted-foreground hover:text-foreground px-2"
+  onClick={handleSignOut}
+>
+  <LogOut className="w-3.5 h-3.5" />
+</Button>
+```
+
+**Depois:**
+```typescript
+<Button
+  variant="ghost"
+  size="icon"
+  className="h-8 w-8 mx-auto text-muted-foreground hover:text-foreground"
+  onClick={handleSignOut}
+>
+  <LogOut className="w-3.5 h-3.5" />
+</Button>
+```
+
+---
+
+### 7. Ajustar WorkspaceSelector (WorkspaceSelector.tsx)
+
+**Antes (linhas 44-50):**
+```typescript
+<Button variant="ghost" className="p-1 h-auto">
+  <Avatar className="h-7 w-7">
+    ...
+  </Avatar>
+</Button>
+```
+
+**Depois:**
+```typescript
+<Button variant="ghost" size="icon" className="h-8 w-8">
+  <Avatar className="h-7 w-7">
+    ...
+  </Avatar>
+</Button>
+```
+
+---
+
+### Resultado Visual Esperado
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ Sidebar Colapsado (48px)                                   │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│     ┌────────┐  ← WorkspaceSelector: h-8 w-8 (32px)       │
+│     │   W    │    Avatar interno: h-7 w-7 (28px)          │
+│     └────────┘                                             │
+│                                                            │
+│     ┌────────┐  ← Nav Item: h-8 w-8 (32px)                │
+│     │   🏠   │    Ícone: w-3.5 h-3.5 (14px)              │
+│     └────────┘                                             │
+│                                                            │
+│     ┌────────┐  ← Nav Item: h-8 w-8 (32px)                │
+│     │   👥   │    Ícone: w-3.5 h-3.5 (14px)              │
+│     └────────┘                                             │
+│                                                            │
+│     ┌────────┐  ← Nav Item: h-8 w-8 (32px)                │
+│     │   📁   │    Ícone: w-3.5 h-3.5 (14px)              │
+│     └────────┘                                             │
+│                                                            │
+│     ┌────────┐  ← Nav Item: h-8 w-8 (32px)                │
+│     │   📅   │    Ícone: w-3.5 h-3.5 (14px)              │
+│     └────────┘                                             │
+│                                                            │
+│  ──────────────  ← Separador                               │
+│                                                            │
+│     ┌────────┐  ← Avatar usuário: h-8 w-8 (32px)          │
+│     │   U    │                                             │
+│     └────────┘                                             │
+│                                                            │
+│     ┌────────┐  ← Settings: h-8 w-8 (32px)                │
+│     │   ⚙️   │    Ícone: w-3.5 h-3.5 (14px)              │
+│     └────────┘                                             │
+│                                                            │
+│     ┌────────┐  ← Logout: h-8 w-8 (32px)                  │
+│     │   🚪   │    Ícone: w-3.5 h-3.5 (14px)              │
+│     └────────┘                                             │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Seção Técnica
+
+**Dimensões padronizadas:**
+- Sidebar colapsado: `lg:w-12` (48px)
+- Itens clicáveis: `h-8 w-8` (32px) - deixa 8px de margem em cada lado
+- Ícones: `w-3.5 h-3.5` (14px)
+- Avatares: `h-7 w-7` (28px) dentro de container de 32px
+
+**Classes CSS para itens colapsados:**
+```css
+/* Nav items, Settings, Logout quando colapsado */
+.collapsed-item {
+  @apply h-8 w-8 mx-auto flex items-center justify-center rounded-md;
 }
 ```
 
 ---
 
-### Ordem de Implementacao
+### Ordem de Implementação
 
-1. Remover PageHeader de todas as paginas (7 arquivos)
-2. Remover itens do menu em AppLayout.tsx
-3. Adicionar tabs de Solicitacoes e Edicoes em Projects.tsx
-4. Adicionar tab de Propostas em Clients.tsx
-5. Testar navegacao e funcionalidades
+1. Adicionar tokens em `design-tokens.ts`
+2. Ajustar `WorkspaceSelector.tsx` (botão colapsado)
+3. Ajustar `AppLayout.tsx`:
+   - Nav items (linhas 329-335)
+   - Avatar do usuário (linha 379)
+   - Settings link colapsado (linhas 408-417)
+   - Logout button colapsado (linhas 454-460)
+4. Testar visualmente o sidebar colapsado
 
