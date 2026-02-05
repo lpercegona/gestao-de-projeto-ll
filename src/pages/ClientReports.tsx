@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -17,162 +18,54 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Loader2, Share2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, AlertCircle } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
-
-interface ProjectColumn {
-  id: string;
-  name: string;
-  type: string;
-  options: string[] | null;
-  client_id: string | null;
-  show_in_report: boolean;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  client_id: string;
-  custom_fields?: Record<string, string> | null;
-}
-
-interface Task {
-  id: string;
-  name: string;
-  description: string | null;
-  project_id: string;
-}
-
-interface TimeEntry {
-  id: string;
-  task_id: string;
-  hours: number;
-  date: string;
-  entry_type?: string;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  company?: string | null;
-  contracted_hours: number;
-}
-
+import { supabase } from '@/integrations/supabase/client';
 
 export const ClientReports: React.FC = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [client, setClient] = useState<Client | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
+  const { 
+    data, 
+    loading, 
+    getClientColumns, 
+    getClientMonthlyHours, 
+    getClientPreviousMonthOverflow 
+  } = useData();
+  
   const [reportShare, setReportShare] = useState<ReportShare | null>(null);
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
+  // Get client for current user (RLS ensures only their data is returned)
+  const client = useMemo(() => {
+    if (!data.clients.length) return null;
+    return data.clients[0] || null;
+  }, [data.clients]);
+
+  // Get data from context
+  const projects = data.projects;
+  const tasks = data.tasks;
+  const timeEntries = data.timeEntries;
+  const projectColumns = client ? getClientColumns(client.id) : [];
+
+  // Fetch report share settings
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        // Fetch client associated with user through client_users table
-        const { data: clientUserData } = await supabase
-          .from('client_users')
-          .select('client_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        let clientData = null;
-
-        if (clientUserData?.client_id) {
-          // User is in client_users table, fetch the client
-          const { data: fetchedClient } = await supabase
-            .from('clients')
-            .select('*')
-            .eq('id', clientUserData.client_id)
-            .maybeSingle();
-          clientData = fetchedClient;
-        } else {
-          // Fallback: check legacy user_id field on clients table
-          const { data: legacyClient } = await supabase
-            .from('clients')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          clientData = legacyClient;
-        }
-
-        if (clientData) {
-          setClient(clientData);
-
-          // Fetch projects for this client
-          const { data: projectsData } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('client_id', clientData.id);
-
-          setProjects((projectsData || []).map(p => ({
-            ...p,
-            custom_fields: (p.custom_fields as Record<string, string> | null) || {}
-          })));
-
-          if (projectsData && projectsData.length > 0) {
-            const projectIds = projectsData.map(p => p.id);
-
-            // Fetch tasks
-            const { data: tasksData } = await supabase
-              .from('tasks')
-              .select('*')
-              .in('project_id', projectIds);
-
-            setTasks(tasksData || []);
-
-            if (tasksData && tasksData.length > 0) {
-              const taskIds = tasksData.map(t => t.id);
-
-              // Fetch time entries
-              const { data: entriesData } = await supabase
-                .from('time_entries')
-                .select('*')
-                .in('task_id', taskIds);
-
-              setTimeEntries(entriesData || []);
-            }
-          }
-
-          // Fetch project columns for this client
-          const { data: columnsData } = await supabase
-            .from('project_columns')
-            .select('*')
-            .eq('client_id', clientData.id);
-
-          setProjectColumns(columnsData || []);
-
-          // Fetch existing share settings
-          const { data: shareData } = await supabase
-            .from('report_shares')
-            .select('*')
-            .eq('client_id', clientData.id)
-            .maybeSingle();
-
-          setReportShare(shareData);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
+    const fetchShareSettings = async () => {
+      if (!client) return;
+      const { data: shareData } = await supabase
+        .from('report_shares')
+        .select('*')
+        .eq('client_id', client.id)
+        .maybeSingle();
+      setReportShare(shareData);
     };
-
-    fetchData();
-  }, [user]);
+    fetchShareSettings();
+  }, [client]);
 
   // Generate month options (last 12 months)
   const monthOptions = useMemo(() => {
@@ -188,9 +81,26 @@ export const ClientReports: React.FC = () => {
     return options;
   }, []);
 
-  // Filter and calculate report data - only show projects with hours > 0 in period
+  // Parse selected month
+  const [year, month] = selectedMonth.split('-').map(Number);
+  const isMonthly = client?.contract_type === 'monthly';
+
+  // Calculate overflow for monthly contracts
+  const previousOverflow = useMemo(() => {
+    if (!client || !isMonthly) return 0;
+    return getClientPreviousMonthOverflow(client.id, year, month);
+  }, [client, isMonthly, year, month, getClientPreviousMonthOverflow]);
+
+  const availableHours = useMemo(() => {
+    if (!client) return 0;
+    if (isMonthly) {
+      return Math.max(0, client.contracted_hours - previousOverflow);
+    }
+    return client.contracted_hours;
+  }, [client, isMonthly, previousOverflow]);
+
+  // Filter and calculate report data
   const reportData = useMemo(() => {
-    const [year, month] = selectedMonth.split('-').map(Number);
     const monthStart = startOfMonth(new Date(year, month - 1));
     const monthEnd = endOfMonth(new Date(year, month - 1));
 
@@ -222,7 +132,7 @@ export const ClientReports: React.FC = () => {
           monthMeetingHours,
           totalHours,
         };
-      }).filter(t => t.monthHours > 0); // Only tasks with hours in period
+      }).filter(t => t.monthHours > 0);
 
       const monthHours = tasksWithHours.reduce((sum, t) => sum + t.monthHours, 0);
       const monthTaskHours = tasksWithHours.reduce((sum, t) => sum + t.monthTaskHours, 0);
@@ -237,8 +147,8 @@ export const ClientReports: React.FC = () => {
         monthMeetingHours,
         totalHours,
       };
-    }).filter(p => p.monthHours > 0); // Only projects with hours in period
-  }, [projects, tasks, timeEntries, selectedMonth]);
+    }).filter(p => p.monthHours > 0);
+  }, [projects, tasks, timeEntries, year, month]);
 
   const toggleProject = (projectId: string) => {
     const newExpanded = new Set(expandedProjects);
@@ -250,11 +160,14 @@ export const ClientReports: React.FC = () => {
     setExpandedProjects(newExpanded);
   };
 
-
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
   const totalMonthTaskHours = reportData.reduce((sum, p) => sum + p.monthTaskHours, 0);
   const totalMonthMeetingHours = reportData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
   const totalAllHours = timeEntries.reduce((sum, te) => sum + Number(te.hours), 0);
+
+  // Calculate displayed used hours based on contract type
+  const displayedUsedHours = isMonthly ? totalMonthHours : totalAllHours;
+  const remainingHours = Math.max(0, availableHours - displayedUsedHours);
 
   if (loading) {
     return (
@@ -306,34 +219,87 @@ export const ClientReports: React.FC = () => {
         }
       />
 
-      {/* Client Info */}
+      {/* Contract Summary */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Resumo do Contrato</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>Resumo do Contrato</CardTitle>
+            <Badge variant={isMonthly ? "default" : "secondary"}>
+              {isMonthly ? (
+                <><RefreshCw className="w-3 h-3 mr-1" />Mensal</>
+              ) : (
+                <><Clock className="w-3 h-3 mr-1" />Único</>
+              )}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-5">
             <div>
-              <p className="text-sm text-muted-foreground">Horas Contratadas</p>
-              <p className="text-2xl font-bold text-foreground">{formatHours(client.contracted_hours)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Horas Utilizadas</p>
-              <p className="text-2xl font-bold text-foreground">{formatHours(totalAllHours)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Horas Restantes</p>
+              <p className="text-sm text-muted-foreground">
+                {isMonthly ? 'Disponível' : 'Horas Contratadas'}
+              </p>
               <p className="text-2xl font-bold text-foreground">
-                {formatHours(Math.max(0, client.contracted_hours - totalAllHours))}
+                {formatHours(availableHours)}
+              </p>
+              {isMonthly && previousOverflow > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)}
+                </p>
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                {isMonthly ? 'Usado no Mês' : 'Total Utilizado'}
+              </p>
+              <p className="text-2xl font-bold text-foreground">
+                {formatHours(displayedUsedHours)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas em Tarefas</p>
+              <p className="text-2xl font-bold text-primary">
+                {formatHours(totalMonthTaskHours)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Horas em Reuniões</p>
+              <p className="text-2xl font-bold text-accent-foreground">
+                {formatHours(totalMonthMeetingHours)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                {isMonthly ? 'Restante do Mês' : 'Restante'}
+              </p>
+              <p className="text-2xl font-bold text-foreground">
+                {formatHours(remainingHours)}
               </p>
             </div>
           </div>
+          
+          {/* Overflow Alert for Monthly Contracts */}
+          {isMonthly && previousOverflow > 0 && (
+            <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 mt-4">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                  Saldo Anterior: {formatHours(previousOverflow)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Horas excedentes do mês anterior descontadas do limite deste mês
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Progress Bar */}
           <div className="w-full bg-muted rounded-full h-3 mt-4">
             <div
               className="bg-primary h-3 rounded-full transition-all"
               style={{ 
-                width: `${client.contracted_hours > 0 
-                  ? Math.min((totalAllHours / client.contracted_hours) * 100, 100) 
+                width: `${availableHours > 0 
+                  ? Math.min((displayedUsedHours / availableHours) * 100, 100) 
                   : 0}%` 
               }}
             />
@@ -362,33 +328,6 @@ export const ClientReports: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Summary */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Resumo do Período</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Projetos com atividade</p>
-              <p className="text-2xl font-bold text-foreground">{reportData.length}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total de horas</p>
-              <p className="text-2xl font-bold text-foreground">{formatHours(totalMonthHours)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Horas em tarefas</p>
-              <p className="text-2xl font-bold text-primary">{formatHours(totalMonthTaskHours)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Horas em reuniões</p>
-              <p className="text-2xl font-bold text-accent-foreground">{formatHours(totalMonthMeetingHours)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Report List */}
       {reportData.length === 0 ? (
         <Card>
@@ -404,6 +343,7 @@ export const ClientReports: React.FC = () => {
             const isExpanded = expandedProjects.has(project.id);
             const originalProject = projects.find(p => p.id === project.id);
             const customFields = originalProject?.custom_fields || {};
+            const visibleColumns = projectColumns.filter(col => col.show_in_report);
             
             return (
               <Card key={project.id}>
@@ -431,14 +371,14 @@ export const ClientReports: React.FC = () => {
                   
                   <CollapsibleContent>
                     <CardContent className="pt-0">
-                      {/* Custom Fields - only show fields marked as show_in_report */}
-                      {projectColumns.filter(col => col.show_in_report).length > 0 && Object.keys(customFields).length > 0 && (
+                      {/* Custom Fields */}
+                      {visibleColumns.length > 0 && Object.keys(customFields).length > 0 && (
                         <div className="border-t border-border pt-4 mb-4">
                           <p className="text-sm font-medium text-muted-foreground mb-3">
                             Campos do Projeto
                           </p>
                           <div className="flex flex-wrap gap-2">
-                            {projectColumns.filter(col => col.show_in_report).map(col => {
+                            {visibleColumns.map(col => {
                               const value = customFields[col.id];
                               if (!value) return null;
                               return (
@@ -452,7 +392,7 @@ export const ClientReports: React.FC = () => {
                         </div>
                       )}
                       
-                      <div className={projectColumns.length > 0 && Object.keys(customFields).length > 0 ? '' : 'border-t border-border pt-4'}>
+                      <div className={visibleColumns.length > 0 && Object.keys(customFields).length > 0 ? '' : 'border-t border-border pt-4'}>
                         <p className="text-sm font-medium text-muted-foreground mb-3">
                           Tarefas ({project.tasks.length})
                         </p>
