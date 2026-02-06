@@ -1,27 +1,117 @@
 
+## Plano: Correção de Layout Mobile e Ajustes de Navegação
 
-## Plano: Padronizar Visualização de Relatórios entre Admin e Cliente
+### Problemas Identificados
 
-### Problema Identificado
-
-O componente `ClientReports.tsx` utiliza queries diretas ao Supabase e não inclui:
-
-1. **Cálculo de horas mensais** para contratos do tipo `monthly`
-2. **Saldo anterior** (overflow de meses anteriores)
-3. **Badge de tipo de contrato** (Mensal/Único)
-4. **Resumo dinâmico** que responde ao tipo de contrato
-5. **Alerta de saldo anterior** quando há excedente
-
-Enquanto o `Reports.tsx` do admin usa o `DataContext` que possui todas essas funcionalidades prontas.
+| Problema | Causa Raiz |
+|----------|------------|
+| Dashboard (Painel) extrapola largura mobile | Componentes internos sem controle de overflow e grid de stats com 5 colunas fixas |
+| ClientDashboard extrapola largura mobile | `QuickRequestCard` com layout flex que não quebra corretamente em mobile |
+| Modal de notificações sem scroll | `ScrollArea` com `max-h-[400px]` funciona, mas precisa de altura fixa para ativar o scroll corretamente |
+| Clientes não têm painel como página inicial | Rota `/` redireciona clientes para `/client-dashboard`, mas o antigo dashboard (Painel) é mais completo |
 
 ---
 
 ### Solução
 
-Refatorar `ClientReports.tsx` para:
-1. Usar `useData()` do `DataContext` em vez de queries diretas
-2. Reutilizar a mesma lógica de cálculo do admin
-3. Adicionar os campos visuais ausentes
+#### 1. Dashboard.tsx - Corrigir Overflow Mobile
+
+**Problema**: O grid de stats usa `lg:grid-cols-5` mas falta `overflow-hidden` no container principal e `min-w-0` em elementos flex.
+
+**Alterações**:
+- Adicionar `overflow-hidden` no container principal
+- Adicionar `min-w-0` nos cards para prevenir overflow de texto longo
+- Garantir que o grid de 2 colunas em mobile funcione corretamente
+
+```typescript
+// Container principal
+<div className="space-y-6 overflow-hidden">
+
+// Cards de stats
+<Card key={stat.title} className="min-w-0">
+```
+
+---
+
+#### 2. ClientDashboard.tsx - Corrigir Overflow Mobile
+
+**Problema**: O `QuickRequestCard` usa layout flex horizontal que não quebra em telas pequenas.
+
+**Alterações**:
+- Adicionar `overflow-hidden` no container principal
+- Ajustar responsividade dos cards de estatísticas
+- Adicionar `min-w-0` em elementos com texto truncado
+
+```typescript
+// Container principal
+<div className="space-y-6 overflow-hidden">
+
+// Cards de stats - já usa grid-cols-2 lg:grid-cols-4, verificar se precisa ajustes
+```
+
+---
+
+#### 3. QuickRequestCard.tsx - Corrigir Layout Mobile
+
+**Problema**: O layout flex horizontal do card não quebra em mobile, causando overflow.
+
+**Alterações**:
+- Mudar o layout para empilhar verticalmente em mobile
+- Usar classes responsivas `flex-col sm:flex-row`
+
+```typescript
+// Antes
+<div className="flex items-center justify-between">
+
+// Depois
+<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+
+// Botões também empilham
+<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+```
+
+---
+
+#### 4. NotificationBell.tsx - Ativar Scroll do Modal
+
+**Problema**: O `ScrollArea` precisa de uma altura definida (não apenas `max-h`) para que o scroll interno funcione corretamente.
+
+**Alterações**:
+- Adicionar `h-[400px]` junto com `max-h-[400px]` no ScrollArea quando há muitas notificações
+- Usar altura dinâmica baseada na quantidade de notificações
+
+```typescript
+// Antes
+<ScrollArea className="max-h-[400px]">
+
+// Depois - usar altura fixa para garantir scroll
+<ScrollArea className="h-auto max-h-[400px]">
+```
+
+**Nota**: A implementação atual deve funcionar. Vou verificar se o problema é a falta de `overflow-y-auto` ou se o `ScrollArea` não está recebendo altura correta.
+
+---
+
+#### 5. ProtectedRoute.tsx - Painel como Página Inicial para Clientes
+
+**Problema**: Atualmente clientes são redirecionados para `/client-dashboard`. O usuário quer que eles vejam o painel (antigo dashboard) como página inicial.
+
+**Importante**: O Dashboard atual (`/`) requer `requiredRole="admin"` e contém dados que clientes não devem ver (propostas, todos os clientes, etc.).
+
+**Opções**:
+
+**Opção A** (Recomendada): Manter `/client-dashboard` como página inicial para clientes, pois o Dashboard tem informações administrativas que clientes não devem acessar.
+
+**Opção B**: Criar uma versão do Dashboard filtrada para clientes que mostra apenas dados relevantes a eles.
+
+**Opção C**: Permitir que clientes acessem a rota `/` mas filtrar os dados mostrados baseado no role.
+
+Para implementar a **Opção A** (manter comportamento atual), nenhuma mudança é necessária.
+
+Para implementar a **Opção C** (solicitada), precisamos:
+1. Mudar a rota `/` de `requiredRole="admin"` para `requiredRole="client"`
+2. Modificar `Dashboard.tsx` para filtrar dados quando `isClient === true`
+3. Esconder painéis que clientes não devem ver (Solicitações, Horas por Cliente de outros, etc.)
 
 ---
 
@@ -29,188 +119,104 @@ Refatorar `ClientReports.tsx` para:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/ClientReports.tsx` | Refatorar para usar `useData()` e adicionar campos do admin |
+| `src/pages/Dashboard.tsx` | Adicionar `overflow-hidden` e `min-w-0` para evitar overflow mobile |
+| `src/pages/ClientDashboard.tsx` | Adicionar `overflow-hidden` no container principal |
+| `src/components/dashboard/QuickRequestCard.tsx` | Layout responsivo com empilhamento vertical em mobile |
+| `src/components/notifications/NotificationBell.tsx` | Garantir scroll funcional no modal de notificações |
+| `src/App.tsx` | Mudar rota `/` para `requiredRole="client"` (se opção C aprovada) |
+| `src/components/layout/ProtectedRoute.tsx` | Remover redirecionamento automático de clientes para `/client-dashboard` |
 
 ---
 
 ### Alterações Detalhadas
 
-**1. Importações**
-```typescript
-// Adicionar
-import { useData } from '@/contexts/DataContext';
-import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Clock, AlertCircle } from 'lucide-react';
+#### Dashboard.tsx
 
-// Remover queries manuais do Supabase para dados principais
+```typescript
+// Linha 70 - Container principal
+<div className="space-y-6 overflow-hidden">
+
+// Linha 86 - Cards de stats
+<Card key={stat.title} className="min-w-0 overflow-hidden">
 ```
 
-**2. Usar DataContext**
+#### ClientDashboard.tsx
+
 ```typescript
-export const ClientReports: React.FC = () => {
-  const { user } = useAuth();
-  const { 
-    data, 
-    loading, 
-    getClientColumns, 
-    getClientMonthlyHours, 
-    getClientPreviousMonthOverflow 
-  } = useData();
-  
-  // Buscar cliente atual
-  const client = useMemo(() => {
-    if (!data.clients.length) return null;
-    // Para clientes, o DataContext já filtra apenas seus dados via RLS
-    return data.clients[0] || null;
-  }, [data.clients]);
-  
-  // Usar data.projects, data.tasks, data.timeEntries do contexto
-  const projects = data.projects;
-  const tasks = data.tasks;
-  const timeEntries = data.timeEntries;
-  const projectColumns = data.projectColumns;
+// Linha 174 - Container principal
+<div className="space-y-6 overflow-hidden">
+
+// Linha 178 - Cards de stats
+<Card key={index} className="min-w-0 overflow-hidden">
 ```
 
-**3. Adicionar Badge de Tipo de Contrato no Header**
+#### QuickRequestCard.tsx
+
 ```typescript
-{/* No Card de Resumo do Contrato */}
-<div className="flex items-center gap-2">
-  <CardTitle>Resumo do Contrato</CardTitle>
-  <Badge variant={client.contract_type === 'monthly' ? "default" : "secondary"}>
-    {client.contract_type === 'monthly' ? (
-      <><RefreshCw className="w-3 h-3 mr-1" />Mensal</>
-    ) : (
-      <><Clock className="w-3 h-3 mr-1" />Único</>
+// Linha 63-84 - Layout responsivo
+<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+  <div className="flex items-center gap-4">
+    <div className="p-3 bg-primary/20 rounded-xl shrink-0">
+      <FileText className="w-6 h-6 text-primary" />
+    </div>
+    <div className="min-w-0">
+      <h3 className="font-semibold text-lg">Solicitação Rápida</h3>
+      <p className="text-sm text-muted-foreground">
+        Solicite um novo projeto ou serviço
+      </p>
+    </div>
+  </div>
+  <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+    {pendingCount > 0 && (
+      <Badge variant="secondary" className="text-xs shrink-0">
+        {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
+      </Badge>
     )}
-  </Badge>
+    <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full sm:w-auto">
+      <Plus className="w-4 h-4" />
+      Nova Solicitação
+    </Button>
+  </div>
 </div>
 ```
 
-**4. Adicionar Cálculo de Overflow para Contratos Mensais**
+#### NotificationBell.tsx
+
 ```typescript
-const [year, month] = selectedMonth.split('-').map(Number);
-const isMonthly = client.contract_type === 'monthly';
-
-const previousOverflow = isMonthly 
-  ? getClientPreviousMonthOverflow(client.id, year, month) 
-  : 0;
-
-const monthlyHours = isMonthly 
-  ? getClientMonthlyHours(client.id, year, month) 
-  : 0;
-
-const availableHours = isMonthly 
-  ? Math.max(0, client.contracted_hours - previousOverflow) 
-  : client.contracted_hours;
-
-const displayedUsedHours = isMonthly ? monthlyHours : totalAllHours;
-const remainingHours = Math.max(0, availableHours - displayedUsedHours);
+// Linha 177 - ScrollArea com altura garantida
+<ScrollArea className="h-auto max-h-[400px] overflow-y-auto">
 ```
 
-**5. Atualizar Card de Resumo do Contrato**
+---
+
+### Sobre o Redirecionamento de Clientes
+
+Atualmente, o `ProtectedRoute.tsx` (linhas 66-72) redireciona clientes que acessam `/` para `/client-dashboard`:
+
 ```typescript
-<CardContent>
-  <div className="grid gap-4 md:grid-cols-5">
-    <div>
-      <p className="text-sm text-muted-foreground">
-        {isMonthly ? 'Disponível' : 'Horas Contratadas'}
-      </p>
-      <p className="text-2xl font-bold text-foreground">
-        {formatHours(availableHours)}
-      </p>
-      {isMonthly && previousOverflow > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)}
-        </p>
-      )}
-    </div>
-    <div>
-      <p className="text-sm text-muted-foreground">
-        {isMonthly ? 'Usado no Mês' : 'Total Utilizado'}
-      </p>
-      <p className="text-2xl font-bold text-foreground">
-        {formatHours(displayedUsedHours)}
-      </p>
-    </div>
-    <div>
-      <p className="text-sm text-muted-foreground">Horas em Tarefas</p>
-      <p className="text-2xl font-bold text-primary">
-        {formatHours(totalMonthTaskHours)}
-      </p>
-    </div>
-    <div>
-      <p className="text-sm text-muted-foreground">Horas em Reuniões</p>
-      <p className="text-2xl font-bold text-accent-foreground">
-        {formatHours(totalMonthMeetingHours)}
-      </p>
-    </div>
-    <div>
-      <p className="text-sm text-muted-foreground">
-        {isMonthly ? 'Restante do Mês' : 'Restante'}
-      </p>
-      <p className="text-2xl font-bold text-foreground">
-        {formatHours(remainingHours)}
-      </p>
-    </div>
-  </div>
-  
-  {/* Alerta de Saldo Anterior */}
-  {isMonthly && previousOverflow > 0 && (
-    <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 mt-4">
-      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-      <div>
-        <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-          Saldo Anterior: {formatHours(previousOverflow)}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Horas excedentes do mês anterior descontadas do limite deste mês
-        </p>
-      </div>
-    </div>
-  )}
-  
-  {/* Barra de Progresso */}
-  <div className="w-full bg-muted rounded-full h-3 mt-4">
-    <div
-      className="bg-primary h-3 rounded-full transition-all"
-      style={{ 
-        width: `${availableHours > 0 
-          ? Math.min((displayedUsedHours / availableHours) * 100, 100) 
-          : 0}%` 
-      }}
-    />
-  </div>
-</CardContent>
+if (isClient) {
+  const location = window.location.pathname;
+  if (location === '/') {
+    return <Navigate to="/client-dashboard" replace />;
+  }
+}
 ```
 
-**6. Usar getClientColumns do DataContext**
-```typescript
-// Remover fetch manual de project_columns
-// Usar getClientColumns(clientId) do DataContext
-const clientColumns = client ? getClientColumns(client.id) : [];
+**Para fazer o Painel ser a página inicial de clientes**, precisamos:
 
-// Filtrar apenas os marcados para exibição em relatório
-const visibleColumns = clientColumns.filter(col => col.show_in_report);
-```
+1. **Em `App.tsx`**: Mudar a rota `/` de `requiredRole="admin"` para `requiredRole="client"`
+2. **Em `ProtectedRoute.tsx`**: Remover o redirecionamento automático para `/client-dashboard`
+3. **Em `Dashboard.tsx`**: Filtrar os painéis visíveis baseado no role do usuário
+
+Isso permitiria que clientes vissem o Dashboard mas com conteúdo filtrado apropriado para seu acesso.
 
 ---
 
 ### Resultado Esperado
 
-| Campo | Antes | Depois |
-|-------|-------|--------|
-| Tipo de Contrato | Não exibido | Badge "Mensal" ou "Único" |
-| Horas Disponíveis | Apenas `contracted_hours` | `contracted_hours - saldoAnterior` para mensais |
-| Saldo Anterior | Não exibido | Alerta quando há excedente |
-| Horas Usadas | Total acumulado | Mês atual para mensais, total para únicos |
-| Labels | Fixos | Dinâmicos conforme tipo de contrato |
-| Colunas | 3 | 5 (igual ao admin) |
-
----
-
-### Segurança
-
-As políticas RLS existentes já garantem que:
-- Clientes só veem seus próprios dados via `get_user_client_id()`
-- `DataContext` respeita essas políticas automaticamente
-
+| Item | Antes | Depois |
+|------|-------|--------|
+| Dashboard mobile | Extrapola largura | Respeita limites da tela |
+| ClientDashboard mobile | QuickRequestCard quebrado | Layout empilhado em mobile |
+| Notificações | Scroll não funciona | Scroll ativado corretamente |
+| Página inicial cliente | `/client-dashboard` | `/` (Dashboard/Painel) com filtros |
