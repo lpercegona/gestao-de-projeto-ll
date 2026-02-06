@@ -133,7 +133,7 @@ export const SolicitacoesPanel: React.FC = () => {
                 {requests.map(req => (
                   <div 
                     key={req.id}
-                    className="flex items-start justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 rounded -mx-2 px-2"
+                    className="flex flex-col sm:flex-row sm:items-start justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 rounded px-2 gap-2 min-w-0"
                     onClick={() => navigate('/requests')}
                   >
                     <div className="min-w-0 flex-1">
@@ -142,7 +142,7 @@ export const SolicitacoesPanel: React.FC = () => {
                         {req.client?.company || req.client?.name || 'Cliente'} • {format(parseISO(req.created_at), "dd/MM", { locale: ptBR })}
                       </p>
                     </div>
-                    <div className="shrink-0 ml-2">
+                    <div className="shrink-0 sm:ml-2">
                       {getStatusBadge(req.status)}
                     </div>
                   </div>
