@@ -798,48 +798,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const targetYear = year ?? now.getFullYear();
     const targetMonth = month ?? now.getMonth() + 1;
 
-    // Check if contract has started
-    if (client.contract_start_date) {
-      const startDate = new Date(client.contract_start_date);
-      const startYear = startDate.getFullYear();
-      const startMonth = startDate.getMonth() + 1;
-      
-      // If target month is the contract start month or before, no overflow
-      if (targetYear < startYear || (targetYear === startYear && targetMonth <= startMonth)) {
-        return 0;
+    const targetMonthIndex = targetYear * 12 + (targetMonth - 1);
+
+    // Prefer explicit contract start. For legacy clients without contract_start_date,
+    // use the earliest reliable month available from client creation/time entries.
+    const fallbackStartDate = client.contract_start_date || client.created_at || null;
+    const startDate = fallbackStartDate ? new Date(fallbackStartDate) : null;
+
+    if (startDate) {
+      const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
+      if (targetMonthIndex <= startMonthIndex) return 0;
+    }
+
+    // Walk month by month (iterative) to avoid unbounded recursion on legacy data.
+    const MAX_LOOKBACK_MONTHS = 120;
+    const firstMonthToEvaluate = Math.max(0, targetMonthIndex - MAX_LOOKBACK_MONTHS);
+
+    let overflow = 0;
+    for (let monthIndex = firstMonthToEvaluate; monthIndex < targetMonthIndex; monthIndex += 1) {
+      if (startDate) {
+        const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
+        if (monthIndex <= startMonthIndex) continue;
       }
-    }
 
-    // Calculate previous month
-    let prevYear = targetYear;
-    let prevMonth = targetMonth - 1;
-    if (prevMonth === 0) {
-      prevMonth = 12;
-      prevYear -= 1;
+      const monthYear = Math.floor(monthIndex / 12);
+      const monthNumber = (monthIndex % 12) + 1;
+      const usedHours = getClientMonthlyHours(clientId, monthYear, monthNumber);
+      const availableHours = Math.max(0, client.contracted_hours - overflow);
+      overflow = Math.max(0, usedHours - availableHours);
     }
-
-    // Check if previous month is before contract start
-    if (client.contract_start_date) {
-      const startDate = new Date(client.contract_start_date);
-      const startYear = startDate.getFullYear();
-      const startMonth = startDate.getMonth() + 1;
-      
-      if (prevYear < startYear || (prevYear === startYear && prevMonth < startMonth)) {
-        return 0;
-      }
-    }
-
-    // Get hours used in the previous month
-    const prevMonthHours = getClientMonthlyHours(clientId, prevYear, prevMonth);
-    
-    // Get overflow from even earlier months (recursive)
-    const prevOverflow = getClientPreviousMonthOverflow(clientId, prevYear, prevMonth);
-    
-    // Calculate available hours for the previous month
-    const prevAvailable = Math.max(0, client.contracted_hours - prevOverflow);
-    
-    // Calculate overflow from the previous month
-    const overflow = Math.max(0, prevMonthHours - prevAvailable);
 
     return overflow;
   };
