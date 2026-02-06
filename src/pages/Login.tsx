@@ -10,12 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Users, Building2, Mail, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import simboloOras from '@/assets/simbolo-oras.svg';
 
 type ClientLoginStep = 'email' | 'password' | 'set-password';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, signInWithGoogle, resetPassword, user, userRole, roleLoading, refreshRole } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword, user, userRole, loading: authLoading, roleLoading, refreshRole } = useAuth();
   const [loading, setLoading] = useState(false);
   
   // Admin/Collaborator login
@@ -287,6 +288,19 @@ export const Login: React.FC = () => {
     setClientLoginStep('email');
     setClientId(null);
   };
+
+
+  if (authLoading || (user && roleLoading)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <img
+          src={simboloOras}
+          alt="Carregando ORAS"
+          className="w-12 h-12 animate-spin [animation-duration:3s]"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
