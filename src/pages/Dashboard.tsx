@@ -239,7 +239,7 @@ export const Dashboard: React.FC = () => {
     ];
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 min-w-0">
         {/* Stats Grid - Responsive */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {stats.map((stat, index) => (
@@ -313,7 +313,7 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Main Layout for Client */}
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0">
           {/* Left Column - Main Content */}
           <div className="space-y-6 order-last lg:order-first">
             {/* Recent Requests */}
@@ -434,9 +434,9 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Main Layout for Admin */}
-      <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0">
         {/* Right Column - Quick Actions & Calendar (appears first on mobile) */}
         <div className="space-y-6 order-first lg:order-last">
           <QuickActionsPanel />
