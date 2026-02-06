@@ -395,7 +395,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <DesktopHeader hideTimer={isClient} />
           
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
-          <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 px-0 border border-solid py-0 pb-0 lg:pt-[56px]">
+          <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 py-0 pb-0 border-0 border-none px-px lg:pt-[57px]">
             <div className="min-h-full rounded-tl-[12px] bg-white p-4 sm:p-5">
               {children}
             </div>
