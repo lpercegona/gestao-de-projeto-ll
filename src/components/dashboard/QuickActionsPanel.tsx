@@ -1,32 +1,26 @@
-import React, { useState, useCallback } from 'react';
-import { Plus, Users, FileCheck, Play, Pause, Square } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useData } from '@/contexts/DataContext';
-import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
+import React, { useState, useCallback } from "react";
+import { Plus, Users, FileCheck, Play, Pause, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useData } from "@/contexts/DataContext";
+import { useGlobalTimer } from "@/contexts/GlobalTimerContext";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { GlobalTimerCompleteDialog } from "@/components/timer/GlobalTimerCompleteDialog";
 
 export const QuickActionsPanel: React.FC = () => {
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const { data, createClient } = useData();
-  const { 
-    timerState, 
-    startGlobalTimer, 
-    pauseGlobalTimer, 
+  const {
+    timerState,
+    startGlobalTimer,
+    pauseGlobalTimer,
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
@@ -40,23 +34,23 @@ export const QuickActionsPanel: React.FC = () => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   }, []);
 
   const isRunning = timerState.isRunning && !timerState.isPaused;
   const isPaused = timerState.isPaused;
 
   // Get linked task info
-  const linkedTask = timerState.taskId ? data.tasks.find(t => t.id === timerState.taskId) : null;
-  const linkedProject = linkedTask ? data.projects.find(p => p.id === linkedTask.project_id) : null;
-  const linkedClient = linkedProject ? data.clients.find(c => c.id === linkedProject.client_id) : null;
+  const linkedTask = timerState.taskId ? data.tasks.find((t) => t.id === timerState.taskId) : null;
+  const linkedProject = linkedTask ? data.projects.find((p) => p.id === linkedTask.project_id) : null;
+  const linkedClient = linkedProject ? data.clients.find((c) => c.id === linkedProject.client_id) : null;
 
   const handleCreateClient = async () => {
     if (!clientName || !clientEmail) {
       toast({
-        title: 'Campos obrigatórios',
-        description: 'Preencha nome e email do cliente.',
-        variant: 'destructive',
+        title: "Campos obrigatórios",
+        description: "Preencha nome e email do cliente.",
+        variant: "destructive",
       });
       return;
     }
@@ -71,19 +65,19 @@ export const QuickActionsPanel: React.FC = () => {
 
       if (newClient) {
         toast({
-          title: 'Cliente criado',
+          title: "Cliente criado",
           description: `${clientName} foi adicionado com sucesso.`,
         });
         setClientDialogOpen(false);
-        setClientName('');
-        setClientEmail('');
+        setClientName("");
+        setClientEmail("");
         navigate(`/clients/${newClient.id}`);
       }
     } catch (error) {
       toast({
-        title: 'Erro ao criar cliente',
-        description: 'Ocorreu um erro. Tente novamente.',
-        variant: 'destructive',
+        title: "Erro ao criar cliente",
+        description: "Ocorreu um erro. Tente novamente.",
+        variant: "destructive",
       });
     } finally {
       setIsCreating(false);
@@ -102,46 +96,38 @@ export const QuickActionsPanel: React.FC = () => {
         <CardContent className="space-y-4">
           {/* Botões na mesma linha */}
           <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline" 
-              className="justify-start gap-2"
-              onClick={() => setClientDialogOpen(true)}
-            >
+            <Button variant="outline" className="justify-start gap-2" onClick={() => setClientDialogOpen(true)}>
               <Users className="h-4 w-4" />
-              Novo Cliente
+              Cliente
             </Button>
-            <Button 
-              variant="outline" 
-              className="justify-start gap-2"
-              onClick={() => navigate('/proposals')}
-            >
+            <Button variant="outline" className="justify-start gap-2" onClick={() => navigate("/proposals")}>
               <FileCheck className="h-4 w-4" />
-              Nova Proposta
+              Proposta
             </Button>
           </div>
 
           {/* Timer inline (sem título separado) */}
           <div className="flex flex-col items-center gap-3 pt-4 border-t">
-            <div className={`text-3xl font-mono font-bold text-foreground ${isRunning ? 'animate-pulse' : ''}`}>
+            <div className={`text-3xl font-mono font-bold text-foreground ${isRunning ? "animate-pulse" : ""}`}>
               {formatTime(timerState.elapsedSeconds)}
             </div>
-            
+
             {/* Show linked task info or status */}
             {hasActiveTimer && (
               <div className="w-full text-center">
                 {timerState.taskId && linkedTask ? (
                   <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
                     <p className="font-medium text-foreground truncate">{linkedTask.name}</p>
-                    <p className="truncate">{linkedProject?.name} • {linkedClient?.company || linkedClient?.name}</p>
+                    <p className="truncate">
+                      {linkedProject?.name} • {linkedClient?.company || linkedClient?.name}
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Registro não vinculado a nenhuma tarefa
-                  </p>
+                  <p className="text-xs text-muted-foreground">Registro não vinculado a nenhuma tarefa</p>
                 )}
               </div>
             )}
-            
+
             {!hasActiveTimer ? (
               <Button onClick={() => startGlobalTimer()} className="w-full gap-2">
                 <Play className="h-4 w-4" />
@@ -160,9 +146,9 @@ export const QuickActionsPanel: React.FC = () => {
                     Pausar
                   </Button>
                 )}
-                <Button 
-                  onClick={() => completeGlobalTimer()} 
-                  variant="destructive" 
+                <Button
+                  onClick={() => completeGlobalTimer()}
+                  variant="destructive"
                   className="flex-1 gap-2"
                   title="Concluir registro"
                 >
@@ -210,16 +196,13 @@ export const QuickActionsPanel: React.FC = () => {
               Cancelar
             </Button>
             <Button onClick={handleCreateClient} disabled={isCreating}>
-              {isCreating ? 'Criando...' : 'Criar Cliente'}
+              {isCreating ? "Criando..." : "Criar Cliente"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <GlobalTimerCompleteDialog 
-        open={showCompleteDialog} 
-        onOpenChange={setShowCompleteDialog} 
-      />
+      <GlobalTimerCompleteDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog} />
     </>
   );
 };
