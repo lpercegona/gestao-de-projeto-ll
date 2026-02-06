@@ -176,34 +176,34 @@ export const Dashboard: React.FC = () => {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="outline">
+          <Badge variant="outline" className="max-w-full whitespace-normal break-words">
             <AlertCircle className="w-3 h-3 mr-1" />
             Pendente
           </Badge>
         );
       case "analyzing":
         return (
-          <Badge variant="secondary">
+          <Badge variant="secondary" className="max-w-full whitespace-normal break-words">
             <Clock className="w-3 h-3 mr-1" />
             Em Análise
           </Badge>
         );
       case "converted":
         return (
-          <Badge variant="default">
+          <Badge variant="default" className="max-w-full whitespace-normal break-words">
             <CheckCircle2 className="w-3 h-3 mr-1" />
             Convertido
           </Badge>
         );
       case "rejected":
         return (
-          <Badge variant="destructive">
+          <Badge variant="destructive" className="max-w-full whitespace-normal break-words">
             <XCircle className="w-3 h-3 mr-1" />
             Rejeitado
           </Badge>
         );
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="max-w-full whitespace-normal break-words">{status}</Badge>;
     }
   };
 
@@ -239,11 +239,11 @@ export const Dashboard: React.FC = () => {
     ];
 
     return (
-      <div className="space-y-6 min-w-0">
+      <div className="space-y-6 min-w-0 w-full [overflow-wrap:anywhere] [word-break:break-word] [&_*]:max-w-full [&_*]:min-w-0">
         {/* Stats Grid - Responsive */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 min-w-0 w-full">
           {stats.map((stat, index) => (
-            <Card key={index} className="min-w-0">
+            <Card key={index} className="min-w-0 w-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate pr-2">
                   {stat.label}
@@ -263,8 +263,8 @@ export const Dashboard: React.FC = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <span className="text-sm font-medium min-w-0 break-words">
                     {clientStats.isMonthly
                       ? `Horas do Mês - ${format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}`
                       : "Horas Contratadas"}
@@ -286,7 +286,7 @@ export const Dashboard: React.FC = () => {
                 <div className="mb-3 p-2 rounded-md bg-destructive/10 border border-destructive/30">
                   <div className="flex items-center gap-2 text-destructive">
                     <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium min-w-0 break-words">
                       Saldo Anterior: {formatHours(clientStats.previousMonthOverflow)}
                     </span>
                   </div>
@@ -298,7 +298,7 @@ export const Dashboard: React.FC = () => {
 
               <Progress value={clientStats.hoursPercentage} className="h-2" />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-1 gap-1">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground truncate">
                   {formatHours(clientStats.remainingHours)} restantes{clientStats.isMonthly ? " este mês" : ""}
                 </p>
                 {clientStats.isMonthly && clientStats.usedHours > clientStats.availableHours && (
@@ -313,16 +313,16 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Main Layout for Client */}
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 w-full">
           {/* Left Column - Main Content */}
-          <div className="space-y-6 order-last lg:order-first">
+          <div className="space-y-6 order-last lg:order-first min-w-0">
             {/* Recent Requests */}
             <Collapsible open={recentRequestsOpen} onOpenChange={setRecentRequestsOpen}>
-              <Card>
+              <Card className="min-w-0 w-full">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className="flex items-center justify-between min-w-0 gap-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2 min-w-0">
                         <FileText className="w-4 h-4" />
                         Solicitações Recentes
                       </CardTitle>
@@ -343,15 +343,15 @@ export const Dashboard: React.FC = () => {
                         {recentRequests.map((request) => (
                           <div
                             key={request.id}
-                            className="flex items-center justify-between p-3 rounded-lg border border-border gap-3"
+                            className="flex flex-wrap sm:flex-nowrap items-center justify-between p-3 rounded-lg border border-border gap-3 min-w-0"
                           >
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate text-sm">{request.title}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-muted-foreground truncate">
                                 {format(new Date(request.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                               </p>
                             </div>
-                            <div className="shrink-0">{getStatusBadge(request.status)}</div>
+                            <div className="shrink-0 max-w-full">{getStatusBadge(request.status)}</div>
                           </div>
                         ))}
                       </div>
@@ -363,11 +363,11 @@ export const Dashboard: React.FC = () => {
 
             {/* Active Projects */}
             <Collapsible open={activeProjectsOpen} onOpenChange={setActiveProjectsOpen}>
-              <Card>
+              <Card className="min-w-0 w-full">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className="flex items-center justify-between min-w-0 gap-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2 min-w-0">
                         <FolderKanban className="w-4 h-4" />
                         Projetos Ativos
                       </CardTitle>
@@ -390,10 +390,10 @@ export const Dashboard: React.FC = () => {
                             projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
 
                           return (
-                            <div key={project.id} className="p-3 rounded-lg border border-border">
-                              <div className="flex items-center justify-between mb-2 gap-2">
+                            <div key={project.id} className="p-3 rounded-lg border border-border min-w-0">
+                              <div className="flex flex-wrap sm:flex-nowrap items-center justify-between mb-2 gap-2 min-w-0">
                                 <p className="font-medium truncate text-sm">{project.name}</p>
-                                <Badge variant="outline" className="shrink-0 text-xs">
+                                <Badge variant="outline" className="shrink-0 text-[10px] sm:text-xs max-w-full">
                                   {completedTasks.length}/{projectTasks.length} tarefas
                                 </Badge>
                               </div>
@@ -409,16 +409,24 @@ export const Dashboard: React.FC = () => {
             </Collapsible>
 
             {/* Upcoming Deadlines and Recent Records */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <ProximasEntregasPanel />
-              <UltimosRegistrosPanel />
+            <div className="grid md:grid-cols-2 gap-6 min-w-0 w-full">
+              <div className="min-w-0 w-full">
+                <ProximasEntregasPanel />
+              </div>
+              <div className="min-w-0 w-full">
+                <UltimosRegistrosPanel />
+              </div>
             </div>
           </div>
 
           {/* Right Column - Actions & Calendar */}
-          <div className="space-y-6 order-first lg:order-last">
-            <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} />
-            <DashboardCalendar />
+          <div className="space-y-6 order-first lg:order-last min-w-0">
+            <div className="min-w-0 w-full">
+              <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} />
+            </div>
+            <div className="min-w-0 w-full">
+              <DashboardCalendar />
+            </div>
           </div>
         </div>
       </div>
@@ -434,21 +442,25 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 min-w-0">
+    <div className="space-y-6 min-w-0 w-full [overflow-wrap:anywhere] [word-break:break-word] [&_*]:max-w-full [&_*]:min-w-0">
       {/* Main Layout for Admin */}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 w-full">
         {/* Right Column - Quick Actions & Calendar (appears first on mobile) */}
-        <div className="space-y-6 order-first lg:order-last">
-          <QuickActionsPanel />
-          <DashboardCalendar />
+        <div className="space-y-6 order-first lg:order-last min-w-0">
+          <div className="min-w-0 w-full">
+            <QuickActionsPanel />
+          </div>
+          <div className="min-w-0 w-full">
+            <DashboardCalendar />
+          </div>
         </div>
 
         {/* Left Column - Stats & Panels */}
-        <div className="space-y-6 order-last lg:order-first">
+        <div className="space-y-6 order-last lg:order-first min-w-0">
           {/* Stats Row */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5 min-w-0 w-full">
             {adminStats.map((stat) => (
-              <Card key={stat.title} className="min-w-0">
+              <Card key={stat.title} className="min-w-0 w-full">
                 <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
                   <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate pr-2">
                     {stat.title}
@@ -474,14 +486,22 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Content Panels */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-6">
-              <SolicitacoesPanel />
-              <ProximasEntregasPanel />
+          <div className="grid md:grid-cols-2 gap-6 min-w-0 w-full">
+            <div className="space-y-6 min-w-0">
+              <div className="min-w-0 w-full">
+                <SolicitacoesPanel />
+              </div>
+              <div className="min-w-0 w-full">
+                <ProximasEntregasPanel />
+              </div>
             </div>
-            <div className="space-y-6">
-              <HorasPorClientePanel />
-              <UltimosRegistrosPanel />
+            <div className="space-y-6 min-w-0">
+              <div className="min-w-0 w-full">
+                <HorasPorClientePanel />
+              </div>
+              <div className="min-w-0 w-full">
+                <UltimosRegistrosPanel />
+              </div>
             </div>
           </div>
         </div>

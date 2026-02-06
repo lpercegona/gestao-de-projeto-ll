@@ -59,7 +59,7 @@ export const UltimosRegistrosPanel: React.FC = () => {
                         <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-1">{entry.description}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap sm:shrink-0 min-w-0">
                       <span className="text-xs text-muted-foreground">
                         {format(parseISO(entry.date), "dd 'de' MMM", { locale: ptBR })}
                       </span>

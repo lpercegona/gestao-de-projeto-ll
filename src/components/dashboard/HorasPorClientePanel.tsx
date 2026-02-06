@@ -47,7 +47,7 @@ export const HorasPorClientePanel: React.FC = () => {
                   
                   return (
                     <li key={client.id} className="py-2 border-b border-border last:border-0">
-                      <div className="flex justify-between mb-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap min-w-0">
                           <span className="font-medium text-foreground text-sm truncate">
                             {(client as any).company || client.name}
@@ -61,7 +61,7 @@ export const HorasPorClientePanel: React.FC = () => {
                             </Badge>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                        <span className="text-xs text-muted-foreground sm:shrink-0 sm:ml-2">
                           {formatHours(displayedHours)} / {formatHours(availableHours)}
                         </span>
                       </div>

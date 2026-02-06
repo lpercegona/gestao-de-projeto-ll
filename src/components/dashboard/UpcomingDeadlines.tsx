@@ -38,9 +38,9 @@ export const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({
         <li key={`${item.type}-${item.id}`} className="py-2 border-b border-border last:border-0">
           <Link 
             to={item.type === 'project' ? `/projects/${item.id}` : `/projects/${item.projectId}`}
-            className="block hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 transition-colors"
+            className="block hover:bg-muted/50 rounded-md px-2 py-1 transition-colors min-w-0"
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
               <div className="flex items-start gap-3 min-w-0 flex-1">
                 <div className={cn(
                   "mt-0.5 p-1.5 rounded-md flex-shrink-0",
@@ -67,7 +67,7 @@ export const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0 min-w-0">
                 {item.due_date ? (
                   <div className={cn(
                     "flex items-center gap-1 text-xs px-2 py-1 rounded-full",
@@ -82,7 +82,7 @@ export const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({
                   </div>
                 )}
                 
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs shrink-0">
                   {item.type === 'project' ? 'Projeto' : 'Tarefa'}
                 </Badge>
               </div>
