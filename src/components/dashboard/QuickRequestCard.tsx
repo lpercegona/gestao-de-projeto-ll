@@ -60,25 +60,25 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
     <>
       <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/20 rounded-xl">
+              <div className="p-3 bg-primary/20 rounded-xl shrink-0">
                 <FileText className="w-6 h-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-semibold text-lg">Solicitação Rápida</h3>
                 <p className="text-sm text-muted-foreground">
                   Solicite um novo projeto ou serviço
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
               {pendingCount > 0 && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs shrink-0">
                   {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
                 </Badge>
               )}
-              <Button onClick={() => setIsFormOpen(true)} className="gap-2">
+              <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full sm:w-auto">
                 <Plus className="w-4 h-4" />
                 Nova Solicitação
               </Button>

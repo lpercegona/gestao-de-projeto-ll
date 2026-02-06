@@ -56,9 +56,9 @@ const App = () => (
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
               
-              {/* Dashboard - accessible by admin and master_admin only */}
+              {/* Dashboard - accessible by all authenticated roles */}
               <Route path="/" element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole="client">
                   <Dashboard />
                 </ProtectedRoute>
               } />
