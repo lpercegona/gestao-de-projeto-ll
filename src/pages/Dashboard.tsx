@@ -176,34 +176,34 @@ export const Dashboard: React.FC = () => {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="outline">
+          <Badge variant="outline" className="max-w-full whitespace-normal break-words">
             <AlertCircle className="w-3 h-3 mr-1" />
             Pendente
           </Badge>
         );
       case "analyzing":
         return (
-          <Badge variant="secondary">
+          <Badge variant="secondary" className="max-w-full whitespace-normal break-words">
             <Clock className="w-3 h-3 mr-1" />
             Em Análise
           </Badge>
         );
       case "converted":
         return (
-          <Badge variant="default">
+          <Badge variant="default" className="max-w-full whitespace-normal break-words">
             <CheckCircle2 className="w-3 h-3 mr-1" />
             Convertido
           </Badge>
         );
       case "rejected":
         return (
-          <Badge variant="destructive">
+          <Badge variant="destructive" className="max-w-full whitespace-normal break-words">
             <XCircle className="w-3 h-3 mr-1" />
             Rejeitado
           </Badge>
         );
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="max-w-full whitespace-normal break-words">{status}</Badge>;
     }
   };
 
@@ -439,6 +439,12 @@ export const Dashboard: React.FC = () => {
       <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 overflow-x-hidden">
         {/* Right Column - Quick Actions & Calendar (appears first on mobile) */}
         <div className="space-y-6 order-first lg:order-last min-w-0">
+          <div className="min-w-0">
+            <QuickActionsPanel />
+          </div>
+          <div className="min-w-0">
+            <DashboardCalendar />
+          </div>
           <QuickActionsPanel />
           <DashboardCalendar />
         </div>
@@ -479,9 +485,13 @@ export const Dashboard: React.FC = () => {
               <SolicitacoesPanel />
               <ProximasEntregasPanel />
             </div>
-            <div className="space-y-6">
-              <HorasPorClientePanel />
-              <UltimosRegistrosPanel />
+            <div className="space-y-6 min-w-0">
+              <div className="min-w-0">
+                <HorasPorClientePanel />
+              </div>
+              <div className="min-w-0">
+                <UltimosRegistrosPanel />
+              </div>
             </div>
           </div>
         </div>
