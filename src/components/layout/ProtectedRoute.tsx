@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import simboloOras from '@/assets/simbolo-oras.svg';
 import { AppLayout } from './AppLayout';
 
 interface ProtectedRouteProps {
@@ -19,7 +19,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (loading || roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <img
+          src={simboloOras}
+          alt="Carregando ORAS"
+          className="w-12 h-12 animate-spin [animation-duration:3s]"
+        />
       </div>
     );
   }
