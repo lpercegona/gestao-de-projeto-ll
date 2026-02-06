@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useData } from '@/contexts/DataContext';
-import { supabase } from '@/integrations/supabase/client';
-import { QuickRequestCard } from '@/components/dashboard/QuickRequestCard';
-import { QuickActionsPanel } from '@/components/dashboard/QuickActionsPanel';
-import { DashboardCalendar } from '@/components/dashboard/DashboardCalendar';
-import { SolicitacoesPanel } from '@/components/dashboard/SolicitacoesPanel';
-import { HorasPorClientePanel } from '@/components/dashboard/HorasPorClientePanel';
-import { ProximasEntregasPanel } from '@/components/dashboard/ProximasEntregasPanel';
-import { UltimosRegistrosPanel } from '@/components/dashboard/UltimosRegistrosPanel';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { formatHours } from '@/lib/formatHours';
-import { 
-  FolderKanban, 
-  CheckSquare, 
-  Clock, 
+import React, { useState, useEffect, useMemo } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useData } from "@/contexts/DataContext";
+import { supabase } from "@/integrations/supabase/client";
+import { QuickRequestCard } from "@/components/dashboard/QuickRequestCard";
+import { QuickActionsPanel } from "@/components/dashboard/QuickActionsPanel";
+import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
+import { SolicitacoesPanel } from "@/components/dashboard/SolicitacoesPanel";
+import { HorasPorClientePanel } from "@/components/dashboard/HorasPorClientePanel";
+import { ProximasEntregasPanel } from "@/components/dashboard/ProximasEntregasPanel";
+import { UltimosRegistrosPanel } from "@/components/dashboard/UltimosRegistrosPanel";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { formatHours } from "@/lib/formatHours";
+import {
+  FolderKanban,
+  CheckSquare,
+  Clock,
   FileText,
   ChevronDown,
   AlertCircle,
@@ -27,10 +27,10 @@ import {
   Users,
   FileCheck,
   Plus,
-  RefreshCw
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+  RefreshCw,
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ProjectRequest {
   id: string;
@@ -47,12 +47,12 @@ export const Dashboard: React.FC = () => {
   const { data, loading, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow } = useData();
   const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [clientInfo, setClientInfo] = useState<{ 
-    id: string; 
-    contracted_hours: number; 
-    contract_type: 'one_time' | 'monthly'; 
-    contract_end_date: string | null; 
-    contract_start_date: string | null 
+  const [clientInfo, setClientInfo] = useState<{
+    id: string;
+    contracted_hours: number;
+    contract_type: "one_time" | "monthly";
+    contract_end_date: string | null;
+    contract_start_date: string | null;
   } | null>(null);
   const [recentRequestsOpen, setRecentRequestsOpen] = useState(true);
   const [activeProjectsOpen, setActiveProjectsOpen] = useState(true);
@@ -69,24 +69,24 @@ export const Dashboard: React.FC = () => {
       try {
         // Get client_id from client_users
         const { data: clientUserData } = await supabase
-          .from('client_users')
-          .select('client_id')
-          .eq('user_id', user.id)
+          .from("client_users")
+          .select("client_id")
+          .eq("user_id", user.id)
           .maybeSingle();
 
         if (clientUserData?.client_id) {
           // Get client info
           const { data: clientData } = await supabase
-            .from('clients')
-            .select('id, contracted_hours, contract_type, contract_end_date, contract_start_date')
-            .eq('id', clientUserData.client_id)
+            .from("clients")
+            .select("id, contracted_hours, contract_type, contract_end_date, contract_start_date")
+            .eq("id", clientUserData.client_id)
             .single();
 
           if (clientData) {
             setClientInfo({
               id: (clientData as any).id,
               contracted_hours: (clientData as any).contracted_hours,
-              contract_type: ((clientData as any).contract_type as 'one_time' | 'monthly') || 'one_time',
+              contract_type: ((clientData as any).contract_type as "one_time" | "monthly") || "one_time",
               contract_end_date: (clientData as any).contract_end_date || null,
               contract_start_date: (clientData as any).contract_start_date || null,
             });
@@ -94,17 +94,17 @@ export const Dashboard: React.FC = () => {
 
           // Get project requests
           const { data: requestsData } = await supabase
-            .from('project_requests')
-            .select('*')
-            .eq('client_id', clientUserData.client_id)
-            .order('created_at', { ascending: false });
+            .from("project_requests")
+            .select("*")
+            .eq("client_id", clientUserData.client_id)
+            .order("created_at", { ascending: false });
 
           if (requestsData) {
             setProjectRequests(requestsData);
           }
         }
       } catch (err) {
-        console.error('Error fetching client data:', err);
+        console.error("Error fetching client data:", err);
       } finally {
         setLoadingRequests(false);
       }
@@ -116,12 +116,12 @@ export const Dashboard: React.FC = () => {
   // Fetch proposal count for admin
   useEffect(() => {
     if (isClient) return;
-    
+
     const fetchProposalCount = async () => {
       const { count } = await supabase
-        .from('proposals')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['draft', 'sent', 'viewed']);
+        .from("proposals")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["draft", "sent", "viewed"]);
       setProposalCount(count || 0);
     };
     fetchProposalCount();
@@ -134,28 +134,24 @@ export const Dashboard: React.FC = () => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
-    
+
     const contractedHours = clientInfo.contracted_hours || 0;
-    const isMonthly = clientInfo.contract_type === 'monthly';
-    
+    const isMonthly = clientInfo.contract_type === "monthly";
+
     // Calculate monthly hours and overflow for monthly clients
-    const previousMonthOverflow = isMonthly 
-      ? getClientPreviousMonthOverflow(clientInfo.id, currentYear, currentMonth) 
+    const previousMonthOverflow = isMonthly
+      ? getClientPreviousMonthOverflow(clientInfo.id, currentYear, currentMonth)
       : 0;
-    
-    const monthlyUsedHours = isMonthly 
+
+    const monthlyUsedHours = isMonthly
       ? getClientMonthlyHours(clientInfo.id, currentYear, currentMonth)
       : getClientHours(clientInfo.id);
-    
+
     // Calculate available hours (contracted - saldo anterior)
-    const availableHours = isMonthly 
-      ? Math.max(0, contractedHours - previousMonthOverflow) 
-      : contractedHours;
-    
+    const availableHours = isMonthly ? Math.max(0, contractedHours - previousMonthOverflow) : contractedHours;
+
     const remainingHours = Math.max(0, availableHours - monthlyUsedHours);
-    const hoursPercentage = availableHours > 0 
-      ? Math.min((monthlyUsedHours / availableHours) * 100, 100) 
-      : 0;
+    const hoursPercentage = availableHours > 0 ? Math.min((monthlyUsedHours / availableHours) * 100, 100) : 0;
 
     return {
       contractedHours,
@@ -164,28 +160,48 @@ export const Dashboard: React.FC = () => {
       remainingHours,
       hoursPercentage,
       previousMonthOverflow,
-      isMonthly
+      isMonthly,
     };
   }, [isClient, clientInfo, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow]);
 
   // Filter data based on role
-  const activeProjects = data.projects.filter(p => p.status === 'active');
-  const pendingTasks = data.tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
+  const activeProjects = data.projects.filter((p) => p.status === "active");
+  const pendingTasks = data.tasks.filter((t) => t.status === "pending" || t.status === "in_progress");
 
   // Request statistics for clients
-  const pendingRequests = projectRequests.filter(r => r.status === 'pending');
-  const analyzingRequests = projectRequests.filter(r => r.status === 'analyzing');
+  const pendingRequests = projectRequests.filter((r) => r.status === "pending");
+  const analyzingRequests = projectRequests.filter((r) => r.status === "analyzing");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <Badge variant="outline"><AlertCircle className="w-3 h-3 mr-1" />Pendente</Badge>;
-      case 'analyzing':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Em Análise</Badge>;
-      case 'converted':
-        return <Badge variant="default"><CheckCircle2 className="w-3 h-3 mr-1" />Convertido</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejeitado</Badge>;
+      case "pending":
+        return (
+          <Badge variant="outline">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Pendente
+          </Badge>
+        );
+      case "analyzing":
+        return (
+          <Badge variant="secondary">
+            <Clock className="w-3 h-3 mr-1" />
+            Em Análise
+          </Badge>
+        );
+      case "converted":
+        return (
+          <Badge variant="default">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            Convertido
+          </Badge>
+        );
+      case "rejected":
+        return (
+          <Badge variant="destructive">
+            <XCircle className="w-3 h-3 mr-1" />
+            Rejeitado
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -204,16 +220,21 @@ export const Dashboard: React.FC = () => {
   // CLIENT VIEW
   if (isClient) {
     const stats = [
-      { label: 'Projetos Ativos', value: activeProjects.length, icon: FolderKanban },
-      { label: 'Tarefas Pendentes', value: pendingTasks.length, icon: CheckSquare },
-      { label: 'Solicitações Pendentes', value: pendingRequests.length + analyzingRequests.length, icon: FileText },
-      { 
-        label: clientStats?.isMonthly ? 'Disponível este Mês' : 'Horas Utilizadas', 
-        value: clientStats?.isMonthly ? formatHours(clientStats.availableHours) : formatHours(clientStats?.usedHours || 0), 
-        icon: Clock, 
-        extra: clientStats?.isMonthly && clientStats.previousMonthOverflow > 0 
-          ? `${formatHours(clientStats.contractedHours)} - ${formatHours(clientStats.previousMonthOverflow)} saldo ant.` 
-          : (clientStats?.contractedHours && clientStats.contractedHours > 0 ? `de ${formatHours(clientStats.contractedHours)}` : undefined) 
+      { label: "Projetos Ativos", value: activeProjects.length, icon: FolderKanban },
+      { label: "Tarefas Pendentes", value: pendingTasks.length, icon: CheckSquare },
+      { label: "Solicitações Pendentes", value: pendingRequests.length + analyzingRequests.length, icon: FileText },
+      {
+        label: clientStats?.isMonthly ? "Disponível este Mês" : "Horas Utilizadas",
+        value: clientStats?.isMonthly
+          ? formatHours(clientStats.availableHours)
+          : formatHours(clientStats?.usedHours || 0),
+        icon: Clock,
+        extra:
+          clientStats?.isMonthly && clientStats.previousMonthOverflow > 0
+            ? `${formatHours(clientStats.contractedHours)} - ${formatHours(clientStats.previousMonthOverflow)} saldo ant.`
+            : clientStats?.contractedHours && clientStats.contractedHours > 0
+              ? `de ${formatHours(clientStats.contractedHours)}`
+              : undefined,
       },
     ];
 
@@ -231,9 +252,7 @@ export const Dashboard: React.FC = () => {
               </CardHeader>
               <CardContent className="p-3 sm:p-4 pt-0">
                 <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
-                {stat.extra && (
-                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{stat.extra}</p>
-                )}
+                {stat.extra && <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{stat.extra}</p>}
               </CardContent>
             </Card>
           ))}
@@ -246,7 +265,9 @@ export const Dashboard: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium">
-                    {clientStats.isMonthly ? `Horas do Mês - ${format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}` : 'Horas Contratadas'}
+                    {clientStats.isMonthly
+                      ? `Horas do Mês - ${format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}`
+                      : "Horas Contratadas"}
                   </span>
                   {clientStats.isMonthly && (
                     <Badge variant="outline" className="text-xs">
@@ -259,28 +280,31 @@ export const Dashboard: React.FC = () => {
                   {formatHours(clientStats.usedHours)} / {formatHours(clientStats.availableHours)}
                 </span>
               </div>
-              
+
               {/* Previous month overflow indicator */}
               {clientStats.isMonthly && clientStats.previousMonthOverflow > 0 && (
                 <div className="mb-3 p-2 rounded-md bg-destructive/10 border border-destructive/30">
                   <div className="flex items-center gap-2 text-destructive">
                     <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span className="text-sm font-medium">Saldo Anterior: {formatHours(clientStats.previousMonthOverflow)}</span>
+                    <span className="text-sm font-medium">
+                      Saldo Anterior: {formatHours(clientStats.previousMonthOverflow)}
+                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Horas excedentes do mês anterior descontadas do limite deste mês
                   </p>
                 </div>
               )}
-              
+
               <Progress value={clientStats.hoursPercentage} className="h-2" />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-1 gap-1">
                 <p className="text-xs text-muted-foreground">
-                  {formatHours(clientStats.remainingHours)} restantes{clientStats.isMonthly ? ' este mês' : ''}
+                  {formatHours(clientStats.remainingHours)} restantes{clientStats.isMonthly ? " este mês" : ""}
                 </p>
                 {clientStats.isMonthly && clientStats.usedHours > clientStats.availableHours && (
                   <p className="text-xs text-destructive">
-                    ⚠️ {formatHours(clientStats.usedHours - clientStats.availableHours)} serão descontadas do próximo mês
+                    ⚠️ {formatHours(clientStats.usedHours - clientStats.availableHours)} serão descontadas do próximo
+                    mês
                   </p>
                 )}
               </div>
@@ -302,7 +326,9 @@ export const Dashboard: React.FC = () => {
                         <FileText className="w-4 h-4" />
                         Solicitações Recentes
                       </CardTitle>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${recentRequestsOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${recentRequestsOpen ? "rotate-180" : ""}`}
+                      />
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -315,8 +341,8 @@ export const Dashboard: React.FC = () => {
                     ) : (
                       <div className="space-y-3">
                         {recentRequests.map((request) => (
-                          <div 
-                            key={request.id} 
+                          <div
+                            key={request.id}
                             className="flex items-center justify-between p-3 rounded-lg border border-border gap-3"
                           >
                             <div className="flex-1 min-w-0">
@@ -325,9 +351,7 @@ export const Dashboard: React.FC = () => {
                                 {format(new Date(request.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                               </p>
                             </div>
-                            <div className="shrink-0">
-                              {getStatusBadge(request.status)}
-                            </div>
+                            <div className="shrink-0">{getStatusBadge(request.status)}</div>
                           </div>
                         ))}
                       </div>
@@ -347,30 +371,26 @@ export const Dashboard: React.FC = () => {
                         <FolderKanban className="w-4 h-4" />
                         Projetos Ativos
                       </CardTitle>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${activeProjectsOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${activeProjectsOpen ? "rotate-180" : ""}`}
+                      />
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="pt-0">
                     {activeProjects.length === 0 ? (
-                      <p className="text-muted-foreground text-sm text-center py-4">
-                        Nenhum projeto ativo no momento
-                      </p>
+                      <p className="text-muted-foreground text-sm text-center py-4">Nenhum projeto ativo no momento</p>
                     ) : (
                       <div className="space-y-3">
                         {activeProjects.slice(0, 5).map((project) => {
-                          const projectTasks = data.tasks.filter(t => t.project_id === project.id);
-                          const completedTasks = projectTasks.filter(t => t.status === 'completed');
-                          const progress = projectTasks.length > 0 
-                            ? (completedTasks.length / projectTasks.length) * 100 
-                            : 0;
+                          const projectTasks = data.tasks.filter((t) => t.project_id === project.id);
+                          const completedTasks = projectTasks.filter((t) => t.status === "completed");
+                          const progress =
+                            projectTasks.length > 0 ? (completedTasks.length / projectTasks.length) * 100 : 0;
 
                           return (
-                            <div 
-                              key={project.id} 
-                              className="p-3 rounded-lg border border-border"
-                            >
+                            <div key={project.id} className="p-3 rounded-lg border border-border">
                               <div className="flex items-center justify-between mb-2 gap-2">
                                 <p className="font-medium truncate text-sm">{project.name}</p>
                                 <Badge variant="outline" className="shrink-0 text-xs">
@@ -407,26 +427,24 @@ export const Dashboard: React.FC = () => {
 
   // ADMIN VIEW
   const adminStats = [
-    { title: 'Clientes', value: data.clients.length, icon: Users, description: 'Total de clientes' },
-    { title: 'Projetos', value: activeProjects.length, icon: FolderKanban, description: 'Projetos ativos' },
-    { title: 'Tarefas', value: pendingTasks.length, icon: CheckSquare, description: 'Tarefas pendentes' },
-    { title: 'Propostas', value: proposalCount, icon: FileCheck, description: 'Pendentes ou enviadas' },
+    { title: "Clientes", value: data.clients.length, icon: Users, description: "Total de clientes" },
+    { title: "Projetos", value: activeProjects.length, icon: FolderKanban, description: "Ativos" },
+    { title: "Tarefas", value: pendingTasks.length, icon: CheckSquare, description: "Pendentes" },
+    { title: "Propostas", value: proposalCount, icon: FileCheck, description: "Pendentes ou enviadas" },
   ];
 
   return (
     <div className="space-y-6">
       {/* Main Layout for Admin */}
       <div className="grid lg:grid-cols-[1fr_320px] gap-6">
-        
         {/* Right Column - Quick Actions & Calendar (appears first on mobile) */}
         <div className="space-y-6 order-first lg:order-last">
           <QuickActionsPanel />
           <DashboardCalendar />
         </div>
-        
+
         {/* Left Column - Stats & Panels */}
         <div className="space-y-6 order-last lg:order-first">
-          
           {/* Stats Row */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
             {adminStats.map((stat) => (
@@ -443,7 +461,7 @@ export const Dashboard: React.FC = () => {
                 </CardContent>
               </Card>
             ))}
-            
+
             {/* Placeholder Card */}
             <Card className="border-dashed border-2 border-muted-foreground/30 hover:border-primary/50 transition-colors cursor-pointer min-w-0">
               <CardContent className="flex items-center justify-center h-full p-3 sm:p-4 min-h-[88px]">
@@ -454,7 +472,7 @@ export const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Content Panels */}
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-6">
@@ -467,7 +485,6 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-        
       </div>
     </div>
   );
