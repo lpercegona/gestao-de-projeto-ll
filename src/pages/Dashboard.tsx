@@ -239,11 +239,11 @@ export const Dashboard: React.FC = () => {
     ];
 
     return (
-      <div className="space-y-6 min-w-0 overflow-x-hidden">
+      <div className="space-y-6 min-w-0 w-full [overflow-wrap:anywhere] [word-break:break-word] [&_*]:max-w-full [&_*]:min-w-0">
         {/* Stats Grid - Responsive */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 min-w-0 w-full">
           {stats.map((stat, index) => (
-            <Card key={index} className="min-w-0">
+            <Card key={index} className="min-w-0 w-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate pr-2">
                   {stat.label}
@@ -313,12 +313,12 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Main Layout for Client */}
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 overflow-x-hidden">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 w-full">
           {/* Left Column - Main Content */}
           <div className="space-y-6 order-last lg:order-first min-w-0">
             {/* Recent Requests */}
             <Collapsible open={recentRequestsOpen} onOpenChange={setRecentRequestsOpen}>
-              <Card className="min-w-0">
+              <Card className="min-w-0 w-full">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
                     <div className="flex items-center justify-between min-w-0 gap-2">
@@ -363,7 +363,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Active Projects */}
             <Collapsible open={activeProjectsOpen} onOpenChange={setActiveProjectsOpen}>
-              <Card className="min-w-0">
+              <Card className="min-w-0 w-full">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
                     <div className="flex items-center justify-between min-w-0 gap-2">
@@ -409,16 +409,24 @@ export const Dashboard: React.FC = () => {
             </Collapsible>
 
             {/* Upcoming Deadlines and Recent Records */}
-            <div className="grid md:grid-cols-2 gap-6 min-w-0">
-              <ProximasEntregasPanel />
-              <UltimosRegistrosPanel />
+            <div className="grid md:grid-cols-2 gap-6 min-w-0 w-full">
+              <div className="min-w-0 w-full">
+                <ProximasEntregasPanel />
+              </div>
+              <div className="min-w-0 w-full">
+                <UltimosRegistrosPanel />
+              </div>
             </div>
           </div>
 
           {/* Right Column - Actions & Calendar */}
           <div className="space-y-6 order-first lg:order-last min-w-0">
-            <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} />
-            <DashboardCalendar />
+            <div className="min-w-0 w-full">
+              <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} />
+            </div>
+            <div className="min-w-0 w-full">
+              <DashboardCalendar />
+            </div>
           </div>
         </div>
       </div>
@@ -434,27 +442,25 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 min-w-0 overflow-x-hidden">
+    <div className="space-y-6 min-w-0 w-full [overflow-wrap:anywhere] [word-break:break-word] [&_*]:max-w-full [&_*]:min-w-0">
       {/* Main Layout for Admin */}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 overflow-x-hidden">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 w-full">
         {/* Right Column - Quick Actions & Calendar (appears first on mobile) */}
         <div className="space-y-6 order-first lg:order-last min-w-0">
-          <div className="min-w-0">
+          <div className="min-w-0 w-full">
             <QuickActionsPanel />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 w-full">
             <DashboardCalendar />
           </div>
-          <QuickActionsPanel />
-          <DashboardCalendar />
         </div>
 
         {/* Left Column - Stats & Panels */}
         <div className="space-y-6 order-last lg:order-first min-w-0">
           {/* Stats Row */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5 min-w-0">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5 min-w-0 w-full">
             {adminStats.map((stat) => (
-              <Card key={stat.title} className="min-w-0">
+              <Card key={stat.title} className="min-w-0 w-full">
                 <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
                   <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate pr-2">
                     {stat.title}
@@ -480,16 +486,20 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Content Panels */}
-          <div className="grid md:grid-cols-2 gap-6 min-w-0">
-            <div className="space-y-6">
-              <SolicitacoesPanel />
-              <ProximasEntregasPanel />
+          <div className="grid md:grid-cols-2 gap-6 min-w-0 w-full">
+            <div className="space-y-6 min-w-0">
+              <div className="min-w-0 w-full">
+                <SolicitacoesPanel />
+              </div>
+              <div className="min-w-0 w-full">
+                <ProximasEntregasPanel />
+              </div>
             </div>
             <div className="space-y-6 min-w-0">
-              <div className="min-w-0">
+              <div className="min-w-0 w-full">
                 <HorasPorClientePanel />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 w-full">
                 <UltimosRegistrosPanel />
               </div>
             </div>
