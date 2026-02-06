@@ -501,7 +501,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
           <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 lg:pt-20">
-            <div className="min-h-full rounded-tl-[12px] border border-[#e2e8f0] bg-white p-4 sm:p-5">
+            <div className="min-h-full rounded-tl-[12px] bg-white p-4 sm:p-5">
               {children}
             </div>
           </div>
