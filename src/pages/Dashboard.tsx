@@ -239,7 +239,7 @@ export const Dashboard: React.FC = () => {
     ];
 
     return (
-      <div className="space-y-6 min-w-0">
+      <div className="space-y-6 min-w-0 overflow-x-hidden">
         {/* Stats Grid - Responsive */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {stats.map((stat, index) => (
@@ -313,7 +313,7 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Main Layout for Client */}
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 overflow-x-hidden">
           {/* Left Column - Main Content */}
           <div className="space-y-6 order-last lg:order-first min-w-0">
             {/* Recent Requests */}
@@ -410,23 +410,15 @@ export const Dashboard: React.FC = () => {
 
             {/* Upcoming Deadlines and Recent Records */}
             <div className="grid md:grid-cols-2 gap-6 min-w-0">
-              <div className="min-w-0">
-                <ProximasEntregasPanel />
-              </div>
-              <div className="min-w-0">
-                <UltimosRegistrosPanel />
-              </div>
+              <ProximasEntregasPanel />
+              <UltimosRegistrosPanel />
             </div>
           </div>
 
           {/* Right Column - Actions & Calendar */}
           <div className="space-y-6 order-first lg:order-last min-w-0">
-            <div className="min-w-0">
-              <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} />
-            </div>
-            <div className="min-w-0">
-              <DashboardCalendar />
-            </div>
+            <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} />
+            <DashboardCalendar />
           </div>
         </div>
       </div>
@@ -442,9 +434,9 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 min-w-0">
+    <div className="space-y-6 min-w-0 overflow-x-hidden">
       {/* Main Layout for Admin */}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 min-w-0 overflow-x-hidden">
         {/* Right Column - Quick Actions & Calendar (appears first on mobile) */}
         <div className="space-y-6 order-first lg:order-last min-w-0">
           <div className="min-w-0">
@@ -453,6 +445,8 @@ export const Dashboard: React.FC = () => {
           <div className="min-w-0">
             <DashboardCalendar />
           </div>
+          <QuickActionsPanel />
+          <DashboardCalendar />
         </div>
 
         {/* Left Column - Stats & Panels */}
@@ -487,13 +481,9 @@ export const Dashboard: React.FC = () => {
 
           {/* Content Panels */}
           <div className="grid md:grid-cols-2 gap-6 min-w-0">
-            <div className="space-y-6 min-w-0">
-              <div className="min-w-0">
-                <SolicitacoesPanel />
-              </div>
-              <div className="min-w-0">
-                <ProximasEntregasPanel />
-              </div>
+            <div className="space-y-6">
+              <SolicitacoesPanel />
+              <ProximasEntregasPanel />
             </div>
             <div className="space-y-6 min-w-0">
               <div className="min-w-0">
