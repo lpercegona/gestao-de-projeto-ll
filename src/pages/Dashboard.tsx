@@ -427,10 +427,10 @@ export const Dashboard: React.FC = () => {
 
   // ADMIN VIEW
   const adminStats = [
-    { title: "Clientes", value: data.clients.length, icon: Users, description: "Total de clientes" },
+    { title: "Clientes", value: data.clients.length, icon: Users, description: "Total" },
     { title: "Projetos", value: activeProjects.length, icon: FolderKanban, description: "Ativos" },
     { title: "Tarefas", value: pendingTasks.length, icon: CheckSquare, description: "Pendentes" },
-    { title: "Propostas", value: proposalCount, icon: FileCheck, description: "Pendentes ou enviadas" },
+    { title: "Propostas", value: proposalCount, icon: FileCheck, description: "Total" },
   ];
 
   return (
