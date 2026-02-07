@@ -221,7 +221,7 @@ export const Clients: React.FC = () => {
                   <Badge variant="circular" className="">
                     {leadCount}
                   </Badge>
-                  <span className="hidden sm:inline">Leads</span>
+                  <span className="sm:inline">Leads</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="proposal"
@@ -230,7 +230,7 @@ export const Clients: React.FC = () => {
                   <Badge variant="circular" className="">
                     {proposalCount}
                   </Badge>
-                  <span className="hidden sm:inline">Em Negociação</span>
+                  <span className=" sm:inline">Em Negociação</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="active"
@@ -239,7 +239,7 @@ export const Clients: React.FC = () => {
                   <Badge variant="circular" className="">
                     {activeCount}
                   </Badge>
-                  <span className="hidden sm:inline">Ativos</span>
+                  <span className="sm:inline">Ativos</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="churned"
@@ -248,7 +248,7 @@ export const Clients: React.FC = () => {
                   <Badge variant="circular" className="">
                     {churnedCount}
                   </Badge>
-                  <span className="hidden sm:inline">Inativos</span>
+                  <span className="sm:inline">Inativos</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
