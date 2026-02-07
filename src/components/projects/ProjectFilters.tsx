@@ -1,11 +1,28 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon } from "lucide-react";
+import {
+  Filter,
+  LayoutList,
+  Columns3,
+  Plus,
+  X,
+  CalendarIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -87,9 +104,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               variant="outline"
               size="icon"
               className={cn(
-                "relative h-8 w-8 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 border-0",
-                "hover:bg-slate-200 hover:text-slate-500",
-                activeFilters > 0 && "bg-slate-200",
+                "relative h-8 w-8 rounded-md border border-input bg-muted text-muted-foreground",
+                "hover:bg-accent hover:text-accent-foreground",
+                activeFilters > 0 && "bg-accent text-accent-foreground",
               )}
             >
               <Filter className="w-3.5 h-3.5" />
@@ -147,7 +164,10 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                       <SelectItem key={stage.id} value={stage.id}>
                         <div className="flex items-center gap-2">
                           {stage.color && (
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.color }} />
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: stage.color }}
+                            />
                           )}
                           {stage.name}
                         </div>
@@ -173,7 +193,10 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                       {dateRange?.from ? (
                         dateRange.to ? (
                           <>
-                            {format(dateRange.from, "dd/MM/yy", { locale: ptBR })} -{" "}
+                            {format(dateRange.from, "dd/MM/yy", {
+                              locale: ptBR,
+                            })}{" "}
+                            -{" "}
                             {format(dateRange.to, "dd/MM/yy", { locale: ptBR })}
                           </>
                         ) : (
@@ -216,13 +239,13 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           type="single"
           value={viewMode}
           onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
-          className="rounded-full p-1 bg-[#f1f5f9]"
+          className="rounded-full border border-border bg-muted/40 p-1"
         >
           <ToggleGroupItem
             value="list"
             aria-label="Visualização em lista"
             className={cn(
-              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
+              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-border data-[state=on]:text-accent-foreground",
             )}
           >
             <LayoutList className="w-3.5 h-3.5 mr-1.5" />
@@ -232,7 +255,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             value="kanban"
             aria-label="Visualização Kanban"
             className={cn(
-              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
+              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-border data-[state=on]:text-accent-foreground",
             )}
           >
             <Columns3 className="w-3.5 h-3.5 mr-1.5" />
