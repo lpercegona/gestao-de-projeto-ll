@@ -96,11 +96,11 @@ export const QuickActionsPanel: React.FC = () => {
         <CardContent className="space-y-4">
           {/* Botões na mesma linha */}
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="justify-start gap-2" onClick={() => setClientDialogOpen(true)}>
+            <Button size="xs" variant="outline" className="justify-start gap-2" onClick={() => setClientDialogOpen(true)}>
               <Users className="h-4 w-4" />
               Cliente
             </Button>
-            <Button variant="outline" className="justify-start gap-2" onClick={() => navigate("/proposals")}>
+            <Button size="xs" variant="outline" className="justify-start gap-2" onClick={() => navigate("/proposals")}>
               <FileCheck className="h-4 w-4" />
               Proposta
             </Button>
@@ -129,19 +129,19 @@ export const QuickActionsPanel: React.FC = () => {
             )}
 
             {!hasActiveTimer ? (
-              <Button onClick={() => startGlobalTimer()} className="w-full gap-2">
+              <Button size="xs" onClick={() => startGlobalTimer()} className="w-full gap-2">
                 <Play className="h-4 w-4" />
                 Iniciar
               </Button>
             ) : (
               <div className="flex gap-2 w-full">
                 {isPaused ? (
-                  <Button onClick={() => resumeGlobalTimer()} className="flex-1 gap-2">
+                  <Button size="xs" onClick={() => resumeGlobalTimer()} className="flex-1 gap-2">
                     <Play className="h-4 w-4" />
                     Retomar
                   </Button>
                 ) : (
-                  <Button onClick={() => pauseGlobalTimer()} variant="outline" className="flex-1 gap-2">
+                  <Button size="xs" onClick={() => pauseGlobalTimer()} variant="outline" className="flex-1 gap-2">
                     <Pause className="h-4 w-4" />
                     Pausar
                   </Button>
@@ -150,6 +150,7 @@ export const QuickActionsPanel: React.FC = () => {
                   onClick={() => completeGlobalTimer()}
                   variant="destructive"
                   className="flex-1 gap-2"
+                  size="xs"
                   title="Concluir registro"
                 >
                   <Square className="h-4 w-4" />
