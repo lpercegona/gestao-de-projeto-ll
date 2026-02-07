@@ -218,19 +218,28 @@ export const Clients: React.FC = () => {
                   </Badge>
                   <span className="hidden sm:inline">Leads</span>
                 </TabsTrigger>
-                <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2 rounded-full">
+                <TabsTrigger
+                  value="proposal"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                >
                   <Badge variant="circular" className="">
                     {proposalCount}
                   </Badge>
                   <span className="hidden sm:inline">Em Negociação</span>
                 </TabsTrigger>
-                <TabsTrigger value="active" className="flex items-center gap-1 sm:gap-2 rounded-full">
+                <TabsTrigger
+                  value="active"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                >
                   <Badge variant="circular" className="">
                     {activeCount}
                   </Badge>
                   <span className="hidden sm:inline">Ativos</span>
                 </TabsTrigger>
-                <TabsTrigger value="churned" className="flex items-center gap-1 sm:gap-2 rounded-full">
+                <TabsTrigger
+                  value="churned"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                >
                   <Badge variant="circular" className="">
                     {churnedCount}
                   </Badge>
