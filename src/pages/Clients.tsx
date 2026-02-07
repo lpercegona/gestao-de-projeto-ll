@@ -177,11 +177,11 @@ export const Clients: React.FC = () => {
     <div className="space-y-4">
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'clients' | 'proposals')}>
         <TabsList className="h-10 p-1 rounded-full">
-          <TabsTrigger value="clients" className="flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium">
+          <TabsTrigger value="clients" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full shadow-none">
             <Users className="w-3.5 h-3.5" />
             Clientes
           </TabsTrigger>
-          <TabsTrigger value="proposals" className="flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium">
+          <TabsTrigger value="proposals" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full shadow-none">
             <FileCheck className="w-3.5 h-3.5" />
             Propostas
           </TabsTrigger>
