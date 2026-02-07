@@ -208,8 +208,11 @@ export const Clients: React.FC = () => {
               onValueChange={(v) => setActiveTab(v as "lead" | "proposal" | "active" | "churned")}
               className="flex-1 overflow-x-auto"
             >
-              <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent">
-                <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2 rounded-full">
+              <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent gap-1">
+                <TabsTrigger
+                  value="lead"
+                  className="flex items-center gap-1 sm:gap-2 rounded-full active[on]:bg-muted-foreground"
+                >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Lead</span>
                   <Badge variant="circular" className="">
