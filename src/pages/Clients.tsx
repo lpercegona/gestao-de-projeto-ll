@@ -188,9 +188,6 @@ export const Clients: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <span className="text-lg font-semibold text-foreground whitespace-nowrap">
-        {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
-      </span>
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
         <div className="flex items-center justify-between w-full">
           <TabsList className="flex rounded-lg">
