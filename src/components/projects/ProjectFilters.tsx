@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Calendar } from '@/components/ui/calendar';
-import { Label } from '@/components/ui/label';
-import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { DateRange } from 'react-day-picker';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
+import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { DateRange } from "react-day-picker";
 
 interface Client {
   id: string;
@@ -35,8 +35,8 @@ interface ProjectFiltersProps {
   onClientChange: (clientId: string) => void;
   onStageChange: (stageId: string) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
-  viewMode: 'list' | 'kanban';
-  onViewModeChange: (mode: 'list' | 'kanban') => void;
+  viewMode: "list" | "kanban";
+  onViewModeChange: (mode: "list" | "kanban") => void;
   onAddProject: () => void;
   isAdminOrMaster: boolean;
 }
@@ -60,14 +60,14 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
 
   // Count active filters
   const activeFilters = [
-    selectedClientId !== 'all' ? 1 : 0,
-    selectedStageId !== 'all' ? 1 : 0,
+    selectedClientId !== "all" ? 1 : 0,
+    selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
-    onClientChange('all');
-    onStageChange('all');
+    onClientChange("all");
+    onStageChange("all");
     onDateRangeChange(undefined);
   };
 
@@ -77,25 +77,16 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
       <div className="flex items-center gap-3">
         {/* Project count */}
         <span className="text-lg font-semibold text-foreground whitespace-nowrap">
-          {projectCount} {projectCount === 1 ? 'projeto' : 'projetos'}
+          {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
         </span>
-        
+
         {/* Filter button */}
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className={cn(
-                "relative",
-                activeFilters > 0 && "border-primary"
-              )}
-            >
+            <Button variant="outline" size="icon" className={cn("relative", activeFilters > 0 && "border-primary")}>
               <Filter className="h-4 w-4" />
               {activeFilters > 0 && (
-                <Badge 
-                  className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
-                >
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
                   {activeFilters}
                 </Badge>
               )}
@@ -106,9 +97,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm">Filtros</h4>
                 {activeFilters > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={clearFilters}
                     className="h-auto px-2 py-1 text-xs text-muted-foreground"
                   >
@@ -116,7 +107,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                   </Button>
                 )}
               </div>
-              
+
               {/* Client filter */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Cliente</Label>
@@ -134,7 +125,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* Stage filter */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Etapa</Label>
@@ -148,10 +139,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                       <SelectItem key={stage.id} value={stage.id}>
                         <div className="flex items-center gap-2">
                           {stage.color && (
-                            <div 
-                              className="w-2 h-2 rounded-full" 
-                              style={{ backgroundColor: stage.color }} 
-                            />
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.color }} />
                           )}
                           {stage.name}
                         </div>
@@ -160,7 +148,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* Date range filter */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Período</Label>
@@ -170,7 +158,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !dateRange?.from && "text-muted-foreground"
+                        !dateRange?.from && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -187,8 +175,8 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                         <span>Selecionar período</span>
                       )}
                       {dateRange?.from && (
-                        <X 
-                          className="ml-auto h-4 w-4 hover:text-destructive" 
+                        <X
+                          className="ml-auto h-4 w-4 hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
                             onDateRangeChange(undefined);
@@ -214,37 +202,33 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             </div>
           </PopoverContent>
         </Popover>
-        
+
         {/* View toggle */}
-        <ToggleGroup 
-          type="single" 
-          value={viewMode} 
-          onValueChange={(v) => v && onViewModeChange(v as 'list' | 'kanban')}
-          className="border rounded-lg p-1 bg-muted/50"
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
+          className="border rounded-full p-1 bg-muted/50"
         >
-          <ToggleGroupItem 
-            value="list" 
+          <ToggleGroupItem
+            value="list"
             aria-label="Visualização em lista"
-            className={cn(
-              "px-3 h-8 data-[state=on]:bg-background data-[state=on]:shadow-sm",
-            )}
+            className={cn("px-3 h-8 data-[state=on]:bg-background data-[state=on]:shadow-sm")}
           >
             <LayoutList className="w-4 h-4 mr-2" />
             Lista
           </ToggleGroupItem>
-          <ToggleGroupItem 
-            value="kanban" 
+          <ToggleGroupItem
+            value="kanban"
             aria-label="Visualização Kanban"
-            className={cn(
-              "px-3 h-8 data-[state=on]:bg-background data-[state=on]:shadow-sm",
-            )}
+            className={cn("px-3 h-8 data-[state=on]:bg-background data-[state=on]:shadow-sm")}
           >
             <Columns3 className="w-4 h-4 mr-2" />
             Kanban
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
-      
+
       {/* Right: Add button */}
       {isAdminOrMaster && (
         <Button onClick={onAddProject} size="icon" className="shrink-0">
