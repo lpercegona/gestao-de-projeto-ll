@@ -188,14 +188,14 @@ export const Clients: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <span className="text-lg font-semibold text-foreground whitespace-nowrap">
-        {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
-      </span>
-      <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
-        <Plus className="w-3.5 h-3.5" />
-      </Button>
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
         <div className="flex items-center justify-between w-full">
+          <span className="text-lg font-semibold text-foreground whitespace-nowrap">
+            {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
+          </span>
+          <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+            <Plus className="w-3.5 h-3.5" />
+          </Button>
           <TabsList className="flex rounded-lg">
             <TabsTrigger value="clients">
               <Users className="w-3.5 h-3.5" />
