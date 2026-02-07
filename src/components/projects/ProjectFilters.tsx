@@ -232,7 +232,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             value="kanban"
             aria-label="Visualização Kanban"
             className={cn(
-              "h-6 px-2.5 text-xs font-medium text-muted rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none",
+              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
             )}
           >
             <Columns3 className="w-3.5 h-3.5 mr-1.5" />
