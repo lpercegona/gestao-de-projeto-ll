@@ -247,9 +247,8 @@ export const Clients: React.FC = () => {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button onClick={() => handleOpenDialog()} size="sm" className="px-3 shrink-0">
+            <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0">
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline ml-2">Novo Cliente</span>
             </Button>
           </div>
 
@@ -257,9 +256,8 @@ export const Clients: React.FC = () => {
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground mb-4">Nenhum cliente cadastrado ainda.</p>
-                <Button onClick={() => handleOpenDialog()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar primeiro cliente
+                <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0">
+                  <Plus className="w-3.5 h-3.5 mr-2" />
                 </Button>
               </CardContent>
             </Card>
