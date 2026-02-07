@@ -103,7 +103,7 @@ export const Clients: React.FC = () => {
   const filteredClients = useMemo(() => {
     return data.clients.filter((c) => (c.pipeline_status || "active") === activeTab);
   }, [data.clients, activeTab]);
-  const clientCount = filteredClients.length;
+  const clientCount = data.clients.length;
   const leadCount = data.clients.filter((c) => (c.pipeline_status || "lead") === "lead").length;
   const proposalCount = data.clients.filter((c) => c.pipeline_status === "proposal").length;
   const activeCount = data.clients.filter((c) => c.pipeline_status === "active").length;
