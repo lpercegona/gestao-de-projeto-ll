@@ -103,6 +103,10 @@ export const Clients: React.FC = () => {
   const filteredClients = useMemo(() => {
     return data.clients.filter((c) => (c.pipeline_status || "lead") === activeTab);
   }, [data.clients, activeTab]);
+  const projectCount = useMemo(() => {
+    const clientIds = new Set(filteredClients.map((c) => c.id));
+    return data.projects.filter((p) => clientIds.has(p.client_id)).length;
+  }, [filteredClients, data.projects]);
 
   const leadCount = data.clients.filter((c) => (c.pipeline_status || "lead") === "lead").length;
   const proposalCount = data.clients.filter((c) => c.pipeline_status === "proposal").length;
@@ -188,7 +192,9 @@ export const Clients: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <span className="text-lg font-semibold text-foreground whitespace-nowrap">texto</span>
+      <span className="text-lg font-semibold text-foreground whitespace-nowrap">
+        {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
+      </span>
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
         <div className="flex items-center justify-between w-full">
           <TabsList className="flex rounded-lg">
