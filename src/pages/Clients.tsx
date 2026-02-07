@@ -216,7 +216,7 @@ export const Clients: React.FC = () => {
               <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent gap-1">
                 <TabsTrigger
                   value="lead"
-                  className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
                 >
                   <Badge variant="circular" className="">
                     {leadCount}
@@ -225,7 +225,7 @@ export const Clients: React.FC = () => {
                 </TabsTrigger>
                 <TabsTrigger
                   value="proposal"
-                  className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
                 >
                   <Badge variant="circular" className="">
                     {proposalCount}
@@ -234,7 +234,7 @@ export const Clients: React.FC = () => {
                 </TabsTrigger>
                 <TabsTrigger
                   value="active"
-                  className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
                 >
                   <Badge variant="circular" className="">
                     {activeCount}
@@ -243,7 +243,7 @@ export const Clients: React.FC = () => {
                 </TabsTrigger>
                 <TabsTrigger
                   value="churned"
-                  className="flex pt-1 pb-1 pl-1 pr-1.5 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
                 >
                   <Badge variant="circular" className="">
                     {churnedCount}
