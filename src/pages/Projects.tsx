@@ -745,7 +745,7 @@ export const Projects: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Opções</Label>
                   <div className="flex gap-2"><Input value={newOption} onChange={(e) => setNewOption(e.target.value)} placeholder="Nova opção" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddOption(); } }} disabled={submittingColumn} /><Button type="button" onClick={handleAddOption} disabled={submittingColumn}>Adicionar</Button></div>
-                  {columnFormData.options.length > 0 && (<div className="flex flex-wrap gap-2 mt-2">{columnFormData.options.map((o) => (<Badge key={o} variant="secondary" className="gap-1">{o}<Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveOption(o)} className="ml-1 h-4 w-4 hover:text-destructive"><X className="w-3 h-3" /></Button></Badge>))}</div>)}
+                  {columnFormData.options.length > 0 && (<div className="flex flex-wrap gap-2 mt-2">{columnFormData.options.map((o) => (<Badge key={o} variant="secondary" className="gap-1">{o}<button type="button" onClick={() => handleRemoveOption(o)} className="ml-1 hover:text-destructive"><X className="w-3 h-3" /></button></Badge>))}</div>)}
                 </div>
               )}
             </div>

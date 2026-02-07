@@ -21,23 +21,6 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["@radix-ui/*"],
-              message: "Use os componentes de src/components/ui (shadcn/ui) ao invés de importar Radix diretamente.",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    files: ["src/components/ui/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": "off",
     },
   },
 );
