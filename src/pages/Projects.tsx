@@ -16,22 +16,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList, FileText, Edit } from 'lucide-react';
+import { Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList, Plus } from 'lucide-react';
 import { Users as UsersIcon } from 'lucide-react';
 import { Project, Task } from '@/types';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 // New components
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { KanbanStagesDialog } from '@/components/projects/KanbanStagesDialog';
-import { ProjectRequestsTab } from '@/components/projects/ProjectRequestsTab';
-import { EditRequestsTab } from '@/components/projects/EditRequestsTab';
 
 interface Collaborator {
   user_id: string;
@@ -82,9 +80,10 @@ export const Projects: React.FC = () => {
   const { resetTimer } = useGlobalTimer();
   
   // View state
-  const [activeMainTab, setActiveMainTab] = useState<'projects' | 'requests' | 'edits'>('projects');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [filterClientId, setFilterClientId] = useState<string>('all');
+  const [filterStageId, setFilterStageId] = useState<string>('all');
+  const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
   
   // Project dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -179,8 +178,27 @@ export const Projects: React.FC = () => {
       projects = projects.filter(project => project.client_id === filterClientId);
     }
     
+    // Filter by stage (status)
+    if (filterStageId !== 'all') {
+      const selectedStage = data.kanbanStages.find(s => s.id === filterStageId);
+      if (selectedStage) {
+        projects = projects.filter(project => project.status === selectedStage.name.toLowerCase());
+      }
+    }
+    
+    // Filter by date range (due_date)
+    if (filterDateRange?.from) {
+      projects = projects.filter(project => {
+        if (!project.due_date) return false;
+        const dueDate = new Date(project.due_date);
+        const from = startOfDay(filterDateRange.from!);
+        const to = filterDateRange.to ? endOfDay(filterDateRange.to) : endOfDay(filterDateRange.from!);
+        return isWithinInterval(dueDate, { start: from, end: to });
+      });
+    }
+    
     return projects;
-  }, [data.projects, data.projectAccess, user?.id, isAdminOrMaster, filterClientId]);
+  }, [data.projects, data.projectAccess, data.kanbanStages, user?.id, isAdminOrMaster, filterClientId, filterStageId, filterDateRange]);
 
   // Helper functions for time conversion
   const parseTimeToHours = (timeString: string): number => {
@@ -474,181 +492,73 @@ export const Projects: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Main tabs for Projects, Requests, Edits */}
-      {isAdminOrMaster && (
-        <Tabs value={activeMainTab} onValueChange={(v) => setActiveMainTab(v as 'projects' | 'requests' | 'edits')}>
-          <TabsList>
-            <TabsTrigger value="projects" className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4" />
-              Projetos
-            </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Solicitações
-            </TabsTrigger>
-            <TabsTrigger value="edits" className="flex items-center gap-2">
-              <Edit className="w-4 h-4" />
-              Edições
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="projects" className="mt-6">
-            {/* Filters and view toggle */}
-            <ProjectFilters
-              clients={data.clients}
-              selectedClientId={filterClientId}
-              onClientChange={setFilterClientId}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-            />
-            
-            {/* Header with count and new button */}
-            <div className="flex items-center justify-between mt-6">
-              <h2 className="text-lg font-semibold text-foreground">
-                {visibleProjects.length} {visibleProjects.length === 1 ? 'projeto' : 'projetos'}
-              </h2>
-              <Button onClick={() => handleOpenDialog()} size="sm" className="px-3">
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline ml-2">Novo Projeto</span>
-              </Button>
-            </div>
+      {/* Unified header with filters */}
+      <ProjectFilters
+        projectCount={visibleProjects.length}
+        clients={data.clients}
+        kanbanStages={data.kanbanStages}
+        selectedClientId={filterClientId}
+        selectedStageId={filterStageId}
+        dateRange={filterDateRange}
+        onClientChange={setFilterClientId}
+        onStageChange={setFilterStageId}
+        onDateRangeChange={setFilterDateRange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onAddProject={() => handleOpenDialog()}
+        isAdminOrMaster={isAdminOrMaster}
+      />
 
-            {/* View content */}
-            <div className="mt-6">
-              {viewMode === 'list' ? (
-                <ProjectListView
-                  projects={visibleProjects}
-                  clients={data.clients}
-                  tasks={data.tasks}
-                  timeEntries={data.timeEntries}
-                  taskTimers={data.taskTimers}
-                  projectColumns={data.projectColumns}
-                  projectAccess={data.projectAccess}
-                  kanbanStages={data.kanbanStages}
-                  isAdminOrMaster={isAdminOrMaster}
-                  getProjectHours={getProjectHours}
-                  getTaskHours={getTaskHours}
-                  getCreatorName={getCreatorName}
-                  getActiveTimer={getActiveTimer}
-                  getClientColumns={getClientColumns}
-                  onEditProject={handleOpenDialog}
-                  onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
-                  onCreateTask={(projectId) => handleOpenTaskDialog(projectId)}
-                  onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
-                  onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
-                  onRegisterTime={handleOpenTimeDialog}
-                  onStartTimer={handleStartTimer}
-                  onStopTimer={handleStopTimer}
-                  onCompleteTask={handleCompleteTask}
-                />
-              ) : (
-                <ProjectKanbanView
-                  projects={visibleProjects}
-                  clients={data.clients}
-                  tasks={data.tasks}
-                  timeEntries={data.timeEntries}
-                  taskTimers={data.taskTimers}
-                  kanbanStages={data.kanbanStages}
-                  isAdminOrMaster={isAdminOrMaster}
-                  getProjectHours={getProjectHours}
-                  getTaskHours={getTaskHours}
-                  getCreatorName={getCreatorName}
-                  getActiveTimer={getActiveTimer}
-                  onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
-                  onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
-                  onRegisterTime={handleOpenTimeDialog}
-                  onStartTimer={handleStartTimer}
-                  onStopTimer={handleStopTimer}
-                  onCompleteTask={handleCompleteTask}
-                  onUpdateTaskStatus={handleUpdateTaskStatus}
-                  onCreateTask={(projectId, status) => handleOpenTaskDialog(projectId, undefined, status)}
-                  onManageStages={() => setIsKanbanStagesDialogOpen(true)}
-                />
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="requests" className="mt-6">
-            <ProjectRequestsTab />
-          </TabsContent>
-          
-          <TabsContent value="edits" className="mt-6">
-            <EditRequestsTab />
-          </TabsContent>
-        </Tabs>
-      )}
-      
-      {/* Collaborator view (no tabs) */}
-      {!isAdminOrMaster && (
-        <>
-          {/* Filters and view toggle */}
-          <ProjectFilters
-            clients={data.clients}
-            selectedClientId={filterClientId}
-            onClientChange={setFilterClientId}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-          
-          {/* Header with count */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">
-              {visibleProjects.length} {visibleProjects.length === 1 ? 'projeto' : 'projetos'}
-            </h2>
-          </div>
-          
-          {/* View content */}
-          {viewMode === 'list' ? (
-            <ProjectListView
-              projects={visibleProjects}
-              clients={data.clients}
-              tasks={data.tasks}
-              timeEntries={data.timeEntries}
-              taskTimers={data.taskTimers}
-              projectColumns={data.projectColumns}
-              projectAccess={data.projectAccess}
-              kanbanStages={data.kanbanStages}
-              isAdminOrMaster={isAdminOrMaster}
-              getProjectHours={getProjectHours}
-              getTaskHours={getTaskHours}
-              getCreatorName={getCreatorName}
-              getActiveTimer={getActiveTimer}
-              getClientColumns={getClientColumns}
-              onEditProject={handleOpenDialog}
-              onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
-              onCreateTask={(projectId) => handleOpenTaskDialog(projectId)}
-              onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
-              onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
-              onRegisterTime={handleOpenTimeDialog}
-              onStartTimer={handleStartTimer}
-              onStopTimer={handleStopTimer}
-              onCompleteTask={handleCompleteTask}
-            />
-          ) : (
-            <ProjectKanbanView
-              projects={visibleProjects}
-              clients={data.clients}
-              tasks={data.tasks}
-              timeEntries={data.timeEntries}
-              taskTimers={data.taskTimers}
-              kanbanStages={data.kanbanStages}
-              isAdminOrMaster={isAdminOrMaster}
-              getProjectHours={getProjectHours}
-              getTaskHours={getTaskHours}
-              getCreatorName={getCreatorName}
-              getActiveTimer={getActiveTimer}
-              onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
-              onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
-              onRegisterTime={handleOpenTimeDialog}
-              onStartTimer={handleStartTimer}
-              onStopTimer={handleStopTimer}
-              onCompleteTask={handleCompleteTask}
-              onUpdateTaskStatus={handleUpdateTaskStatus}
-              onCreateTask={(projectId, status) => handleOpenTaskDialog(projectId, undefined, status)}
-              onManageStages={() => setIsKanbanStagesDialogOpen(true)}
-            />
-          )}
-        </>
+      {/* View content */}
+      {viewMode === 'list' ? (
+        <ProjectListView
+          projects={visibleProjects}
+          clients={data.clients}
+          tasks={data.tasks}
+          timeEntries={data.timeEntries}
+          taskTimers={data.taskTimers}
+          projectColumns={data.projectColumns}
+          projectAccess={data.projectAccess}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={isAdminOrMaster}
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getActiveTimer={getActiveTimer}
+          getClientColumns={getClientColumns}
+          onEditProject={handleOpenDialog}
+          onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
+          onCreateTask={(projectId) => handleOpenTaskDialog(projectId)}
+          onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
+          onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
+          onRegisterTime={handleOpenTimeDialog}
+          onStartTimer={handleStartTimer}
+          onStopTimer={handleStopTimer}
+          onCompleteTask={handleCompleteTask}
+        />
+      ) : (
+        <ProjectKanbanView
+          projects={visibleProjects}
+          clients={data.clients}
+          tasks={data.tasks}
+          timeEntries={data.timeEntries}
+          taskTimers={data.taskTimers}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={isAdminOrMaster}
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getActiveTimer={getActiveTimer}
+          onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
+          onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
+          onRegisterTime={handleOpenTimeDialog}
+          onStartTimer={handleStartTimer}
+          onStopTimer={handleStopTimer}
+          onCompleteTask={handleCompleteTask}
+          onUpdateTaskStatus={handleUpdateTaskStatus}
+          onCreateTask={(projectId, status) => handleOpenTaskDialog(projectId, undefined, status)}
+          onManageStages={() => setIsKanbanStagesDialogOpen(true)}
+        />
       )}
       
       {/* Project Dialog */}

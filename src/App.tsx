@@ -20,7 +20,6 @@ import { Users } from "@/pages/Users";
 import { ClientReports } from "@/pages/ClientReports";
 import { ClientProjects } from "@/pages/ClientProjects";
 
-import { ProjectRequests } from "@/pages/ProjectRequests";
 import { ClientPortal } from "@/pages/ClientPortal";
 import { SharedReport } from "@/pages/SharedReport";
 import { Preferences } from "@/pages/Preferences";
@@ -30,7 +29,6 @@ import { Proposals } from "@/pages/Proposals";
 import { PublicProposal } from "@/pages/PublicProposal";
 import { Contracts } from "@/pages/Contracts";
 import { PublicContract } from "@/pages/PublicContract";
-import { EditRequests } from "@/pages/EditRequests";
 import { CalendarPage } from "@/pages/CalendarPage";
 import NotFound from "./pages/NotFound";
 
@@ -101,35 +99,12 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Project Requests - admin only */}
-              <Route path="/requests" element={
-                <ProtectedRoute requiredRole="admin">
-                  <ProjectRequests />
-                </ProtectedRoute>
-              } />
-              
-              {/* Proposals - admin only */}
-              <Route path="/proposals" element={
-                <ProtectedRoute requiredRole="admin">
-                  <Proposals />
-                </ProtectedRoute>
-              } />
-              
-              {/* Contracts - admin only */}
-              <Route path="/contracts" element={
-                <ProtectedRoute requiredRole="admin">
-                  <Contracts />
-                </ProtectedRoute>
-              } />
-              
-              {/* Edit Requests - admin only */}
-              <Route path="/edit-requests" element={
-                <ProtectedRoute requiredRole="admin">
-                  <EditRequests />
-                </ProtectedRoute>
-              } />
-              
               {/* Calendar - accessible by all authenticated users */}
+              <Route path="/calendar" element={
+                <ProtectedRoute requiredRole="client">
+                  <CalendarPage />
+                </ProtectedRoute>
+              } />
               <Route path="/calendar" element={
                 <ProtectedRoute requiredRole="client">
                   <CalendarPage />
