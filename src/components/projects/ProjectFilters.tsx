@@ -208,7 +208,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           type="single"
           value={viewMode}
           onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
-          className="border rounded-full p-1 bg-muted/50"
+          className="border rounded-full p-1 bg-[f1f5f9]"
         >
           <ToggleGroupItem
             value="list"
