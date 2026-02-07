@@ -265,7 +265,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         <aside className={cn("fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[#f1f5f9] transition-all duration-300 lg:static", isCollapsed ? "lg:w-12" : "lg:w-64", "w-64",
       // Mobile always full width
       sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0")} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
-          {/* Header with workspace selector and collapse button */}
+          {/* Header with workspace selector */}
           <div className={cn("relative flex h-14 flex-shrink-0 items-center", isCollapsed ? "lg:px-2 lg:justify-center" : "px-4")}>
             <div className="flex items-center justify-center w-full">
               {/* Desktop: Workspace selector */}
@@ -274,18 +274,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
               {/* Mobile: always show full logo centered */}
               <img src={LogoOras} alt="ORAS" className="lg:hidden h-8 w-auto max-w-[120px]" />
-
-              {/* Collapse toggle (desktop only, positioned overlapping the border) */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" className={cn("absolute -right-4 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 rounded-full border border-[#e2e8f0] bg-white text-[#64748b] shadow-sm transition-opacity duration-200 lg:flex", isHovering ? "opacity-100" : "opacity-0")} onClick={() => setIsCollapsed(!isCollapsed)}>
-                    {isCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {isCollapsed ? 'Expandir menu' : 'Recolher menu'}
-                </TooltipContent>
-              </Tooltip>
             </div>
             
             {/* Mobile close button */}
@@ -296,6 +284,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </svg>
             </button>
           </div>
+
+          {/* Collapse toggle (desktop only) */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[#e2e8f0] bg-white p-0 text-[#64748b] shadow-sm transition-opacity duration-200 lg:flex",
+                  isHovering ? "opacity-100" : "opacity-0",
+                )}
+                onClick={() => setIsCollapsed(!isCollapsed)}
+              >
+                {isCollapsed ? <PanelLeft className="h-3 w-3" /> : <PanelLeftClose className="h-3 w-3" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+            </TooltipContent>
+          </Tooltip>
           
           {/* Navigation - Scrollable area */}
           <nav className="flex-1 overflow-y-auto p-2">
