@@ -232,7 +232,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
       {/* Right: Add button */}
       {isAdminOrMaster && (
         <Button onClick={onAddProject} size="icon" className="shrink-0">
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
         </Button>
       )}
     </div>
