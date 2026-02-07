@@ -213,7 +213,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           <ToggleGroupItem
             value="list"
             aria-label="Visualização em lista"
-            className={cn("h-8 px-2.5 text-xs font-medium text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none")}
+            className={cn("h-6 px-2.5 text-xs font-medium text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none")}
           >
             <LayoutList className="w-3.5 h-3.5 mr-1.5" />
             Lista
@@ -221,7 +221,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           <ToggleGroupItem
             value="kanban"
             aria-label="Visualização Kanban"
-            className={cn("h-8 px-2.5 text-xs font-medium text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none")}
+            className={cn("h-6 px-2.5 text-xs font-medium text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none")}
           >
             <Columns3 className="w-3.5 h-3.5 mr-1.5" />
             Kanban
