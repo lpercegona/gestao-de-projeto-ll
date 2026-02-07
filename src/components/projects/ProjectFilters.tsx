@@ -243,7 +243,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
 
       {/* Right: Add button */}
       {isAdminOrMaster && (
-        <Button onClick={onAddProject} size="icon" className="h-8 w-8 shrink-0">
+        <Button onClick={onAddProject} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
           <Plus className="w-3.5 h-3.5" />
         </Button>
       )}
