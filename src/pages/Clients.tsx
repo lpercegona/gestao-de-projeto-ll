@@ -275,7 +275,7 @@ export const Clients: React.FC = () => {
                     className="cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => navigate(`/clients/${client.id}`)}
                   >
-                    <CardContent className="p-6">
+                    <CardContent className="p-2">
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-foreground">{client.company || client.name}</h3>
