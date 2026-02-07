@@ -60,6 +60,16 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## UI standard (shadcn/ui)
+
+A camada de interface segue o padrão **shadcn/ui**.
+
+- Use componentes a partir de `src/components/ui/*`.
+- Evite importar `@radix-ui/*` diretamente em telas, páginas ou features.
+- Caso precise de um novo bloco de UI, adicione/ajuste um componente em `src/components/ui` e reutilize-o no restante da aplicação.
+
+> Observação: o shadcn/ui utiliza Radix internamente para acessibilidade e comportamento, mas o consumo na aplicação deve acontecer pelos componentes shadcn da pasta `ui`.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
