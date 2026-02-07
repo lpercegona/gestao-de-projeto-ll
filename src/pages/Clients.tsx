@@ -1,32 +1,20 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useData } from '@/contexts/DataContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatHours } from '@/lib/formatHours';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useData } from "@/contexts/DataContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatHours } from "@/lib/formatHours";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,16 +24,32 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, UserCheck, Handshake, MoreVertical, UserPlus, UserX, Calendar, RefreshCw, Clock, AlertCircle, FileCheck, Users } from 'lucide-react';
+} from "@/components/ui/alert-dialog";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  UserCheck,
+  Handshake,
+  MoreVertical,
+  UserPlus,
+  UserX,
+  Calendar,
+  RefreshCw,
+  Clock,
+  AlertCircle,
+  FileCheck,
+  Users,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
-import { ProposalsTab } from '@/components/clients/ProposalsTab';
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { ProposalsTab } from "@/components/clients/ProposalsTab";
 
 interface Client {
   id: string;
@@ -58,7 +62,7 @@ interface Client {
   phone?: string | null;
   source?: string | null;
   notes?: string | null;
-  contract_type?: 'one_time' | 'monthly';
+  contract_type?: "one_time" | "monthly";
   contract_start_date?: string | null;
   contract_end_date?: string | null;
   contract_months?: number | null;
@@ -66,35 +70,44 @@ interface Client {
 
 export const Clients: React.FC = () => {
   const navigate = useNavigate();
-  const { data, loading, createClient, updateClient, deleteClient, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow } = useData();
-  const [mainTab, setMainTab] = useState<'clients' | 'proposals'>('clients');
-  const [activeTab, setActiveTab] = useState<'lead' | 'proposal' | 'active' | 'churned'>('lead');
+  const {
+    data,
+    loading,
+    createClient,
+    updateClient,
+    deleteClient,
+    getClientHours,
+    getClientMonthlyHours,
+    getClientPreviousMonthOverflow,
+  } = useData();
+  const [mainTab, setMainTab] = useState<"clients" | "proposals">("clients");
+  const [activeTab, setActiveTab] = useState<"lead" | "proposal" | "active" | "churned">("lead");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    company: '',
-    phone: '',
+    name: "",
+    email: "",
+    company: "",
+    phone: "",
     contracted_hours: 0,
-    pipeline_status: 'lead',
-    source: '',
-    notes: '',
-    contract_type: 'one_time' as 'one_time' | 'monthly',
+    pipeline_status: "lead",
+    source: "",
+    notes: "",
+    contract_type: "one_time" as "one_time" | "monthly",
   });
 
   // Filter clients by pipeline status
   const filteredClients = useMemo(() => {
-    return data.clients.filter(c => (c.pipeline_status || 'lead') === activeTab);
+    return data.clients.filter((c) => (c.pipeline_status || "lead") === activeTab);
   }, [data.clients, activeTab]);
 
-  const leadCount = data.clients.filter(c => (c.pipeline_status || 'lead') === 'lead').length;
-  const proposalCount = data.clients.filter(c => c.pipeline_status === 'proposal').length;
-  const activeCount = data.clients.filter(c => c.pipeline_status === 'active').length;
-  const churnedCount = data.clients.filter(c => c.pipeline_status === 'churned').length;
+  const leadCount = data.clients.filter((c) => (c.pipeline_status || "lead") === "lead").length;
+  const proposalCount = data.clients.filter((c) => c.pipeline_status === "proposal").length;
+  const activeCount = data.clients.filter((c) => c.pipeline_status === "active").length;
+  const churnedCount = data.clients.filter((c) => c.pipeline_status === "churned").length;
 
   const handleOpenDialog = (client?: Client) => {
     if (client) {
@@ -102,26 +115,26 @@ export const Clients: React.FC = () => {
       setFormData({
         name: client.name,
         email: client.email,
-        company: client.company || '',
-        phone: client.phone || '',
+        company: client.company || "",
+        phone: client.phone || "",
         contracted_hours: client.contracted_hours,
-        pipeline_status: client.pipeline_status || 'lead',
-        source: client.source || '',
-        notes: client.notes || '',
-        contract_type: client.contract_type || 'one_time',
+        pipeline_status: client.pipeline_status || "lead",
+        source: client.source || "",
+        notes: client.notes || "",
+        contract_type: client.contract_type || "one_time",
       });
     } else {
       setEditingClient(null);
       setFormData({
-        name: '',
-        email: '',
-        company: '',
-        phone: '',
+        name: "",
+        email: "",
+        company: "",
+        phone: "",
         contracted_hours: 0,
-        pipeline_status: 'lead',
-        source: '',
-        notes: '',
-        contract_type: 'one_time',
+        pipeline_status: "lead",
+        source: "",
+        notes: "",
+        contract_type: "one_time",
       });
     }
     setIsDialogOpen(true);
@@ -130,15 +143,15 @@ export const Clients: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    
+
     if (editingClient) {
       await updateClient(editingClient.id, formData);
-      toast.success('Cliente atualizado com sucesso!');
+      toast.success("Cliente atualizado com sucesso!");
     } else {
       await createClient(formData);
-      toast.success('Cliente criado com sucesso!');
+      toast.success("Cliente criado com sucesso!");
     }
-    
+
     setSubmitting(false);
     setIsDialogOpen(false);
   };
@@ -146,7 +159,7 @@ export const Clients: React.FC = () => {
   const handleDelete = async () => {
     if (deletingClient) {
       await deleteClient(deletingClient.id);
-      toast.success('Cliente excluído com sucesso!');
+      toast.success("Cliente excluído com sucesso!");
       setIsDeleteDialogOpen(false);
       setDeletingClient(null);
     }
@@ -162,11 +175,11 @@ export const Clients: React.FC = () => {
 
   const getPipelineBadge = (status: string) => {
     switch (status) {
-      case 'active':
+      case "active":
         return <Badge className="bg-green-100 text-green-800">Ativo</Badge>;
-      case 'proposal':
+      case "proposal":
         return <Badge className="bg-blue-100 text-blue-800">Em Negociação</Badge>;
-      case 'churned':
+      case "churned":
         return <Badge variant="destructive">Inativo</Badge>;
       default:
         return <Badge variant="secondary">Lead</Badge>;
@@ -175,173 +188,199 @@ export const Clients: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'clients' | 'proposals')}>
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
         <TabsList className="h-8 p-1 rounded-full">
-          <TabsTrigger value="clients" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none data-[state=active]:border data-[state=active]:border-[#e2e8f0]">
+          <TabsTrigger
+            value="clients"
+            className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none data-[state=active]:border data-[state=active]:border-[#e2e8f0]"
+          >
             <Users className="w-3.5 h-3.5" />
             Clientes
           </TabsTrigger>
-          <TabsTrigger value="proposals" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none data-[state=active]:border data-[state=active]:border-[#e2e8f0]">
+          <TabsTrigger
+            value="proposals"
+            className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none data-[state=active]:border data-[state=active]:border-[#e2e8f0]"
+          >
             <FileCheck className="w-3.5 h-3.5" />
             Propostas
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="clients" className="mt-6">
           <div className="flex items-center justify-between gap-4">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'lead' | 'proposal' | 'active' | 'churned')} className="flex-1 overflow-x-auto">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2">
-              <UserPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Lead</span>
-              <Badge variant="secondary" className="ml-1">{leadCount}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2">
-              <Handshake className="w-4 h-4" />
-              <span className="hidden sm:inline">Em Negociação</span>
-              <Badge variant="secondary" className="ml-1">{proposalCount}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="active" className="flex items-center gap-1 sm:gap-2">
-              <UserCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Ativo</span>
-              <Badge variant="secondary" className="ml-1">{activeCount}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="churned" className="flex items-center gap-1 sm:gap-2">
-              <UserX className="w-4 h-4" />
-              <span className="hidden sm:inline">Inativo</span>
-              <Badge variant="secondary" className="ml-1">{churnedCount}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <Button onClick={() => handleOpenDialog()} size="sm" className="px-3 shrink-0">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline ml-2">Novo Cliente</span>
-        </Button>
-      </div>
-
-      {filteredClients.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">Nenhum cliente cadastrado ainda.</p>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="w-4 h-4 mr-2" />
-              Criar primeiro cliente
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as "lead" | "proposal" | "active" | "churned")}
+              className="flex-1 overflow-x-auto"
+            >
+              <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full">
+                <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Lead</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {leadCount}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2">
+                  <Handshake className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Em Negociação</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {proposalCount}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="active" className="flex items-center gap-1 sm:gap-2">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Ativo</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {activeCount}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="churned" className="flex items-center gap-1 sm:gap-2">
+                  <UserX className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Inativo</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {churnedCount}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button onClick={() => handleOpenDialog()} size="sm" className="px-3 shrink-0">
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline ml-2">Novo Cliente</span>
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredClients.map((client) => {
-            const isMonthly = (client as any).contract_type === 'monthly';
-            const totalUsedHours = getClientHours(client.id);
-            const monthlyUsedHours = getClientMonthlyHours(client.id);
-            const previousOverflow = isMonthly ? getClientPreviousMonthOverflow(client.id) : 0;
-            const availableHours = isMonthly ? Math.max(0, client.contracted_hours - previousOverflow) : client.contracted_hours;
-            const displayedHours = isMonthly ? monthlyUsedHours : totalUsedHours;
-            const projectCount = data.projects.filter(p => p.client_id === client.id).length;
-            const contractEndDate = (client as any).contract_end_date;
-            
-            return (
-              <Card 
-                key={client.id} 
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/clients/${client.id}`)}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{client.company || client.name}</h3>
-                      <p className="text-sm text-muted-foreground">{client.email}</p>
-                    </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreVertical className="w-3 h-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleOpenDialog(client)}>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => {
-                              setDeletingClient(client);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  
-                  {/* Contract type and period badges */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <Badge variant={isMonthly ? "default" : "secondary"} className="text-xs">
-                      {isMonthly ? (
-                        <><RefreshCw className="w-3 h-3 mr-1" />Plano Mensal</>
-                      ) : (
-                        <><Clock className="w-3 h-3 mr-1" />Serviço Único</>
-                      )}
-                    </Badge>
-                    {contractEndDate && (
-                      <Badge variant="outline" className="text-xs">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        até {format(new Date(contractEndDate), "MMM/yy", { locale: ptBR })}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {/* Previous month overflow indicator */}
-                  {isMonthly && previousOverflow > 0 && (
-                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-2">
-                      <AlertCircle className="w-3 h-3" />
-                      <span className="text-xs font-medium">Saldo anterior: {formatHours(previousOverflow)}</span>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Projetos:</span>
-                      <span className="font-medium text-foreground">{projectCount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {isMonthly ? `Horas (${format(new Date(), "MMM/yy", { locale: ptBR })})` : 'Horas usadas'}:
-                      </span>
-                      <span className="font-medium text-foreground">
-                        {formatHours(displayedHours)} / {formatHours(availableHours)}
-                      </span>
-                    </div>
-                    {isMonthly && previousOverflow > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        Disponível: {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} saldo
+          </div>
+
+          {filteredClients.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground mb-4">Nenhum cliente cadastrado ainda.</p>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar primeiro cliente
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredClients.map((client) => {
+                const isMonthly = (client as any).contract_type === "monthly";
+                const totalUsedHours = getClientHours(client.id);
+                const monthlyUsedHours = getClientMonthlyHours(client.id);
+                const previousOverflow = isMonthly ? getClientPreviousMonthOverflow(client.id) : 0;
+                const availableHours = isMonthly
+                  ? Math.max(0, client.contracted_hours - previousOverflow)
+                  : client.contracted_hours;
+                const displayedHours = isMonthly ? monthlyUsedHours : totalUsedHours;
+                const projectCount = data.projects.filter((p) => p.client_id === client.id).length;
+                const contractEndDate = (client as any).contract_end_date;
+
+                return (
+                  <Card
+                    key={client.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/clients/${client.id}`)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-foreground">{client.company || client.name}</h3>
+                          <p className="text-sm text-muted-foreground">{client.email}</p>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreVertical className="w-3 h-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenDialog(client)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => {
+                                  setDeletingClient(client);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    )}
-                    <div className="w-full bg-muted rounded-full h-2 mt-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ 
-                          width: `${availableHours > 0 
-                            ? Math.min((displayedHours / availableHours) * 100, 100) 
-                            : 0}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+
+                      {/* Contract type and period badges */}
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <Badge variant={isMonthly ? "default" : "secondary"} className="text-xs">
+                          {isMonthly ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                              Plano Mensal
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="w-3 h-3 mr-1" />
+                              Serviço Único
+                            </>
+                          )}
+                        </Badge>
+                        {contractEndDate && (
+                          <Badge variant="outline" className="text-xs">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            até {format(new Date(contractEndDate), "MMM/yy", { locale: ptBR })}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Previous month overflow indicator */}
+                      {isMonthly && previousOverflow > 0 && (
+                        <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-2">
+                          <AlertCircle className="w-3 h-3" />
+                          <span className="text-xs font-medium">Saldo anterior: {formatHours(previousOverflow)}</span>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Projetos:</span>
+                          <span className="font-medium text-foreground">{projectCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            {isMonthly ? `Horas (${format(new Date(), "MMM/yy", { locale: ptBR })})` : "Horas usadas"}:
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatHours(displayedHours)} / {formatHours(availableHours)}
+                          </span>
+                        </div>
+                        {isMonthly && previousOverflow > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Disponível: {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} saldo
+                          </div>
+                        )}
+                        <div className="w-full bg-muted rounded-full h-2 mt-2">
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all"
+                            style={{
+                              width: `${
+                                availableHours > 0 ? Math.min((displayedHours / availableHours) * 100, 100) : 0
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
-        
+
         <TabsContent value="proposals" className="mt-6">
           <ProposalsTab />
         </TabsContent>
@@ -350,9 +389,7 @@ export const Clients: React.FC = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
-            </DialogTitle>
+            <DialogTitle>{editingClient ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
@@ -424,7 +461,9 @@ export const Clients: React.FC = () => {
                     <Label htmlFor="contract_type">Modelo de Contratação</Label>
                     <Select
                       value={formData.contract_type}
-                      onValueChange={(value: 'one_time' | 'monthly') => setFormData({ ...formData, contract_type: value })}
+                      onValueChange={(value: "one_time" | "monthly") =>
+                        setFormData({ ...formData, contract_type: value })
+                      }
                       disabled={submitting}
                     >
                       <SelectTrigger id="contract_type">
@@ -436,9 +475,9 @@ export const Clients: React.FC = () => {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {formData.contract_type === 'monthly' 
-                        ? 'Horas renovam a cada mês' 
-                        : 'Horas acumulativas desde o início'}
+                      {formData.contract_type === "monthly"
+                        ? "Horas renovam a cada mês"
+                        : "Horas acumulativas desde o início"}
                     </p>
                   </div>
                 </div>
@@ -494,10 +533,8 @@ export const Clients: React.FC = () => {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : null}
-                {editingClient ? 'Salvar' : 'Criar'}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {editingClient ? "Salvar" : "Criar"}
               </Button>
             </DialogFooter>
           </form>
@@ -509,8 +546,8 @@ export const Clients: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente
-              "{deletingClient?.name}" e todos os seus projetos, tarefas e registros de horas.
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o cliente "{deletingClient?.name}" e todos
+              os seus projetos, tarefas e registros de horas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
