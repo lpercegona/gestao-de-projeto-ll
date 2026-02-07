@@ -212,7 +212,7 @@ export const Clients: React.FC = () => {
                 <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2">
                   <UserPlus className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Lead</span>
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="outline" className="ml-1">
                     {leadCount}
                   </Badge>
                 </TabsTrigger>
