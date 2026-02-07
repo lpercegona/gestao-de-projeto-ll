@@ -198,17 +198,19 @@ export const Clients: React.FC = () => {
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </div>
-          <TabsList className="flex rounded-lg">
-            <TabsTrigger value="clients">
-              <Users className="w-3.5 h-3.5" />
-              Clientes
-            </TabsTrigger>
+          <div className="flex justify-end">
+            <TabsList className="flex rounded-lg">
+              <TabsTrigger value="clients">
+                <Users className="w-3.5 h-3.5" />
+                Clientes
+              </TabsTrigger>
 
-            <TabsTrigger value="proposals">
-              <FileCheck className="w-3.5 h-3.5" />
-              Propostas
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="proposals">
+                <FileCheck className="w-3.5 h-3.5" />
+                Propostas
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </div>
         <TabsContent value="clients" className="mt-6">
           <div className="w-full overflow-x-auto touch-pan-x overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none]">
