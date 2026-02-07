@@ -4,19 +4,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FolderKanban, 
-  FileBarChart, 
-  Settings,
-  LogOut,
-  Shield,
-  UserCog,
-  PanelLeftClose,
-  PanelLeft,
-  Calendar,
-} from 'lucide-react';
+import { LayoutDashboard, Users, FolderKanban, FileBarChart, Settings, LogOut, Shield, UserCog, PanelLeftClose, PanelLeft, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,14 +30,9 @@ const MobileHeader: React.FC<{
 
   // Only show timer animation when timer is active AND not hidden for clients
   const showTimerAnimation = hasActiveTimer && !hideTimer;
-  
-  return (
-    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
+  return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
       <div className="flex items-center gap-3 flex-1 overflow-hidden">
-        <button 
-          className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70"
-          onClick={() => setSidebarOpen(true)}
-        >
+        <button className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70" onClick={() => setSidebarOpen(true)}>
           <span className="sr-only">Abrir menu</span>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -78,11 +61,15 @@ const MobileHeader: React.FC<{
 };
 
 // Desktop Header Component with breadcrumb, search and timer
-const DesktopHeader: React.FC<{ hideTimer?: boolean }> = ({ hideTimer = false }) => {
-  const { hasActiveTimer } = useGlobalTimer();
-  
-  return (
-    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[#f1f5f9] lg:flex">
+const DesktopHeader: React.FC<{
+  hideTimer?: boolean;
+}> = ({
+  hideTimer = false
+}) => {
+  const {
+    hasActiveTimer
+  } = useGlobalTimer();
+  return <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[#f1f5f9] lg:flex">
       <div className="ml-12 flex w-full items-center justify-between px-6">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />
@@ -269,29 +256,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
   };
-
-  return (
-    <TooltipProvider delayDuration={0}>
+  return <TooltipProvider delayDuration={0}>
       <div className="flex h-screen overflow-hidden bg-[#f1f5f9]">
         {/* Mobile overlay */}
         {sidebarOpen && <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
         {/* Sidebar - Fixed height 100vh */}
-        <aside 
-          className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[#f1f5f9] transition-all duration-300 lg:static",
-            isCollapsed ? "lg:w-12" : "lg:w-64",
-            "w-64", // Mobile always full width
-            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          )}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-        >
+        <aside className={cn("fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[#f1f5f9] transition-all duration-300 lg:static", isCollapsed ? "lg:w-12" : "lg:w-64", "w-64",
+      // Mobile always full width
+      sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0")} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
           {/* Header with workspace selector and collapse button */}
-          <div className={cn(
-            "relative flex h-14 flex-shrink-0 items-center",
-            isCollapsed ? "lg:px-2 lg:justify-center" : "px-4"
-          )}>
+          <div className={cn("relative flex h-14 flex-shrink-0 items-center", isCollapsed ? "lg:px-2 lg:justify-center" : "px-4")}>
             <div className="flex items-center justify-center w-full">
               {/* Desktop: Workspace selector */}
               <div className="hidden lg:flex w-full justify-center">
@@ -303,20 +278,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               {/* Collapse toggle (desktop only, positioned overlapping the border) */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={cn(
-                      "absolute -right-4 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 rounded-full border border-[#e2e8f0] bg-white text-[#64748b] shadow-sm transition-opacity duration-200 lg:flex",
-                      isHovering ? "opacity-100" : "opacity-0"
-                    )}
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                  >
-                    {isCollapsed ? (
-                      <PanelLeft className="h-4 w-4" />
-                    ) : (
-                      <PanelLeftClose className="h-4 w-4" />
-                    )}
+                  <Button variant="outline" size="icon" className={cn("absolute -right-4 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 rounded-full border border-[#e2e8f0] bg-white text-[#64748b] shadow-sm transition-opacity duration-200 lg:flex", isHovering ? "opacity-100" : "opacity-0")} onClick={() => setIsCollapsed(!isCollapsed)}>
+                    {isCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -326,10 +289,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             </div>
             
             {/* Mobile close button */}
-            <button 
-              className="absolute right-4 top-1/2 rounded-md p-2 text-[#64748b] hover:bg-white/70 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
+            <button className="absolute right-4 top-1/2 rounded-md p-2 text-[#64748b] hover:bg-white/70 lg:hidden" onClick={() => setSidebarOpen(false)}>
               <span className="sr-only">Fechar menu</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -340,20 +300,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           {/* Navigation - Scrollable area */}
           <nav className="flex-1 overflow-y-auto p-2">
             <ul className="space-y-1">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                const NavLink = (
-                  <Link
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors',
-                      isActive
-                        ? 'border border-[#e2e8f0] bg-white text-[#0f172a]'
-                        : 'hover:bg-white/70 hover:text-[#334155]',
-                      isCollapsed && 'lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto'
-                    )}
-                  >
+              {navItems.map(item => {
+              const isActive = location.pathname === item.path;
+              const NavLink = <Link to={item.path} onClick={() => setSidebarOpen(false)} className={cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors', isActive ? 'border border-[#e2e8f0] bg-white text-[#0f172a]' : 'hover:bg-white/70 hover:text-[#334155]', isCollapsed && 'lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto')}>
                     <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className={cn("transition-opacity duration-300", isCollapsed && "lg:hidden")}>
                       {item.label}
@@ -375,10 +324,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           </nav>
 
           {/* User section - Fixed at bottom */}
-          <div className={cn(
-            "flex-shrink-0 space-y-2 p-3",
-            isCollapsed && "lg:p-2"
-          )}>
+          <div className={cn("flex-shrink-0 space-y-2 p-3", isCollapsed && "lg:p-2")}>
             {/* User info */}
             {user && <div className={cn("flex items-center gap-3 px-2 py-2", isCollapsed && "lg:justify-center lg:px-0 lg:py-1")}>
                 <Avatar className={cn("flex-shrink-0", isCollapsed ? "h-8 w-8" : "h-9 w-9")}>
@@ -402,45 +348,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             {/* Settings link */}
             {isCollapsed ? <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
-                  <Link
-                    to="/preferences"
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      'mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-[#64748b] transition-colors',
-                      location.pathname === '/preferences'
-                        ? 'border border-[#e2e8f0] bg-white text-[#0f172a]'
-                        : 'hover:bg-white/70 hover:text-[#334155]'
-                    )}
-                  >
+                  <Link to="/preferences" onClick={() => setSidebarOpen(false)} className={cn('mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-[#64748b] transition-colors', location.pathname === '/preferences' ? 'border border-[#e2e8f0] bg-white text-[#0f172a]' : 'hover:bg-white/70 hover:text-[#334155]')}>
                     <Settings className="w-3.5 h-3.5" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">Configurações</TooltipContent>
-                <Link
-                  to="/preferences"
-                  onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      'lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors',
-                    location.pathname === '/preferences'
-                      ? 'border border-[#e2e8f0] bg-white text-[#0f172a]'
-                      : 'hover:bg-white/70 hover:text-[#334155]'
-                  )}
-                >
+                <Link to="/preferences" onClick={() => setSidebarOpen(false)} className={cn('lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors', location.pathname === '/preferences' ? 'border border-[#e2e8f0] bg-white text-[#0f172a]' : 'hover:bg-white/70 hover:text-[#334155]')}>
                   <Settings className="w-3.5 h-3.5" />
                   Configurações
                 </Link>
-              </Tooltip>
-            ) : (
-              <Link
-                to="/preferences"
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors',
-                  location.pathname === '/preferences'
-                    ? 'border border-[#e2e8f0] bg-white text-[#0f172a]'
-                    : 'hover:bg-white/70 hover:text-[#334155]'
-                )}
-              >
+              </Tooltip> : <Link to="/preferences" onClick={() => setSidebarOpen(false)} className={cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors', location.pathname === '/preferences' ? 'border border-[#e2e8f0] bg-white text-[#0f172a]' : 'hover:bg-white/70 hover:text-[#334155]')}>
                 <Settings className="w-3.5 h-3.5" />
                 Configurações
               </Link>}
@@ -448,40 +365,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             {/* Sign out button */}
             {isCollapsed ? <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="mx-auto h-8 w-8 text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
-                    onClick={handleSignOut}
-                  >
+                  <Button variant="ghost" size="icon" className="mx-auto h-8 w-8 text-[#64748b] hover:bg-white/70 hover:text-[#334155]" onClick={handleSignOut}>
                     <LogOut className="w-3.5 h-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Sair</TooltipContent>
-                <Button
-                  variant="ghost"
-                  className="lg:hidden w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
-                  onClick={handleSignOut}
-                >
+                <Button variant="ghost" className="lg:hidden w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]" onClick={handleSignOut}>
                   <LogOut className="w-3.5 h-3.5 mr-2" />
                   Sair
                 </Button>
-              </Tooltip>
-            ) : (
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
-                onClick={handleSignOut}
-              >
+              </Tooltip> : <Button variant="ghost" className="w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]" onClick={handleSignOut}>
                 <LogOut className="w-3.5 h-3.5 mr-2" />
                 Sair
               </Button>}
 
             {/* Version */}
-            <div className={cn(
-              "px-3 py-2 text-xs text-[#94a3b8]",
-              isCollapsed && "lg:hidden"
-            )}>
+            <div className={cn("px-3 py-2 text-xs text-[#94a3b8]", isCollapsed && "lg:hidden")}>
               Versão 1.0
             </div>
           </div>
@@ -496,8 +395,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <DesktopHeader hideTimer={isClient} />
           
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
-          <div className="flex-1 overflow-auto lg:pt-14">
-            <div className="min-h-full rounded-tl-[12px] border border-[#e2e8f0] bg-white p-4 sm:p-5">
+          <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 py-0 pb-0 border-0 border-none px-0 pl-0 pr-0 lg:pt-[56px]">
+            <div className="min-h-full rounded-tl-[12px] bg-white p-4 sm:p-5">
               {children}
             </div>
           </div>
