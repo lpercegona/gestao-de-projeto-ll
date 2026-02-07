@@ -207,51 +207,53 @@ export const Clients: React.FC = () => {
           </Button>
         </div>
         <TabsContent value="clients" className="mt-6">
-          <div className="flex items-center justify-between gap-4">
-            <Tabs
-              value={activeTab}
-              onValueChange={(v) => setActiveTab(v as "lead" | "proposal" | "active" | "churned")}
-              className="flex-1 overflow-x-auto"
-            >
-              <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent gap-1">
-                <TabsTrigger
-                  value="lead"
-                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-                >
-                  <Badge variant="circular" className="">
-                    {leadCount}
-                  </Badge>
-                  <span className="sm:inline">Leads</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="proposal"
-                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-                >
-                  <Badge variant="circular" className="">
-                    {proposalCount}
-                  </Badge>
-                  <span className=" sm:inline">Em Negociação</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="active"
-                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-                >
-                  <Badge variant="circular" className="">
-                    {activeCount}
-                  </Badge>
-                  <span className="sm:inline">Ativos</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="churned"
-                  className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-                >
-                  <Badge variant="circular" className="">
-                    {churnedCount}
-                  </Badge>
-                  <span className="sm:inline">Inativos</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+          <div className="w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex items-center justify-start min-w-max gap-4">
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => setActiveTab(v as "lead" | "proposal" | "active" | "churned")}
+                className="flex-1 overflow-x-auto"
+              >
+                <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent gap-1">
+                  <TabsTrigger
+                    value="lead"
+                    className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  >
+                    <Badge variant="circular" className="">
+                      {leadCount}
+                    </Badge>
+                    <span className="sm:inline">Leads</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="proposal"
+                    className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  >
+                    <Badge variant="circular" className="">
+                      {proposalCount}
+                    </Badge>
+                    <span className=" sm:inline">Em Negociação</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="active"
+                    className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  >
+                    <Badge variant="circular" className="">
+                      {activeCount}
+                    </Badge>
+                    <span className="sm:inline">Ativos</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="churned"
+                    className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  >
+                    <Badge variant="circular" className="">
+                      {churnedCount}
+                    </Badge>
+                    <span className="sm:inline">Inativos</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
 
           {filteredClients.length === 0 ? (
