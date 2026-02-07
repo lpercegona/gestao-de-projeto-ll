@@ -189,7 +189,7 @@ export const Clients: React.FC = () => {
   return (
     <div className="space-y-4">
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
-        <div className="flex items-center justify-between w-full">
+        <div className="grid grid-cols-2 gap-6 w-full items-center">
           <span className="text-lg font-semibold text-foreground whitespace-nowrap">
             {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
           </span>
@@ -210,7 +210,7 @@ export const Clients: React.FC = () => {
         </div>
         <TabsContent value="clients" className="mt-6">
           <div className="w-full overflow-x-auto touch-pan-x overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none]">
-            <div className="flex items-center justify-start min-w-max gap-4">
+            <div className="flex items-center justify-start min-w-max gap-4 pb-3">
               <Tabs
                 value={activeTab}
                 onValueChange={(v) => setActiveTab(v as "lead" | "proposal" | "active" | "churned")}
