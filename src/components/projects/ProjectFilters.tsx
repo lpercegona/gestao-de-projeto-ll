@@ -83,7 +83,15 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         {/* Filter button */}
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" className={cn("relative h-8 w-8 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 border-0", "hover:bg-slate-200 hover:text-slate-500", activeFilters > 0 && "bg-slate-200")}>
+            <Button
+              variant="outline"
+              size="icon"
+              className={cn(
+                "relative h-8 w-8 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 border-0",
+                "hover:bg-slate-200 hover:text-slate-500",
+                activeFilters > 0 && "bg-slate-200",
+              )}
+            >
               <Filter className="w-3.5 h-3.5" />
               {activeFilters > 0 && (
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
@@ -208,21 +216,14 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           type="single"
           value={viewMode}
           onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
-          className="rounded-full p-1 bg-[#f1f5f9]"
+          className="rounded-full p-1 bg-muted"
         >
-          <ToggleGroupItem
-            value="list"
-            aria-label="Visualização em lista"
-            className={cn("h-6 px-2.5 text-xs font-medium text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none")}
-          >
+          <ToggleGroupItem value="list" aria-label="Visualização em lista">
             <LayoutList className="w-3.5 h-3.5 mr-1.5" />
             Lista
           </ToggleGroupItem>
-          <ToggleGroupItem
-            value="kanban"
-            aria-label="Visualização Kanban"
-            className={cn("h-6 px-2.5 text-xs font-medium text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none")}
-          >
+
+          <ToggleGroupItem value="kanban" aria-label="Visualização Kanban">
             <Columns3 className="w-3.5 h-3.5 mr-1.5" />
             Kanban
           </ToggleGroupItem>
