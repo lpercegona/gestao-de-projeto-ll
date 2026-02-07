@@ -189,7 +189,7 @@ export const Clients: React.FC = () => {
   return (
     <div className="space-y-4">
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
-        <div className="grid grid-cols-2 gap-6 items-center">
+        <div className="grid grid-cols-2 gap-6">
           <div className="flex items-center gap-4">
             <span className="text-lg font-semibold text-foreground whitespace-nowrap">
               {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
