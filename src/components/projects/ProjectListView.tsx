@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical } from 'lucide-react';
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { TaskCard } from './TaskCard';
-import { Badge } from '@/components/ui/badge';
-import { formatHours } from '@/lib/formatHours';
-import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
+} from "@/components/ui/dropdown-menu";
+import { TaskCard } from "./TaskCard";
+import { Badge } from "@/components/ui/badge";
+import { formatHours } from "@/lib/formatHours";
+import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 
 interface Project {
   id: string;
@@ -97,7 +97,10 @@ interface ProjectListViewProps {
   onCreateTask: (projectId: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
-  onRegisterTime: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string }) => void;
+  onRegisterTime: (
+    taskId: string,
+    entry?: { id: string; hours: number; description: string | null; date: string },
+  ) => void;
   onStartTimer: (taskId: string) => Promise<void>;
   onStopTimer: (taskId: string) => Promise<void>;
   onCompleteTask: (taskId: string) => Promise<void>;
@@ -130,11 +133,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
 
   const toggleProject = (projectId: string) => {
-    setOpenProjects(prev => ({ ...prev, [projectId]: !prev[projectId] }));
+    setOpenProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
   };
 
-  const getStatusLabel = (s: string) => s === 'active' ? 'Ativo' : s === 'paused' ? 'Pausado' : 'Concluído';
-  const getStatusColor = (s: string) => s === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : s === 'paused' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 'bg-muted text-muted-foreground';
+  const getStatusLabel = (s: string) => (s === "active" ? "Ativo" : s === "paused" ? "Pausado" : "Concluído");
+  const getStatusColor = (s: string) =>
+    s === "active"
+      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      : s === "paused"
+        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        : "bg-muted text-muted-foreground";
 
   if (projects.length === 0) {
     return (
@@ -147,12 +155,12 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {projects.map((project) => {
-        const client = clients.find(c => c.id === project.client_id);
-        const projectTasks = tasks.filter(t => t.project_id === project.id);
+        const client = clients.find((c) => c.id === project.client_id);
+        const projectTasks = tasks.filter((t) => t.project_id === project.id);
         const hours = getProjectHours(project.id);
-        const projectCollaborators = projectAccess.filter(a => a.project_id === project.id);
+        const projectCollaborators = projectAccess.filter((a) => a.project_id === project.id);
         const projectColumns = client ? getClientColumns(client.id) : [];
         const isOpen = openProjects[project.id] ?? false;
 
@@ -170,13 +178,21 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditProject(project); }}>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditProject(project);
+                          }}
+                        >
                           <Pencil className="w-4 h-4 mr-2" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={(e) => { e.stopPropagation(); onDeleteProject(project); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProject(project);
+                          }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Excluir
@@ -189,11 +205,15 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 <CollapsibleTrigger className="w-full text-left">
                   <CardContent className="p-4 sm:p-6 pr-24 cursor-pointer hover:bg-muted/30 transition-colors">
                     <div className="flex items-start gap-3">
-                      <ChevronDown className={`w-5 h-5 mt-0.5 text-muted-foreground transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        className={`w-5 h-5 mt-0.5 text-muted-foreground transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                           <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
-                          <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>{getStatusLabel(project.status)}</span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>
+                            {getStatusLabel(project.status)}
+                          </span>
                           {isAdminOrMaster && projectCollaborators.length > 0 && (
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Users className="w-3 h-3" />
@@ -201,14 +221,34 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             </span>
                           )}
                         </div>
-                        {project.description && <WysiwygContent content={project.description} className="text-sm text-muted-foreground mb-2 line-clamp-1" />}
+                        {project.description && (
+                          <WysiwygContent
+                            content={project.description}
+                            className="text-sm text-muted-foreground mb-2 line-clamp-1"
+                          />
+                        )}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                          <div><span className="text-muted-foreground">Cliente: </span><span className="font-medium text-foreground">{client?.company || client?.name}</span></div>
-                          <div><span className="text-muted-foreground">Tarefas: </span><span className="font-medium text-foreground">{projectTasks.length}</span></div>
-                          <div><span className="text-muted-foreground">Horas: </span><span className="font-medium text-foreground">{formatHours(hours)}</span></div>
-                          {projectColumns.map(col => project.custom_fields[col.id] && (
-                            <div key={col.id}><span className="text-muted-foreground">{col.name}: </span><span className="font-medium text-foreground">{project.custom_fields[col.id]}</span></div>
-                          ))}
+                          <div>
+                            <span className="text-muted-foreground">Cliente: </span>
+                            <span className="font-medium text-foreground">{client?.company || client?.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Tarefas: </span>
+                            <span className="font-medium text-foreground">{projectTasks.length}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Horas: </span>
+                            <span className="font-medium text-foreground">{formatHours(hours)}</span>
+                          </div>
+                          {projectColumns.map(
+                            (col) =>
+                              project.custom_fields[col.id] && (
+                                <div key={col.id}>
+                                  <span className="text-muted-foreground">{col.name}: </span>
+                                  <span className="font-medium text-foreground">{project.custom_fields[col.id]}</span>
+                                </div>
+                              ),
+                          )}
                         </div>
                       </div>
                     </div>
@@ -231,7 +271,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                   ) : (
                     <div className="space-y-3">
                       {projectTasks.map((task) => {
-                        const taskTimeEntries = timeEntries.filter(te => te.task_id === task.id);
+                        const taskTimeEntries = timeEntries.filter((te) => te.task_id === task.id);
                         const activeTimer = getActiveTimer(task.id);
 
                         return (
