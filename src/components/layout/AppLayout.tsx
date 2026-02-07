@@ -29,9 +29,17 @@ import { WorkspaceSelector } from '@/components/layout/WorkspaceSelector';
 import LogoOras from '@/assets/logo-oras.svg';
 
 // Mobile Header Component with animated logo/task info
-const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void; hideTimer?: boolean }> = ({ setSidebarOpen, hideTimer = false }) => {
-  const { hasActiveTimer } = useGlobalTimer();
-  
+const MobileHeader: React.FC<{
+  setSidebarOpen: (open: boolean) => void;
+  hideTimer?: boolean;
+}> = ({
+  setSidebarOpen,
+  hideTimer = false
+}) => {
+  const {
+    hasActiveTimer
+  } = useGlobalTimer();
+
   // Only show timer animation when timer is active AND not hidden for clients
   const showTimerAnimation = hasActiveTimer && !hideTimer;
   
@@ -51,22 +59,14 @@ const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void; hideTime
         {/* Animated container for logo/task info - only animate if not hidden */}
         <div className="relative flex-1 h-6 overflow-hidden">
           {/* Logo - slides up when timer active (only if timer not hidden) */}
-          <div className={cn(
-            "absolute inset-0 flex items-center transition-transform duration-300 ease-in-out",
-            showTimerAnimation ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
-          )}>
+          <div className={cn("absolute inset-0 flex items-center transition-transform duration-300 ease-in-out", showTimerAnimation ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
             <img src={LogoOras} alt="ORAS" className="h-6 w-auto" />
           </div>
           
           {/* Task info - slides in from left when timer active (only if timer not hidden) */}
-          {!hideTimer && (
-            <div className={cn(
-              "absolute inset-0 flex items-center transition-all duration-300 ease-in-out",
-              showTimerAnimation ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
-            )}>
+          {!hideTimer && <div className={cn("absolute inset-0 flex items-center transition-all duration-300 ease-in-out", showTimerAnimation ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0")}>
               <HeaderTimerTaskInfo />
-            </div>
-          )}
+            </div>}
         </div>
       </div>
       
@@ -74,8 +74,7 @@ const MobileHeader: React.FC<{ setSidebarOpen: (open: boolean) => void; hideTime
         {!hideTimer && <HeaderTimerDisplay />}
         <NotificationBell />
       </div>
-    </div>
-  );
+    </div>;
 };
 
 // Desktop Header Component with breadcrumb, search and timer
@@ -96,32 +95,33 @@ const DesktopHeader: React.FC<{ hideTimer?: boolean }> = ({ hideTimer = false })
         {/* Right: Timer + Notifications */}
         <div className="flex items-center gap-3 text-[#64748b]">
           {/* Task info - slides in from left when timer active (only if timer not hidden) */}
-          {!hideTimer && (
-            <div className={cn(
-              "transition-all duration-300 ease-in-out overflow-hidden",
-              hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
-            )}>
+          {!hideTimer && <div className={cn("transition-all duration-300 ease-in-out overflow-hidden", hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0")}>
               <HeaderTimerTaskInfo />
-            </div>
-          )}
+            </div>}
           
           {!hideTimer && <HeaderTimerDisplay />}
           <NotificationBell />
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 interface AppLayoutProps {
   children: React.ReactNode;
 }
-
-export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({
+  children
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut, isMasterAdmin, isAdmin, isCollaborator, isClient, userRole } = useAuth();
-
+  const {
+    user,
+    signOut,
+    isMasterAdmin,
+    isAdmin,
+    isCollaborator,
+    isClient,
+    userRole
+  } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -139,14 +139,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   useEffect(() => {
     const fetchAvatar = async () => {
       if (!user) return;
-      
       try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
+        const {
+          data
+        } = await supabase.from('profiles').select('avatar_url').eq('user_id', user.id).maybeSingle();
         if (data?.avatar_url) {
           setUserAvatar(data.avatar_url);
         }
@@ -154,44 +150,80 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         console.error('Error fetching avatar:', err);
       }
     };
-
     fetchAvatar();
   }, [user]);
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
 
   // Master Admin nav items (full access)
-  const masterAdminNavItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Painel' },
-    { path: '/clients', icon: Users, label: 'Clientes' },
-    { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-    { path: '/calendar', icon: Calendar, label: 'Calendário' },
-  ];
+  const masterAdminNavItems = [{
+    path: '/',
+    icon: LayoutDashboard,
+    label: 'Painel'
+  }, {
+    path: '/clients',
+    icon: Users,
+    label: 'Clientes'
+  }, {
+    path: '/projects',
+    icon: FolderKanban,
+    label: 'Projetos'
+  }, {
+    path: '/calendar',
+    icon: Calendar,
+    label: 'Calendário'
+  }];
 
   // Admin nav items
-  const adminNavItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Painel' },
-    { path: '/clients', icon: Users, label: 'Clientes' },
-    { path: '/projects', icon: FolderKanban, label: 'Projetos' },
-    { path: '/calendar', icon: Calendar, label: 'Calendário' },
-  ];
+  const adminNavItems = [{
+    path: '/',
+    icon: LayoutDashboard,
+    label: 'Painel'
+  }, {
+    path: '/clients',
+    icon: Users,
+    label: 'Clientes'
+  }, {
+    path: '/projects',
+    icon: FolderKanban,
+    label: 'Projetos'
+  }, {
+    path: '/calendar',
+    icon: Calendar,
+    label: 'Calendário'
+  }];
 
   // Collaborator nav items (dashboard and projects)
-  const collaboratorNavItems = [
-    { path: '/collaborator-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/projects', icon: FolderKanban, label: 'Meus Projetos' },
-  ];
+  const collaboratorNavItems = [{
+    path: '/collaborator-dashboard',
+    icon: LayoutDashboard,
+    label: 'Dashboard'
+  }, {
+    path: '/projects',
+    icon: FolderKanban,
+    label: 'Meus Projetos'
+  }];
 
   // Client nav items (dashboard, reports, projects and calendar)
-  const clientNavItems = [
-    { path: '/client-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/my-reports', icon: FileBarChart, label: 'Meus Relatórios' },
-    { path: '/my-projects', icon: FolderKanban, label: 'Meus Projetos' },
-    { path: '/calendar', icon: Calendar, label: 'Calendário' },
-  ];
+  const clientNavItems = [{
+    path: '/client-dashboard',
+    icon: LayoutDashboard,
+    label: 'Dashboard'
+  }, {
+    path: '/my-reports',
+    icon: FileBarChart,
+    label: 'Meus Relatórios'
+  }, {
+    path: '/my-projects',
+    icon: FolderKanban,
+    label: 'Meus Projetos'
+  }, {
+    path: '/calendar',
+    icon: Calendar,
+    label: 'Calendário'
+  }];
 
   // Select nav items based on role
   const getNavItems = () => {
@@ -200,7 +232,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     if (isCollaborator) return collaboratorNavItems;
     return clientNavItems;
   };
-
   const navItems = getNavItems();
 
   // Get role display label
@@ -243,12 +274,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <TooltipProvider delayDuration={0}>
       <div className="flex h-screen overflow-hidden bg-[#f1f5f9]">
         {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+        {sidebarOpen && <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
         {/* Sidebar - Fixed height 100vh */}
         <aside 
@@ -272,11 +298,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <WorkspaceSelector isCollapsed={isCollapsed} />
               </div>
               {/* Mobile: always show full logo centered */}
-              <img 
-                src={LogoOras} 
-                alt="ORAS" 
-                className="lg:hidden h-8 w-auto max-w-[120px]"
-              />
+              <img src={LogoOras} alt="ORAS" className="lg:hidden h-8 w-auto max-w-[120px]" />
 
               {/* Collapse toggle (desktop only, positioned overlapping the border) */}
               <Tooltip>
@@ -333,19 +355,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     )}
                   >
                     <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className={cn(
-                      "transition-opacity duration-300",
-                      isCollapsed && "lg:hidden"
-                    )}>
+                    <span className={cn("transition-opacity duration-300", isCollapsed && "lg:hidden")}>
                       {item.label}
                     </span>
-                  </Link>
-                );
-
-                return (
-                  <li key={item.path}>
-                    {isCollapsed ? (
-                      <Tooltip>
+                  </Link>;
+              return <li key={item.path}>
+                    {isCollapsed ? <Tooltip>
                         <TooltipTrigger asChild className="hidden lg:flex">
                           {NavLink}
                         </TooltipTrigger>
@@ -353,13 +368,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                           {item.label}
                         </TooltipContent>
                         <div className="lg:hidden">{NavLink}</div>
-                      </Tooltip>
-                    ) : (
-                      NavLink
-                    )}
-                  </li>
-                );
-              })}
+                      </Tooltip> : NavLink}
+                  </li>;
+            })}
             </ul>
           </nav>
 
@@ -369,21 +380,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             isCollapsed && "lg:p-2"
           )}>
             {/* User info */}
-            {user && (
-              <div className={cn(
-                "flex items-center gap-3 px-2 py-2",
-                isCollapsed && "lg:justify-center lg:px-0 lg:py-1"
-              )}>
+            {user && <div className={cn("flex items-center gap-3 px-2 py-2", isCollapsed && "lg:justify-center lg:px-0 lg:py-1")}>
                 <Avatar className={cn("flex-shrink-0", isCollapsed ? "h-8 w-8" : "h-9 w-9")}>
                   <AvatarImage src={userAvatar || undefined} alt="Avatar" />
                   <AvatarFallback className="bg-white text-[#0f172a] text-sm border border-[#e2e8f0]">
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
-                <div className={cn(
-                  "flex-1 min-w-0 transition-opacity duration-300",
-                  isCollapsed && "lg:hidden"
-                )}>
+                <div className={cn("flex-1 min-w-0 transition-opacity duration-300", isCollapsed && "lg:hidden")}>
                   <p className="text-sm font-medium text-foreground truncate">
                     {user.email}
                   </p>
@@ -393,12 +397,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     {getRoleLabel()}
                   </Badge>
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Settings link */}
-            {isCollapsed ? (
-              <Tooltip>
+            {isCollapsed ? <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
                   <Link
                     to="/preferences"
@@ -441,12 +443,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               >
                 <Settings className="w-3.5 h-3.5" />
                 Configurações
-              </Link>
-            )}
+              </Link>}
 
             {/* Sign out button */}
-            {isCollapsed ? (
-              <Tooltip>
+            {isCollapsed ? <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
                   <Button
                     variant="ghost"
@@ -475,8 +475,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               >
                 <LogOut className="w-3.5 h-3.5 mr-2" />
                 Sair
-              </Button>
-            )}
+              </Button>}
 
             {/* Version */}
             <div className={cn(
@@ -491,10 +490,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Main Content - Scrollable */}
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Mobile header - hide timer for clients */}
-          <MobileHeader 
-            setSidebarOpen={setSidebarOpen}
-            hideTimer={isClient}
-          />
+          <MobileHeader setSidebarOpen={setSidebarOpen} hideTimer={isClient} />
 
           {/* Desktop header buttons - hide timer for clients */}
           <DesktopHeader hideTimer={isClient} />
@@ -507,6 +503,5 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
         </main>
       </div>
-    </TooltipProvider>
-  );
+    </TooltipProvider>;
 };
