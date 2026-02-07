@@ -216,13 +216,13 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           type="single"
           value={viewMode}
           onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
-          className="rounded-full p-1 bg-[#f1f5f9]"
+          className="rounded-lg p-1 bg-[#f1f5f9]"
         >
           <ToggleGroupItem
             value="list"
             aria-label="Visualização em lista"
             className={cn(
-              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
+              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-md data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
             )}
           >
             <LayoutList className="w-3.5 h-3.5 mr-1.5" />
@@ -232,7 +232,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             value="kanban"
             aria-label="Visualização Kanban"
             className={cn(
-              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
+              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-md data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
             )}
           >
             <Columns3 className="w-3.5 h-3.5 mr-1.5" />
