@@ -19,7 +19,7 @@ const toggleVariants = cva(
     "disabled:pointer-events-none disabled:opacity-50",
 
     // Estado ativo
-    "data-[state=on]:bg-border",
+    "data-[state=on]:bg-background",
     "data-[state=on]:shadow-none",
     "data-[state=on]:text-muted-foreground",
 
