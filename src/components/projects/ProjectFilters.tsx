@@ -208,14 +208,12 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           type="single"
           value={viewMode}
           onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
-          className="border rounded-full p-1 bg-muted/50"
+          className="rounded-full p-1 bg-muted/50"
         >
           <ToggleGroupItem
             value="list"
             aria-label="Visualização em lista"
-            className={cn(
-              "px-3 h-8 text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none",
-            )}
+            className={cn("px-3 h-8 rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none")}
           >
             <LayoutList className="w-4 h-4 mr-2" />
             Lista
@@ -223,9 +221,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           <ToggleGroupItem
             value="kanban"
             aria-label="Visualização Kanban"
-            className={cn(
-              "px-3 h-8 text-[#64748b] rounded-full data-[state=on]:bg-[#e2e8f0] data-[state=on]:shadow-none",
-            )}
+            className={cn("px-3 h-8 rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none")}
           >
             <Columns3 className="w-4 h-4 mr-2" />
             Kanban
