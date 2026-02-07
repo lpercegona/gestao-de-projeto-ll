@@ -83,8 +83,8 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         {/* Filter button */}
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" className={cn("relative text-slate-500 bg-slate-100 border-0", "hover:bg-slate-200 hover:text-slate-500", activeFilters > 0 && "bg-slate-200")}>
-              <Filter className="w-2.5 h-2.5" />
+            <Button variant="outline" size="icon" className={cn("relative h-8 w-8 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 border-0", "hover:bg-slate-200 hover:text-slate-500", activeFilters > 0 && "bg-slate-200")}>
+              <Filter className="w-3.5 h-3.5" />
               {activeFilters > 0 && (
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
                   {activeFilters}
