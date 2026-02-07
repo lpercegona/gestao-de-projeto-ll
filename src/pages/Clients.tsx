@@ -189,7 +189,7 @@ export const Clients: React.FC = () => {
   return (
     <div className="space-y-4">
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
-        <TabsList className="h-8 p-1 rounded-md">
+        <TabsList className="h-8 p-0.6 rounded-lg">
           <TabsTrigger value="clients">
             <Users className="w-3.5 h-3.5" />
             Clientes
