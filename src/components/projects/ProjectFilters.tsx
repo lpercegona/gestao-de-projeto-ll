@@ -213,7 +213,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           <ToggleGroupItem
             value="list"
             aria-label="Visualização em lista"
-            className={cn("px-3 h-8 data-[state=on]:bg-background data-[state=on]:shadow-sm")}
+            className={cn("px-3 h-8 rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none")}
           >
             <LayoutList className="w-4 h-4 mr-2" />
             Lista
@@ -221,7 +221,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           <ToggleGroupItem
             value="kanban"
             aria-label="Visualização Kanban"
-            className={cn("px-3 h-8 data-[state=on]:bg-background data-[state=on]:shadow-sm")}
+            className={cn("px-3 h-8 rounded-full data-[state=on]:bg-background data-[state=on]:shadow-none")}
           >
             <Columns3 className="w-4 h-4 mr-2" />
             Kanban
