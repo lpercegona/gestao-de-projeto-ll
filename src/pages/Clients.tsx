@@ -202,7 +202,7 @@ export const Clients: React.FC = () => {
             </TabsTrigger>
           </TabsList>
 
-          <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0 rouded-lg">
+          <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0 rounded-lg">
             <Plus className="w-3.5 h-3.5" />
           </Button>
         </div>
