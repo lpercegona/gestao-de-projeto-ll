@@ -189,7 +189,7 @@ export const Clients: React.FC = () => {
   return (
     <div className="space-y-4">
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
-        <TabsList className="h-8 p-0.9 rounded-lg">
+        <TabsList className="h-8 p-1 rounded-lg">
           <TabsTrigger value="clients">
             <Users className="w-3.5 h-3.5" />
             Clientes
@@ -209,28 +209,28 @@ export const Clients: React.FC = () => {
               className="flex-1 overflow-x-auto"
             >
               <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full">
-                <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2">
+                <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2 rounded-full">
                   <UserPlus className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Lead</span>
                   <Badge variant="circular" className="">
                     {leadCount}
                   </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2">
+                <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2 rounded-full">
                   <Handshake className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Em Negociação</span>
                   <Badge variant="circular" className="">
                     {proposalCount}
                   </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="active" className="flex items-center gap-1 sm:gap-2">
+                <TabsTrigger value="active" className="flex items-center gap-1 sm:gap-2 rounded-full">
                   <UserCheck className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Ativo</span>
                   <Badge variant="circular" className="">
                     {activeCount}
                   </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="churned" className="flex items-center gap-1 sm:gap-2">
+                <TabsTrigger value="churned" className="flex items-center gap-1 sm:gap-2 rounded-full">
                   <UserX className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Inativo</span>
                   <Badge variant="circular" className="">
