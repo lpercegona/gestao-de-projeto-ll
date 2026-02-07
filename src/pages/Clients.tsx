@@ -191,6 +191,9 @@ export const Clients: React.FC = () => {
       <span className="text-lg font-semibold text-foreground whitespace-nowrap">
         {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
       </span>
+      <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0">
+        <Plus className="w-3.5 h-3.5" />
+      </Button>
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
         <div className="flex items-center justify-between w-full">
           <TabsList className="flex rounded-lg">
@@ -204,10 +207,6 @@ export const Clients: React.FC = () => {
               Propostas
             </TabsTrigger>
           </TabsList>
-
-          <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0">
-            <Plus className="w-3.5 h-3.5" />
-          </Button>
         </div>
         <TabsContent value="clients" className="mt-6">
           <div className="w-full overflow-x-auto touch-pan-x overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none]">
