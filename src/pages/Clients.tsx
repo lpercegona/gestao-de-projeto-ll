@@ -208,39 +208,50 @@ export const Clients: React.FC = () => {
         </div>
         <TabsContent value="clients" className="mt-6">
           <div className="flex items-center justify-between gap-4">
-            <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-transparent gap-1">
-              <TabsTrigger
-                value="lead"
-                className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-              >
-                <Badge variant="circular">{leadCount}</Badge>
-                <span className="hidden sm:inline">Leads</span>
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="proposal"
-                className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-              >
-                <Badge variant="circular">{proposalCount}</Badge>
-                <span className="hidden sm:inline">Em Negociação</span>
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="active"
-                className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-              >
-                <Badge variant="circular">{activeCount}</Badge>
-                <span className="hidden sm:inline">Ativos</span>
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="churned"
-                className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
-              >
-                <Badge variant="circular">{churnedCount}</Badge>
-                <span className="hidden sm:inline">Inativos</span>
-              </TabsTrigger>
-            </TabsList>
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as "lead" | "proposal" | "active" | "churned")}
+              className="flex-1 overflow-x-auto"
+            >
+              <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent gap-1">
+                <TabsTrigger
+                  value="lead"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                >
+                  <Badge variant="circular" className="">
+                    {leadCount}
+                  </Badge>
+                  <span className="hidden sm:inline">Leads</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="proposal"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                >
+                  <Badge variant="circular" className="">
+                    {proposalCount}
+                  </Badge>
+                  <span className="hidden sm:inline">Em Negociação</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="active"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                >
+                  <Badge variant="circular" className="">
+                    {activeCount}
+                  </Badge>
+                  <span className="hidden sm:inline">Ativos</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="churned"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                >
+                  <Badge variant="circular" className="">
+                    {churnedCount}
+                  </Badge>
+                  <span className="hidden sm:inline">Inativos</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {filteredClients.length === 0 ? (
