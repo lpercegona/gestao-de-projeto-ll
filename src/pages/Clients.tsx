@@ -207,7 +207,7 @@ export const Clients: React.FC = () => {
           </Button>
         </div>
         <TabsContent value="clients" className="mt-6">
-          <div className="w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="w-full overflow-x-auto touch-pan-x overscroll-x-contain">
             <div className="flex items-center justify-start min-w-max gap-4">
               <Tabs
                 value={activeTab}
