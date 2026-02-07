@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon } from "lucide-react";
+import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon, Funnel } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -84,9 +84,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" className={cn("relative", activeFilters > 0 && "border-primary")}>
-              <Filter className="h-4 w-4" />
+              <Funnel className="h-4 w-4" />
               {activeFilters > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">teste
                   {activeFilters}
                 </Badge>
               )}
