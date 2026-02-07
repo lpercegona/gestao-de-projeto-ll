@@ -177,11 +177,11 @@ export const Clients: React.FC = () => {
     <div className="space-y-4">
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'clients' | 'proposals')}>
         <TabsList className="h-8 p-1 rounded-full">
-          <TabsTrigger value="clients" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none">
+          <TabsTrigger value="clients" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none data-[state=active]:border data-[state=active]:border-[#e2e8f0]">
             <Users className="w-3.5 h-3.5" />
             Clientes
           </TabsTrigger>
-          <TabsTrigger value="proposals" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none">
+          <TabsTrigger value="proposals" className="flex h-6 items-center gap-1.5 px-2.5 text-xs font-medium rounded-full data-[state=active]:shadow-none data-[state=active]:border data-[state=active]:border-[#e2e8f0]">
             <FileCheck className="w-3.5 h-3.5" />
             Propostas
           </TabsTrigger>
