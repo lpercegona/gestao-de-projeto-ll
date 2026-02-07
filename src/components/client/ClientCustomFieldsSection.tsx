@@ -380,13 +380,15 @@ export const ClientCustomFieldsSection: React.FC<ClientCustomFieldsSectionProps>
                       {formData.options.map((opt) => (
                         <Badge key={opt} variant="secondary" className="gap-1">
                           {opt}
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleRemoveOption(opt)}
-                            className="ml-1 hover:text-destructive"
+                            className="ml-1 h-4 w-4 hover:text-destructive"
                           >
                             <X className="w-3 h-3" />
-                          </button>
+                          </Button>
                         </Badge>
                       ))}
                     </div>

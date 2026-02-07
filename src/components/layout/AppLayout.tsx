@@ -32,12 +32,12 @@ const MobileHeader: React.FC<{
   const showTimerAnimation = hasActiveTimer && !hideTimer;
   return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
       <div className="flex items-center gap-3 flex-1 overflow-hidden">
-        <button className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70" onClick={() => setSidebarOpen(true)}>
+        <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0 text-[#64748b] hover:bg-white/70" onClick={() => setSidebarOpen(true)}>
           <span className="sr-only">Abrir menu</span>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
-        </button>
+        </Button>
         
         {/* Animated container for logo/task info - only animate if not hidden */}
         <div className="relative flex-1 h-6 overflow-hidden">
@@ -289,12 +289,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             </div>
             
             {/* Mobile close button */}
-            <button className="absolute right-4 top-1/2 rounded-md p-2 text-[#64748b] hover:bg-white/70 lg:hidden" onClick={() => setSidebarOpen(false)}>
+            <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 h-9 w-9 -translate-y-1/2 text-[#64748b] hover:bg-white/70 lg:hidden" onClick={() => setSidebarOpen(false)}>
               <span className="sr-only">Fechar menu</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </Button>
           </div>
           
           {/* Navigation - Scrollable area */}

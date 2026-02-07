@@ -245,18 +245,20 @@ export const Profile: React.FC = () => {
                   {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                className="absolute inset-0 flex items-center justify-center rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                className="absolute inset-0 h-full w-full rounded-full bg-background/80 opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
               >
                 {uploadingAvatar ? (
                   <Loader2 className="h-6 w-6 animate-spin text-foreground" />
                 ) : (
                   <Camera className="h-6 w-6 text-foreground" />
                 )}
-              </button>
+              </Button>
             </div>
             <div className="text-center sm:text-left space-y-2">
               <input
