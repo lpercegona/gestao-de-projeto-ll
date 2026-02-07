@@ -211,7 +211,7 @@ export const Clients: React.FC = () => {
               <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent gap-1">
                 <TabsTrigger
                   value="lead"
-                  className="flex items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-secondary"
+                  className="flex p1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
                 >
                   <Badge variant="circular" className="">
                     {leadCount}
