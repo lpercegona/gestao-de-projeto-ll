@@ -211,13 +211,12 @@ export const Clients: React.FC = () => {
               <TabsList className="h-8 w-full sm:w-auto p-1 rounded-full bg-trasparent gap-1">
                 <TabsTrigger
                   value="lead"
-                  className="flex items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted-foreground"
+                  className="flex items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-secondary"
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Lead</span>
                   <Badge variant="circular" className="">
                     {leadCount}
                   </Badge>
+                  <span className="hidden sm:inline">Lead</span>
                 </TabsTrigger>
                 <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2 rounded-full">
                   <Handshake className="w-3.5 h-3.5" />
