@@ -16,14 +16,10 @@ const toggleVariants = cva(
     "disabled:pointer-events-none disabled:opacity-50",
     "data-[state=on]:bg-border",
     "data-[state=on]:shadow-none",
-    "hover:bg-border]",
+    "hover:bg-border",
     "hover:text-muted-foreground",
   ].join(" "),
-  {
-    variants: {},
-    defaultVariants: {},
-  }
-);,
+);
   {
     variants: {
       variant: {
