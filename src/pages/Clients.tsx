@@ -189,7 +189,7 @@ export const Clients: React.FC = () => {
   return (
     <div className="space-y-4">
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between w-full">
           <TabsList className="flex h-8 p-1 rounded-lg">
             <TabsTrigger value="clients">
               <Users className="w-3.5 h-3.5" />
@@ -202,7 +202,7 @@ export const Clients: React.FC = () => {
             </TabsTrigger>
           </TabsList>
 
-          <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0 rounded-lg">
+          <Button onClick={() => handleOpenDialog()} size="sm" className="h-8 w-8 shrink-0">
             <Plus className="w-3.5 h-3.5" />
           </Button>
         </div>
