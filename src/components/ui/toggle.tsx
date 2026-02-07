@@ -9,8 +9,8 @@ const toggleVariants = cva(
   "whitespace-nowrap transition-colors ring-offset-background",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
   "disabled:pointer-events-none disabled:opacity-50",
-  "data-[state=active]:border data-[state=active]:border-slate-200",
-  "data-[state=active]:shadow-none data-[state=active]:bg-background data-[state=active]:text-accent-foreground",
+  "data-[state=on]:border data-[state=on]:border-slate-200",
+  "data-[state=on]:shadow-none data-[state=on]:bg-background data-[state=on]:text-accent-foreground",
   {
     variants: {
       variant: {
