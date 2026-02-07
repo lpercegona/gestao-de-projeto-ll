@@ -212,35 +212,36 @@ export const Clients: React.FC = () => {
                 <TabsTrigger value="lead" className="flex items-center gap-1 sm:gap-2">
                   <UserPlus className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Lead</span>
-                  <Badge variant="outline" className="ml-1">
+                  <Badge variant="outline" className="">
                     {leadCount}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="proposal" className="flex items-center gap-1 sm:gap-2">
                   <Handshake className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Em Negociação</span>
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="outline" className="">
                     {proposalCount}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="active" className="flex items-center gap-1 sm:gap-2">
                   <UserCheck className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Ativo</span>
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="outline" className="">
                     {activeCount}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="churned" className="flex items-center gap-1 sm:gap-2">
                   <UserX className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Inativo</span>
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="outline" className="">
                     {churnedCount}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0">
+            <Button onClick={() => handleOpenDialog()} size="sm" className="px-3 shrink-0">
               <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline ml-2">Novo Cliente</span>
             </Button>
           </div>
 
@@ -248,8 +249,9 @@ export const Clients: React.FC = () => {
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground mb-4">Nenhum cliente cadastrado ainda.</p>
-                <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0">
-                  <Plus className="w-3.5 h-3.5" />
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar primeiro cliente
                 </Button>
               </CardContent>
             </Card>
@@ -273,7 +275,7 @@ export const Clients: React.FC = () => {
                     className="cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => navigate(`/clients/${client.id}`)}
                   >
-                    <CardContent className="p-2">
+                    <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-foreground">{client.company || client.name}</h3>
