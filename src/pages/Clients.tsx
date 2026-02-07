@@ -243,7 +243,7 @@ export const Clients: React.FC = () => {
                 </TabsTrigger>
                 <TabsTrigger
                   value="churned"
-                  className="flex p-1 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                  className="flex pt-1 pb-1 pl-1 pr-1.5 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
                 >
                   <Badge variant="circular" className="">
                     {churnedCount}
