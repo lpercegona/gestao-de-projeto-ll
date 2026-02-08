@@ -20,7 +20,7 @@ import { Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList
 import { Users as UsersIcon } from 'lucide-react';
 import { Project, Task } from '@/types';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -96,13 +96,14 @@ export const Projects: React.FC = () => {
   } = useData();
   const { user, isAdminOrMaster, isCollaborator } = useAuth();
   const { resetTimer } = useGlobalTimer();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // View state
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [filterClientId, setFilterClientId] = useState<string>('all');
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showOnlyRequests, setShowOnlyRequests] = useState(false);
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -214,6 +215,19 @@ export const Projects: React.FC = () => {
     fetchProjectRequests();
   }, [isAdminOrMaster]);
 
+  useEffect(() => {
+    const filter = searchParams.get('filter');
+
+    if (filter === 'requests' && isAdminOrMaster) {
+      setShowOnlyRequests(true);
+      setSearchParams((previousParams) => {
+        const nextParams = new URLSearchParams(previousParams);
+        nextParams.delete('filter');
+        return nextParams;
+      }, { replace: true });
+    }
+  }, [isAdminOrMaster, searchParams, setSearchParams]);
+
   // Filter projects
   const visibleProjects = useMemo(() => {
     let projects = data.projects;
@@ -245,17 +259,17 @@ export const Projects: React.FC = () => {
       });
     }
 
-    if (!showArchived) {
-      projects = projects.filter(project => project.status !== 'archived');
+    if (filterStageId === 'all') {
+      projects = projects.filter((project) => project.status !== 'archived');
     }
 
     return projects;
-  }, [data.projects, data.projectAccess, data.kanbanStages, user?.id, isAdminOrMaster, filterClientId, filterStageId, filterDateRange, showArchived]);
+  }, [data.projects, data.projectAccess, data.kanbanStages, user?.id, isAdminOrMaster, filterClientId, filterStageId, filterDateRange]);
 
   const visibleRequestProjects = useMemo<UnifiedProject[]>(() => {
     if (!isAdminOrMaster) return [];
 
-    let filteredRequests = requestProjects;
+    let filteredRequests = requestProjects.filter((request) => !request.converted_project_id);
 
     if (filterClientId !== 'all') {
       filteredRequests = filteredRequests.filter((request) => request.client_id === filterClientId);
@@ -280,15 +294,19 @@ export const Projects: React.FC = () => {
   const filteredProjects: UnifiedProject[] = useMemo(() => {
     const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects];
 
-    return unifiedList.sort((a, b) => {
+    const requestFilteredList = showOnlyRequests
+      ? unifiedList.filter((project) => project.is_request)
+      : unifiedList;
+
+    return requestFilteredList.sort((a, b) => {
       const firstDate = new Date(a.updated_at || a.created_at).getTime();
       const secondDate = new Date(b.updated_at || b.created_at).getTime();
       return secondDate - firstDate;
     });
-  }, [visibleProjects, visibleRequestProjects]);
+  }, [visibleProjects, visibleRequestProjects, showOnlyRequests]);
 
   const pendingRequestsCount = useMemo(() => {
-    return requestProjects.filter((request) => request.status === 'pending' || request.status === 'analyzing').length;
+    return requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing')).length;
   }, [requestProjects]);
 
   // Helper functions for time conversion
@@ -599,9 +617,9 @@ export const Projects: React.FC = () => {
         onClientChange={setFilterClientId}
         onStageChange={setFilterStageId}
         onDateRangeChange={setFilterDateRange}
-        showArchived={showArchived}
-        onShowArchivedChange={setShowArchived}
         pendingRequestsCount={pendingRequestsCount}
+        showOnlyRequests={showOnlyRequests}
+        onShowOnlyRequestsChange={setShowOnlyRequests}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onAddProject={() => handleOpenDialog()}

@@ -16,6 +16,7 @@ interface ProjectRequest {
   status: string;
   created_at: string;
   client_id: string;
+  converted_project_id?: string | null;
   client?: {
     name: string;
     company: string | null;
@@ -40,6 +41,7 @@ export const SolicitacoesPanel: React.FC = () => {
             status,
             created_at,
             client_id,
+            converted_project_id,
             clients (
               name,
               company
@@ -52,10 +54,12 @@ export const SolicitacoesPanel: React.FC = () => {
         if (error) throw error;
 
         setRequests(
-          (data || []).map((req: any) => ({
+          (data || [])
+            .filter((req: any) => !req.converted_project_id)
+            .map((req: any) => ({
             ...req,
-            client: req.clients,
-          })),
+              client: req.clients,
+            })),
         );
       } catch (error) {
         console.error("Error fetching requests:", error);
