@@ -73,6 +73,7 @@ import { ClientCustomFieldsSection } from '@/components/client/ClientCustomField
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Project } from '@/types';
+import { ProjectListView } from '@/components/projects/ProjectListView';
 
 interface ProjectRequest {
   id: string;
@@ -120,7 +121,24 @@ export const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { user, isAdminOrMaster } = useAuth();
-  const { data, loading, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow, getProjectHours, getTaskHours, updateClient, updateProject, deleteProject } = useData();
+  const {
+    data,
+    loading,
+    getClientHours,
+    getClientMonthlyHours,
+    getClientPreviousMonthOverflow,
+    getProjectHours,
+    getTaskHours,
+    updateClient,
+    updateProject,
+    deleteProject,
+    getCreatorName,
+    getActiveTimer,
+    getClientColumns,
+    startTaskTimer,
+    stopTaskTimer,
+    completeTask,
+  } = useData();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -494,6 +512,28 @@ export const ClientDetail: React.FC = () => {
     setProjectSubmitting(false);
   };
 
+  const handleArchiveProject = async (project: Project) => {
+    const updated = await updateProject(project.id, { status: 'archived' });
+
+    if (updated) {
+      toast.success('Projeto arquivado com sucesso.');
+    } else {
+      toast.error('Não foi possível arquivar o projeto.');
+    }
+  };
+
+  const navigateToTaskProject = (taskId: string, action: string) => {
+    const task = data.tasks.find((item) => item.id === taskId);
+
+    if (!task) {
+      toast.error('Não foi possível localizar a tarefa selecionada.');
+      return;
+    }
+
+    navigate(`/projects/${task.project_id}`);
+    toast.info(`Você foi redirecionado para ${action} no projeto.`);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -508,62 +548,6 @@ export const ClientDetail: React.FC = () => {
         return <Badge variant="default">Convertido</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getProjectStatusLabel = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'Ativo';
-      case 'paused':
-        return 'Pausado';
-      case 'completed':
-        return 'Concluído';
-      case 'archived':
-        return 'Arquivado';
-      default:
-        return status;
-    }
-  };
-
-  const getProjectStatusClasses = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'paused':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'archived':
-        return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getTaskStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'Pendente';
-      case 'in_progress':
-        return 'Em andamento';
-      case 'completed':
-        return 'Concluída';
-      case 'paused':
-        return 'Pausada';
-      default:
-        return status;
-    }
-  };
-
-  const getTaskStatusClasses = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'paused':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-      default:
-        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -1114,156 +1098,41 @@ export const ClientDetail: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {clientProjects.map((project) => {
-                const projectTasks = data.tasks.filter(t => t.project_id === project.id);
-                const isExpanded = expandedProjects.has(project.id);
-
-                return (
-                  <Card key={project.id} className="relative overflow-hidden">
-                    {isAdminOrMaster && (
-                      <div className="absolute top-3 right-3 z-10">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleOpenProjectEdit(project);
-                              }}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setDeletingProject(project);
-                                setIsDeleteProjectDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
-
-                    <Collapsible open={isExpanded} onOpenChange={() => toggleProject(project.id)}>
-                      <CollapsibleTrigger asChild>
-                        <CardContent className="p-4 sm:p-6 pr-14 cursor-pointer hover:bg-muted/30 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <ChevronDown
-                              className={`w-5 h-5 mt-0.5 text-muted-foreground transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                                <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
-                                <span className={`text-xs px-2 py-1 rounded-full ${getProjectStatusClasses(project.status)}`}>
-                                  {getProjectStatusLabel(project.status)}
-                                </span>
-                              </div>
-
-                              {project.description && (
-                                <WysiwygContent
-                                  content={project.description}
-                                  className="text-sm text-muted-foreground mb-2 line-clamp-1"
-                                />
-                              )}
-
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Tarefas: </span>
-                                  <span className="font-medium text-foreground">{projectTasks.length}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Horas: </span>
-                                  <span className="font-medium text-foreground">{formatHours(getProjectHours(project.id))}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </CollapsibleTrigger>
-
-                      <CollapsibleContent>
-                        <div className="border-t px-4 sm:px-6 py-4 bg-muted/20 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium text-foreground">Tarefas ({projectTasks.length})</h4>
-                            <Button size="sm" variant="outline" onClick={() => navigate(`/projects/${project.id}`)}>
-                              Ver projeto
-                            </Button>
-                          </div>
-
-                          {projectTasks.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-3">Nenhuma tarefa neste projeto.</p>
-                          ) : (
-                            <div className="space-y-3">
-                              {projectTasks.map((task) => {
-                                const taskEntries = data.timeEntries
-                                  .filter((entry) => entry.task_id === task.id)
-                                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-                                return (
-                                  <div key={task.id} className="rounded-md border bg-background p-3 space-y-2">
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="min-w-0">
-                                        <p className="text-sm font-medium text-foreground">{task.name}</p>
-                                        {task.description && (
-                                          <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
-                                        )}
-                                      </div>
-                                      <div className="text-right shrink-0">
-                                        <span className={`text-[10px] px-2 py-1 rounded-full ${getTaskStatusClasses(task.status)}`}>
-                                          {getTaskStatusLabel(task.status)}
-                                        </span>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                          {formatHours(getTaskHours(task.id))}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    {taskEntries.length === 0 ? (
-                                      <p className="text-xs text-muted-foreground">Sem registros de horas.</p>
-                                    ) : (
-                                      <div className="space-y-1.5 pt-1 border-t">
-                                        {taskEntries.map((entry) => (
-                                          <div key={entry.id} className="flex items-center justify-between text-xs text-muted-foreground">
-                                            <div className="min-w-0 pr-3">
-                                              <p className="truncate">
-                                                {format(new Date(entry.date), 'dd/MM/yyyy', { locale: ptBR })}
-                                                {entry.description ? ` • ${entry.description}` : ''}
-                                              </p>
-                                            </div>
-                                            <span className="font-medium text-foreground whitespace-nowrap">{formatHours(entry.hours)}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </Card>
-                );
-              })}
-            </div>
+            <ProjectListView
+              projects={clientProjects}
+              clients={data.clients}
+              tasks={data.tasks}
+              timeEntries={data.timeEntries}
+              taskTimers={data.taskTimers}
+              projectColumns={data.projectColumns}
+              projectAccess={data.projectAccess}
+              kanbanStages={data.kanbanStages}
+              isAdminOrMaster={isAdminOrMaster}
+              getProjectHours={getProjectHours}
+              getTaskHours={getTaskHours}
+              getCreatorName={getCreatorName}
+              getActiveTimer={getActiveTimer}
+              getClientColumns={getClientColumns}
+              onEditProject={handleOpenProjectEdit}
+              onDeleteProject={(project) => {
+                setDeletingProject(project);
+                setIsDeleteProjectDialogOpen(true);
+              }}
+              onArchiveProject={handleArchiveProject}
+              onCreateTask={(projectId) => navigate(`/projects/${projectId}`)}
+              onEditTask={(task) => navigate(`/projects/${task.project_id}`)}
+              onDeleteTask={(task) => navigate(`/projects/${task.project_id}`)}
+              onRegisterTime={(taskId) => navigateToTaskProject(taskId, 'registrar horas')}
+              onStartTimer={async (taskId) => {
+                await startTaskTimer(taskId);
+              }}
+              onStopTimer={async (taskId) => {
+                await stopTaskTimer(taskId);
+              }}
+              onCompleteTask={async (taskId) => {
+                await completeTask(taskId);
+              }}
+            />
           )}
         </TabsContent>
 
