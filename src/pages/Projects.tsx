@@ -65,7 +65,7 @@ type UnifiedProject = Project & {
 };
 
 export const Projects: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     data, 
     loading, 
@@ -155,6 +155,18 @@ export const Projects: React.FC = () => {
   const [isKanbanStagesDialogOpen, setIsKanbanStagesDialogOpen] = useState(false);
   const [requestProjects, setRequestProjects] = useState<ProjectRequest[]>([]);
   const requestsFilterActive = searchParams.get('filter') === 'requests';
+
+  const handleRequestsFilterChange = (enabled: boolean) => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (enabled) {
+      nextParams.set('filter', 'requests');
+    } else {
+      nextParams.delete('filter');
+    }
+
+    setSearchParams(nextParams);
+  };
 
   // Get columns for selected client
   const clientColumns = useMemo(() => {
@@ -297,6 +309,10 @@ export const Projects: React.FC = () => {
 
     return visibleProjects as UnifiedProject[];
   }, [requestsFilterActive, visibleRequestProjects, visibleProjects]);
+
+  const pendingRequestsCount = useMemo(() => {
+    return requestProjects.filter((request) => request.status === 'pending' || request.status === 'analyzing').length;
+  }, [requestProjects]);
 
   // Helper functions for time conversion
   const parseTimeToHours = (timeString: string): number => {
@@ -608,6 +624,9 @@ export const Projects: React.FC = () => {
         onDateRangeChange={setFilterDateRange}
         showArchived={showArchived}
         onShowArchivedChange={setShowArchived}
+        showRequests={requestsFilterActive}
+        onShowRequestsChange={handleRequestsFilterChange}
+        pendingRequestsCount={pendingRequestsCount}
         viewMode={requestsFilterActive ? 'list' : viewMode}
         onViewModeChange={setViewMode}
         onAddProject={() => handleOpenDialog()}
