@@ -45,6 +45,7 @@ interface ProjectFiltersProps {
   showClientFilter?: boolean;
   showRequestsFilter?: boolean;
   showViewToggle?: boolean;
+  showAddButton?: boolean;
 }
 
 export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
@@ -67,6 +68,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   showClientFilter = true,
   showRequestsFilter = true,
   showViewToggle = true,
+  showAddButton = isAdminOrMaster,
 }) => {
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -305,7 +307,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         )}
 
         {/* Mobile only: Add button */}
-        {isAdminOrMaster && (
+        {showAddButton && (
           <Button onClick={onAddProject} size="icon" className="sm:hidden h-8 w-8 shrink-0 rounded-lg">
             <Plus className="w-3.5 h-3.5" />
           </Button>
@@ -313,7 +315,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
       </div>
 
       {/* Desktop only: Add button */}
-      {isAdminOrMaster && (
+      {showAddButton && (
         <Button onClick={onAddProject} size="icon" className="hidden sm:flex h-8 w-8 shrink-0 rounded-lg">
           <Plus className="w-3.5 h-3.5" />
         </Button>

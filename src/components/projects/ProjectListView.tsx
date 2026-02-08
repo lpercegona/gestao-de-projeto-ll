@@ -90,6 +90,7 @@ interface ProjectListViewProps {
   projectAccess: ProjectAccess[];
   kanbanStages: KanbanStage[];
   isAdminOrMaster: boolean;
+  allowProjectEditOnly?: boolean;
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
@@ -119,6 +120,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   projectAccess,
   kanbanStages,
   isAdminOrMaster,
+  allowProjectEditOnly = false,
   getProjectHours,
   getTaskHours,
   getCreatorName,
@@ -183,7 +185,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             {/* Project Header */}
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">
-                {isAdminOrMaster && !project.is_request && (
+                {(isAdminOrMaster || allowProjectEditOnly) && (
                   <div className="absolute top-3 right-3 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -199,27 +201,31 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                           }}
                         >
                           <Pencil className="w-4 h-4 mr-2" />
-                          Editar
+                          {allowProjectEditOnly ? 'Solicitar Edição' : 'Editar'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onArchiveProject(project);
-                          }}
-                        >
-                          <Archive className="w-4 h-4 mr-2" />
-                          Arquivar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteProject(project);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
+                        {isAdminOrMaster && !allowProjectEditOnly && !project.is_request && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onArchiveProject(project);
+                              }}
+                            >
+                              <Archive className="w-4 h-4 mr-2" />
+                              Arquivar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteProject(project);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

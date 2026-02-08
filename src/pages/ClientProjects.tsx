@@ -2,20 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
 import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm';
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
-import { Plus, FolderKanban, Clock, Loader2, FileText, CheckCircle, XCircle, Search, ArrowRight, MoreVertical, Pencil, Calendar } from 'lucide-react';
+import { Plus, FolderKanban, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { endOfDay, format, isWithinInterval, parseISO, startOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { endOfDay, isWithinInterval, startOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
 interface ProjectRequest {
@@ -24,10 +20,25 @@ interface ProjectRequest {
   title: string;
   briefing: string;
   status: string;
-  admin_notes: string | null;
   converted_project_id: string | null;
   created_at: string;
+  updated_at?: string;
 }
+
+type UnifiedProject = {
+  id: string;
+  client_id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  due_date?: string | null;
+  custom_fields: Record<string, string>;
+  created_at: string;
+  updated_at?: string;
+  is_request?: boolean;
+  request_status?: string;
+  request_id?: string;
+};
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
@@ -54,7 +65,7 @@ export const ClientProjects: React.FC = () => {
     { value: 'archived', label: 'Arquivado' },
   ]), []);
 
-  const filteredProjects = useMemo(() => {
+  const visibleProjects = useMemo(() => {
     let projects = data.projects;
 
     if (filterStageId !== 'all') {
@@ -65,8 +76,8 @@ export const ClientProjects: React.FC = () => {
       projects = projects.filter((project) => {
         if (!project.due_date) return false;
         const dueDate = new Date(project.due_date);
-        const from = startOfDay(filterDateRange.from!);
-        const to = filterDateRange.to ? endOfDay(filterDateRange.to) : endOfDay(filterDateRange.from!);
+        const from = startOfDay(filterDateRange.from);
+        const to = filterDateRange.to ? endOfDay(filterDateRange.to) : endOfDay(filterDateRange.from);
         return isWithinInterval(dueDate, { start: from, end: to });
       });
     }
@@ -77,6 +88,35 @@ export const ClientProjects: React.FC = () => {
 
     return projects;
   }, [data.projects, filterDateRange, filterStageId]);
+
+  const visibleRequestProjects = useMemo<UnifiedProject[]>(() => {
+    if (viewMode === 'kanban') return [];
+
+    return requests
+      .filter((request) => !request.converted_project_id)
+      .map((request) => ({
+        id: `request-${request.id}`,
+        client_id: request.client_id,
+        name: request.title,
+        description: request.briefing || null,
+        status: 'active',
+        due_date: null,
+        custom_fields: {},
+        created_at: request.created_at,
+        updated_at: request.updated_at || request.created_at,
+        is_request: true,
+        request_status: request.status,
+        request_id: request.id,
+      }));
+  }, [requests, viewMode]);
+
+  const filteredProjects: UnifiedProject[] = useMemo(() => {
+    return [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects].sort((a, b) => {
+      const firstDate = new Date(a.updated_at || a.created_at).getTime();
+      const secondDate = new Date(b.updated_at || b.created_at).getTime();
+      return secondDate - firstDate;
+    });
+  }, [visibleProjects, visibleRequestProjects]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -98,12 +138,12 @@ export const ClientProjects: React.FC = () => {
 
         const { data: requestsData, error } = await supabase
           .from('project_requests')
-          .select('*')
+          .select('id, client_id, title, briefing, status, converted_project_id, created_at, updated_at')
           .eq('client_id', clientData.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setRequests(requestsData || []);
+        setRequests((requestsData || []) as ProjectRequest[]);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -137,7 +177,7 @@ export const ClientProjects: React.FC = () => {
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       })
-      .select()
+      .select('id, client_id, title, briefing, status, converted_project_id, created_at, updated_at')
       .single();
 
     if (error) {
@@ -146,42 +186,35 @@ export const ClientProjects: React.FC = () => {
       return;
     }
 
-    setRequests((prev) => [newRequest, ...prev]);
+    setRequests((prev) => [newRequest as ProjectRequest, ...prev]);
     toast.success('Solicitação enviada com sucesso!');
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Aguardando análise</Badge>;
-      case 'in_review':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Em análise</Badge>;
-      case 'approved':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Aprovado</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Não aprovado</Badge>;
-      case 'converted':
-        return <Badge variant="default">Projeto criado</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  const openEditRequest = (project: UnifiedProject) => {
+    if (!clientId) return;
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-5 h-5 text-yellow-600" />;
-      case 'in_review':
-        return <Search className="w-5 h-5 text-blue-600" />;
-      case 'approved':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'rejected':
-        return <XCircle className="w-5 h-5 text-destructive" />;
-      case 'converted':
-        return <ArrowRight className="w-5 h-5 text-primary" />;
-      default:
-        return <FileText className="w-5 h-5 text-muted-foreground" />;
+    if (project.is_request && project.request_id) {
+      setEditEntity({
+        type: 'project_request',
+        id: project.request_id,
+        data: {
+          title: project.name,
+          briefing: project.description || '',
+        },
+      });
+    } else {
+      setEditEntity({
+        type: 'project',
+        id: project.id,
+        data: {
+          name: project.name,
+          description: project.description || '',
+          due_date: project.due_date || null,
+        },
+      });
     }
+
+    setEditFormOpen(true);
   };
 
   if (loading) {
@@ -193,17 +226,92 @@ export const ClientProjects: React.FC = () => {
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Meus Projetos"
-        description="Visualize seus projetos e solicite novos"
-        actions={
-          <Button onClick={() => setIsFormOpen(true)} className="px-3 sm:px-4">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline ml-2">Solicitar Novo Projeto</span>
-          </Button>
-        }
+    <div className="space-y-4">
+      <ProjectFilters
+        projectCount={filteredProjects.length}
+        clients={[]}
+        projectStatusOptions={projectStatusOptions}
+        selectedClientId="all"
+        selectedStageId={filterStageId}
+        dateRange={filterDateRange}
+        onClientChange={() => {}}
+        onStageChange={setFilterStageId}
+        onDateRangeChange={setFilterDateRange}
+        pendingRequestsCount={0}
+        showOnlyRequests={false}
+        onShowOnlyRequestsChange={() => {}}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onAddProject={() => setIsFormOpen(true)}
+        isAdminOrMaster={false}
+        showClientFilter={false}
+        showRequestsFilter={false}
+        showViewToggle
+        showAddButton
       />
+
+      {filteredProjects.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground mb-4">Nenhum projeto encontrado para os filtros selecionados.</p>
+            <Button onClick={() => setIsFormOpen(true)} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'list' ? (
+        <ProjectListView
+          projects={filteredProjects}
+          clients={data.clients}
+          tasks={data.tasks}
+          timeEntries={data.timeEntries}
+          taskTimers={data.taskTimers}
+          projectColumns={data.projectColumns}
+          projectAccess={data.projectAccess}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={false}
+          allowProjectEditOnly
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getActiveTimer={getActiveTimer}
+          getClientColumns={() => []}
+          onEditProject={(project) => openEditRequest(project as UnifiedProject)}
+          onDeleteProject={() => {}}
+          onArchiveProject={() => {}}
+          onCreateTask={() => {}}
+          onEditTask={() => {}}
+          onDeleteTask={() => {}}
+          onRegisterTime={() => {}}
+          onStartTimer={async () => {}}
+          onStopTimer={async () => {}}
+          onCompleteTask={async () => {}}
+        />
+      ) : (
+        <ProjectKanbanView
+          projects={visibleProjects}
+          clients={data.clients}
+          tasks={data.tasks}
+          timeEntries={data.timeEntries}
+          taskTimers={data.taskTimers}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={false}
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getActiveTimer={getActiveTimer}
+          onEditTask={() => {}}
+          onDeleteTask={() => {}}
+          onRegisterTime={() => {}}
+          onStartTimer={async () => {}}
+          onStopTimer={async () => {}}
+          onCompleteTask={async () => {}}
+          onUpdateTaskStatus={async () => {}}
+          onCreateTask={() => {}}
+          onManageStages={() => {}}
+        />
+      )}
 
       {requests.length > 0 && (
         <div className="mb-8">
