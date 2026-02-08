@@ -204,6 +204,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Kanban board */}
       <ScrollArea className="w-full">
         <div className="flex gap-4 pb-4 min-w-max">
           {stages.map((stage) => {
@@ -226,6 +227,20 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                         </Badge>
                       </CardTitle>
                     </div>
+                    {/* Stage management button */}
+                    {isAdminOrMaster && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="edit"
+                          size="icon"
+                          onClick={onManageStages}
+                          className="inline-flex justify-center items-center gap-2"
+                        >
+                          <Settings className="w-4 h-4" />
+                          <span className="hidden">Gerenciar Etapas</span>
+                        </Button>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="p-2 min-h-[200px] max-h-[60vh] overflow-y-auto">
                     {stageTasks.length === 0 ? (
