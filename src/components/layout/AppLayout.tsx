@@ -24,19 +24,44 @@ const MobileHeader: React.FC<{
   setSidebarOpen,
   hideTimer = false
 }) => {
-  return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-3 bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
+  const { hasActiveTimer } = useGlobalTimer();
+
+  return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
       <button className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70" onClick={() => setSidebarOpen(true)}>
         <span className="sr-only">Abrir menu</span>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
-      
-      {/* Search bar - takes remaining space */}
-      <div className="flex-1 min-w-0">
-        <UniversalSearchBar />
+
+      <div className="relative flex-1 min-w-0 overflow-hidden">
+        {/* Busca fica alinhada à esquerda e sobe quando o timer está ativo */}
+        <div
+          className={cn(
+            "transition-all duration-300 ease-in-out",
+            hasActiveTimer && !hideTimer
+              ? "-translate-y-8 opacity-0 pointer-events-none"
+              : "translate-y-0 opacity-100",
+          )}
+        >
+          <div className="flex justify-start">
+            <UniversalSearchBar />
+          </div>
+        </div>
+
+        {/* Info do registro assume toda a largura restante quando ativo */}
+        <div
+          className={cn(
+            "absolute inset-0 flex items-center transition-all duration-300 ease-in-out",
+            hasActiveTimer && !hideTimer
+              ? "translate-y-0 opacity-100"
+              : "translate-y-8 opacity-0 pointer-events-none",
+          )}
+        >
+          <HeaderTimerTaskInfo />
+        </div>
       </div>
-      
+
       <div className="flex flex-shrink-0 items-center gap-1 text-[#64748b]">
         {!hideTimer && <HeaderTimerDisplay />}
         <NotificationBell />

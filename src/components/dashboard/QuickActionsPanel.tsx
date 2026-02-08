@@ -108,7 +108,7 @@ export const QuickActionsPanel: React.FC = () => {
 
           {/* Timer inline (sem título separado) */}
           <div className="flex flex-col items-center gap-3 pt-4 border-t">
-            <div className={`text-3xl font-mono font-bold text-foreground ${isRunning ? "animate-pulse" : ""}`}>
+            <div className={`text-3xl font-mono tabular-nums font-bold text-foreground ${isRunning ? "animate-pulse" : ""}`}>
               {formatTime(timerState.elapsedSeconds)}
             </div>
 
