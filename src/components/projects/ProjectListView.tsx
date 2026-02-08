@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +23,10 @@ interface Project {
   due_date?: string | null;
   custom_fields: Record<string, string>;
   created_at: string;
+  is_request?: boolean;
+  request_status?: string;
 }
+
 
 interface Task {
   id: string;
@@ -94,6 +97,7 @@ interface ProjectListViewProps {
   getClientColumns: (clientId: string) => ProjectColumn[];
   onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
+  onArchiveProject: (project: Project) => void;
   onCreateTask: (projectId: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
@@ -122,6 +126,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   getClientColumns,
   onEditProject,
   onDeleteProject,
+  onArchiveProject,
   onCreateTask,
   onEditTask,
   onDeleteTask,
@@ -136,13 +141,22 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     setOpenProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
   };
 
-  const getStatusLabel = (s: string) => (s === "active" ? "Ativo" : s === "paused" ? "Pausado" : "Concluído");
+  const getStatusLabel = (s: string) => (s === "active" ? "Ativo" : s === "paused" ? "Pausado" : s === "archived" ? "Arquivo" : "Concluído");
   const getStatusColor = (s: string) =>
     s === "active"
       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
       : s === "paused"
         ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-        : "bg-muted text-muted-foreground";
+        : s === "archived"
+          ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          : "bg-muted text-muted-foreground";
+
+  const getRequestStatusLabel = (status?: string) => {
+    if (status === 'pending') return 'Pendente';
+    if (status === 'analyzing') return 'Em análise';
+    if (status === 'rejected') return 'Rejeitada';
+    return status || 'Solicitação';
+  };
 
   if (projects.length === 0) {
     return (
@@ -169,7 +183,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             {/* Project Header */}
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">
-                {isAdminOrMaster && (
+                {isAdminOrMaster && !project.is_request && (
                   <div className="absolute top-3 right-3 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -186,6 +200,15 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         >
                           <Pencil className="w-4 h-4 mr-2" />
                           Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onArchiveProject(project);
+                          }}
+                        >
+                          <Archive className="w-4 h-4 mr-2" />
+                          Arquivar
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
@@ -211,8 +234,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                           <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
+                          {project.is_request && <Badge variant="secondary">Solicitação</Badge>}
                           <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>
-                            {getStatusLabel(project.status)}
+                            {project.is_request ? getRequestStatusLabel(project.request_status) : getStatusLabel(project.status)}
                           </span>
                           {isAdminOrMaster && projectCollaborators.length > 0 && (
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -232,14 +256,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             <span className="text-muted-foreground">Cliente: </span>
                             <span className="font-medium text-foreground">{client?.company || client?.name}</span>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Tarefas: </span>
-                            <span className="font-medium text-foreground">{projectTasks.length}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Horas: </span>
-                            <span className="font-medium text-foreground">{formatHours(hours)}</span>
-                          </div>
+                          {!project.is_request && (<>
+                            <div>
+                              <span className="text-muted-foreground">Tarefas: </span>
+                              <span className="font-medium text-foreground">{projectTasks.length}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Horas: </span>
+                              <span className="font-medium text-foreground">{formatHours(hours)}</span>
+                            </div>
+                          </>)}
                           {projectColumns.map(
                             (col) =>
                               project.custom_fields[col.id] && (
@@ -258,6 +284,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
               <CollapsibleContent>
                 <div className="border-t px-4 sm:px-6 py-4 bg-muted/20">
+                  {project.is_request ? (
+                    <p className="text-sm text-muted-foreground">Esta solicitação ainda não foi convertida em projeto.</p>
+                  ) : (<>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-sm font-medium text-foreground">Tarefas ({projectTasks.length})</h4>
                     <Button size="sm" variant="outline" onClick={() => onCreateTask(project.id)} className="h-8">
@@ -295,6 +324,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       })}
                     </div>
                   )}
+                  </>)}
                 </div>
               </CollapsibleContent>
             </Collapsible>
