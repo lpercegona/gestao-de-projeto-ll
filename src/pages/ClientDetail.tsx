@@ -447,6 +447,62 @@ export const ClientDetail: React.FC = () => {
     }
   };
 
+  const getProjectStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'Ativo';
+      case 'paused':
+        return 'Pausado';
+      case 'completed':
+        return 'Concluído';
+      case 'archived':
+        return 'Arquivado';
+      default:
+        return status;
+    }
+  };
+
+  const getProjectStatusClasses = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'paused':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'archived':
+        return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getTaskStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pendente';
+      case 'in_progress':
+        return 'Em andamento';
+      case 'completed':
+        return 'Concluída';
+      case 'paused':
+        return 'Pausada';
+      default:
+        return status;
+    }
+  };
+
+  const getTaskStatusClasses = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'paused':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
   const getRoleBadge = (role: string | null) => {
     switch (role) {
       case 'master_admin':
@@ -994,25 +1050,116 @@ export const ClientDetail: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {clientProjects.map((project) => (
-                <Card key={project.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/projects/${project.id}`)}>
-                  <CardContent className="pt-6">
-                    <h3 className="font-semibold text-foreground mb-2">{project.name}</h3>
-                    {project.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{project.description}</p>
-                    )}
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {data.tasks.filter(t => t.project_id === project.id).length} tarefas
-                      </span>
-                      <span className="font-medium text-foreground">
-                        {getProjectHours(project.id).toFixed(2)}h
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {clientProjects.map((project) => {
+                const projectTasks = data.tasks.filter(t => t.project_id === project.id);
+                const isExpanded = expandedProjects.has(project.id);
+
+                return (
+                  <Card key={project.id} className="relative overflow-hidden">
+                    <Collapsible open={isExpanded} onOpenChange={() => toggleProject(project.id)}>
+                      <CollapsibleTrigger asChild>
+                        <CardContent className="p-4 sm:p-6 cursor-pointer hover:bg-muted/30 transition-colors">
+                          <div className="flex items-start gap-3">
+                            <ChevronDown
+                              className={`w-5 h-5 mt-0.5 text-muted-foreground transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
+                            />
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                                <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
+                                <span className={`text-xs px-2 py-1 rounded-full ${getProjectStatusClasses(project.status)}`}>
+                                  {getProjectStatusLabel(project.status)}
+                                </span>
+                              </div>
+
+                              {project.description && (
+                                <WysiwygContent
+                                  content={project.description}
+                                  className="text-sm text-muted-foreground mb-2 line-clamp-1"
+                                />
+                              )}
+
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Tarefas: </span>
+                                  <span className="font-medium text-foreground">{projectTasks.length}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Horas: </span>
+                                  <span className="font-medium text-foreground">{formatHours(getProjectHours(project.id))}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent>
+                        <div className="border-t px-4 sm:px-6 py-4 bg-muted/20 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium text-foreground">Tarefas ({projectTasks.length})</h4>
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/projects/${project.id}`)}>
+                              Ver projeto
+                            </Button>
+                          </div>
+
+                          {projectTasks.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-3">Nenhuma tarefa neste projeto.</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {projectTasks.map((task) => {
+                                const taskEntries = data.timeEntries
+                                  .filter((entry) => entry.task_id === task.id)
+                                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                                return (
+                                  <div key={task.id} className="rounded-md border bg-background p-3 space-y-2">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-medium text-foreground">{task.name}</p>
+                                        {task.description && (
+                                          <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
+                                        )}
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <span className={`text-[10px] px-2 py-1 rounded-full ${getTaskStatusClasses(task.status)}`}>
+                                          {getTaskStatusLabel(task.status)}
+                                        </span>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {formatHours(getTaskHours(task.id))}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {taskEntries.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground">Sem registros de horas.</p>
+                                    ) : (
+                                      <div className="space-y-1.5 pt-1 border-t">
+                                        {taskEntries.map((entry) => (
+                                          <div key={entry.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <div className="min-w-0 pr-3">
+                                              <p className="truncate">
+                                                {format(new Date(entry.date), 'dd/MM/yyyy', { locale: ptBR })}
+                                                {entry.description ? ` • ${entry.description}` : ''}
+                                              </p>
+                                            </div>
+                                            <span className="font-medium text-foreground whitespace-nowrap">{formatHours(entry.hours)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
