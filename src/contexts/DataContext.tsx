@@ -106,6 +106,20 @@ interface AppData {
   kanbanStages: KanbanStage[];
 }
 
+const getEffectiveKanbanStages = (stages: KanbanStage[], userId: string): KanbanStage[] => {
+  const customStages = stages
+    .filter(stage => !stage.is_default && stage.owner_id === userId)
+    .sort((a, b) => a.order_position - b.order_position);
+
+  if (customStages.length > 0) {
+    return customStages;
+  }
+
+  return stages
+    .filter(stage => stage.is_default)
+    .sort((a, b) => a.order_position - b.order_position);
+};
+
 interface DataContextType {
   data: AppData;
   loading: boolean;
@@ -201,6 +215,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       setProfilesMap(profiles);
 
+      const allStages = (stagesRes.data || []) as KanbanStage[];
+
       setData({
         clients: (clientsRes.data || []).map(c => ({
           ...c,
@@ -221,7 +237,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         projectColumns: (columnsRes.data || []) as ProjectColumn[],
         projectAccess: (accessRes.data || []) as UserProjectAccess[],
         taskTimers: (timersRes.data || []) as TaskTimer[],
-        kanbanStages: (stagesRes.data || []) as KanbanStage[],
+        kanbanStages: getEffectiveKanbanStages(allStages, user.id),
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -854,11 +870,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const { data: insertedStages } = await supabase.from('kanban_stages').insert(stagesToInsert).select();
       
-      // Update local state immediately
+      // Update local state immediately using only user custom stages
       if (insertedStages) {
         setData(prev => ({
           ...prev,
-          kanbanStages: [...prev.kanbanStages.filter(s => s.is_default || s.owner_id !== user.id), ...insertedStages as KanbanStage[]].sort((a, b) => a.order_position - b.order_position),
+          kanbanStages: (insertedStages as KanbanStage[]).sort((a, b) => a.order_position - b.order_position),
         }));
       }
     } else {
