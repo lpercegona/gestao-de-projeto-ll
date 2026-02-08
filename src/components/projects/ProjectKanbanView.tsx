@@ -219,28 +219,28 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
               >
                 <Card className={`h-full ${getStageColor(stage.color)}`}>
                   <CardHeader className="py-3 px-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between column-2">
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
                         {stage.name}
                         <Badge variant="secondary" className="text-xs">
                           {stageTasks.length}
                         </Badge>
                       </CardTitle>
+                      {/* Stage management button */}
+                      {isAdminOrMaster && (
+                        <div className="flex justify-end">
+                          <Button
+                            variant="edit"
+                            size="icon"
+                            onClick={onManageStages}
+                            className="inline-flex justify-center items-center gap-2"
+                          >
+                            <Settings className="w-4 h-4" />
+                            <span className="hidden">Gerenciar Etapas</span>
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {/* Stage management button */}
-                    {isAdminOrMaster && (
-                      <div className="flex justify-end">
-                        <Button
-                          variant="edit"
-                          size="icon"
-                          onClick={onManageStages}
-                          className="inline-flex justify-center items-center gap-2"
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span className="hidden">Gerenciar Etapas</span>
-                        </Button>
-                      </div>
-                    )}
                   </CardHeader>
                   <CardContent className="p-2 min-h-[200px] max-h-[60vh] overflow-y-auto">
                     {stageTasks.length === 0 ? (
