@@ -46,7 +46,8 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
-              <Route path="/home" element={<Landing />} />
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/home" element={<Navigate to="/landing" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/portal/:token" element={<ClientPortal />} />
