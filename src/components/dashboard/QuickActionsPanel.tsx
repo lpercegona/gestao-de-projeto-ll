@@ -88,7 +88,7 @@ export const QuickActionsPanel: React.FC = () => {
     <>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
             <Plus className="h-4 w-4" />
             Ações Rápidas
           </CardTitle>
@@ -108,7 +108,9 @@ export const QuickActionsPanel: React.FC = () => {
 
           {/* Timer inline (sem título separado) */}
           <div className="flex flex-col items-center gap-3 pt-4 border-t">
-            <div className={`text-3xl font-mono tabular-nums font-bold text-foreground ${isRunning ? "animate-pulse" : ""}`}>
+            <div
+              className={`text-3xl font-mono tabular-nums font-bold text-foreground ${isRunning ? "animate-pulse" : ""}`}
+            >
               {formatTime(timerState.elapsedSeconds)}
             </div>
 
