@@ -38,6 +38,8 @@ interface ProjectFiltersProps {
   showArchived: boolean;
   onShowArchivedChange: (value: boolean) => void;
   pendingRequestsCount: number;
+  showOnlyRequests: boolean;
+  onShowOnlyRequestsChange: (value: boolean) => void;
   viewMode: "list" | "kanban";
   onViewModeChange: (mode: "list" | "kanban") => void;
   onAddProject: () => void;
@@ -57,6 +59,8 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   showArchived,
   onShowArchivedChange,
   pendingRequestsCount,
+  showOnlyRequests,
+  onShowOnlyRequestsChange,
   viewMode,
   onViewModeChange,
   onAddProject,
@@ -70,6 +74,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
     showArchived ? 1 : 0,
+    showOnlyRequests ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
@@ -77,6 +82,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     onStageChange("all");
     onDateRangeChange(undefined);
     onShowArchivedChange(false);
+    onShowOnlyRequestsChange(false);
   };
 
 
@@ -93,7 +99,12 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
         </span>
         {pendingRequestsCount > 0 && (
-          <Badge variant="outline" className="ml-2 h-6 px-2 text-[10px]">
+          <Badge
+            variant={showOnlyRequests ? "default" : "outline"}
+            className="ml-2 h-6 px-2 text-[10px] cursor-pointer"
+            role="button"
+            onClick={() => onShowOnlyRequestsChange(!showOnlyRequests)}
+          >
             {pendingRequestsLabel}
           </Badge>
         )}
@@ -106,7 +117,12 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
           </span>
           {pendingRequestsCount > 0 && (
-            <Badge variant="outline" className="h-6 px-2 text-[10px]">
+            <Badge
+              variant={showOnlyRequests ? "default" : "outline"}
+              className="h-6 px-2 text-[10px] cursor-pointer"
+              role="button"
+              onClick={() => onShowOnlyRequestsChange(!showOnlyRequests)}
+            >
               {pendingRequestsLabel}
             </Badge>
           )}
@@ -194,6 +210,20 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                   onCheckedChange={(checked) => onShowArchivedChange(Boolean(checked))}
                 />
               </div>
+
+              {/* Requests filter */}
+              {isAdminOrMaster && (
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <Label htmlFor="show-only-requests" className="text-xs text-muted-foreground cursor-pointer">
+                    Visualizar somente solicitações
+                  </Label>
+                  <Checkbox
+                    id="show-only-requests"
+                    checked={showOnlyRequests}
+                    onCheckedChange={(checked) => onShowOnlyRequestsChange(Boolean(checked))}
+                  />
+                </div>
+              )}
 
 
               {/* Date range filter */}
