@@ -33,17 +33,35 @@ const MobileHeader: React.FC<{
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
-      
-      {/* Search bar - on mobile shows only icon and gives room to timer info */}
-      <div className="flex min-w-0 items-center gap-2">
-        <UniversalSearchBar />
+
+      <div className="relative flex-1 min-w-0 overflow-hidden">
+        {/* Busca fica alinhada à esquerda e sobe quando o timer está ativo */}
+        <div
+          className={cn(
+            "transition-all duration-300 ease-in-out",
+            hasActiveTimer && !hideTimer
+              ? "-translate-y-8 opacity-0 pointer-events-none"
+              : "translate-y-0 opacity-100",
+          )}
+        >
+          <div className="flex justify-start">
+            <UniversalSearchBar />
+          </div>
+        </div>
+
+        {/* Info do registro assume toda a largura restante quando ativo */}
+        <div
+          className={cn(
+            "absolute inset-0 flex items-center transition-all duration-300 ease-in-out",
+            hasActiveTimer && !hideTimer
+              ? "translate-y-0 opacity-100"
+              : "translate-y-8 opacity-0 pointer-events-none",
+          )}
+        >
+          <HeaderTimerTaskInfo />
+        </div>
       </div>
 
-      {/* Mobile timer task info takes search line space when active */}
-      {!hideTimer && hasActiveTimer && <div className="flex-1 min-w-0">
-          <HeaderTimerTaskInfo />
-        </div>}
-      
       <div className="flex flex-shrink-0 items-center gap-1 text-[#64748b]">
         {!hideTimer && <HeaderTimerDisplay />}
         <NotificationBell />

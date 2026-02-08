@@ -55,7 +55,7 @@ export const UniversalSearchBar: React.FC = () => {
       <Button
         variant="ghost"
         onClick={() => setOpen(true)}
-        className="relative h-11 w-11 sm:w-full max-w-[2.75rem] sm:max-w-sm lg:max-w-2xl justify-center sm:justify-start rounded-full border border-[#e2e8f0] bg-white px-0 sm:px-4 text-[#64748b] shadow-none hover:bg-white hover:text-[#64748b]"
+        className="relative h-11 w-10 sm:w-full max-w-[2.5rem] sm:max-w-sm lg:max-w-2xl justify-start rounded-full border border-[#e2e8f0] bg-white px-3 sm:px-4 text-[#64748b] shadow-none hover:bg-white hover:text-[#64748b]"
       >
         <Search className="h-4 w-4 sm:mr-3" />
         <span className="sr-only sm:hidden">Pesquisar</span>
