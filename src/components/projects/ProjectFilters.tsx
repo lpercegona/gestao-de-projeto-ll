@@ -198,21 +198,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               {isAdminOrMaster && (
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <Label htmlFor="show-only-requests" className="text-xs text-muted-foreground cursor-pointer">
-                    Visualizar somente solicitações
-                  </Label>
-                  <Checkbox
-                    id="show-only-requests"
-                    checked={showOnlyRequests}
-                    onCheckedChange={(checked) => onShowOnlyRequestsChange(Boolean(checked))}
-                  />
-                </div>
-              )}
-
-              {/* Requests filter */}
-              {isAdminOrMaster && (
-                <div className="flex items-center justify-between rounded-md border p-3">
-                  <Label htmlFor="show-only-requests" className="text-xs text-muted-foreground cursor-pointer">
-                    Visualizar somente solicitações
+                    solicitações
                   </Label>
                   <Checkbox
                     id="show-only-requests"
