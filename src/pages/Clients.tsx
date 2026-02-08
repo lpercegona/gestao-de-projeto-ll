@@ -104,18 +104,10 @@ export const Clients: React.FC = () => {
     return data.clients.filter((c) => (c.pipeline_status || "active") === activeTab);
   }, [data.clients, activeTab]);
   const clientCount = data.clients.length;
-
   const leadCount = data.clients.filter((c) => (c.pipeline_status || "lead") === "lead").length;
   const proposalCount = data.clients.filter((c) => c.pipeline_status === "proposal").length;
   const activeCount = data.clients.filter((c) => c.pipeline_status === "active").length;
   const churnedCount = data.clients.filter((c) => c.pipeline_status === "churned").length;
-
-  const proposalCount = data.proposals?.length ?? 0;
-  // Calcula clientes e propostas
-  const mainCount = mainTab === "clients" ? clientCount : proposalCount;
-
-  const mainLabel =
-    mainTab === "clients" ? (mainCount === 1 ? "cliente" : "clientes") : mainCount === 1 ? "proposta" : "propostas";
 
   const handleOpenDialog = (client?: Client) => {
     if (client) {
@@ -200,7 +192,7 @@ export const Clients: React.FC = () => {
         <div className="grid grid-cols-2 gap-6">
           <div className="flex items-center gap-4">
             <span className="text-lg font-semibold text-foreground whitespace-nowrap">
-              {mainCount} {mainLabel}
+              {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
             </span>
             <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
               <Plus className="w-3.5 h-3.5" />
