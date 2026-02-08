@@ -103,6 +103,7 @@ export const Projects: React.FC = () => {
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
   const [showArchived, setShowArchived] = useState(false);
+  const [showOnlyRequests, setShowOnlyRequests] = useState(false);
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -280,12 +281,16 @@ export const Projects: React.FC = () => {
   const filteredProjects: UnifiedProject[] = useMemo(() => {
     const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects];
 
-    return unifiedList.sort((a, b) => {
+    const requestFilteredList = showOnlyRequests
+      ? unifiedList.filter((project) => project.is_request)
+      : unifiedList;
+
+    return requestFilteredList.sort((a, b) => {
       const firstDate = new Date(a.updated_at || a.created_at).getTime();
       const secondDate = new Date(b.updated_at || b.created_at).getTime();
       return secondDate - firstDate;
     });
-  }, [visibleProjects, visibleRequestProjects]);
+  }, [visibleProjects, visibleRequestProjects, showOnlyRequests]);
 
   const pendingRequestsCount = useMemo(() => {
     return requestProjects.filter((request) => request.status === 'pending' || request.status === 'analyzing').length;
@@ -602,6 +607,8 @@ export const Projects: React.FC = () => {
         showArchived={showArchived}
         onShowArchivedChange={setShowArchived}
         pendingRequestsCount={pendingRequestsCount}
+        showOnlyRequests={showOnlyRequests}
+        onShowOnlyRequestsChange={setShowOnlyRequests}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onAddProject={() => handleOpenDialog()}

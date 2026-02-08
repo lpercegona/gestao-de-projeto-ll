@@ -38,6 +38,8 @@ interface ProjectFiltersProps {
   showArchived: boolean;
   onShowArchivedChange: (value: boolean) => void;
   pendingRequestsCount: number;
+  showOnlyRequests: boolean;
+  onShowOnlyRequestsChange: (value: boolean) => void;
   viewMode: "list" | "kanban";
   onViewModeChange: (mode: "list" | "kanban") => void;
   onAddProject: () => void;
@@ -57,6 +59,8 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   showArchived,
   onShowArchivedChange,
   pendingRequestsCount,
+  showOnlyRequests,
+  onShowOnlyRequestsChange,
   viewMode,
   onViewModeChange,
   onAddProject,
@@ -93,7 +97,12 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
         </span>
         {pendingRequestsCount > 0 && (
-          <Badge variant="outline" className="ml-2 h-6 px-2 text-[10px]">
+          <Badge
+            variant={showOnlyRequests ? "default" : "outline"}
+            className="ml-2 h-6 px-2 text-[10px] cursor-pointer"
+            role="button"
+            onClick={() => onShowOnlyRequestsChange(!showOnlyRequests)}
+          >
             {pendingRequestsLabel}
           </Badge>
         )}
@@ -106,7 +115,12 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
           </span>
           {pendingRequestsCount > 0 && (
-            <Badge variant="outline" className="h-6 px-2 text-[10px]">
+            <Badge
+              variant={showOnlyRequests ? "default" : "outline"}
+              className="h-6 px-2 text-[10px] cursor-pointer"
+              role="button"
+              onClick={() => onShowOnlyRequestsChange(!showOnlyRequests)}
+            >
               {pendingRequestsLabel}
             </Badge>
           )}
