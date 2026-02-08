@@ -271,6 +271,8 @@ export const ClientProjects: React.FC = () => {
     } finally {
       setTaskRequestSubmitting(false);
     }
+
+    setEditFormOpen(true);
   };
 
   if (loading) {
