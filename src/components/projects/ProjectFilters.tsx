@@ -72,11 +72,11 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 flex-wrap">
-      {/* Left: Project count + Filter button + View toggle */}
-      <div className="flex items-center gap-3">
-        {/* Project count */}
-        <span className="text-lg font-semibold text-foreground whitespace-nowrap">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* Mobile: Line 1 - Filter, Toggle, Add | Desktop: All in one line */}
+      <div className="flex items-center justify-between sm:justify-start gap-3">
+        {/* Desktop only: Project count */}
+        <span className="hidden sm:block text-lg font-semibold text-foreground whitespace-nowrap">
           {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
         </span>
 
@@ -227,11 +227,23 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             Kanban
           </ToggleGroupItem>
         </ToggleGroup>
+
+        {/* Mobile only: Add button */}
+        {isAdminOrMaster && (
+          <Button onClick={onAddProject} size="icon" className="sm:hidden h-8 w-8 shrink-0 rounded-lg">
+            <Plus className="w-3.5 h-3.5" />
+          </Button>
+        )}
       </div>
 
-      {/* Right: Add button */}
+      {/* Mobile only: Project count on second line */}
+      <span className="sm:hidden text-lg font-semibold text-foreground whitespace-nowrap">
+        {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
+      </span>
+
+      {/* Desktop only: Add button */}
       {isAdminOrMaster && (
-        <Button onClick={onAddProject} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+        <Button onClick={onAddProject} size="icon" className="hidden sm:flex h-8 w-8 shrink-0 rounded-lg">
           <Plus className="w-3.5 h-3.5" />
         </Button>
       )}

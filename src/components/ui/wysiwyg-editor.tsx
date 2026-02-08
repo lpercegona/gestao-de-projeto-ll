@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -224,6 +224,15 @@ export const WysiwygContent: React.FC<{ content: string; className?: string }> =
   content,
   className,
 }) => {
+  // Process content to ensure proper HTML rendering
+  const processedContent = useMemo(() => {
+    if (!content) return '';
+    // Check if content already contains HTML tags
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+    // If plain text, wrap in <p> for consistent rendering
+    return hasHtmlTags ? content : `<p>${content}</p>`;
+  }, [content]);
+
   if (!content) return null;
 
   return (
@@ -234,7 +243,7 @@ export const WysiwygContent: React.FC<{ content: string; className?: string }> =
         '[&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer',
         className
       )}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: processedContent }}
       onClick={(e) => {
         // Handle link clicks
         const target = e.target as HTMLElement;
