@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive, FilePenLine } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,6 +90,7 @@ interface ProjectListViewProps {
   projectAccess: ProjectAccess[];
   kanbanStages: KanbanStage[];
   isAdminOrMaster: boolean;
+  allowProjectEditOnly?: boolean;
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
@@ -108,6 +109,9 @@ interface ProjectListViewProps {
   onStartTimer: (taskId: string) => Promise<void>;
   onStopTimer: (taskId: string) => Promise<void>;
   onCompleteTask: (taskId: string) => Promise<void>;
+  onRequestCardClick?: (project: Project) => void;
+  hasPendingEditRequest?: (project: Project) => boolean;
+  onOpenEditRequestReview?: (project: Project) => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -119,6 +123,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   projectAccess,
   kanbanStages,
   isAdminOrMaster,
+  allowProjectEditOnly = false,
   getProjectHours,
   getTaskHours,
   getCreatorName,
@@ -134,6 +139,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onStartTimer,
   onStopTimer,
   onCompleteTask,
+  onRequestCardClick,
+  hasPendingEditRequest,
+  onOpenEditRequestReview,
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
 
@@ -153,7 +161,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
   const getRequestStatusLabel = (status?: string) => {
     if (status === 'pending') return 'Pendente';
-    if (status === 'analyzing') return 'Em análise';
+    if (status === 'analyzing' || status === 'in_review') return 'Em análise';
+    if (status === 'approved') return 'Aprovada';
+    if (status === 'converted') return 'Convertida';
     if (status === 'rejected') return 'Rejeitada';
     return status || 'Solicitação';
   };
@@ -183,7 +193,23 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             {/* Project Header */}
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">
-                {isAdminOrMaster && !project.is_request && (
+                {hasPendingEditRequest?.(project) && (
+                  <div className="absolute top-3 right-11 z-10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenEditRequestReview?.(project);
+                      }}
+                    >
+                      <FilePenLine className="w-3 h-3 text-amber-500" />
+                    </Button>
+                  </div>
+                )}
+
+                {(allowProjectEditOnly || (isAdminOrMaster && !project.is_request)) && (
                   <div className="absolute top-3 right-3 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -199,33 +225,43 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                           }}
                         >
                           <Pencil className="w-4 h-4 mr-2" />
-                          Editar
+                          {allowProjectEditOnly ? 'Solicitar Edição' : 'Editar'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onArchiveProject(project);
-                          }}
-                        >
-                          <Archive className="w-4 h-4 mr-2" />
-                          Arquivar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteProject(project);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
+                        {isAdminOrMaster && !allowProjectEditOnly && !project.is_request && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onArchiveProject(project);
+                              }}
+                            >
+                              <Archive className="w-4 h-4 mr-2" />
+                              Arquivar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteProject(project);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
                 )}
 
-                <CollapsibleTrigger className="w-full text-left">
+                <CollapsibleTrigger className="w-full text-left" onClick={(event) => {
+                  if (project.is_request && isAdminOrMaster && onRequestCardClick) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onRequestCardClick(project);
+                  }
+                }}>
                   <CardContent className="p-4 sm:p-6 pr-24 cursor-pointer hover:bg-muted/30 transition-colors">
                     <div className="flex items-start gap-3">
                       <ChevronDown
