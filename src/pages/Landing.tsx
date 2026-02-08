@@ -99,6 +99,11 @@ export const Landing: React.FC = () => {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                  Fazer Login
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
