@@ -39,7 +39,7 @@ import {
   RefreshCw,
   Clock,
   AlertCircle,
-  FileCheck,
+  FolderOpen,
   Users,
 } from "lucide-react";
 import {
@@ -201,8 +201,8 @@ export const Clients: React.FC = () => {
               </TabsTrigger>
 
               <TabsTrigger value="proposals">
-                <FileCheck className="w-3.5 h-3.5" />
-                Propostas
+                <FolderOpen className="w-3.5 h-3.5" />
+                Documentos
               </TabsTrigger>
             </TabsList>
           </div>
