@@ -174,7 +174,7 @@ export const NotificationBell: React.FC = () => {
           </div>
         </div>
 
-        <ScrollArea className="h-auto max-h-[400px] [&>div]:!block">
+        <ScrollArea className="h-[60vh] max-h-[400px] min-h-[120px]">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
