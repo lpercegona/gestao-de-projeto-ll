@@ -155,7 +155,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
   const getRequestStatusLabel = (status?: string) => {
     if (status === 'pending') return 'Pendente';
-    if (status === 'analyzing') return 'Em análise';
+    if (status === 'analyzing' || status === 'in_review') return 'Em análise';
+    if (status === 'approved') return 'Aprovada';
+    if (status === 'converted') return 'Convertida';
     if (status === 'rejected') return 'Rejeitada';
     return status || 'Solicitação';
   };
@@ -185,7 +187,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             {/* Project Header */}
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">
-                {(isAdminOrMaster || allowProjectEditOnly) && (
+                {(allowProjectEditOnly || (isAdminOrMaster && !project.is_request)) && (
                   <div className="absolute top-3 right-3 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
