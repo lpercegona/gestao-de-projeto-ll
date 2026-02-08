@@ -1,42 +1,57 @@
-# Plano: Atualização Visual da Página de Projetos
 
-## Status: ✅ Concluído
+# Plano: Ajustes de Navegação Mobile
 
-## Alterações Realizadas
+## Resumo das Alterações
 
-### 1. Remoção das Tabs (Projetos/Solicitações/Edições)
-- Removidas as tabs que separavam projetos, solicitações e edições
-- A página agora exibe apenas a lista/kanban de projetos
+Duas modificações na interface mobile para melhorar a experiência de navegação:
 
-### 2. Nova Barra de Filtros Unificada
-Layout: `[Contador] [Filtro] [Lista|Kanban] [+]`
+1. **Header Mobile**: Substituir a logo ORAS pela barra de pesquisa universal
+2. **Menu Mobile (Sidebar)**: Substituir a logo pelo seletor de workspace
 
-Componentes:
-- **Contador**: "X projetos" 
-- **Botão Filtro**: Dropdown com filtros por:
-  - Cliente
-  - Etapa (status do kanban)
-  - Período (data de entrega)
-- **Toggle de Visualização**: Lista / Kanban
-- **Botão Adicionar**: Apenas para admins
+---
 
-### 3. Arquivos Removidos
-- `src/pages/ProjectRequests.tsx`
-- `src/pages/EditRequests.tsx`
-- `src/components/projects/ProjectRequestsTab.tsx`
-- `src/components/projects/EditRequestsTab.tsx`
+## Alterações Visuais
 
-### 4. Rotas Removidas (App.tsx)
-- `/requests` - Solicitações de projetos
-- `/edit-requests` - Edições pendentes
-- `/proposals` - Propostas
-- `/contracts` - Contratos
+### Antes vs Depois
 
-### 5. Arquivos Modificados
-- `src/components/projects/ProjectFilters.tsx` - Novo componente de filtros unificado
-- `src/pages/Projects.tsx` - Refatorado para usar novo layout
-- `src/App.tsx` - Rotas removidas
+**Header Mobile:**
+- Antes: `[≡] [Logo ORAS] ................ [Timer] [🔔]`
+- Depois: `[≡] [🔍 Pesquisar...] ........... [Timer] [🔔]`
 
-## Próximos Passos (Pendentes)
-- As solicitações de novos projetos serão tratadas diretamente no painel de projetos
-- As solicitações de edições serão tratadas diretamente no projeto em questão
+**Menu Mobile (topo da sidebar):**
+- Antes: Logo ORAS centralizada
+- Depois: WorkspaceSelector com avatar, nome do workspace e plano
+
+---
+
+## Detalhes Técnicos
+
+### 1. MobileHeader - Adicionar Barra de Pesquisa
+
+Arquivo: `src/components/layout/AppLayout.tsx`
+
+Modificações no componente `MobileHeader`:
+- Remover o container animado que alterna entre logo e info do timer
+- Adicionar o componente `UniversalSearchBar` ocupando o espaço central
+- Manter a animação do timer info apenas ao lado direito quando ativo
+
+O comportamento do timer será preservado, mas o info da tarefa aparecerá de forma diferente (não mais animando com a logo).
+
+### 2. Sidebar Mobile - Substituir Logo por WorkspaceSelector
+
+Arquivo: `src/components/layout/AppLayout.tsx`
+
+Modificações na seção do header da sidebar:
+- Remover a tag `<img>` que exibe a logo no mobile
+- Adicionar `<WorkspaceSelector isCollapsed={false} />` visível apenas no mobile (`lg:hidden`)
+- O WorkspaceSelector já existe e mostra avatar + nome do workspace + plano
+
+---
+
+## Comportamentos Preservados
+
+- Timer display e notification bell continuam no header mobile
+- Animação do timer info no desktop permanece inalterada
+- Atalho de teclado ⌘K continua funcionando para abrir a pesquisa
+- WorkspaceSelector no desktop continua funcionando normalmente
+- Botão de fechar menu (X) no mobile continua no mesmo lugar
