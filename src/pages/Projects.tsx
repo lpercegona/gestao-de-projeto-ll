@@ -20,7 +20,7 @@ import { Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList
 import { Users as UsersIcon } from 'lucide-react';
 import { Project, Task } from '@/types';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -46,7 +46,26 @@ interface ProjectColumn {
   show_in_report: boolean;
 }
 
+
+interface ProjectRequest {
+  id: string;
+  client_id: string;
+  title: string;
+  briefing: string;
+  status: string;
+  created_at: string;
+  updated_at?: string;
+  converted_project_id?: string | null;
+}
+
+type UnifiedProject = Project & {
+  is_request?: boolean;
+  request_status?: string;
+  request_id?: string;
+};
+
 export const Projects: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const { 
     data, 
     loading, 
@@ -84,6 +103,7 @@ export const Projects: React.FC = () => {
   const [filterClientId, setFilterClientId] = useState<string>('all');
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
+  const [showArchived, setShowArchived] = useState(false);
   
   // Project dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -133,6 +153,8 @@ export const Projects: React.FC = () => {
 
   // Kanban stages dialog
   const [isKanbanStagesDialogOpen, setIsKanbanStagesDialogOpen] = useState(false);
+  const [requestProjects, setRequestProjects] = useState<ProjectRequest[]>([]);
+  const requestsFilterActive = searchParams.get('filter') === 'requests';
 
   // Get columns for selected client
   const clientColumns = useMemo(() => {
@@ -161,6 +183,30 @@ export const Projects: React.FC = () => {
       }
     };
     fetchCollaborators();
+  }, [isAdminOrMaster]);
+
+
+  useEffect(() => {
+    const fetchProjectRequests = async () => {
+      if (!isAdminOrMaster) {
+        setRequestProjects([]);
+        return;
+      }
+
+      const { data: requestsData, error } = await supabase
+        .from('project_requests')
+        .select('id, client_id, title, briefing, status, created_at, updated_at, converted_project_id')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching project requests:', error);
+        return;
+      }
+
+      setRequestProjects((requestsData || []) as ProjectRequest[]);
+    };
+
+    fetchProjectRequests();
   }, [isAdminOrMaster]);
 
   // Filter projects
@@ -196,9 +242,61 @@ export const Projects: React.FC = () => {
         return isWithinInterval(dueDate, { start: from, end: to });
       });
     }
-    
+
+    if (!showArchived) {
+      projects = projects.filter(project => project.status !== 'archived');
+    }
+
     return projects;
-  }, [data.projects, data.projectAccess, data.kanbanStages, user?.id, isAdminOrMaster, filterClientId, filterStageId, filterDateRange]);
+  }, [data.projects, data.projectAccess, data.kanbanStages, user?.id, isAdminOrMaster, filterClientId, filterStageId, filterDateRange, showArchived]);
+
+  const visibleRequestProjects = useMemo<UnifiedProject[]>(() => {
+    if (!isAdminOrMaster) return [];
+
+    let filteredRequests = requestProjects;
+
+    if (filterClientId !== 'all') {
+      filteredRequests = filteredRequests.filter((request) => request.client_id === filterClientId);
+    }
+
+    return filteredRequests.map((request) => {
+      if (request.status === 'converted' && request.converted_project_id) {
+        const convertedProject = data.projects.find((project) => project.id === request.converted_project_id);
+
+        if (convertedProject) {
+          return {
+            ...convertedProject,
+            is_request: false,
+            request_status: request.status,
+            request_id: request.id,
+          } as UnifiedProject;
+        }
+      }
+
+      return {
+        id: `request-${request.id}`,
+        client_id: request.client_id,
+        name: request.title,
+        description: request.briefing || null,
+        status: 'active',
+        due_date: null,
+        custom_fields: {},
+        created_at: request.created_at,
+        updated_at: request.updated_at || request.created_at,
+        is_request: true,
+        request_status: request.status,
+        request_id: request.id,
+      } as UnifiedProject;
+    });
+  }, [isAdminOrMaster, requestProjects, filterClientId, data.projects]);
+
+  const filteredProjects: UnifiedProject[] = useMemo(() => {
+    if (requestsFilterActive) {
+      return visibleRequestProjects;
+    }
+
+    return visibleProjects as UnifiedProject[];
+  }, [requestsFilterActive, visibleRequestProjects, visibleProjects]);
 
   // Helper functions for time conversion
   const parseTimeToHours = (timeString: string): number => {
@@ -291,6 +389,11 @@ export const Projects: React.FC = () => {
       setIsDeleteDialogOpen(false); 
       setDeletingProject(null); 
     }
+  };
+
+  const handleArchiveProject = async (project: Project) => {
+    await updateProject(project.id, { status: 'archived' });
+    toast.success('Projeto arquivado!');
   };
 
   const toggleCollaborator = (userId: string) => {
@@ -481,7 +584,7 @@ export const Projects: React.FC = () => {
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
 
-  if (isCollaborator && !isAdminOrMaster && visibleProjects.length === 0 && filterClientId === 'all') {
+  if (isCollaborator && !isAdminOrMaster && filteredProjects.length === 0 && filterClientId === 'all') {
     return <NoProjectsAssigned />;
   }
 
@@ -494,7 +597,7 @@ export const Projects: React.FC = () => {
     <div className="space-y-6">
       {/* Unified header with filters */}
       <ProjectFilters
-        projectCount={visibleProjects.length}
+        projectCount={filteredProjects.length}
         clients={data.clients}
         kanbanStages={data.kanbanStages}
         selectedClientId={filterClientId}
@@ -503,16 +606,18 @@ export const Projects: React.FC = () => {
         onClientChange={setFilterClientId}
         onStageChange={setFilterStageId}
         onDateRangeChange={setFilterDateRange}
-        viewMode={viewMode}
+        showArchived={showArchived}
+        onShowArchivedChange={setShowArchived}
+        viewMode={requestsFilterActive ? 'list' : viewMode}
         onViewModeChange={setViewMode}
         onAddProject={() => handleOpenDialog()}
         isAdminOrMaster={isAdminOrMaster}
       />
 
       {/* View content */}
-      {viewMode === 'list' ? (
+      {(requestsFilterActive ? 'list' : viewMode) === 'list' ? (
         <ProjectListView
-          projects={visibleProjects}
+          projects={filteredProjects}
           clients={data.clients}
           tasks={data.tasks}
           timeEntries={data.timeEntries}
@@ -528,6 +633,7 @@ export const Projects: React.FC = () => {
           getClientColumns={getClientColumns}
           onEditProject={handleOpenDialog}
           onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
+          onArchiveProject={handleArchiveProject}
           onCreateTask={(projectId) => handleOpenTaskDialog(projectId)}
           onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
           onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
@@ -538,7 +644,7 @@ export const Projects: React.FC = () => {
         />
       ) : (
         <ProjectKanbanView
-          projects={visibleProjects}
+          projects={filteredProjects}
           clients={data.clients}
           tasks={data.tasks}
           timeEntries={data.timeEntries}
@@ -571,7 +677,7 @@ export const Projects: React.FC = () => {
               <div className="space-y-2"><Label htmlFor="description">Descrição</Label><WysiwygEditor value={formData.description} onChange={(value) => setFormData({ ...formData, description: value })} disabled={submitting} minHeight="80px" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Cliente</Label><Select value={formData.client_id} onValueChange={handleClientChange} disabled={submitting}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{data.clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem><SelectItem value="archived">Arquivo</SelectItem></SelectContent></Select></div>
               </div>
               <div className="space-y-2"><Label htmlFor="due_date">Prazo (opcional)</Label><Input id="due_date" type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} disabled={submitting} /></div>
               
@@ -658,7 +764,7 @@ export const Projects: React.FC = () => {
               <div className="space-y-2"><Label>Nome da Tarefa</Label><Input value={taskFormData.name} onChange={(e) => setTaskFormData({ ...taskFormData, name: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskFormData.description} onChange={(value) => setTaskFormData({ ...taskFormData, description: value })} disabled={submitting} minHeight="80px" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Status</Label><Select value={taskFormData.status} onValueChange={(v) => setTaskFormData({ ...taskFormData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="in_progress">Em Andamento</SelectItem><SelectItem value="completed">Concluída</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Status</Label><Select value={taskFormData.status} onValueChange={(v) => setTaskFormData({ ...taskFormData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="in_progress">Em Andamento</SelectItem><SelectItem value="completed">Concluída</SelectItem><SelectItem value="archived">Arquivo</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={taskFormData.due_date} onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })} disabled={submitting} /></div>
               </div>
             </div>

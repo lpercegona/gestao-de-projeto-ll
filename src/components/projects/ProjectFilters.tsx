@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,8 @@ interface ProjectFiltersProps {
   onClientChange: (clientId: string) => void;
   onStageChange: (stageId: string) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
+  showArchived: boolean;
+  onShowArchivedChange: (value: boolean) => void;
   viewMode: "list" | "kanban";
   onViewModeChange: (mode: "list" | "kanban") => void;
   onAddProject: () => void;
@@ -51,6 +54,8 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   onClientChange,
   onStageChange,
   onDateRangeChange,
+  showArchived,
+  onShowArchivedChange,
   viewMode,
   onViewModeChange,
   onAddProject,
@@ -63,12 +68,14 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     selectedClientId !== "all" ? 1 : 0,
     selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
+    showArchived ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
     onClientChange("all");
     onStageChange("all");
     onDateRangeChange(undefined);
+    onShowArchivedChange(false);
   };
 
   return (
@@ -158,6 +165,18 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Archived filter */}
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <Label htmlFor="show-archived" className="text-xs text-muted-foreground cursor-pointer">
+                  Ver arquivados
+                </Label>
+                <Checkbox
+                  id="show-archived"
+                  checked={showArchived}
+                  onCheckedChange={(checked) => onShowArchivedChange(Boolean(checked))}
+                />
               </div>
 
               {/* Date range filter */}
