@@ -218,23 +218,11 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
           className="rounded-lg p-1 bg-[#f1f5f9]"
         >
-          <ToggleGroupItem
-            value="list"
-            aria-label="Visualização em lista"
-            className={cn(
-              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-md data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
-            )}
-          >
+          <ToggleGroupItem value="list" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
             <LayoutList className="w-3.5 h-3.5 mr-1.5" />
             Lista
           </ToggleGroupItem>
-          <ToggleGroupItem
-            value="kanban"
-            aria-label="Visualização Kanban"
-            className={cn(
-              "h-6 px-2.5 text-xs font-medium border border-muted text-muted-foreground rounded-md data-[state=on]:bg-background data-[state=on]:shadow-none data-[state=on]:border data-[state=on]:border-slate-200 data-[state=on]:text-accent-foreground",
-            )}
-          >
+          <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" variant="tab" size="tb" className={cn("")}>
             <Columns3 className="w-3.5 h-3.5 mr-1.5" />
             Kanban
           </ToggleGroupItem>
