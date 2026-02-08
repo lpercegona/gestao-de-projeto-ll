@@ -1,14 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Plus, Settings, GripVertical } from 'lucide-react';
-import { TaskCard } from './TaskCard';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Trash2 } from 'lucide-react';
+import React, { useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Plus, Settings, GripVertical } from "lucide-react";
+import { TaskCard } from "./TaskCard";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Trash2 } from "lucide-react";
 
 interface Project {
   id: string;
@@ -75,7 +75,10 @@ interface ProjectKanbanViewProps {
   getActiveTimer: (taskId: string) => TaskTimer | null;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
-  onRegisterTime: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string }) => void;
+  onRegisterTime: (
+    taskId: string,
+    entry?: { id: string; hours: number; description: string | null; date: string },
+  ) => void;
   onStartTimer: (taskId: string) => Promise<void>;
   onStopTimer: (taskId: string) => Promise<void>;
   onCompleteTask: (taskId: string) => Promise<void>;
@@ -87,19 +90,27 @@ interface ProjectKanbanViewProps {
 // Map task status to kanban stage
 const getStageKeyFromStatus = (status: string): string => {
   switch (status) {
-    case 'pending': return 'Pendente';
-    case 'in_progress': return 'Em Andamento';
-    case 'completed': return 'Concluída';
-    default: return 'Pendente';
+    case "pending":
+      return "Pendente";
+    case "in_progress":
+      return "Em Andamento";
+    case "completed":
+      return "Concluída";
+    default:
+      return "Pendente";
   }
 };
 
 const getStatusFromStageKey = (stageName: string): string => {
   switch (stageName) {
-    case 'Pendente': return 'pending';
-    case 'Em Andamento': return 'in_progress';
-    case 'Concluída': return 'completed';
-    default: return 'pending';
+    case "Pendente":
+      return "pending";
+    case "Em Andamento":
+      return "in_progress";
+    case "Concluída":
+      return "completed";
+    default:
+      return "pending";
   }
 };
 
@@ -129,29 +140,29 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
       return kanbanStages.sort((a, b) => a.order_position - b.order_position);
     }
     return [
-      { id: 'pending', name: 'Pendente', order_position: 0, color: 'bg-yellow-100', is_default: true },
-      { id: 'in_progress', name: 'Em Andamento', order_position: 1, color: 'bg-blue-100', is_default: true },
-      { id: 'completed', name: 'Concluída', order_position: 2, color: 'bg-green-100', is_default: true },
+      { id: "pending", name: "Pendente", order_position: 0, color: "bg-yellow-100", is_default: true },
+      { id: "in_progress", name: "Em Andamento", order_position: 1, color: "bg-blue-100", is_default: true },
+      { id: "completed", name: "Concluída", order_position: 2, color: "bg-green-100", is_default: true },
     ];
   }, [kanbanStages]);
 
   // Get all tasks for visible projects, grouped by stage
   const tasksByStage = useMemo(() => {
-    const projectIds = new Set(projects.map(p => p.id));
-    const relevantTasks = tasks.filter(t => projectIds.has(t.project_id));
-    
+    const projectIds = new Set(projects.map((p) => p.id));
+    const relevantTasks = tasks.filter((t) => projectIds.has(t.project_id));
+
     const grouped: Record<string, Task[]> = {};
-    stages.forEach(stage => {
+    stages.forEach((stage) => {
       grouped[stage.name] = [];
     });
 
-    relevantTasks.forEach(task => {
+    relevantTasks.forEach((task) => {
       const stageName = getStageKeyFromStatus(task.status);
       if (grouped[stageName]) {
         grouped[stageName].push(task);
       } else {
         // Put in first stage if status doesn't match
-        const firstStage = stages[0]?.name || 'Pendente';
+        const firstStage = stages[0]?.name || "Pendente";
         if (grouped[firstStage]) {
           grouped[firstStage].push(task);
         }
@@ -161,11 +172,11 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
     return grouped;
   }, [tasks, projects, stages]);
 
-  const getProject = (projectId: string) => projects.find(p => p.id === projectId);
-  const getClient = (clientId: string) => clients.find(c => c.id === clientId);
+  const getProject = (projectId: string) => projects.find((p) => p.id === projectId);
+  const getClient = (clientId: string) => clients.find((c) => c.id === clientId);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    e.dataTransfer.setData('taskId', taskId);
+    e.dataTransfer.setData("taskId", taskId);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -174,7 +185,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
 
   const handleDrop = async (e: React.DragEvent, stageName: string) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
+    const taskId = e.dataTransfer.getData("taskId");
     if (taskId) {
       const newStatus = getStatusFromStageKey(stageName);
       await onUpdateTaskStatus(taskId, newStatus);
@@ -183,12 +194,12 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
 
   const getStageColor = (color: string) => {
     const colorMap: Record<string, string> = {
-      'bg-yellow-100': 'bg-yellow-100 dark:bg-yellow-900/30',
-      'bg-blue-100': 'bg-blue-100 dark:bg-blue-900/30',
-      'bg-green-100': 'bg-green-100 dark:bg-green-900/30',
-      'bg-muted': 'bg-muted',
+      "bg-yellow-100": "bg-yellow-100 dark:bg-yellow-900/30",
+      "bg-blue-100": "bg-blue-100 dark:bg-blue-900/30",
+      "bg-green-100": "bg-green-100 dark:bg-green-900/30",
+      "bg-muted": "bg-muted",
     };
-    return colorMap[color] || 'bg-muted';
+    return colorMap[color] || "bg-muted";
   };
 
   return (
@@ -196,8 +207,8 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
       {/* Stage management button */}
       {isAdminOrMaster && (
         <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={onManageStages}>
-            <Settings className="w-4 h-4 mr-2" />
+          <Button variant="" size="icon" onClick={onManageStages}>
+            <Settings className="hidden w-4 h-4 mr-2" />
             Gerenciar Etapas
           </Button>
         </div>
@@ -208,7 +219,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
         <div className="flex gap-4 pb-4 min-w-max">
           {stages.map((stage) => {
             const stageTasks = tasksByStage[stage.name] || [];
-            
+
             return (
               <div
                 key={stage.id}
@@ -229,15 +240,13 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                   </CardHeader>
                   <CardContent className="p-2 min-h-[200px] max-h-[60vh] overflow-y-auto">
                     {stageTasks.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-muted-foreground">
-                        Arraste tarefas aqui
-                      </div>
+                      <div className="text-center py-8 text-sm text-muted-foreground">Arraste tarefas aqui</div>
                     ) : (
                       <div className="space-y-2">
                         {stageTasks.map((task) => {
                           const project = getProject(task.project_id);
                           const client = project ? getClient(project.client_id) : null;
-                          const taskTimeEntries = timeEntries.filter(te => te.task_id === task.id);
+                          const taskTimeEntries = timeEntries.filter((te) => te.task_id === task.id);
                           const activeTimer = getActiveTimer(task.id);
 
                           return (
