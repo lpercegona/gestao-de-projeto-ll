@@ -207,7 +207,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
       {/* Stage management button */}
       {isAdminOrMaster && (
         <div className="flex justify-end">
-          <Button variant="edit" size="icon" onClick={onManageStages} className="items-center">
+          <Button variant="outlined" size="icon" onClick={onManageStages}>
             <Settings className="w-4 h-4 mr-2" />
             <span className="hidden">Gerenciar Etapas</span>
           </Button>
