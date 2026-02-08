@@ -24,7 +24,9 @@ const MobileHeader: React.FC<{
   setSidebarOpen,
   hideTimer = false
 }) => {
-  return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-3 bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
+  const { hasActiveTimer } = useGlobalTimer();
+
+  return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
       <button className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70" onClick={() => setSidebarOpen(true)}>
         <span className="sr-only">Abrir menu</span>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,10 +34,15 @@ const MobileHeader: React.FC<{
         </svg>
       </button>
       
-      {/* Search bar - takes remaining space */}
-      <div className="flex-1 min-w-0">
+      {/* Search bar - on mobile shows only icon and gives room to timer info */}
+      <div className="flex min-w-0 items-center gap-2">
         <UniversalSearchBar />
       </div>
+
+      {/* Mobile timer task info takes search line space when active */}
+      {!hideTimer && hasActiveTimer && <div className="flex-1 min-w-0">
+          <HeaderTimerTaskInfo />
+        </div>}
       
       <div className="flex flex-shrink-0 items-center gap-1 text-[#64748b]">
         {!hideTimer && <HeaderTimerDisplay />}
