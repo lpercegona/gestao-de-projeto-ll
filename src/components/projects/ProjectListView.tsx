@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive, FilePenLine } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -109,6 +109,9 @@ interface ProjectListViewProps {
   onStartTimer: (taskId: string) => Promise<void>;
   onStopTimer: (taskId: string) => Promise<void>;
   onCompleteTask: (taskId: string) => Promise<void>;
+  onRequestCardClick?: (project: Project) => void;
+  hasPendingEditRequest?: (project: Project) => boolean;
+  onOpenEditRequestReview?: (project: Project) => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -136,6 +139,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onStartTimer,
   onStopTimer,
   onCompleteTask,
+  onRequestCardClick,
+  hasPendingEditRequest,
+  onOpenEditRequestReview,
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
 
@@ -187,6 +193,22 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             {/* Project Header */}
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">
+                {hasPendingEditRequest?.(project) && (
+                  <div className="absolute top-3 right-11 z-10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenEditRequestReview?.(project);
+                      }}
+                    >
+                      <FilePenLine className="w-3 h-3 text-amber-500" />
+                    </Button>
+                  </div>
+                )}
+
                 {(allowProjectEditOnly || (isAdminOrMaster && !project.is_request)) && (
                   <div className="absolute top-3 right-3 z-10">
                     <DropdownMenu>
@@ -233,7 +255,13 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                   </div>
                 )}
 
-                <CollapsibleTrigger className="w-full text-left">
+                <CollapsibleTrigger className="w-full text-left" onClick={(event) => {
+                  if (project.is_request && isAdminOrMaster && onRequestCardClick) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onRequestCardClick(project);
+                  }
+                }}>
                   <CardContent className="p-4 sm:p-6 pr-24 cursor-pointer hover:bg-muted/30 transition-colors">
                     <div className="flex items-start gap-3">
                       <ChevronDown

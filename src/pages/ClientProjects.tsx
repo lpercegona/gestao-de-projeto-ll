@@ -4,6 +4,10 @@ import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
 import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm';
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
@@ -59,6 +63,10 @@ export const ClientProjects: React.FC = () => {
     id: string;
     data: Record<string, unknown>;
   } | null>(null);
+  const [taskRequestDialogOpen, setTaskRequestDialogOpen] = useState(false);
+  const [taskRequestProjectId, setTaskRequestProjectId] = useState('');
+  const [taskRequestSubmitting, setTaskRequestSubmitting] = useState(false);
+  const [taskRequestForm, setTaskRequestForm] = useState({ name: '', description: '', due_date: '' });
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -221,6 +229,52 @@ export const ClientProjects: React.FC = () => {
     setEditFormOpen(true);
   };
 
+  const handleOpenTaskRequestDialog = (projectId: string) => {
+    setTaskRequestProjectId(projectId);
+    setTaskRequestForm({ name: '', description: '', due_date: '' });
+    setTaskRequestDialogOpen(true);
+  };
+
+  const handleSubmitTaskRequest = async () => {
+    if (!clientId || !user || !taskRequestProjectId || !taskRequestForm.name.trim()) {
+      toast.error('Preencha o nome da tarefa para solicitar.');
+      return;
+    }
+
+    setTaskRequestSubmitting(true);
+
+    try {
+      const { error } = await supabase.from('edit_requests').insert([
+        {
+          entity_type: 'project',
+          entity_id: taskRequestProjectId,
+          client_id: clientId,
+          requested_by: user.id,
+          original_data: {},
+          proposed_data: {
+            request_type: 'new_task',
+            task_name: taskRequestForm.name.trim(),
+            task_description: taskRequestForm.description.trim() || null,
+            task_due_date: taskRequestForm.due_date || null,
+          },
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success('Solicitação de nova tarefa enviada para aprovação!');
+      setTaskRequestDialogOpen(false);
+      setTaskRequestProjectId('');
+    } catch (error) {
+      console.error('Error creating task request:', error);
+      toast.error('Erro ao solicitar nova tarefa');
+    } finally {
+      setTaskRequestSubmitting(false);
+    }
+
+    setEditFormOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -284,7 +338,7 @@ export const ClientProjects: React.FC = () => {
           onEditProject={(project) => openEditRequest(project as UnifiedProject)}
           onDeleteProject={() => {}}
           onArchiveProject={() => {}}
-          onCreateTask={() => {}}
+          onCreateTask={handleOpenTaskRequestDialog}
           onEditTask={() => {}}
           onDeleteTask={() => {}}
           onRegisterTime={() => {}}
@@ -312,10 +366,55 @@ export const ClientProjects: React.FC = () => {
           onStopTimer={async () => {}}
           onCompleteTask={async () => {}}
           onUpdateTaskStatus={async () => {}}
-          onCreateTask={() => {}}
+          onCreateTask={handleOpenTaskRequestDialog}
           onManageStages={() => {}}
         />
       )}
+
+      <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="task-request-name">Nome da tarefa</Label>
+              <Input
+                id="task-request-name"
+                value={taskRequestForm.name}
+                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="Ex: Criar arte para campanha"
+                disabled={taskRequestSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-request-description">Descrição</Label>
+              <Textarea
+                id="task-request-description"
+                value={taskRequestForm.description}
+                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Descreva o que precisa ser feito"
+                rows={4}
+                disabled={taskRequestSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-request-due-date">Prazo (opcional)</Label>
+              <Input
+                id="task-request-due-date"
+                type="date"
+                value={taskRequestForm.due_date}
+                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, due_date: event.target.value }))}
+                disabled={taskRequestSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>Enviar solicitação</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ProjectRequestForm
         open={isFormOpen}
