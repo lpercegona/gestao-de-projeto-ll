@@ -235,6 +235,7 @@ export const ProjectDetail: React.FC = () => {
       case 'pending': return 'Pendente';
       case 'in_progress': return 'Em Andamento';
       case 'completed': return 'Concluída';
+      case 'archived': return 'Arquivo';
       default: return status;
     }
   };
@@ -244,6 +245,7 @@ export const ProjectDetail: React.FC = () => {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'in_progress': return 'bg-blue-100 text-blue-800';
       case 'completed': return 'bg-green-100 text-green-800';
+      case 'archived': return 'bg-slate-200 text-slate-700';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -454,6 +456,7 @@ export const ProjectDetail: React.FC = () => {
                     <SelectItem value="pending">Pendente</SelectItem>
                     <SelectItem value="in_progress">Em Andamento</SelectItem>
                     <SelectItem value="completed">Concluída</SelectItem>
+                    <SelectItem value="archived">Arquivo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

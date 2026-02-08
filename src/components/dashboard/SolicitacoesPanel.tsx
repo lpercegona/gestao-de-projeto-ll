@@ -135,7 +135,7 @@ export const SolicitacoesPanel: React.FC = () => {
                   <div
                     key={req.id}
                     className="flex flex-col sm:flex-row sm:items-start justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 rounded px-2 gap-2 min-w-0"
-                    onClick={() => navigate("/requests")}
+                    onClick={() => navigate("/projects?filter=requests")}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{req.title}</p>
@@ -147,7 +147,12 @@ export const SolicitacoesPanel: React.FC = () => {
                     <div className="shrink-0 sm:ml-2">{getStatusBadge(req.status)}</div>
                   </div>
                 ))}
-                <Button variant="ghost" size="sm" className="w-full mt-2" onClick={() => navigate("/requests")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => navigate("/projects?filter=requests")}
+                >
                   Ver todas
                 </Button>
               </div>

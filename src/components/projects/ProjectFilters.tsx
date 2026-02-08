@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,11 @@ interface ProjectFiltersProps {
   onClientChange: (clientId: string) => void;
   onStageChange: (stageId: string) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
+  showArchived: boolean;
+  onShowArchivedChange: (value: boolean) => void;
+  showRequests: boolean;
+  onShowRequestsChange: (value: boolean) => void;
+  pendingRequestsCount: number;
   viewMode: "list" | "kanban";
   onViewModeChange: (mode: "list" | "kanban") => void;
   onAddProject: () => void;
@@ -51,6 +57,11 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   onClientChange,
   onStageChange,
   onDateRangeChange,
+  showArchived,
+  onShowArchivedChange,
+  showRequests,
+  onShowRequestsChange,
+  pendingRequestsCount,
   viewMode,
   onViewModeChange,
   onAddProject,
@@ -63,26 +74,60 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     selectedClientId !== "all" ? 1 : 0,
     selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
+    showArchived ? 1 : 0,
+    showRequests ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
     onClientChange("all");
     onStageChange("all");
     onDateRangeChange(undefined);
+    onShowArchivedChange(false);
+    onShowRequestsChange(false);
   };
+
+
+  const pendingRequestsLabel =
+    pendingRequestsCount === 1
+      ? "1 solicitação pendente"
+      : `${pendingRequestsCount} solicitações pendentes`;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       {/* Mobile: Line 1 - Filter, Toggle, Add | Desktop: All in one line */}
-      <span className="block sm:hidden text-sm font-semibold text-foreground whitespace-nowrap">
-        {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
-      </span>
+      <div className="block sm:hidden text-sm font-semibold text-foreground whitespace-nowrap">
+        <span>
+          {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
+        </span>
+        {pendingRequestsCount > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-2 h-6 px-2 text-[10px]"
+            onClick={() => onShowRequestsChange(true)}
+          >
+            ({pendingRequestsLabel})
+          </Button>
+        )}
+      </div>
 
       <div className="flex items-center justify-between sm:justify-start gap-3">
         {/* Desktop only */}
-        <span className="hidden sm:inline text-sm font-semibold text-foreground whitespace-nowrap">
-          {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
-        </span>
+        <div className="hidden sm:flex items-center gap-2 text-sm font-semibold text-foreground whitespace-nowrap">
+          <span>
+            {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
+          </span>
+          {pendingRequestsCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-[10px]"
+              onClick={() => onShowRequestsChange(true)}
+            >
+              ({pendingRequestsLabel})
+            </Button>
+          )}
+        </div>
         {/* Filter button */}
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
@@ -158,6 +203,30 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Archived filter */}
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <Label htmlFor="show-archived" className="text-xs text-muted-foreground cursor-pointer">
+                  Ver arquivados
+                </Label>
+                <Checkbox
+                  id="show-archived"
+                  checked={showArchived}
+                  onCheckedChange={(checked) => onShowArchivedChange(Boolean(checked))}
+                />
+              </div>
+
+              {/* Requests filter */}
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <Label htmlFor="show-requests" className="text-xs text-muted-foreground cursor-pointer">
+                  Solicitações
+                </Label>
+                <Checkbox
+                  id="show-requests"
+                  checked={showRequests}
+                  onCheckedChange={(checked) => onShowRequestsChange(Boolean(checked))}
+                />
               </div>
 
               {/* Date range filter */}

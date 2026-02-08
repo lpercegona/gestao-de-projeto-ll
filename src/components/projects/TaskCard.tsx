@@ -116,6 +116,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       case 'pending': return { name: 'Pendente', color: '#eab308' };
       case 'in_progress': return { name: 'Em Andamento', color: '#3b82f6' };
       case 'completed': return { name: 'Concluída', color: '#22c55e' };
+      case 'archived': return { name: 'Arquivo', color: '#64748b' };
       default: return { name: status, color: null };
     }
   };
@@ -194,7 +195,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-foreground">{formatHours(taskHours)}</span>
           <span>por {getCreatorName(task.created_by)}</span>
-          {task.due_date && task.status !== 'completed' && task.status !== 'done' && (
+          {task.due_date && task.status !== 'completed' && task.status !== 'done' && task.status !== 'archived' && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className={cn(
