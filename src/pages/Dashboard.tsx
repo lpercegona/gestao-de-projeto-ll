@@ -39,7 +39,6 @@ interface ProjectRequest {
   briefing: string;
   status: string;
   admin_notes: string | null;
-  converted_project_id: string | null;
   created_at: string;
 }
 
@@ -208,15 +207,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const visibleRecentRequests = projectRequests
-    .filter((request) => {
-      if (request.status !== "converted" || !request.converted_project_id) {
-        return true;
-      }
-
-      return !activeProjects.some((project) => project.id === request.converted_project_id);
-    })
-    .slice(0, 5);
+  const recentRequests = projectRequests.slice(0, 5);
 
   if (loading || (isClient && loadingRequests)) {
     return (
@@ -343,13 +334,13 @@ export const Dashboard: React.FC = () => {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="pt-0">
-                    {visibleRecentRequests.length === 0 ? (
+                    {recentRequests.length === 0 ? (
                       <p className="text-muted-foreground text-sm text-center py-4">
                         Nenhuma solicitação realizada ainda
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {visibleRecentRequests.map((request) => (
+                        {recentRequests.map((request) => (
                           <div
                             key={request.id}
                             className="flex flex-wrap sm:flex-nowrap items-center justify-between p-3 rounded-lg border border-border gap-3 min-w-0"

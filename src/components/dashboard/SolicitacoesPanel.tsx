@@ -112,18 +112,9 @@ export const SolicitacoesPanel: React.FC = () => {
                 <FileText className="h-4 w-4" />
                 Solicitações
                 {pendingCount > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="ml-1 h-6 px-2 text-[10px]"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate("/projects?filter=requests&requestStatus=pending");
-                    }}
-                  >
+                  <Badge variant="outlined" className="ml-1 bg-blue-500/10">
                     {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
-                  </Button>
+                  </Badge>
                 )}
               </CardTitle>
               <ChevronDown
@@ -162,7 +153,7 @@ export const SolicitacoesPanel: React.FC = () => {
                   className="w-full mt-2"
                   onClick={() => navigate("/projects?filter=requests")}
                 >
-                  Ver todas as solicitações
+                  Ver todas
                 </Button>
               </div>
             )}
