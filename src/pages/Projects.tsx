@@ -20,7 +20,7 @@ import { Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList
 import { Users as UsersIcon } from 'lucide-react';
 import { Project, Task } from '@/types';
 import { toast } from 'sonner';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -65,7 +65,6 @@ type UnifiedProject = Project & {
 };
 
 export const Projects: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     data, 
     loading, 
@@ -350,12 +349,14 @@ export const Projects: React.FC = () => {
   }, [isAdminOrMaster, requestProjects, filterClientId, data.projects, requestStatusFilter, sortOrder]);
 
   const filteredProjects: UnifiedProject[] = useMemo(() => {
-    if (requestsFilterActive) {
-      return visibleRequestProjects;
-    }
+    const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects];
 
-    return visibleProjects as UnifiedProject[];
-  }, [requestsFilterActive, visibleRequestProjects, visibleProjects]);
+    return unifiedList.sort((a, b) => {
+      const firstDate = new Date(a.updated_at || a.created_at).getTime();
+      const secondDate = new Date(b.updated_at || b.created_at).getTime();
+      return secondDate - firstDate;
+    });
+  }, [visibleProjects, visibleRequestProjects]);
 
   const pendingRequestsCount = useMemo(() => {
     return requestProjects.filter((request) => request.status === 'pending' || request.status === 'analyzing').length;
@@ -678,14 +679,14 @@ export const Projects: React.FC = () => {
         requestStatusFilter={requestStatusFilter}
         onRequestStatusFilterChange={handleRequestStatusFilterChange}
         pendingRequestsCount={pendingRequestsCount}
-        viewMode={requestsFilterActive ? 'list' : viewMode}
+        viewMode={viewMode}
         onViewModeChange={setViewMode}
         onAddProject={() => handleOpenDialog()}
         isAdminOrMaster={isAdminOrMaster}
       />
 
       {/* View content */}
-      {(requestsFilterActive ? 'list' : viewMode) === 'list' ? (
+      {viewMode === 'list' ? (
         <ProjectListView
           projects={filteredProjects}
           clients={data.clients}
