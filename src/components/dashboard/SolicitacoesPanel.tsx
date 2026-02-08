@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FileText, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { FileText, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ProjectRequest {
   id: string;
@@ -32,8 +32,9 @@ export const SolicitacoesPanel: React.FC = () => {
     const fetchRequests = async () => {
       try {
         const { data, error } = await supabase
-          .from('project_requests')
-          .select(`
+          .from("project_requests")
+          .select(
+            `
             id,
             title,
             status,
@@ -43,8 +44,9 @@ export const SolicitacoesPanel: React.FC = () => {
               name,
               company
             )
-          `)
-          .order('created_at', { ascending: false })
+          `,
+          )
+          .order("created_at", { ascending: false })
           .limit(5);
 
         if (error) throw error;
@@ -53,10 +55,10 @@ export const SolicitacoesPanel: React.FC = () => {
           (data || []).map((req: any) => ({
             ...req,
             client: req.clients,
-          }))
+          })),
         );
       } catch (error) {
-        console.error('Error fetching requests:', error);
+        console.error("Error fetching requests:", error);
       } finally {
         setLoading(false);
       }
@@ -67,21 +69,21 @@ export const SolicitacoesPanel: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
+      case "pending":
         return (
           <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
             <Clock className="h-3 w-3 mr-1" />
             Pendente
           </Badge>
         );
-      case 'approved':
+      case "approved":
         return (
           <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30">
             <CheckCircle className="h-3 w-3 mr-1" />
             Aprovado
           </Badge>
         );
-      case 'rejected':
+      case "rejected":
         return (
           <Badge variant="outline" className="bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30">
             <XCircle className="h-3 w-3 mr-1" />
@@ -98,7 +100,7 @@ export const SolicitacoesPanel: React.FC = () => {
     }
   };
 
-  const pendingCount = requests.filter(r => r.status === 'pending').length;
+  const pendingCount = requests.filter((r) => r.status === "pending").length;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -106,19 +108,18 @@ export const SolicitacoesPanel: React.FC = () => {
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
                 <FileText className="h-4 w-4" />
                 Solicitações
                 {pendingCount > 0 && (
                   <Badge variant="secondary" className="ml-1">
-                    {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
+                    {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
                   </Badge>
                 )}
               </CardTitle>
-              <ChevronDown className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform",
-                isOpen && "rotate-180"
-              )} />
+              <ChevronDown
+                className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")}
+              />
             </div>
           </CardHeader>
         </CollapsibleTrigger>
@@ -130,29 +131,23 @@ export const SolicitacoesPanel: React.FC = () => {
               <p className="text-sm text-muted-foreground">Nenhuma solicitação encontrada.</p>
             ) : (
               <div className="space-y-3">
-                {requests.map(req => (
-                  <div 
+                {requests.map((req) => (
+                  <div
                     key={req.id}
                     className="flex flex-col sm:flex-row sm:items-start justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 rounded px-2 gap-2 min-w-0"
-                    onClick={() => navigate('/requests')}
+                    onClick={() => navigate("/requests")}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{req.title}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {req.client?.company || req.client?.name || 'Cliente'} • {format(parseISO(req.created_at), "dd/MM", { locale: ptBR })}
+                        {req.client?.company || req.client?.name || "Cliente"} •{" "}
+                        {format(parseISO(req.created_at), "dd/MM", { locale: ptBR })}
                       </p>
                     </div>
-                    <div className="shrink-0 sm:ml-2">
-                      {getStatusBadge(req.status)}
-                    </div>
+                    <div className="shrink-0 sm:ml-2">{getStatusBadge(req.status)}</div>
                   </div>
                 ))}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full mt-2"
-                  onClick={() => navigate('/requests')}
-                >
+                <Button variant="ghost" size="sm" className="w-full mt-2" onClick={() => navigate("/requests")}>
                   Ver todas
                 </Button>
               </div>
