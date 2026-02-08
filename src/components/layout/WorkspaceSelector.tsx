@@ -77,7 +77,7 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({ isCollapse
               <p className="text-xs text-muted-foreground truncate">Plano Profissional</p>
             </div>
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+          <ChevronDown className="hidden lg:block h-4 w-4 text-muted-foreground shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
