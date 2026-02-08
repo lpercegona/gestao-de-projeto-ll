@@ -50,7 +50,7 @@ interface ProjectColumn {
 
 interface EditRequest {
   id: string;
-  entity_type: 'project' | 'project_request';
+  entity_type: 'project' | 'project_request' | 'task';
   entity_id: string;
   client_id: string;
   requested_by: string;
@@ -78,6 +78,9 @@ type UnifiedProject = Project & {
   is_request?: boolean;
   request_status?: string;
   request_id?: string;
+  request_label?: string;
+  request_kind?: 'new_project' | 'edit_request';
+  edit_request_id?: string;
 };
 
 export const Projects: React.FC = () => {
@@ -318,7 +321,9 @@ export const Projects: React.FC = () => {
   const visibleRequestProjects = useMemo<UnifiedProject[]>(() => {
     if (!isAdminOrMaster) return [];
 
-    let filteredRequests = requestProjects.filter((request) => !request.converted_project_id);
+    let filteredRequests = requestProjects.filter((request) =>
+      !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review'),
+    );
 
     if (filterClientId !== 'all') {
       filteredRequests = filteredRequests.filter((request) => request.client_id === filterClientId);
@@ -337,11 +342,47 @@ export const Projects: React.FC = () => {
         is_request: true,
         request_status: request.status,
         request_id: request.id,
+        request_label: 'Solicitação de novo projeto',
+        request_kind: 'new_project',
       } as UnifiedProject));
   }, [isAdminOrMaster, requestProjects, filterClientId]);
 
+
+
+  const visibleEditRequests = useMemo<UnifiedProject[]>(() => {
+    if (!isAdminOrMaster) return [];
+
+    let filteredEditRequests = editRequests.filter((request) => request.status === 'pending');
+
+    if (filterClientId !== 'all') {
+      filteredEditRequests = filteredEditRequests.filter((request) => request.client_id === filterClientId);
+    }
+
+    return filteredEditRequests.map((request) => {
+      const requestType = typeof request.proposed_data?.['request_type'] === 'string' ? request.proposed_data['request_type'] : null;
+
+      return ({
+      id: `edit-request-${request.id}`,
+      client_id: request.client_id,
+      name: request.entity_type === 'project_request'
+        ? 'Solicitação de edição de solicitação de projeto'
+        : (requestType === 'edit_task' ? 'Solicitação de edição de tarefa' : 'Solicitação de edição de projeto'),
+      description: null,
+      status: 'active',
+      due_date: null,
+      custom_fields: {},
+      created_at: request.created_at,
+      updated_at: request.created_at,
+      is_request: true,
+      request_status: request.status,
+      request_label: 'Solicitação de edição',
+      request_kind: 'edit_request',
+      edit_request_id: request.id,
+    } as UnifiedProject);
+    });
+  }, [isAdminOrMaster, editRequests, filterClientId]);
   const filteredProjects: UnifiedProject[] = useMemo(() => {
-    const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects];
+    const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects, ...visibleEditRequests];
 
     const requestFilteredList = showOnlyRequests
       ? unifiedList.filter((project) => project.is_request)
@@ -352,15 +393,15 @@ export const Projects: React.FC = () => {
       const secondDate = new Date(b.updated_at || b.created_at).getTime();
       return secondDate - firstDate;
     });
-  }, [visibleProjects, visibleRequestProjects, showOnlyRequests]);
+  }, [visibleProjects, visibleRequestProjects, visibleEditRequests, showOnlyRequests]);
 
   const pendingRequestsCount = useMemo(() => {
-    return requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')).length;
-  }, [requestProjects]);
+    return requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')).length + editRequests.filter((request) => request.status === 'pending').length;
+  }, [requestProjects, editRequests]);
 
 
   const handleOpenRequestDialog = (project: UnifiedProject) => {
-    if (!project.is_request || !project.request_id) return;
+    if (!project.is_request || project.request_kind !== 'new_project' || !project.request_id) return;
 
     const request = requestProjects.find((item) => item.id === project.request_id);
     if (!request) return;
@@ -368,6 +409,18 @@ export const Projects: React.FC = () => {
     setSelectedRequest(request);
     setRequestAdminNotes(request.admin_notes || '');
     setIsRequestDialogOpen(true);
+  };
+
+
+  const handleOpenEditRequestFromCard = (project: UnifiedProject) => {
+    if (!project.is_request || project.request_kind !== 'edit_request' || !project.edit_request_id) return;
+
+    const request = editRequests.find((item) => item.id === project.edit_request_id);
+    if (!request) return;
+
+    setSelectedEditRequest(request);
+    setEditRequestAdminNotes(request.admin_notes || '');
+    setIsEditRequestDialogOpen(true);
   };
 
   const handleUpdateRequest = async (status: 'in_review' | 'approved' | 'rejected') => {
@@ -412,7 +465,8 @@ export const Projects: React.FC = () => {
       setRequestProjects((previous) =>
         previous.map((request) => (request.id === selectedRequest.id ? (updatedRequest as ProjectRequest) : request)),
       );
-      setSelectedRequest(updatedRequest as ProjectRequest);
+      setIsRequestDialogOpen(false);
+      setSelectedRequest(null);
       await refreshData();
       toast.success(nextStatus === 'converted' ? 'Solicitação aprovada e convertida em projeto!' : 'Solicitação atualizada com sucesso!');
     } catch (error) {
@@ -468,6 +522,18 @@ export const Projects: React.FC = () => {
             status: 'pending',
             due_date: taskDueDate || '',
           });
+        } else if (selectedEditRequest.entity_type === 'project' && proposedData.request_type === 'edit_task') {
+          const taskId = typeof proposedData.task_id === 'string' ? proposedData.task_id : '';
+          if (!taskId) {
+            throw new Error('Solicitação de edição de tarefa inválida');
+          }
+
+          const taskPatch: Record<string, unknown> = {};
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'task_name')) taskPatch.name = proposedData.task_name as string;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'task_description')) taskPatch.description = proposedData.task_description as string | null;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'task_due_date')) taskPatch.due_date = proposedData.task_due_date as string | null;
+
+          await updateTask(taskId, taskPatch);
         } else if (selectedEditRequest.entity_type === 'project') {
           const patch: Record<string, unknown> = {};
           if (Object.prototype.hasOwnProperty.call(proposedData, 'description')) patch.description = proposedData.description as string | null;
@@ -861,6 +927,7 @@ export const Projects: React.FC = () => {
           onRequestCardClick={handleOpenRequestDialog}
           hasPendingEditRequest={(project) => hasPendingEditRequest(project as UnifiedProject)}
           onOpenEditRequestReview={(project) => handleOpenEditRequestDialog(project as UnifiedProject)}
+          onEditRequestCardClick={(project) => handleOpenEditRequestFromCard(project as UnifiedProject)}
         />
       ) : (
         <ProjectKanbanView

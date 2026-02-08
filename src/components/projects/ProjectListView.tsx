@@ -25,6 +25,10 @@ interface Project {
   created_at: string;
   is_request?: boolean;
   request_status?: string;
+  request_label?: string;
+  request_kind?: 'new_project' | 'edit_request';
+  request_id?: string;
+  edit_request_id?: string;
 }
 
 
@@ -112,6 +116,8 @@ interface ProjectListViewProps {
   onRequestCardClick?: (project: Project) => void;
   hasPendingEditRequest?: (project: Project) => boolean;
   onOpenEditRequestReview?: (project: Project) => void;
+  onRequestTaskEdit?: (task: Task) => void;
+  onEditRequestCardClick?: (project: Project) => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -142,8 +148,12 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onRequestCardClick,
   hasPendingEditRequest,
   onOpenEditRequestReview,
+  onRequestTaskEdit,
+  onEditRequestCardClick,
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
+
+  const isClientRestrictedMode = allowProjectEditOnly && !isAdminOrMaster;
 
   const toggleProject = (projectId: string) => {
     setOpenProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
@@ -256,7 +266,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 )}
 
                 <CollapsibleTrigger className="w-full text-left" onClick={(event) => {
-                  if (project.is_request && isAdminOrMaster && onRequestCardClick) {
+                  if (!project.is_request || !isAdminOrMaster) return;
+
+                  if (project.request_kind === 'edit_request') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onEditRequestCardClick?.(project);
+                    return;
+                  }
+
+                  if (onRequestCardClick) {
                     event.preventDefault();
                     event.stopPropagation();
                     onRequestCardClick(project);
@@ -270,7 +289,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                           <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
-                          {project.is_request && <Badge variant="secondary">Solicitação</Badge>}
+                          {project.is_request && <Badge variant="secondary">{project.request_label || 'Solicitação'}</Badge>}
                           <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>
                             {project.is_request ? getRequestStatusLabel(project.request_status) : getStatusLabel(project.status)}
                           </span>
@@ -350,11 +369,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             getCreatorName={getCreatorName}
                             onEditTask={() => onEditTask(task)}
                             onDeleteTask={() => onDeleteTask(task)}
+                            onRequestEdit={isClientRestrictedMode && onRequestTaskEdit ? () => onRequestTaskEdit(task) : undefined}
                             onRegisterTime={onRegisterTime}
                             onStartTimer={() => onStartTimer(task.id)}
                             onStopTimer={() => onStopTimer(task.id)}
                             onCompleteTask={() => onCompleteTask(task.id)}
                             showStatus={true}
+                            allowTaskEdit={!isClientRestrictedMode}
+                            allowTaskDelete={!isClientRestrictedMode}
+                            showRegisterTimeButton={!isClientRestrictedMode}
+                            allowTimeEntryEdit={!isClientRestrictedMode}
                           />
                         );
                       })}
