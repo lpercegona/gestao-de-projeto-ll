@@ -2,13 +2,15 @@ import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Plus, Settings, GripVertical } from "lucide-react";
+import { Plus, Settings, GripVertical, MoreVertical, Pencil, Archive, Trash2 } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Project {
   id: string;
@@ -73,6 +75,9 @@ interface ProjectKanbanViewProps {
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
   getActiveTimer: (taskId: string) => TaskTimer | null;
+  onEditProject: (project: Project) => void;
+  onDeleteProject: (project: Project) => void;
+  onArchiveProject: (project: Project) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onRegisterTime: (
@@ -124,6 +129,9 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   getTaskHours,
   getCreatorName,
   getActiveTimer,
+  onEditProject,
+  onDeleteProject,
+  onArchiveProject,
   onEditTask,
   onDeleteTask,
   onRegisterTime,
@@ -261,11 +269,58 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                               className="cursor-grab active:cursor-grabbing"
                             >
                               <div className="mb-1.5">
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground px-1">
-                                  <GripVertical className="w-3 h-3" />
-                                  <span className="truncate">{project?.name}</span>
-                                  <span className="text-muted-foreground/50">•</span>
-                                  <span className="truncate">{client?.company || client?.name}</span>
+                                <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground px-1">
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <GripVertical className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{project?.name}</span>
+                                    <span className="text-muted-foreground/50">•</span>
+                                    <span className="truncate">{client?.company || client?.name}</span>
+                                  </div>
+                                  {isAdminOrMaster && project && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-5 w-5 shrink-0"
+                                          onClick={(e) => e.stopPropagation()}
+                                          onPointerDown={(e) => e.stopPropagation()}
+                                        >
+                                          <MoreVertical className="w-3 h-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEditProject(project);
+                                          }}
+                                        >
+                                          <Pencil className="w-4 h-4 mr-2" />
+                                          Editar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onArchiveProject(project);
+                                          }}
+                                        >
+                                          <Archive className="w-4 h-4 mr-2" />
+                                          Arquivar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="text-destructive"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDeleteProject(project);
+                                          }}
+                                        >
+                                          <Trash2 className="w-4 h-4 mr-2" />
+                                          Excluir
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
                                 </div>
                               </div>
                               <TaskCard
