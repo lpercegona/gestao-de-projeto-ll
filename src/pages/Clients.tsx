@@ -205,9 +205,6 @@ export const Clients: React.FC = () => {
                 Propostas
               </TabsTrigger>
             </TabsList>
-            <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
-              <Plus className="w-3.5 h-3.5" />
-            </Button>
           </div>
           <div className="flex justify-end">
             <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
