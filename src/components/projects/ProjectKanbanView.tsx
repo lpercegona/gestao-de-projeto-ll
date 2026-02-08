@@ -85,6 +85,8 @@ interface ProjectKanbanViewProps {
   onUpdateTaskStatus: (taskId: string, newStatus: string) => Promise<void>;
   onCreateTask: (projectId: string, status?: string) => void;
   onManageStages: () => void;
+  clientRestrictedMode?: boolean;
+  onRequestTaskEdit?: (task: Task) => void;
 }
 
 // Map task status to kanban stage
@@ -133,6 +135,8 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   onUpdateTaskStatus,
   onCreateTask,
   onManageStages,
+  clientRestrictedMode = false,
+  onRequestTaskEdit,
 }) => {
   // Default stages if none from DB
   const stages: KanbanStage[] = useMemo(() => {
@@ -276,6 +280,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 getCreatorName={getCreatorName}
                                 onEditTask={() => onEditTask(task)}
                                 onDeleteTask={() => onDeleteTask(task)}
+                                onRequestEdit={clientRestrictedMode && onRequestTaskEdit ? () => onRequestTaskEdit(task) : undefined}
                                 onRegisterTime={onRegisterTime}
                                 onStartTimer={() => onStartTimer(task.id)}
                                 onStopTimer={() => onStopTimer(task.id)}
@@ -283,6 +288,10 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 compact
                                 showStatus={false}
                                 iconOnly
+                                allowTaskEdit={!clientRestrictedMode}
+                                allowTaskDelete={!clientRestrictedMode}
+                                showRegisterTimeButton={!clientRestrictedMode}
+                                allowTimeEntryEdit={!clientRestrictedMode}
                               />
                             </div>
                           );

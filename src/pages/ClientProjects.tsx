@@ -46,6 +46,18 @@ type UnifiedProject = {
   desired_deadline?: string | null;
 };
 
+
+type ClientTask = {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  due_date?: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
   const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer } = useData();
@@ -67,6 +79,16 @@ export const ClientProjects: React.FC = () => {
   const [taskRequestProjectId, setTaskRequestProjectId] = useState('');
   const [taskRequestSubmitting, setTaskRequestSubmitting] = useState(false);
   const [taskRequestForm, setTaskRequestForm] = useState({ name: '', description: '', due_date: '' });
+
+  const [taskEditDialogOpen, setTaskEditDialogOpen] = useState(false);
+  const [taskEditSubmitting, setTaskEditSubmitting] = useState(false);
+  const [taskEditForm, setTaskEditForm] = useState({
+    taskId: '',
+    projectId: '',
+    name: '',
+    description: '',
+    due_date: '',
+  });
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -271,39 +293,61 @@ export const ClientProjects: React.FC = () => {
     } finally {
       setTaskRequestSubmitting(false);
     }
+  };
 
-    setTaskRequestSubmitting(true);
+  const handleOpenTaskEditDialog = (task: ClientTask) => {
+    setTaskEditForm({
+      taskId: task.id,
+      projectId: task.project_id,
+      name: task.name,
+      description: task.description || '',
+      due_date: task.due_date || '',
+    });
+    setTaskEditDialogOpen(true);
+  };
+
+  const handleSubmitTaskEditRequest = async () => {
+    if (!clientId || !user || !taskEditForm.taskId || !taskEditForm.projectId || !taskEditForm.name.trim()) {
+      toast.error('Preencha o nome da tarefa para solicitar a edição.');
+      return;
+    }
+
+    setTaskEditSubmitting(true);
 
     try {
       const { error } = await supabase.from('edit_requests').insert([
         {
           entity_type: 'project',
-          entity_id: taskRequestProjectId,
+          entity_id: taskEditForm.projectId,
           client_id: clientId,
           requested_by: user.id,
-          original_data: {},
+          original_data: {
+            task_id: taskEditForm.taskId,
+            task_name: taskEditForm.name,
+            task_description: taskEditForm.description || null,
+            task_due_date: taskEditForm.due_date || null,
+          },
           proposed_data: {
-            request_type: 'new_task',
-            task_name: taskRequestForm.name.trim(),
-            task_description: taskRequestForm.description.trim() || null,
-            task_due_date: taskRequestForm.due_date || null,
+            request_type: 'edit_task',
+            task_id: taskEditForm.taskId,
+            task_name: taskEditForm.name.trim(),
+            task_description: taskEditForm.description.trim() || null,
+            task_due_date: taskEditForm.due_date || null,
           },
         },
       ]);
 
       if (error) throw error;
 
-      toast.success('Solicitação de nova tarefa enviada para aprovação!');
-      setTaskRequestDialogOpen(false);
-      setTaskRequestProjectId('');
+      toast.success('Solicitação de edição da tarefa enviada para aprovação!');
+      setTaskEditDialogOpen(false);
+      setTaskEditForm({ taskId: '', projectId: '', name: '', description: '', due_date: '' });
     } catch (error) {
-      console.error('Error creating task request:', error);
-      toast.error('Erro ao solicitar nova tarefa');
+      console.error('Error creating task edit request:', error);
+      toast.error('Erro ao solicitar edição da tarefa');
     } finally {
-      setTaskRequestSubmitting(false);
+      setTaskEditSubmitting(false);
     }
-
-    setEditFormOpen(true);
   };
 
   if (loading) {
@@ -376,6 +420,7 @@ export const ClientProjects: React.FC = () => {
           onStartTimer={async () => {}}
           onStopTimer={async () => {}}
           onCompleteTask={async () => {}}
+          onRequestTaskEdit={handleOpenTaskEditDialog}
         />
       ) : (
         <ProjectKanbanView
@@ -399,9 +444,59 @@ export const ClientProjects: React.FC = () => {
           onUpdateTaskStatus={async () => {}}
           onCreateTask={handleOpenTaskRequestDialog}
           onManageStages={() => {}}
+          clientRestrictedMode
+          onRequestTaskEdit={handleOpenTaskEditDialog}
         />
       )}
 
+
+      <Dialog open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Solicitar Edição da Tarefa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="task-edit-name">Nome da tarefa</Label>
+              <Input
+                id="task-edit-name"
+                value={taskEditForm.name}
+                onChange={(event) => setTaskEditForm((prev) => ({ ...prev, name: event.target.value }))}
+                disabled={taskEditSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-edit-description">Descrição</Label>
+              <Textarea
+                id="task-edit-description"
+                value={taskEditForm.description}
+                onChange={(event) => setTaskEditForm((prev) => ({ ...prev, description: event.target.value }))}
+                rows={4}
+                disabled={taskEditSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-edit-due-date">Prazo</Label>
+              <Input
+                id="task-edit-due-date"
+                type="date"
+                value={taskEditForm.due_date}
+                onChange={(event) => setTaskEditForm((prev) => ({ ...prev, due_date: event.target.value }))}
+                disabled={taskEditSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskEditDialogOpen(false)} disabled={taskEditSubmitting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmitTaskEditRequest} disabled={taskEditSubmitting}>
+              {taskEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Enviar Solicitação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader>
