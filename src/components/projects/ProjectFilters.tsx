@@ -74,6 +74,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
     showArchived ? 1 : 0,
+    showOnlyRequests ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
@@ -81,6 +82,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     onStageChange("all");
     onDateRangeChange(undefined);
     onShowArchivedChange(false);
+    onShowOnlyRequestsChange(false);
   };
 
 
@@ -208,6 +210,20 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                   onCheckedChange={(checked) => onShowArchivedChange(Boolean(checked))}
                 />
               </div>
+
+              {/* Requests filter */}
+              {isAdminOrMaster && (
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <Label htmlFor="show-only-requests" className="text-xs text-muted-foreground cursor-pointer">
+                    Visualizar somente solicitações
+                  </Label>
+                  <Checkbox
+                    id="show-only-requests"
+                    checked={showOnlyRequests}
+                    onCheckedChange={(checked) => onShowOnlyRequestsChange(Boolean(checked))}
+                  />
+                </div>
+              )}
 
 
               {/* Date range filter */}
