@@ -194,11 +194,6 @@ export const Clients: React.FC = () => {
             <span className="text-lg font-semibold text-foreground whitespace-nowrap">
               {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
             </span>
-            <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
-              <Plus className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-          <div className="flex justify-end">
             <TabsList className="flex rounded-lg">
               <TabsTrigger value="clients">
                 <Users className="w-3.5 h-3.5" />
@@ -210,6 +205,11 @@ export const Clients: React.FC = () => {
                 Propostas
               </TabsTrigger>
             </TabsList>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
           </div>
         </div>
         <TabsContent value="clients" className="mt-6">
