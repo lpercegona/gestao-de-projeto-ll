@@ -271,6 +271,39 @@ export const ClientProjects: React.FC = () => {
     } finally {
       setTaskRequestSubmitting(false);
     }
+
+    setTaskRequestSubmitting(true);
+
+    try {
+      const { error } = await supabase.from('edit_requests').insert([
+        {
+          entity_type: 'project',
+          entity_id: taskRequestProjectId,
+          client_id: clientId,
+          requested_by: user.id,
+          original_data: {},
+          proposed_data: {
+            request_type: 'new_task',
+            task_name: taskRequestForm.name.trim(),
+            task_description: taskRequestForm.description.trim() || null,
+            task_due_date: taskRequestForm.due_date || null,
+          },
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success('Solicitação de nova tarefa enviada para aprovação!');
+      setTaskRequestDialogOpen(false);
+      setTaskRequestProjectId('');
+    } catch (error) {
+      console.error('Error creating task request:', error);
+      toast.error('Erro ao solicitar nova tarefa');
+    } finally {
+      setTaskRequestSubmitting(false);
+    }
+
+    setEditFormOpen(true);
   };
 
   if (loading) {
