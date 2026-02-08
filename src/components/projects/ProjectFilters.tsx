@@ -74,12 +74,11 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       {/* Mobile: Line 1 - Filter, Toggle, Add | Desktop: All in one line */}
+      {/* Desktop only: Project count */}
+      <span className="text-sm font-semibold text-foreground whitespace-nowrap">
+        {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
+      </span>
       <div className="flex items-center justify-between sm:justify-start gap-3">
-        {/* Desktop only: Project count */}
-        <span className="hidden sm:block text-lg font-semibold text-foreground whitespace-nowrap">
-          {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
-        </span>
-
         {/* Filter button */}
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
@@ -235,11 +234,6 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           </Button>
         )}
       </div>
-
-      {/* Mobile only: Project count on second line */}
-      <span className="sm:hidden text-lg font-semibold text-foreground whitespace-nowrap">
-        {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
-      </span>
 
       {/* Desktop only: Add button */}
       {isAdminOrMaster && (
