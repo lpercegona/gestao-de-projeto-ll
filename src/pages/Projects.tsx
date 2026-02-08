@@ -67,6 +67,7 @@ interface ProjectRequest {
   title: string;
   briefing: string;
   status: string;
+  desired_deadline?: string | null;
   admin_notes?: string | null;
   created_at: string;
   updated_at?: string;
@@ -225,7 +226,7 @@ export const Projects: React.FC = () => {
 
       const { data: requestsData, error } = await supabase
         .from('project_requests')
-        .select('id, client_id, title, briefing, status, admin_notes, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -374,11 +375,36 @@ export const Projects: React.FC = () => {
 
     setUpdatingRequest(true);
     try {
+      let nextStatus: 'in_review' | 'approved' | 'rejected' | 'converted' = status;
+      let convertedProjectId: string | null = null;
+
+      if (status === 'approved') {
+        const createdProject = await createProject({
+          name: selectedRequest.title,
+          description: selectedRequest.briefing || '',
+          client_id: selectedRequest.client_id,
+          status: 'active',
+          due_date: selectedRequest.desired_deadline || null,
+          custom_fields: {},
+        });
+
+        if (!createdProject?.id) {
+          throw new Error('Falha ao criar projeto a partir da solicitação');
+        }
+
+        convertedProjectId = createdProject.id;
+        nextStatus = 'converted';
+      }
+
       const { data: updatedRequest, error } = await supabase
         .from('project_requests')
-        .update({ status, admin_notes: requestAdminNotes || null })
+        .update({
+          status: nextStatus,
+          admin_notes: requestAdminNotes || null,
+          converted_project_id: convertedProjectId,
+        })
         .eq('id', selectedRequest.id)
-        .select('id, client_id, title, briefing, status, admin_notes, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
         .single();
 
       if (error) throw error;
@@ -387,7 +413,8 @@ export const Projects: React.FC = () => {
         previous.map((request) => (request.id === selectedRequest.id ? (updatedRequest as ProjectRequest) : request)),
       );
       setSelectedRequest(updatedRequest as ProjectRequest);
-      toast.success('Solicitação atualizada com sucesso!');
+      await refreshData();
+      toast.success(nextStatus === 'converted' ? 'Solicitação aprovada e convertida em projeto!' : 'Solicitação atualizada com sucesso!');
     } catch (error) {
       console.error('Error updating project request:', error);
       toast.error('Erro ao atualizar solicitação');
@@ -861,13 +888,13 @@ export const Projects: React.FC = () => {
       )}
       
       <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Solicitação de Projeto</DialogTitle>
           </DialogHeader>
 
           {selectedRequest && (
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
               <div>
                 <p className="text-sm text-muted-foreground">Título</p>
                 <p className="font-medium">{selectedRequest.title}</p>
@@ -875,6 +902,10 @@ export const Projects: React.FC = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Briefing</p>
                 <p className="text-sm whitespace-pre-wrap">{selectedRequest.briefing}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Prazo desejado</p>
+                <p className="text-sm font-medium">{selectedRequest.desired_deadline || 'Não informado'}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status atual</p>
@@ -909,13 +940,13 @@ export const Projects: React.FC = () => {
       </Dialog>
 
       <Dialog open={isEditRequestDialogOpen} onOpenChange={setIsEditRequestDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Revisar solicitação de edição</DialogTitle>
           </DialogHeader>
 
           {selectedEditRequest && (
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
               <div>
                 <p className="text-sm text-muted-foreground">Tipo</p>
                 <p className="font-medium">{selectedEditRequest.entity_type === 'project' ? 'Projeto' : 'Solicitação de projeto'}</p>
@@ -955,7 +986,7 @@ export const Projects: React.FC = () => {
 
       {/* Project Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingProject ? 'Editar Projeto' : 'Novo Projeto'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
@@ -1043,7 +1074,7 @@ export const Projects: React.FC = () => {
 
       {/* Task Dialog */}
       <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTask}>
             <div className="space-y-4 py-4">
@@ -1061,7 +1092,7 @@ export const Projects: React.FC = () => {
 
       {/* Time Entry Dialog */}
       <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTime}>
             <div className="space-y-4 py-4">
@@ -1097,7 +1128,7 @@ export const Projects: React.FC = () => {
 
       {/* Complete Timer Dialog */}
       <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1127,7 +1158,7 @@ export const Projects: React.FC = () => {
 
       {/* Column Dialog */}
       <Dialog open={isColumnDialogOpen} onOpenChange={setIsColumnDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitColumn}>
             <div className="space-y-4 py-4">

@@ -272,6 +272,37 @@ export const ClientProjects: React.FC = () => {
       setTaskRequestSubmitting(false);
     }
 
+    setTaskRequestSubmitting(true);
+
+    try {
+      const { error } = await supabase.from('edit_requests').insert([
+        {
+          entity_type: 'project',
+          entity_id: taskRequestProjectId,
+          client_id: clientId,
+          requested_by: user.id,
+          original_data: {},
+          proposed_data: {
+            request_type: 'new_task',
+            task_name: taskRequestForm.name.trim(),
+            task_description: taskRequestForm.description.trim() || null,
+            task_due_date: taskRequestForm.due_date || null,
+          },
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success('Solicitação de nova tarefa enviada para aprovação!');
+      setTaskRequestDialogOpen(false);
+      setTaskRequestProjectId('');
+    } catch (error) {
+      console.error('Error creating task request:', error);
+      toast.error('Erro ao solicitar nova tarefa');
+    } finally {
+      setTaskRequestSubmitting(false);
+    }
+
     setEditFormOpen(true);
   };
 
@@ -372,11 +403,11 @@ export const ClientProjects: React.FC = () => {
       )}
 
       <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="task-request-name">Nome da tarefa</Label>
               <Input
