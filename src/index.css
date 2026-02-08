@@ -184,3 +184,12 @@ All colors MUST be HSL.
     transform: translateX(-50%);
   }
 }
+
+.dialog-scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.dialog-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
