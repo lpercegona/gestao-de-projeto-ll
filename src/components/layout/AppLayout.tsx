@@ -329,7 +329,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
             {/* Mobile close button */}
             <button
-              className="absolute right-4 top-0.5 rounded-md p-2 text-[#64748b] hover:bg-white/70 lg:hidden"
+              className="absolute right-2 top-2 rounded-md p-2 text-[#64748b] hover:bg-white/70 lg:hidden"
               onClick={() => setSidebarOpen(false)}
             >
               <span className="sr-only">Fechar menu</span>
