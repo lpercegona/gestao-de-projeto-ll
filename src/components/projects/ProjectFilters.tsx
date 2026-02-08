@@ -37,8 +37,6 @@ interface ProjectFiltersProps {
   onDateRangeChange: (range: DateRange | undefined) => void;
   showArchived: boolean;
   onShowArchivedChange: (value: boolean) => void;
-  showRequests: boolean;
-  onShowRequestsChange: (value: boolean) => void;
   pendingRequestsCount: number;
   viewMode: "list" | "kanban";
   onViewModeChange: (mode: "list" | "kanban") => void;
@@ -58,8 +56,6 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   onDateRangeChange,
   showArchived,
   onShowArchivedChange,
-  showRequests,
-  onShowRequestsChange,
   pendingRequestsCount,
   viewMode,
   onViewModeChange,
@@ -74,7 +70,6 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
     showArchived ? 1 : 0,
-    showRequests ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
@@ -82,7 +77,6 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     onStageChange("all");
     onDateRangeChange(undefined);
     onShowArchivedChange(false);
-    onShowRequestsChange(false);
   };
 
 
@@ -99,14 +93,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
         </span>
         {pendingRequestsCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="ml-2 h-6 px-2 text-[10px]"
-            onClick={() => onShowRequestsChange(true)}
-          >
-            ({pendingRequestsLabel})
-          </Button>
+          <Badge variant="outline" className="ml-2 h-6 px-2 text-[10px]">
+            {pendingRequestsLabel}
+          </Badge>
         )}
       </div>
 
@@ -117,14 +106,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
           </span>
           {pendingRequestsCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-[10px]"
-              onClick={() => onShowRequestsChange(true)}
-            >
-              ({pendingRequestsLabel})
-            </Button>
+            <Badge variant="outline" className="h-6 px-2 text-[10px]">
+              {pendingRequestsLabel}
+            </Badge>
           )}
         </div>
         {/* Filter button */}
@@ -211,17 +195,6 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                 />
               </div>
 
-              {/* Requests filter */}
-              <div className="flex items-center justify-between rounded-md border p-3">
-                <Label htmlFor="show-requests" className="text-xs text-muted-foreground cursor-pointer">
-                  Solicitações
-                </Label>
-                <Checkbox
-                  id="show-requests"
-                  checked={showRequests}
-                  onCheckedChange={(checked) => onShowRequestsChange(Boolean(checked))}
-                />
-              </div>
 
               {/* Date range filter */}
               <div className="space-y-2">

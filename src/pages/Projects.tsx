@@ -20,7 +20,7 @@ import { Pencil, Trash2, Loader2, Users, Settings, ChevronDown, X, ClipboardList
 import { Users as UsersIcon } from 'lucide-react';
 import { Project, Task } from '@/types';
 import { toast } from 'sonner';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -65,7 +65,6 @@ type UnifiedProject = Project & {
 };
 
 export const Projects: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     data, 
     loading, 
@@ -161,19 +160,6 @@ export const Projects: React.FC = () => {
   // Kanban stages dialog
   const [isKanbanStagesDialogOpen, setIsKanbanStagesDialogOpen] = useState(false);
   const [requestProjects, setRequestProjects] = useState<ProjectRequest[]>([]);
-  const requestsFilterActive = searchParams.get('filter') === 'requests';
-
-  const handleRequestsFilterChange = (enabled: boolean) => {
-    const nextParams = new URLSearchParams(searchParams);
-
-    if (enabled) {
-      nextParams.set('filter', 'requests');
-    } else {
-      nextParams.delete('filter');
-    }
-
-    setSearchParams(nextParams);
-  };
 
   // Get columns for selected client
   const clientColumns = useMemo(() => {
@@ -275,21 +261,7 @@ export const Projects: React.FC = () => {
       filteredRequests = filteredRequests.filter((request) => request.client_id === filterClientId);
     }
 
-    return filteredRequests.map((request) => {
-      if (request.status === 'converted' && request.converted_project_id) {
-        const convertedProject = data.projects.find((project) => project.id === request.converted_project_id);
-
-        if (convertedProject) {
-          return {
-            ...convertedProject,
-            is_request: false,
-            request_status: request.status,
-            request_id: request.id,
-          } as UnifiedProject;
-        }
-      }
-
-      return {
+    return filteredRequests.map((request) => ({
         id: `request-${request.id}`,
         client_id: request.client_id,
         name: request.title,
@@ -302,17 +274,18 @@ export const Projects: React.FC = () => {
         is_request: true,
         request_status: request.status,
         request_id: request.id,
-      } as UnifiedProject;
-    });
-  }, [isAdminOrMaster, requestProjects, filterClientId, data.projects]);
+      } as UnifiedProject));
+  }, [isAdminOrMaster, requestProjects, filterClientId]);
 
   const filteredProjects: UnifiedProject[] = useMemo(() => {
-    if (requestsFilterActive) {
-      return visibleRequestProjects;
-    }
+    const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects];
 
-    return visibleProjects as UnifiedProject[];
-  }, [requestsFilterActive, visibleRequestProjects, visibleProjects]);
+    return unifiedList.sort((a, b) => {
+      const firstDate = new Date(a.updated_at || a.created_at).getTime();
+      const secondDate = new Date(b.updated_at || b.created_at).getTime();
+      return secondDate - firstDate;
+    });
+  }, [visibleProjects, visibleRequestProjects]);
 
   const pendingRequestsCount = useMemo(() => {
     return requestProjects.filter((request) => request.status === 'pending' || request.status === 'analyzing').length;
@@ -628,17 +601,15 @@ export const Projects: React.FC = () => {
         onDateRangeChange={setFilterDateRange}
         showArchived={showArchived}
         onShowArchivedChange={setShowArchived}
-        showRequests={requestsFilterActive}
-        onShowRequestsChange={handleRequestsFilterChange}
         pendingRequestsCount={pendingRequestsCount}
-        viewMode={requestsFilterActive ? 'list' : viewMode}
+        viewMode={viewMode}
         onViewModeChange={setViewMode}
         onAddProject={() => handleOpenDialog()}
         isAdminOrMaster={isAdminOrMaster}
       />
 
       {/* View content */}
-      {(requestsFilterActive ? 'list' : viewMode) === 'list' ? (
+      {viewMode === 'list' ? (
         <ProjectListView
           projects={filteredProjects}
           clients={data.clients}
