@@ -8,6 +8,8 @@ import { useData } from "@/contexts/DataContext";
 import { UpcomingDeadlines, DeadlineItem } from "@/components/dashboard/UpcomingDeadlines";
 import { getDeadlineStatus } from "@/lib/deadlineUtils";
 
+const ALLOWED_STATUSES = new Set(["active", "in_progress", "pending"]);
+
 export const ProximasEntregasPanel: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
   const { data, loading } = useData();
@@ -18,9 +20,9 @@ export const ProximasEntregasPanel: React.FC = () => {
     const itemsWithDeadline: DeadlineItem[] = [];
     const itemsWithoutDeadline: DeadlineItem[] = [];
 
-    // Add projects (only non-completed ones)
+    // Add projects (only active, in progress, and pending)
     data.projects
-      .filter((p) => p.status !== "completed")
+      .filter((p) => ALLOWED_STATUSES.has(p.status))
       .forEach((p) => {
         const client = data.clients.find((c) => c.id === p.client_id);
 
@@ -50,9 +52,12 @@ export const ProximasEntregasPanel: React.FC = () => {
         }
       });
 
-    // Add tasks (only non-completed ones)
+    // Add tasks (only active, in progress, and pending, from valid projects)
     data.tasks
-      .filter((t) => t.status !== "completed" && t.status !== "done")
+      .filter((t) => {
+        const project = data.projects.find((p) => p.id === t.project_id);
+        return ALLOWED_STATUSES.has(t.status) && !!project && ALLOWED_STATUSES.has(project.status);
+      })
       .forEach((t) => {
         const project = data.projects.find((p) => p.id === t.project_id);
         const client = project ? data.clients.find((c) => c.id === project.client_id) : null;
