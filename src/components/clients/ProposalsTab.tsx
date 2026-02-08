@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -96,13 +96,15 @@ export const ProposalsTab: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Documentos</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Gerencie propostas e contratos em uma única área de arquivos.
-            </p>
-          </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | DocumentType)}>
+            <TabsList>
+              <TabsTrigger value="all">Todos</TabsTrigger>
+              <TabsTrigger value="proposal">Propostas</TabsTrigger>
+              <TabsTrigger value="contract">Contratos</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate('/proposals')}>
               <Plus className="w-4 h-4 mr-2" />
@@ -116,13 +118,6 @@ export const ProposalsTab: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | DocumentType)}>
-          <TabsList>
-            <TabsTrigger value="all">Todos</TabsTrigger>
-            <TabsTrigger value="proposal">Propostas</TabsTrigger>
-            <TabsTrigger value="contract">Contratos</TabsTrigger>
-          </TabsList>
-        </Tabs>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
