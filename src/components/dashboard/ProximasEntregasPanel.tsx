@@ -105,7 +105,7 @@ export const ProximasEntregasPanel: React.FC = () => {
                 <CalendarClock className="h-4 w-4" />
                 Próximas Entregas
                 {upcomingDeadlines.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="outline" className="ml-1 bg-blue-500/10">
                     {upcomingDeadlines.length}
                   </Badge>
                 )}
