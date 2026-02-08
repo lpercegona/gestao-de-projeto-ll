@@ -24,33 +24,17 @@ const MobileHeader: React.FC<{
   setSidebarOpen,
   hideTimer = false
 }) => {
-  const {
-    hasActiveTimer
-  } = useGlobalTimer();
-
-  // Only show timer animation when timer is active AND not hidden for clients
-  const showTimerAnimation = hasActiveTimer && !hideTimer;
-  return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
-      <div className="flex items-center gap-3 flex-1 overflow-hidden">
-        <button className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70" onClick={() => setSidebarOpen(true)}>
-          <span className="sr-only">Abrir menu</span>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        
-        {/* Animated container for logo/task info - only animate if not hidden */}
-        <div className="relative flex-1 h-6 overflow-hidden">
-          {/* Logo - slides up when timer active (only if timer not hidden) */}
-          <div className={cn("absolute inset-0 flex items-center transition-transform duration-300 ease-in-out", showTimerAnimation ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
-            <img src={LogoOras} alt="ORAS" className="h-6 w-auto" />
-          </div>
-          
-          {/* Task info - slides in from left when timer active (only if timer not hidden) */}
-          {!hideTimer && <div className={cn("absolute inset-0 flex items-center transition-all duration-300 ease-in-out", showTimerAnimation ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0")}>
-              <HeaderTimerTaskInfo />
-            </div>}
-        </div>
+  return <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-3 bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
+      <button className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70" onClick={() => setSidebarOpen(true)}>
+        <span className="sr-only">Abrir menu</span>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      
+      {/* Search bar - takes remaining space */}
+      <div className="flex-1 min-w-0">
+        <UniversalSearchBar />
       </div>
       
       <div className="flex flex-shrink-0 items-center gap-1 text-[#64748b]">
@@ -272,8 +256,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               <div className="hidden lg:flex w-full justify-center">
                 <WorkspaceSelector isCollapsed={isCollapsed} />
               </div>
-              {/* Mobile: always show full logo centered */}
-              <img src={LogoOras} alt="ORAS" className="lg:hidden h-8 w-auto max-w-[120px]" />
+              {/* Mobile: Workspace selector (always expanded) */}
+              <div className="lg:hidden w-full">
+                <WorkspaceSelector isCollapsed={false} />
+              </div>
             </div>
             
             {/* Mobile close button */}
