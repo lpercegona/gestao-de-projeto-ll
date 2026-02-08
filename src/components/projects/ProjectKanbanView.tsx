@@ -213,7 +213,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
             onClick={onManageStages}
             className="inline-flex justify-center items-center gap-2"
           >
-            <Settings className="w-4 h-4 mr-2" />
+            <Settings className="w-4 h-4" />
             <span className="hidden">Gerenciar Etapas</span>
           </Button>
         </div>
