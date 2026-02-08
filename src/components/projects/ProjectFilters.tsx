@@ -19,17 +19,16 @@ interface Client {
   company?: string | null;
 }
 
-interface KanbanStage {
-  id: string;
-  name: string;
-  color: string | null;
-  order_position: number;
+
+interface ProjectStatusOption {
+  value: string;
+  label: string;
 }
 
 interface ProjectFiltersProps {
   projectCount: number;
   clients: Client[];
-  kanbanStages: KanbanStage[];
+  projectStatusOptions: ProjectStatusOption[];
   selectedClientId: string;
   selectedStageId: string;
   dateRange: DateRange | undefined;
@@ -50,7 +49,7 @@ interface ProjectFiltersProps {
 export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   projectCount,
   clients,
-  kanbanStages,
+  projectStatusOptions,
   selectedClientId,
   selectedStageId,
   dateRange,
@@ -191,14 +190,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as etapas</SelectItem>
-                    {kanbanStages.map((stage) => (
-                      <SelectItem key={stage.id} value={stage.id}>
-                        <div className="flex items-center gap-2">
-                          {stage.color && (
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                          )}
-                          {stage.name}
-                        </div>
+                    {projectStatusOptions.map((statusOption) => (
+                      <SelectItem key={statusOption.value} value={statusOption.value}>
+                        {statusOption.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
