@@ -216,7 +216,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           type="single"
           value={viewMode}
           onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
-          className="rounded-lg p-1 bg-[#f1f5f9]"
+          className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
         >
           <ToggleGroupItem value="list" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
             <LayoutList className="w-3.5 h-3.5 mr-1.5" />
