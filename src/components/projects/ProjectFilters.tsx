@@ -42,6 +42,9 @@ interface ProjectFiltersProps {
   onViewModeChange: (mode: "list" | "kanban") => void;
   onAddProject: () => void;
   isAdminOrMaster: boolean;
+  showClientFilter?: boolean;
+  showRequestsFilter?: boolean;
+  showViewToggle?: boolean;
 }
 
 export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
@@ -61,22 +64,29 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   onViewModeChange,
   onAddProject,
   isAdminOrMaster,
+  showClientFilter = true,
+  showRequestsFilter = true,
+  showViewToggle = true,
 }) => {
   const [filterOpen, setFilterOpen] = useState(false);
 
   // Count active filters
   const activeFilters = [
-    selectedClientId !== "all" ? 1 : 0,
+    showClientFilter && selectedClientId !== "all" ? 1 : 0,
     selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
-    showOnlyRequests ? 1 : 0,
+    showRequestsFilter && showOnlyRequests ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
-    onClientChange("all");
+    if (showClientFilter) {
+      onClientChange("all");
+    }
     onStageChange("all");
     onDateRangeChange(undefined);
-    onShowOnlyRequestsChange(false);
+    if (showRequestsFilter) {
+      onShowOnlyRequestsChange(false);
+    }
   };
 
 
@@ -158,22 +168,24 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               </div>
 
               {/* Client filter */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Cliente</Label>
-                <Select value={selectedClientId} onValueChange={onClientChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Todos os clientes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os clientes</SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.company || client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {showClientFilter && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Cliente</Label>
+                  <Select value={selectedClientId} onValueChange={onClientChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Todos os clientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os clientes</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.company || client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Stage filter */}
               <div className="space-y-2">
@@ -195,7 +207,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
 
 
               {/* Requests filter */}
-              {isAdminOrMaster && (
+              {isAdminOrMaster && showRequestsFilter && (
                 <div className="flex items-center justify-between rounded-md border p-3">
                   <Label htmlFor="show-only-requests" className="text-xs text-muted-foreground cursor-pointer">
                     solicitações
@@ -274,21 +286,23 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         )}
 
         {/* View toggle */}
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
-        >
-          <ToggleGroupItem value="list" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
-            <LayoutList className="w-3.5 h-3.5 mr-1.5" />
-            Lista
-          </ToggleGroupItem>
-          <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" variant="tab" size="tb" className={cn("")}>
-            <Columns3 className="w-3.5 h-3.5 mr-1.5" />
-            Kanban
-          </ToggleGroupItem>
-        </ToggleGroup>
+        {showViewToggle && (
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
+          >
+            <ToggleGroupItem value="list" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
+              <LayoutList className="w-3.5 h-3.5 mr-1.5" />
+              Lista
+            </ToggleGroupItem>
+            <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" variant="tab" size="tb" className={cn("")}>
+              <Columns3 className="w-3.5 h-3.5 mr-1.5" />
+              Kanban
+            </ToggleGroupItem>
+          </ToggleGroup>
+        )}
 
         {/* Mobile only: Add button */}
         {isAdminOrMaster && (
