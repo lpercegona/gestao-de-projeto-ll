@@ -103,6 +103,7 @@ export const Projects: React.FC = () => {
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
   const [showArchived, setShowArchived] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -160,6 +161,34 @@ export const Projects: React.FC = () => {
   // Kanban stages dialog
   const [isKanbanStagesDialogOpen, setIsKanbanStagesDialogOpen] = useState(false);
   const [requestProjects, setRequestProjects] = useState<ProjectRequest[]>([]);
+  const requestsFilterActive = searchParams.get('filter') === 'requests';
+  const requestStatusFilter = searchParams.get('requestStatus') === 'pending' ? 'pending' : 'all';
+
+  const handleRequestsFilterChange = (enabled: boolean) => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (enabled) {
+      nextParams.set('filter', 'requests');
+    } else {
+      nextParams.delete('filter');
+      nextParams.delete('requestStatus');
+    }
+
+    setSearchParams(nextParams);
+  };
+
+  const handleRequestStatusFilterChange = (value: 'all' | 'pending') => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (value === 'pending') {
+      nextParams.set('filter', 'requests');
+      nextParams.set('requestStatus', 'pending');
+    } else {
+      nextParams.delete('requestStatus');
+    }
+
+    setSearchParams(nextParams);
+  };
 
   // Get columns for selected client
   const clientColumns = useMemo(() => {
@@ -249,8 +278,23 @@ export const Projects: React.FC = () => {
       projects = projects.filter(project => project.status !== 'archived');
     }
 
-    return projects;
-  }, [data.projects, data.projectAccess, data.kanbanStages, user?.id, isAdminOrMaster, filterClientId, filterStageId, filterDateRange, showArchived]);
+    return [...projects].sort((a, b) => {
+      const aDate = new Date(a.due_date || a.created_at).getTime();
+      const bDate = new Date(b.due_date || b.created_at).getTime();
+      return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
+    });
+  }, [
+    data.projects,
+    data.projectAccess,
+    data.kanbanStages,
+    user?.id,
+    isAdminOrMaster,
+    filterClientId,
+    filterStageId,
+    filterDateRange,
+    showArchived,
+    sortOrder,
+  ]);
 
   const visibleRequestProjects = useMemo<UnifiedProject[]>(() => {
     if (!isAdminOrMaster) return [];
@@ -261,7 +305,33 @@ export const Projects: React.FC = () => {
       filteredRequests = filteredRequests.filter((request) => request.client_id === filterClientId);
     }
 
-    return filteredRequests.map((request) => ({
+    if (requestStatusFilter === 'pending') {
+      filteredRequests = filteredRequests.filter(
+        (request) => request.status === 'pending' || request.status === 'analyzing',
+      );
+    }
+
+    return [...filteredRequests]
+      .sort((a, b) => {
+        const aDate = new Date(a.updated_at || a.created_at).getTime();
+        const bDate = new Date(b.updated_at || b.created_at).getTime();
+        return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
+      })
+      .map((request) => {
+      if (request.status === 'converted' && request.converted_project_id) {
+        const convertedProject = data.projects.find((project) => project.id === request.converted_project_id);
+
+        if (convertedProject) {
+          return {
+            ...convertedProject,
+            is_request: false,
+            request_status: request.status,
+            request_id: request.id,
+          } as UnifiedProject;
+        }
+      }
+
+      return {
         id: `request-${request.id}`,
         client_id: request.client_id,
         name: request.title,
@@ -274,8 +344,9 @@ export const Projects: React.FC = () => {
         is_request: true,
         request_status: request.status,
         request_id: request.id,
-      } as UnifiedProject));
-  }, [isAdminOrMaster, requestProjects, filterClientId]);
+      } as UnifiedProject;
+    });
+  }, [isAdminOrMaster, requestProjects, filterClientId, data.projects, requestStatusFilter, sortOrder]);
 
   const filteredProjects: UnifiedProject[] = useMemo(() => {
     const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects];
@@ -596,11 +667,17 @@ export const Projects: React.FC = () => {
         selectedClientId={filterClientId}
         selectedStageId={filterStageId}
         dateRange={filterDateRange}
+        sortOrder={sortOrder}
+        onSortOrderChange={setSortOrder}
         onClientChange={setFilterClientId}
         onStageChange={setFilterStageId}
         onDateRangeChange={setFilterDateRange}
         showArchived={showArchived}
         onShowArchivedChange={setShowArchived}
+        showRequests={requestsFilterActive}
+        onShowRequestsChange={handleRequestsFilterChange}
+        requestStatusFilter={requestStatusFilter}
+        onRequestStatusFilterChange={handleRequestStatusFilterChange}
         pendingRequestsCount={pendingRequestsCount}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -649,6 +726,9 @@ export const Projects: React.FC = () => {
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
           getActiveTimer={getActiveTimer}
+          onEditProject={handleOpenDialog}
+          onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
+          onArchiveProject={handleArchiveProject}
           onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
           onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
           onRegisterTime={handleOpenTimeDialog}

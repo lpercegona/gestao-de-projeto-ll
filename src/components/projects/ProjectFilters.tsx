@@ -32,11 +32,17 @@ interface ProjectFiltersProps {
   selectedClientId: string;
   selectedStageId: string;
   dateRange: DateRange | undefined;
+  sortOrder: "asc" | "desc";
+  onSortOrderChange: (order: "asc" | "desc") => void;
   onClientChange: (clientId: string) => void;
   onStageChange: (stageId: string) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
   showArchived: boolean;
   onShowArchivedChange: (value: boolean) => void;
+  showRequests: boolean;
+  onShowRequestsChange: (value: boolean) => void;
+  requestStatusFilter: "all" | "pending";
+  onRequestStatusFilterChange: (value: "all" | "pending") => void;
   pendingRequestsCount: number;
   viewMode: "list" | "kanban";
   onViewModeChange: (mode: "list" | "kanban") => void;
@@ -51,11 +57,17 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   selectedClientId,
   selectedStageId,
   dateRange,
+  sortOrder,
+  onSortOrderChange,
   onClientChange,
   onStageChange,
   onDateRangeChange,
   showArchived,
   onShowArchivedChange,
+  showRequests,
+  onShowRequestsChange,
+  requestStatusFilter,
+  onRequestStatusFilterChange,
   pendingRequestsCount,
   viewMode,
   onViewModeChange,
@@ -70,6 +82,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     selectedStageId !== "all" ? 1 : 0,
     dateRange?.from ? 1 : 0,
     showArchived ? 1 : 0,
+    showRequests ? 1 : 0,
+    requestStatusFilter !== "all" ? 1 : 0,
+    sortOrder !== "desc" ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
   const clearFilters = () => {
@@ -77,6 +92,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     onStageChange("all");
     onDateRangeChange(undefined);
     onShowArchivedChange(false);
+    onShowRequestsChange(false);
+    onRequestStatusFilterChange("all");
+    onSortOrderChange("desc");
   };
 
 
@@ -93,9 +111,18 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
         </span>
         {pendingRequestsCount > 0 && (
-          <Badge variant="outline" className="ml-2 h-6 px-2 text-[10px]">
-            {pendingRequestsLabel}
-          </Badge>
+          <Button
+            variant={showRequests && requestStatusFilter === "pending" ? "default" : "outline"}
+            size="sm"
+            className="ml-2 h-6 px-2 text-[10px]"
+            onClick={() => {
+              const isActive = showRequests && requestStatusFilter === "pending";
+              onShowRequestsChange(!isActive);
+              onRequestStatusFilterChange(isActive ? "all" : "pending");
+            }}
+          >
+            ({pendingRequestsLabel})
+          </Button>
         )}
       </div>
 
@@ -106,9 +133,18 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
           </span>
           {pendingRequestsCount > 0 && (
-            <Badge variant="outline" className="h-6 px-2 text-[10px]">
-              {pendingRequestsLabel}
-            </Badge>
+            <Button
+              variant={showRequests && requestStatusFilter === "pending" ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[10px]"
+              onClick={() => {
+                const isActive = showRequests && requestStatusFilter === "pending";
+                onShowRequestsChange(!isActive);
+                onRequestStatusFilterChange(isActive ? "all" : "pending");
+              }}
+            >
+              ({pendingRequestsLabel})
+            </Button>
           )}
         </div>
         {/* Filter button */}
@@ -183,6 +219,20 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                 </Select>
               </div>
 
+              {/* Sort by date */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Ordenação por data</Label>
+                <Select value={sortOrder} onValueChange={(value) => onSortOrderChange(value as "asc" | "desc")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Mais recentes primeiro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Mais recentes primeiro</SelectItem>
+                    <SelectItem value="asc">Mais antigos primeiro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Archived filter */}
               <div className="flex items-center justify-between rounded-md border p-3">
                 <Label htmlFor="show-archived" className="text-xs text-muted-foreground cursor-pointer">
@@ -195,6 +245,39 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                 />
               </div>
 
+              {/* Requests filter */}
+              <div className="space-y-2 rounded-md border p-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="show-requests" className="text-xs text-muted-foreground cursor-pointer">
+                    Solicitações
+                  </Label>
+                  <Checkbox
+                    id="show-requests"
+                    checked={showRequests}
+                    onCheckedChange={(checked) => {
+                      const enabled = Boolean(checked);
+                      onShowRequestsChange(enabled);
+                      if (!enabled) {
+                        onRequestStatusFilterChange("all");
+                      }
+                    }}
+                  />
+                </div>
+                {showRequests && (
+                  <Select
+                    value={requestStatusFilter}
+                    onValueChange={(value) => onRequestStatusFilterChange(value as "all" | "pending")}
+                  >
+                    <SelectTrigger className="w-full h-8">
+                      <SelectValue placeholder="Status da solicitação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as solicitações</SelectItem>
+                      <SelectItem value="pending">Pendentes e em análise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
 
               {/* Date range filter */}
               <div className="space-y-2">
