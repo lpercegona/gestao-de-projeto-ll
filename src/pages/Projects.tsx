@@ -47,12 +47,28 @@ interface ProjectColumn {
 }
 
 
+
+interface EditRequest {
+  id: string;
+  entity_type: 'project' | 'project_request';
+  entity_id: string;
+  client_id: string;
+  requested_by: string;
+  status: 'pending' | 'approved' | 'rejected';
+  original_data: Record<string, unknown>;
+  proposed_data: Record<string, unknown>;
+  admin_notes: string | null;
+  created_at: string;
+}
+
 interface ProjectRequest {
   id: string;
   client_id: string;
   title: string;
   briefing: string;
   status: string;
+  desired_deadline?: string | null;
+  admin_notes?: string | null;
   created_at: string;
   updated_at?: string;
   converted_project_id?: string | null;
@@ -161,6 +177,15 @@ export const Projects: React.FC = () => {
   // Kanban stages dialog
   const [isKanbanStagesDialogOpen, setIsKanbanStagesDialogOpen] = useState(false);
   const [requestProjects, setRequestProjects] = useState<ProjectRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<ProjectRequest | null>(null);
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [requestAdminNotes, setRequestAdminNotes] = useState('');
+  const [updatingRequest, setUpdatingRequest] = useState(false);
+  const [editRequests, setEditRequests] = useState<EditRequest[]>([]);
+  const [selectedEditRequest, setSelectedEditRequest] = useState<EditRequest | null>(null);
+  const [isEditRequestDialogOpen, setIsEditRequestDialogOpen] = useState(false);
+  const [editRequestAdminNotes, setEditRequestAdminNotes] = useState('');
+  const [processingEditRequest, setProcessingEditRequest] = useState(false);
 
   // Get columns for selected client
   const clientColumns = useMemo(() => {
@@ -201,7 +226,7 @@ export const Projects: React.FC = () => {
 
       const { data: requestsData, error } = await supabase
         .from('project_requests')
-        .select('id, client_id, title, briefing, status, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -213,6 +238,30 @@ export const Projects: React.FC = () => {
     };
 
     fetchProjectRequests();
+  }, [isAdminOrMaster]);
+
+
+  useEffect(() => {
+    const fetchEditRequests = async () => {
+      if (!isAdminOrMaster) {
+        setEditRequests([]);
+        return;
+      }
+
+      const { data: editRequestsData, error } = await supabase
+        .from('edit_requests')
+        .select('id, entity_type, entity_id, client_id, requested_by, status, original_data, proposed_data, admin_notes, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching edit requests:', error);
+        return;
+      }
+
+      setEditRequests((editRequestsData || []) as EditRequest[]);
+    };
+
+    fetchEditRequests();
   }, [isAdminOrMaster]);
 
   useEffect(() => {
@@ -306,8 +355,164 @@ export const Projects: React.FC = () => {
   }, [visibleProjects, visibleRequestProjects, showOnlyRequests]);
 
   const pendingRequestsCount = useMemo(() => {
-    return requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing')).length;
+    return requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')).length;
   }, [requestProjects]);
+
+
+  const handleOpenRequestDialog = (project: UnifiedProject) => {
+    if (!project.is_request || !project.request_id) return;
+
+    const request = requestProjects.find((item) => item.id === project.request_id);
+    if (!request) return;
+
+    setSelectedRequest(request);
+    setRequestAdminNotes(request.admin_notes || '');
+    setIsRequestDialogOpen(true);
+  };
+
+  const handleUpdateRequest = async (status: 'in_review' | 'approved' | 'rejected') => {
+    if (!selectedRequest) return;
+
+    setUpdatingRequest(true);
+    try {
+      let nextStatus: 'in_review' | 'approved' | 'rejected' | 'converted' = status;
+      let convertedProjectId: string | null = null;
+
+      if (status === 'approved') {
+        const createdProject = await createProject({
+          name: selectedRequest.title,
+          description: selectedRequest.briefing || '',
+          client_id: selectedRequest.client_id,
+          status: 'active',
+          due_date: selectedRequest.desired_deadline || null,
+          custom_fields: {},
+        });
+
+        if (!createdProject?.id) {
+          throw new Error('Falha ao criar projeto a partir da solicitação');
+        }
+
+        convertedProjectId = createdProject.id;
+        nextStatus = 'converted';
+      }
+
+      const { data: updatedRequest, error } = await supabase
+        .from('project_requests')
+        .update({
+          status: nextStatus,
+          admin_notes: requestAdminNotes || null,
+          converted_project_id: convertedProjectId,
+        })
+        .eq('id', selectedRequest.id)
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
+        .single();
+
+      if (error) throw error;
+
+      setRequestProjects((previous) =>
+        previous.map((request) => (request.id === selectedRequest.id ? (updatedRequest as ProjectRequest) : request)),
+      );
+      setSelectedRequest(updatedRequest as ProjectRequest);
+      await refreshData();
+      toast.success(nextStatus === 'converted' ? 'Solicitação aprovada e convertida em projeto!' : 'Solicitação atualizada com sucesso!');
+    } catch (error) {
+      console.error('Error updating project request:', error);
+      toast.error('Erro ao atualizar solicitação');
+    } finally {
+      setUpdatingRequest(false);
+    }
+  };
+
+  const hasPendingEditRequest = (project: UnifiedProject) => {
+    if (project.is_request && project.request_id) {
+      return editRequests.some((request) => request.status === 'pending' && request.entity_type === 'project_request' && request.entity_id === project.request_id);
+    }
+
+    return editRequests.some((request) => request.status === 'pending' && request.entity_type === 'project' && request.entity_id === project.id);
+  };
+
+  const handleOpenEditRequestDialog = (project: UnifiedProject) => {
+    const request = editRequests.find((item) => {
+      if (item.status !== 'pending') return false;
+      if (project.is_request && project.request_id) {
+        return item.entity_type === 'project_request' && item.entity_id === project.request_id;
+      }
+      return item.entity_type === 'project' && item.entity_id === project.id;
+    });
+
+    if (!request) return;
+
+    setSelectedEditRequest(request);
+    setEditRequestAdminNotes(request.admin_notes || '');
+    setIsEditRequestDialogOpen(true);
+  };
+
+  const handleProcessEditRequest = async (status: 'approved' | 'rejected') => {
+    if (!selectedEditRequest) return;
+
+    setProcessingEditRequest(true);
+
+    try {
+      const proposedData = selectedEditRequest.proposed_data || {};
+
+      if (status === 'approved') {
+        if (selectedEditRequest.entity_type === 'project' && proposedData.request_type === 'new_task') {
+          const taskName = typeof proposedData.task_name === 'string' ? proposedData.task_name : 'Nova tarefa solicitada';
+          const taskDescription = typeof proposedData.task_description === 'string' ? proposedData.task_description : '';
+          const taskDueDate = typeof proposedData.task_due_date === 'string' ? proposedData.task_due_date : '';
+
+          await createTask({
+            project_id: selectedEditRequest.entity_id,
+            name: taskName,
+            description: taskDescription,
+            status: 'pending',
+            due_date: taskDueDate || '',
+          });
+        } else if (selectedEditRequest.entity_type === 'project') {
+          const patch: Record<string, unknown> = {};
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'description')) patch.description = proposedData.description as string | null;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'due_date')) patch.due_date = proposedData.due_date as string | null;
+          await updateProject(selectedEditRequest.entity_id, patch);
+        } else if (selectedEditRequest.entity_type === 'project_request') {
+          const requestPatch: Record<string, unknown> = {};
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'title')) requestPatch.title = proposedData.title as string;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'briefing')) requestPatch.briefing = proposedData.briefing as string;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'desired_deadline')) requestPatch.desired_deadline = proposedData.desired_deadline as string | null;
+
+          const { error: requestError } = await supabase
+            .from('project_requests')
+            .update(requestPatch)
+            .eq('id', selectedEditRequest.entity_id);
+
+          if (requestError) throw requestError;
+        }
+      }
+
+      const { data: updatedEditRequest, error } = await supabase
+        .from('edit_requests')
+        .update({
+          status,
+          admin_notes: editRequestAdminNotes || null,
+          processed_by: user?.id || null,
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', selectedEditRequest.id)
+        .select('id, entity_type, entity_id, client_id, requested_by, status, original_data, proposed_data, admin_notes, created_at')
+        .single();
+
+      if (error) throw error;
+
+      setEditRequests((previous) => previous.map((request) => request.id === selectedEditRequest.id ? (updatedEditRequest as EditRequest) : request));
+      setIsEditRequestDialogOpen(false);
+      setSelectedEditRequest(null);
+      toast.success(status === 'approved' ? 'Solicitação de edição aprovada!' : 'Solicitação de edição rejeitada!');
+    } catch (error) {
+      console.error('Error processing edit request:', error);
+      toast.error('Erro ao processar solicitação de edição');
+    } finally {
+      setProcessingEditRequest(false);
+    }
+  };
 
   // Helper functions for time conversion
   const parseTimeToHours = (timeString: string): number => {
@@ -653,6 +858,9 @@ export const Projects: React.FC = () => {
           onStartTimer={handleStartTimer}
           onStopTimer={handleStopTimer}
           onCompleteTask={handleCompleteTask}
+          onRequestCardClick={handleOpenRequestDialog}
+          hasPendingEditRequest={(project) => hasPendingEditRequest(project as UnifiedProject)}
+          onOpenEditRequestReview={(project) => handleOpenEditRequestDialog(project as UnifiedProject)}
         />
       ) : (
         <ProjectKanbanView
@@ -679,9 +887,106 @@ export const Projects: React.FC = () => {
         />
       )}
       
+      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Solicitação de Projeto</DialogTitle>
+          </DialogHeader>
+
+          {selectedRequest && (
+            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+              <div>
+                <p className="text-sm text-muted-foreground">Título</p>
+                <p className="font-medium">{selectedRequest.title}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Briefing</p>
+                <p className="text-sm whitespace-pre-wrap">{selectedRequest.briefing}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Prazo desejado</p>
+                <p className="text-sm font-medium">{selectedRequest.desired_deadline || 'Não informado'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status atual</p>
+                <p className="text-sm font-medium">{selectedRequest.status}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="request-admin-notes">Observações do admin</Label>
+                <Textarea
+                  id="request-admin-notes"
+                  value={requestAdminNotes}
+                  onChange={(event) => setRequestAdminNotes(event.target.value)}
+                  placeholder="Adicione um retorno para o cliente"
+                  rows={4}
+                  disabled={updatingRequest}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => handleUpdateRequest('in_review')} disabled={!selectedRequest || updatingRequest}>
+              Em análise
+            </Button>
+            <Button variant="destructive" onClick={() => handleUpdateRequest('rejected')} disabled={!selectedRequest || updatingRequest}>
+              Rejeitar
+            </Button>
+            <Button onClick={() => handleUpdateRequest('approved')} disabled={!selectedRequest || updatingRequest}>
+              Aprovar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditRequestDialogOpen} onOpenChange={setIsEditRequestDialogOpen}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Revisar solicitação de edição</DialogTitle>
+          </DialogHeader>
+
+          {selectedEditRequest && (
+            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+              <div>
+                <p className="text-sm text-muted-foreground">Tipo</p>
+                <p className="font-medium">{selectedEditRequest.entity_type === 'project' ? 'Projeto' : 'Solicitação de projeto'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Dados propostos</p>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto">{JSON.stringify(selectedEditRequest.proposed_data, null, 2)}</pre>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Dados atuais</p>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto">{JSON.stringify(selectedEditRequest.original_data, null, 2)}</pre>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-request-admin-notes">Observações do admin</Label>
+                <Textarea
+                  id="edit-request-admin-notes"
+                  value={editRequestAdminNotes}
+                  onChange={(event) => setEditRequestAdminNotes(event.target.value)}
+                  placeholder="Adicione um retorno para o cliente"
+                  rows={4}
+                  disabled={processingEditRequest}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="destructive" onClick={() => handleProcessEditRequest('rejected')} disabled={!selectedEditRequest || processingEditRequest}>
+              Rejeitar
+            </Button>
+            <Button onClick={() => handleProcessEditRequest('approved')} disabled={!selectedEditRequest || processingEditRequest}>
+              Aprovar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Project Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingProject ? 'Editar Projeto' : 'Novo Projeto'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
@@ -769,7 +1074,7 @@ export const Projects: React.FC = () => {
 
       {/* Task Dialog */}
       <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTask}>
             <div className="space-y-4 py-4">
@@ -787,7 +1092,7 @@ export const Projects: React.FC = () => {
 
       {/* Time Entry Dialog */}
       <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTime}>
             <div className="space-y-4 py-4">
@@ -823,7 +1128,7 @@ export const Projects: React.FC = () => {
 
       {/* Complete Timer Dialog */}
       <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -853,7 +1158,7 @@ export const Projects: React.FC = () => {
 
       {/* Column Dialog */}
       <Dialog open={isColumnDialogOpen} onOpenChange={setIsColumnDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitColumn}>
             <div className="space-y-4 py-4">

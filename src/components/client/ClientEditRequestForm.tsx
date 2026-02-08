@@ -130,7 +130,7 @@ export const ClientEditRequestForm: React.FC<ClientEditRequestFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>
             Solicitar Edição - {entityType === 'project' ? 'Projeto' : 'Solicitação'}
@@ -140,7 +140,7 @@ export const ClientEditRequestForm: React.FC<ClientEditRequestFormProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
           {/* Title - only for project_request */}
           {entityType === 'project_request' && (
             <div className="space-y-2">

@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
 import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm';
-import { Plus, FolderKanban, Clock, Loader2, FileText, CheckCircle, XCircle, Search, ArrowRight, MoreVertical, Pencil, Calendar } from 'lucide-react';
+import { ProjectFilters } from '@/components/projects/ProjectFilters';
+import { ProjectListView } from '@/components/projects/ProjectListView';
+import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
+import { Plus, FolderKanban, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { endOfDay, isWithinInterval, startOfDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 interface ProjectRequest {
   id: string;
@@ -20,55 +24,137 @@ interface ProjectRequest {
   title: string;
   briefing: string;
   status: string;
-  admin_notes: string | null;
+  desired_deadline?: string | null;
   converted_project_id: string | null;
   created_at: string;
+  updated_at?: string;
 }
+
+type UnifiedProject = {
+  id: string;
+  client_id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  due_date?: string | null;
+  custom_fields: Record<string, string>;
+  created_at: string;
+  updated_at?: string;
+  is_request?: boolean;
+  request_status?: string;
+  request_id?: string;
+  desired_deadline?: string | null;
+};
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
-  const { data, getProjectHours } = useData();
+  const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  
-  // Edit request form state
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [filterStageId, setFilterStageId] = useState<string>('all');
+  const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
+
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [editEntity, setEditEntity] = useState<{
     type: 'project' | 'project_request';
     id: string;
     data: Record<string, unknown>;
   } | null>(null);
+  const [taskRequestDialogOpen, setTaskRequestDialogOpen] = useState(false);
+  const [taskRequestProjectId, setTaskRequestProjectId] = useState('');
+  const [taskRequestSubmitting, setTaskRequestSubmitting] = useState(false);
+  const [taskRequestForm, setTaskRequestForm] = useState({ name: '', description: '', due_date: '' });
 
-  // Get client's projects from DataContext
-  const clientProjects = data.projects;
+  const projectStatusOptions = useMemo(() => ([
+    { value: 'active', label: 'Ativo' },
+    { value: 'paused', label: 'Pausado' },
+    { value: 'completed', label: 'Concluído' },
+    { value: 'archived', label: 'Arquivado' },
+  ]), []);
 
-  // Fetch project requests and client ID
+  const visibleProjects = useMemo(() => {
+    let projects = data.projects;
+
+    if (filterStageId !== 'all') {
+      projects = projects.filter((project) => project.status === filterStageId);
+    }
+
+    if (filterDateRange?.from) {
+      projects = projects.filter((project) => {
+        if (!project.due_date) return false;
+        const dueDate = new Date(project.due_date);
+        const from = startOfDay(filterDateRange.from);
+        const to = filterDateRange.to ? endOfDay(filterDateRange.to) : endOfDay(filterDateRange.from);
+        return isWithinInterval(dueDate, { start: from, end: to });
+      });
+    }
+
+    if (filterStageId === 'all') {
+      projects = projects.filter((project) => project.status !== 'archived');
+    }
+
+    return projects;
+  }, [data.projects, filterDateRange, filterStageId]);
+
+  const visibleRequestProjects = useMemo<UnifiedProject[]>(() => {
+    if (viewMode === 'kanban') return [];
+
+    return requests
+      .filter((request) => !request.converted_project_id)
+      .map((request) => ({
+        id: `request-${request.id}`,
+        client_id: request.client_id,
+        name: request.title,
+        description: request.briefing || null,
+        status: 'active',
+        due_date: null,
+        custom_fields: {},
+        created_at: request.created_at,
+        updated_at: request.updated_at || request.created_at,
+        is_request: true,
+        request_status: request.status,
+        request_id: request.id,
+        desired_deadline: request.desired_deadline || null,
+      }));
+  }, [requests, viewMode]);
+
+  const filteredProjects: UnifiedProject[] = useMemo(() => {
+    return [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects].sort((a, b) => {
+      const firstDate = new Date(a.updated_at || a.created_at).getTime();
+      const secondDate = new Date(b.updated_at || b.created_at).getTime();
+      return secondDate - firstDate;
+    });
+  }, [visibleProjects, visibleRequestProjects]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-      
+
       try {
-        // Get client_id
         const { data: clientData } = await supabase
           .from('clients')
           .select('id')
           .eq('user_id', user.id)
           .single();
-        
-        if (clientData) {
-          setClientId(clientData.id);
+
+        if (!clientData) {
+          setLoading(false);
+          return;
         }
-        
-        // Fetch requests
+
+        setClientId(clientData.id);
+
         const { data: requestsData, error } = await supabase
           .from('project_requests')
-          .select('*')
+          .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+          .eq('client_id', clientData.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setRequests(requestsData || []);
+        setRequests((requestsData || []) as ProjectRequest[]);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -82,7 +168,6 @@ export const ClientProjects: React.FC = () => {
   const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
     if (!user) return;
 
-    // Get client_id from the clients table using user_id
     const { data: clientData } = await supabase
       .from('clients')
       .select('id')
@@ -103,7 +188,7 @@ export const ClientProjects: React.FC = () => {
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       })
-      .select()
+      .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();
 
     if (error) {
@@ -112,41 +197,79 @@ export const ClientProjects: React.FC = () => {
       return;
     }
 
-    setRequests(prev => [newRequest, ...prev]);
+    setRequests((prev) => [newRequest as ProjectRequest, ...prev]);
     toast.success('Solicitação enviada com sucesso!');
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Aguardando análise</Badge>;
-      case 'in_review':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Em análise</Badge>;
-      case 'approved':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Aprovado</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Não aprovado</Badge>;
-      case 'converted':
-        return <Badge variant="default">Projeto criado</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const openEditRequest = (project: UnifiedProject) => {
+    if (!clientId) return;
+
+    if (project.is_request && project.request_id) {
+      setEditEntity({
+        type: 'project_request',
+        id: project.request_id,
+        data: {
+          title: project.name,
+          briefing: project.description || '',
+          desired_deadline: project.desired_deadline || null,
+        },
+      });
+    } else {
+      setEditEntity({
+        type: 'project',
+        id: project.id,
+        data: {
+          name: project.name,
+          description: project.description || '',
+          due_date: project.due_date || null,
+        },
+      });
     }
+
+    setEditFormOpen(true);
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-5 h-5 text-yellow-600" />;
-      case 'in_review':
-        return <Search className="w-5 h-5 text-blue-600" />;
-      case 'approved':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'rejected':
-        return <XCircle className="w-5 h-5 text-destructive" />;
-      case 'converted':
-        return <ArrowRight className="w-5 h-5 text-primary" />;
-      default:
-        return <FileText className="w-5 h-5 text-muted-foreground" />;
+  const handleOpenTaskRequestDialog = (projectId: string) => {
+    setTaskRequestProjectId(projectId);
+    setTaskRequestForm({ name: '', description: '', due_date: '' });
+    setTaskRequestDialogOpen(true);
+  };
+
+  const handleSubmitTaskRequest = async () => {
+    if (!clientId || !user || !taskRequestProjectId || !taskRequestForm.name.trim()) {
+      toast.error('Preencha o nome da tarefa para solicitar.');
+      return;
+    }
+
+    setTaskRequestSubmitting(true);
+
+    try {
+      const { error } = await supabase.from('edit_requests').insert([
+        {
+          entity_type: 'project',
+          entity_id: taskRequestProjectId,
+          client_id: clientId,
+          requested_by: user.id,
+          original_data: {},
+          proposed_data: {
+            request_type: 'new_task',
+            task_name: taskRequestForm.name.trim(),
+            task_description: taskRequestForm.description.trim() || null,
+            task_due_date: taskRequestForm.due_date || null,
+          },
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success('Solicitação de nova tarefa enviada para aprovação!');
+      setTaskRequestDialogOpen(false);
+      setTaskRequestProjectId('');
+    } catch (error) {
+      console.error('Error creating task request:', error);
+      toast.error('Erro ao solicitar nova tarefa');
+    } finally {
+      setTaskRequestSubmitting(false);
     }
   };
 
@@ -159,192 +282,144 @@ export const ClientProjects: React.FC = () => {
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Meus Projetos"
-        description="Visualize seus projetos e solicite novos"
-        actions={
-          <Button onClick={() => setIsFormOpen(true)} className="px-3 sm:px-4">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline ml-2">Solicitar Novo Projeto</span>
-          </Button>
-        }
+    <div className="space-y-4">
+      <ProjectFilters
+        projectCount={filteredProjects.length}
+        clients={[]}
+        projectStatusOptions={projectStatusOptions}
+        selectedClientId="all"
+        selectedStageId={filterStageId}
+        dateRange={filterDateRange}
+        onClientChange={() => {}}
+        onStageChange={setFilterStageId}
+        onDateRangeChange={setFilterDateRange}
+        pendingRequestsCount={0}
+        showOnlyRequests={false}
+        onShowOnlyRequestsChange={() => {}}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onAddProject={() => setIsFormOpen(true)}
+        isAdminOrMaster={false}
+        showClientFilter={false}
+        showRequestsFilter={false}
+        showViewToggle
+        showAddButton
       />
 
-      {/* Pending Requests Section */}
-      {requests.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Solicitações</h2>
-          <div className="space-y-4">
-            {requests.map((request) => {
-              const canEdit = request.status === 'pending' || request.status === 'in_review';
-              
-              return (
-                <Card key={request.id}>
-                  <CardContent className="py-4">
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-                        <div className="mt-0.5 flex-shrink-0">
-                          {getStatusIcon(request.status)}
-                        </div>
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-medium text-foreground">{request.title}</h3>
-                            <div className="sm:hidden">{getStatusBadge(request.status)}</div>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2">{request.briefing}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Enviado em {format(new Date(request.created_at), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
-                          </p>
-                          {request.admin_notes && (
-                            <div className="mt-2 p-2 bg-muted rounded-md">
-                              <p className="text-xs font-medium text-muted-foreground">Observação:</p>
-                              <p className="text-sm text-foreground">{request.admin_notes}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="hidden sm:block">
-                          {getStatusBadge(request.status)}
-                        </div>
-                        {canEdit && clientId && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setEditEntity({
-                                  type: 'project_request',
-                                  id: request.id,
-                                  data: {
-                                    title: request.title,
-                                    briefing: request.briefing,
-                                    desired_deadline: (request as unknown as { desired_deadline?: string }).desired_deadline || null,
-                                  },
-                                });
-                                setEditFormOpen(true);
-                              }}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Solicitar Edição
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
+      {filteredProjects.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground mb-4">Nenhum projeto encontrado para os filtros selecionados.</p>
+            <Button onClick={() => setIsFormOpen(true)} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'list' ? (
+        <ProjectListView
+          projects={filteredProjects}
+          clients={data.clients}
+          tasks={data.tasks}
+          timeEntries={data.timeEntries}
+          taskTimers={data.taskTimers}
+          projectColumns={data.projectColumns}
+          projectAccess={data.projectAccess}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={false}
+          allowProjectEditOnly
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getActiveTimer={getActiveTimer}
+          getClientColumns={() => []}
+          onEditProject={(project) => openEditRequest(project as UnifiedProject)}
+          onDeleteProject={() => {}}
+          onArchiveProject={() => {}}
+          onCreateTask={handleOpenTaskRequestDialog}
+          onEditTask={() => {}}
+          onDeleteTask={() => {}}
+          onRegisterTime={() => {}}
+          onStartTimer={async () => {}}
+          onStopTimer={async () => {}}
+          onCompleteTask={async () => {}}
+        />
+      ) : (
+        <ProjectKanbanView
+          projects={visibleProjects}
+          clients={data.clients}
+          tasks={data.tasks}
+          timeEntries={data.timeEntries}
+          taskTimers={data.taskTimers}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={false}
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getActiveTimer={getActiveTimer}
+          onEditTask={() => {}}
+          onDeleteTask={() => {}}
+          onRegisterTime={() => {}}
+          onStartTimer={async () => {}}
+          onStopTimer={async () => {}}
+          onCompleteTask={async () => {}}
+          onUpdateTaskStatus={async () => {}}
+          onCreateTask={handleOpenTaskRequestDialog}
+          onManageStages={() => {}}
+        />
       )}
 
-      {/* Active Projects Section */}
-      <div>
-        <h2 className="text-lg font-semibold text-foreground mb-4">Projetos em Andamento</h2>
-        
-        {clientProjects.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">Você ainda não possui projetos.</p>
-              <Button onClick={() => setIsFormOpen(true)} className="px-3 sm:px-4">
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline ml-2">Solicitar Primeiro Projeto</span>
-                <span className="sm:hidden ml-2">Solicitar</span>
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {clientProjects.map((project) => {
-              const projectHours = getProjectHours(project.id);
-              const projectTasks = data.tasks.filter(t => t.project_id === project.id);
-              const completedTasks = projectTasks.filter(t => t.status === 'completed').length;
-              
-              return (
-                <Card key={project.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-base">{project.name}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                          {project.status === 'active' ? 'Ativo' : project.status}
-                        </Badge>
-                        {clientId && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setEditEntity({
-                                  type: 'project',
-                                  id: project.id,
-                                  data: {
-                                    name: project.name,
-                                    description: project.description || '',
-                                    due_date: project.due_date || null,
-                                  },
-                                });
-                                setEditFormOpen(true);
-                              }}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Solicitar Edição
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-                    {project.due_date && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <Calendar className="w-3 h-3" />
-                        Prazo: {format(parseISO(project.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </div>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    {project.description && (
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {project.description}
-                      </p>
-                    )}
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Horas</p>
-                        <p className="font-medium text-foreground">{projectHours}h</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Tarefas</p>
-                        <p className="font-medium text-foreground">
-                          {completedTasks}/{projectTasks.length} concluídas
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+      <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              <Label htmlFor="task-request-name">Nome da tarefa</Label>
+              <Input
+                id="task-request-name"
+                value={taskRequestForm.name}
+                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="Ex: Criar arte para campanha"
+                disabled={taskRequestSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-request-description">Descrição</Label>
+              <Textarea
+                id="task-request-description"
+                value={taskRequestForm.description}
+                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Descreva o que precisa ser feito"
+                rows={4}
+                disabled={taskRequestSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-request-due-date">Prazo (opcional)</Label>
+              <Input
+                id="task-request-due-date"
+                type="date"
+                value={taskRequestForm.due_date}
+                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, due_date: event.target.value }))}
+                disabled={taskRequestSubmitting}
+              />
+            </div>
           </div>
-        )}
-      </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>Enviar solicitação</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Request Form Dialog */}
       <ProjectRequestForm
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSubmit={handleSubmitRequest}
       />
-      
-      {/* Edit Request Form Dialog */}
+
       {editEntity && clientId && (
         <ClientEditRequestForm
           entityType={editEntity.type}

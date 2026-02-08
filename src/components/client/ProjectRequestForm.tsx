@@ -50,11 +50,11 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Solicitar Novo Projeto</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="max-h-[60vh] overflow-y-auto pr-1">
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título do Projeto *</Label>
