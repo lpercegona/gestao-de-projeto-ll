@@ -79,7 +79,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
       </span>
       <div className="flex items-center justify-between sm:justify-start gap-3">
         {/* Desktop only: Project count */}
-        <span className="text-sm font-semibold text-foreground whitespace-nowrap">
+        <span className="w-full sm:w-auto text-sm font-semibold text-foreground whitespace-nowrap">
           {projectCount} {projectCount === 1 ? "projeto" : "projetos"}
         </span>
         {/* Filter button */}
