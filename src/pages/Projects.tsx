@@ -104,6 +104,13 @@ export const Projects: React.FC = () => {
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
   const [showArchived, setShowArchived] = useState(false);
+
+  const projectStatusOptions = useMemo(() => ([
+    { value: 'active', label: 'Ativo' },
+    { value: 'paused', label: 'Pausado' },
+    { value: 'completed', label: 'Concluído' },
+    { value: 'archived', label: 'Arquivado' },
+  ]), []);
   
   // Project dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -236,12 +243,9 @@ export const Projects: React.FC = () => {
       projects = projects.filter(project => project.client_id === filterClientId);
     }
     
-    // Filter by stage (status)
+    // Filter by status
     if (filterStageId !== 'all') {
-      const selectedStage = data.kanbanStages.find(s => s.id === filterStageId);
-      if (selectedStage) {
-        projects = projects.filter(project => project.status === selectedStage.name.toLowerCase());
-      }
+      projects = projects.filter((project) => project.status === filterStageId);
     }
     
     // Filter by date range (due_date)
@@ -615,7 +619,7 @@ export const Projects: React.FC = () => {
       <ProjectFilters
         projectCount={filteredProjects.length}
         clients={data.clients}
-        kanbanStages={data.kanbanStages}
+        projectStatusOptions={projectStatusOptions}
         selectedClientId={filterClientId}
         selectedStageId={filterStageId}
         dateRange={filterDateRange}
