@@ -55,6 +55,7 @@ import {
   Mail,
   Trash2,
   CalendarIcon,
+  MoreVertical,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -69,6 +70,9 @@ import { formatHours } from '@/lib/formatHours';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
 import { ClientLogoUpload } from '@/components/client/ClientLogoUpload';
 import { ClientCustomFieldsSection } from '@/components/client/ClientCustomFieldsSection';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Project } from '@/types';
 
 interface ProjectRequest {
   id: string;
@@ -115,8 +119,8 @@ interface Contract {
 export const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { data, loading, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow, getProjectHours, getTaskHours, updateClient } = useData();
+  const { user, isAdminOrMaster } = useAuth();
+  const { data, loading, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow, getProjectHours, getTaskHours, updateClient, updateProject, deleteProject } = useData();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -131,6 +135,18 @@ export const ClientDetail: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [reportShare, setReportShare] = useState<ReportShare | null>(null);
+
+  // Project management state
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [isDeleteProjectDialogOpen, setIsDeleteProjectDialogOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+  const [projectSubmitting, setProjectSubmitting] = useState(false);
+  const [projectFormData, setProjectFormData] = useState({
+    name: '',
+    description: '',
+    status: 'active',
+  });
   
   // Contracts state
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -429,6 +445,54 @@ export const ClientDetail: React.FC = () => {
     setExpandedProjects(newExpanded);
   };
 
+  const handleOpenProjectEdit = (project: Project) => {
+    setEditingProject(project);
+    setProjectFormData({
+      name: project.name,
+      description: project.description || '',
+      status: project.status,
+    });
+    setIsProjectDialogOpen(true);
+  };
+
+  const handleSaveProject = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingProject) return;
+
+    setProjectSubmitting(true);
+    const updated = await updateProject(editingProject.id, {
+      name: projectFormData.name.trim(),
+      description: projectFormData.description.trim() || null,
+      status: projectFormData.status,
+    });
+
+    if (updated) {
+      toast.success('Projeto atualizado com sucesso.');
+      setIsProjectDialogOpen(false);
+      setEditingProject(null);
+    } else {
+      toast.error('Não foi possível atualizar o projeto.');
+    }
+
+    setProjectSubmitting(false);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!deletingProject) return;
+
+    setProjectSubmitting(true);
+    const deleted = await deleteProject(deletingProject.id);
+
+    if (deleted) {
+      toast.success('Projeto excluído com sucesso.');
+      setIsDeleteProjectDialogOpen(false);
+      setDeletingProject(null);
+    } else {
+      toast.error('Não foi possível excluir o projeto.');
+    }
+
+    setProjectSubmitting(false);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -1057,9 +1121,48 @@ export const ClientDetail: React.FC = () => {
 
                 return (
                   <Card key={project.id} className="relative overflow-hidden">
+                    {isAdminOrMaster && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleOpenProjectEdit(project);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDeletingProject(project);
+                                setIsDeleteProjectDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
+
                     <Collapsible open={isExpanded} onOpenChange={() => toggleProject(project.id)}>
                       <CollapsibleTrigger asChild>
-                        <CardContent className="p-4 sm:p-6 cursor-pointer hover:bg-muted/30 transition-colors">
+                        <CardContent className="p-4 sm:p-6 pr-14 cursor-pointer hover:bg-muted/30 transition-colors">
                           <div className="flex items-start gap-3">
                             <ChevronDown
                               className={`w-5 h-5 mt-0.5 text-muted-foreground transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
@@ -1968,6 +2071,87 @@ export const ClientDetail: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+
+
+      <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Projeto</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do projeto selecionado.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSaveProject}>
+            <div className="space-y-2">
+              <Label htmlFor="project-name">Nome</Label>
+              <Input
+                id="project-name"
+                value={projectFormData.name}
+                onChange={(event) => setProjectFormData((previous) => ({ ...previous, name: event.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-description">Descrição</Label>
+              <Textarea
+                id="project-description"
+                value={projectFormData.description}
+                onChange={(event) => setProjectFormData((previous) => ({ ...previous, description: event.target.value }))}
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={projectFormData.status}
+                onValueChange={(value) => setProjectFormData((previous) => ({ ...previous, status: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="paused">Pausado</SelectItem>
+                  <SelectItem value="completed">Concluído</SelectItem>
+                  <SelectItem value="archived">Arquivado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsProjectDialogOpen(false)} disabled={projectSubmitting}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={projectSubmitting || !projectFormData.name.trim()}>
+                {projectSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Salvar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteProjectDialogOpen} onOpenChange={setIsDeleteProjectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir projeto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O projeto <strong>{deletingProject?.name}</strong> será removido definitivamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={projectSubmitting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={projectSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteProject}
+            >
+              {projectSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Collaborator Dialog */}
       <UserCreateDialog
