@@ -1,57 +1,53 @@
 
-# Plano: Ajustes de Navegação Mobile
 
-## Resumo das Alterações
+# Plano: Correções de Descrição e Layout Mobile dos Projetos
 
-Duas modificações na interface mobile para melhorar a experiência de navegação:
+## 1. Correção das Tags `<p>` Visíveis nas Descrições
 
-1. **Header Mobile**: Substituir a logo ORAS pela barra de pesquisa universal
-2. **Menu Mobile (Sidebar)**: Substituir a logo pelo seletor de workspace
+**Arquivo:** `src/components/ui/wysiwyg-editor.tsx`
 
----
+**Problema:** Descrições em texto puro (sem formatação HTML) estão sendo exibidas literalmente com as tags `<p>` visíveis.
 
-## Alterações Visuais
+**Solução:** Modificar o componente `WysiwygContent` para:
+- Adicionar `useMemo` ao import do React
+- Verificar se o conteúdo já contém tags HTML
+- Se for texto puro, envolvê-lo automaticamente em uma tag `<p>` para renderização consistente
 
-### Antes vs Depois
-
-**Header Mobile:**
-- Antes: `[≡] [Logo ORAS] ................ [Timer] [🔔]`
-- Depois: `[≡] [🔍 Pesquisar...] ........... [Timer] [🔔]`
-
-**Menu Mobile (topo da sidebar):**
-- Antes: Logo ORAS centralizada
-- Depois: WorkspaceSelector com avatar, nome do workspace e plano
+**Alterações:**
+- Linha 1: Adicionar `useMemo` ao import
+- Linhas 222-251: Reestruturar o componente `WysiwygContent` com processamento de conteúdo
 
 ---
 
-## Detalhes Técnicos
+## 2. Layout Mobile dos Filtros de Projetos
 
-### 1. MobileHeader - Adicionar Barra de Pesquisa
+**Arquivo:** `src/components/projects/ProjectFilters.tsx`
 
-Arquivo: `src/components/layout/AppLayout.tsx`
+**Layout atual (todas as telas):**
+```
+[8 projetos] [Filtro] [Lista|Kanban] .............. [+]
+```
 
-Modificações no componente `MobileHeader`:
-- Remover o container animado que alterna entre logo e info do timer
-- Adicionar o componente `UniversalSearchBar` ocupando o espaço central
-- Manter a animação do timer info apenas ao lado direito quando ativo
+**Layout mobile desejado:**
+```
+Linha 1: [Filtro] ---- [Lista|Kanban] ---- [+]
+Linha 2: [8 projetos]
+```
 
-O comportamento do timer será preservado, mas o info da tarefa aparecerá de forma diferente (não mais animando com a logo).
+**Layout desktop (sem alteração):**
+```
+[8 projetos] [Filtro] [Lista|Kanban] .............. [+]
+```
 
-### 2. Sidebar Mobile - Substituir Logo por WorkspaceSelector
-
-Arquivo: `src/components/layout/AppLayout.tsx`
-
-Modificações na seção do header da sidebar:
-- Remover a tag `<img>` que exibe a logo no mobile
-- Adicionar `<WorkspaceSelector isCollapsed={false} />` visível apenas no mobile (`lg:hidden`)
-- O WorkspaceSelector já existe e mostra avatar + nome do workspace + plano
+**Alterações:**
+- Reestruturar o container principal com `flex-col sm:flex-row`
+- Mover a contagem de projetos para uma segunda linha no mobile (`sm:hidden` / `hidden sm:block`)
+- Duplicar o botão de adicionar para posicionamento diferente no mobile e desktop
 
 ---
 
-## Comportamentos Preservados
+## Arquivos Afetados
 
-- Timer display e notification bell continuam no header mobile
-- Animação do timer info no desktop permanece inalterada
-- Atalho de teclado ⌘K continua funcionando para abrir a pesquisa
-- WorkspaceSelector no desktop continua funcionando normalmente
-- Botão de fechar menu (X) no mobile continua no mesmo lugar
+1. `src/components/ui/wysiwyg-editor.tsx`
+2. `src/components/projects/ProjectFilters.tsx`
+
