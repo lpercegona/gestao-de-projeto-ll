@@ -73,7 +73,7 @@ type ClientTask = {
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
-  const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer } = useData();
+  const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [pendingTaskRequests, setPendingTaskRequests] = useState<PendingTaskRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -471,7 +471,7 @@ export const ClientProjects: React.FC = () => {
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
           getActiveTimer={getActiveTimer}
-          getClientColumns={() => []}
+          getClientColumns={getClientColumns}
           onEditProject={(project) => openEditRequest(project as UnifiedProject)}
           onDeleteProject={() => {}}
           onArchiveProject={() => {}}
