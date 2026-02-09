@@ -20,6 +20,14 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, AlertCircle, CalendarIcon, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -65,6 +73,7 @@ export const ClientReports: React.FC = () => {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'hours' | 'requests'>('hours');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [projectRequestsHistory, setProjectRequestsHistory] = useState<ProjectRequestHistory[]>([]);
   const [editRequestsHistory, setEditRequestsHistory] = useState<EditRequestHistory[]>([]);
 
@@ -310,7 +319,7 @@ export const ClientReports: React.FC = () => {
     );
   }
 
-  const handleExportReport = () => {
+  const handleExportReportCSV = () => {
     const monthLabel = monthOptions.find((option) => option.value === selectedMonth)?.label || selectedMonth;
     const rows = [
       ['Projeto', 'Tarefa', 'Descrição', 'Horas Tarefas', 'Horas Reuniões', 'Total Horas'],
@@ -347,6 +356,12 @@ export const ClientReports: React.FC = () => {
     link.download = `relatorio-${client.company || client.name}-${monthLabel}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+    setExportDialogOpen(false);
+  };
+
+  const handleExportReportPDF = () => {
+    setExportDialogOpen(false);
+    window.print();
   };
 
   return (
@@ -360,7 +375,7 @@ export const ClientReports: React.FC = () => {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={handleExportReport}
+                onClick={() => setExportDialogOpen(true)}
                 className="h-8 w-8 rounded-lg"
                 title="Exportar relatório"
               >
@@ -382,6 +397,21 @@ export const ClientReports: React.FC = () => {
           )
         }
       />
+
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Exportar relatório</DialogTitle>
+            <DialogDescription>
+              Escolha o formato do arquivo para baixar o relatório deste período.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleExportReportCSV}>Baixar CSV</Button>
+            <Button onClick={handleExportReportPDF}>Baixar PDF</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Contract Summary */}
       <Card className="mb-6">
