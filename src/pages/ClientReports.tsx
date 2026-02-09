@@ -310,17 +310,12 @@ export const ClientReports: React.FC = () => {
     );
   }
 
+  const contractStartDate = (client as { contract_start_date?: string | null }).contract_start_date;
   const contractEndDate = (client as { contract_end_date?: string | null }).contract_end_date;
-  const firstEntryDate = timeEntries.length > 0
-    ? timeEntries.reduce((min, entry) => (entry.date < min ? entry.date : min), timeEntries[0].date)
-    : null;
-  const monthlyContractMonths = isMonthly
-    ? Math.max(
-        1,
-        firstEntryDate
-          ? differenceInCalendarMonths(new Date(), startOfMonth(parseISO(firstEntryDate))) + 1
-          : 1,
-      )
+  const contractPeriodStart = contractStartDate ? startOfMonth(parseISO(contractStartDate)) : null;
+  const contractPeriodEnd = contractEndDate ? startOfMonth(parseISO(contractEndDate)) : startOfMonth(new Date());
+  const monthlyContractMonths = isMonthly && contractPeriodStart
+    ? Math.max(1, differenceInCalendarMonths(contractPeriodEnd, contractPeriodStart) + 1)
     : 1;
   const totalContractHoursAllMonths = isMonthly
     ? client.contracted_hours * monthlyContractMonths
@@ -478,26 +473,26 @@ export const ClientReports: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-5">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <div>
                   <p className="text-xs text-muted-foreground">Tipo de contrato</p>
-                  <p className="text-lg font-semibold">{isMonthly ? 'Mensal' : 'Único'}</p>
+                  <p className="text-lg font-semibold text-foreground">{isMonthly ? 'Mensal' : 'Único'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horas contratadas</p>
-                  <p className="text-lg font-semibold">{formatHours(client.contracted_hours)}</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(client.contracted_hours)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Previsão de término</p>
-                  <p className="text-lg font-semibold">{contractEndDate ? format(parseISO(contractEndDate), 'dd/MM/yyyy') : 'Não definida'}</p>
+                  <p className="text-lg font-semibold text-foreground">{contractEndDate ? format(parseISO(contractEndDate), 'dd/MM/yyyy') : 'Não definida'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total de horas (todos os meses)</p>
-                  <p className="text-lg font-semibold">{formatHours(totalContractHoursAllMonths)}</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalContractHoursAllMonths)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
-                  <p className="text-lg font-semibold">{formatHours(totalAllHours)}</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
                 </div>
               </div>
             </CardContent>
@@ -508,35 +503,39 @@ export const ClientReports: React.FC = () => {
               <CardTitle className="text-base">Resumo do Mês</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <div>
-                  <p className="text-sm text-muted-foreground">Horas disponíveis no mês</p>
-                  <p className="text-2xl font-bold">{formatHours(availableHours)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Horas utilizadas no mês</p>
-                  <p className="text-2xl font-bold">{formatHours(totalMonthHours)}</p>
+                  <p className="text-xs text-muted-foreground">Horas disponíveis no mês</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(availableHours)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Horas em tarefas</p>
-                  <p className="text-xl font-semibold text-primary">{formatHours(totalMonthTaskHours)}</p>
+                  <p className="text-xs text-muted-foreground">Horas utilizadas no mês</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthHours)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Horas em reunião</p>
-                  <p className="text-xl font-semibold text-accent-foreground">{formatHours(totalMonthMeetingHours)}</p>
+                  <p className="text-xs text-muted-foreground">Horas em tarefas</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthTaskHours)}</p>
                 </div>
-              </div>
-              <div className="mt-5 space-y-2">
-                <div className="h-3 w-full rounded-full bg-muted">
-                  <div
-                    className="h-3 rounded-full bg-primary transition-all"
-                    style={{ width: `${availableHours > 0 ? Math.min((totalMonthHours / availableHours) * 100, 100) : 0}%` }}
-                  />
+                <div>
+                  <p className="text-xs text-muted-foreground">Horas em reunião</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthMeetingHours)}</p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Remanescentes: {formatHours(remainingHours)}
-                  {isMonthly ? ` • Saldo do mês anterior descontado: ${formatHours(previousOverflow)}` : ''}
-                </p>
+                <div>
+                  <p className="text-xs text-muted-foreground">Horas remanescentes no mês</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(remainingHours)}</p>
+                </div>
+                <div className="col-span-2 mt-1 space-y-2 lg:col-span-5">
+                  <div className="h-3 w-full rounded-full bg-muted">
+                    <div
+                      className="h-3 rounded-full bg-primary transition-all"
+                      style={{ width: `${availableHours > 0 ? Math.min((totalMonthHours / availableHours) * 100, 100) : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Remanescentes: {formatHours(remainingHours)}
+                    {isMonthly ? ` • Saldo do mês anterior descontado: ${formatHours(previousOverflow)}` : ''}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
