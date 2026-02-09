@@ -67,6 +67,7 @@ interface TaskCardProps {
   compact?: boolean;
   showStatus?: boolean;
   iconOnly?: boolean;
+  showTimeControls?: boolean;
   allowTaskEdit?: boolean;
   allowTaskDelete?: boolean;
   showRegisterTimeButton?: boolean;
@@ -91,6 +92,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   compact = false,
   showStatus = false,
   iconOnly = false,
+  showTimeControls = true,
   allowTaskEdit = true,
   allowTaskDelete = true,
   showRegisterTimeButton = true,
@@ -220,32 +222,34 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <WysiwygContent content={task.description} className="text-xs text-muted-foreground mb-2 line-clamp-2" />
         )}
 
-        <div className="flex items-center gap-2 flex-wrap mb-2">
-          <TaskTimer
-            taskId={task.id}
-            taskStatus={task.status}
-            activeTimer={activeTimer}
-            onStart={onStartTimer}
-            onStop={onStopTimer}
-            onComplete={onCompleteTask}
-            iconOnly={iconOnly}
-          />
-          {showRegisterTimeButton && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => onRegisterTime(task.id)} 
-                  className="h-7 px-2 text-xs"
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Registrar tempo</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+        {showTimeControls && (
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <TaskTimer
+              taskId={task.id}
+              taskStatus={task.status}
+              activeTimer={activeTimer}
+              onStart={onStartTimer}
+              onStop={onStopTimer}
+              onComplete={onCompleteTask}
+              iconOnly={iconOnly}
+            />
+            {showRegisterTimeButton && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => onRegisterTime(task.id)} 
+                    className="h-7 px-2 text-xs"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Registrar tempo</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-foreground">{formatHours(taskHours)}</span>

@@ -381,6 +381,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             onStopTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStopTimer(task.id))}
                             onCompleteTask={() => (isPendingApprovalTask ? Promise.resolve() : onCompleteTask(task.id))}
                             showStatus={true}
+                            showTimeControls={!isClientRestrictedMode}
                             allowTaskEdit={!isPendingApprovalTask && !isClientRestrictedMode}
                             allowTaskDelete={!isPendingApprovalTask && !isClientRestrictedMode}
                             showRegisterTimeButton={!isPendingApprovalTask && !isClientRestrictedMode}
