@@ -68,13 +68,13 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
                 <p className="text-sm text-muted-foreground">Solicite um novo projeto ou serviço</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              {pendingCount > 0 && (
-                <Badge variant="secondary" className="text-xs shrink-0">
-                  {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
-                </Badge>
-              )}
-            </div>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            {pendingCount > 0 && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
+              </Badge>
+            )}
             <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               Nova Solicitação
