@@ -481,7 +481,7 @@ export const ClientReports: React.FC = () => {
                   <p className="text-lg font-semibold text-foreground">{isMonthly ? 'Mensal' : 'Único'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Horas contratadas</p>
+                  <p className="text-xs text-muted-foreground">Horas/Mês</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(client.contracted_hours)}</p>
                 </div>
                 <div>
@@ -489,11 +489,11 @@ export const ClientReports: React.FC = () => {
                   <p className="text-lg font-semibold text-foreground">{contractEndDate ? format(parseISO(contractEndDate), 'dd/MM/yyyy') : 'Não definida'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Total de horas (todos os meses)</p>
+                  <p className="text-xs text-muted-foreground">Total disponíveis</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalContractHoursAllMonths)}</p>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
-                  <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
+                  <p className="text-xs text-muted-foreground">Utilizadas (geral)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
                   <div className="mt-2 space-y-1.5">
                     <div className="h-2.5 w-full rounded-full bg-muted">
@@ -522,19 +522,19 @@ export const ClientReports: React.FC = () => {
             <CardContent>
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <div>
-                  <p className="text-xs text-muted-foreground">Horas disponíveis no mês</p>
+                  <p className="text-xs text-muted-foreground">Disponíveis</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(availableHours)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Horas utilizadas no mês</p>
+                  <p className="text-xs text-muted-foreground">Utilizadas</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthHours)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Horas em tarefas</p>
+                  <p className="text-xs text-muted-foreground">Tarefas</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthTaskHours)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Horas em reunião</p>
+                  <p className="text-xs text-muted-foreground">Reuniões</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthMeetingHours)}</p>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
