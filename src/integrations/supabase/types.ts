@@ -540,6 +540,7 @@ export type Database = {
           admin_notes: string | null
           briefing: string
           client_id: string
+          custom_fields: Json | null
           converted_project_id: string | null
           created_at: string
           created_by: string
@@ -553,6 +554,7 @@ export type Database = {
           admin_notes?: string | null
           briefing: string
           client_id: string
+          custom_fields?: Json | null
           converted_project_id?: string | null
           created_at?: string
           created_by: string
@@ -566,6 +568,7 @@ export type Database = {
           admin_notes?: string | null
           briefing?: string
           client_id?: string
+          custom_fields?: Json | null
           converted_project_id?: string | null
           created_at?: string
           created_by?: string

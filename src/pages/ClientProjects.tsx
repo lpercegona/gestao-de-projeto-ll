@@ -217,7 +217,7 @@ export const ClientProjects: React.FC = () => {
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
-            .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+            .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
             .eq('client_id', clientData.id)
             .order('created_at', { ascending: false }),
           supabase
@@ -245,7 +245,7 @@ export const ClientProjects: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
+  const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
     const { data: clientData } = await supabase
@@ -265,10 +265,11 @@ export const ClientProjects: React.FC = () => {
         client_id: clientData.id,
         title,
         briefing,
+        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       })
-      .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+      .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();
 
     if (error) {

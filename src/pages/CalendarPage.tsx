@@ -35,7 +35,7 @@ export const CalendarPage: React.FC = () => {
   const [showRequestForm, setShowRequestForm] = useState(false);
 
   // Handle project request submission for clients
-  const handleSubmitRequest = async (title: string, briefing: string, desiredDeadline?: string) => {
+  const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
     const { data: clientData } = await supabase
@@ -55,6 +55,7 @@ export const CalendarPage: React.FC = () => {
         client_id: clientData.id,
         title,
         briefing,
+        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       });

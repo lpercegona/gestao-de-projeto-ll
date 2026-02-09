@@ -72,6 +72,7 @@ interface ProjectRequest {
   client_id: string;
   title: string;
   briefing: string;
+  custom_fields?: Record<string, string> | null;
   status: string;
   desired_deadline?: string | null;
   admin_notes?: string | null;
@@ -235,7 +236,7 @@ export const Projects: React.FC = () => {
 
       const { data: requestsData, error } = await supabase
         .from('project_requests')
-        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -497,7 +498,7 @@ export const Projects: React.FC = () => {
           client_id: selectedRequest.client_id,
           status: 'active',
           due_date: selectedRequest.desired_deadline || null,
-          custom_fields: {},
+          custom_fields: (selectedRequest.custom_fields as Record<string, string>) || {},
         });
 
         if (!createdProject?.id) {
@@ -516,7 +517,7 @@ export const Projects: React.FC = () => {
           converted_project_id: convertedProjectId,
         })
         .eq('id', selectedRequest.id)
-        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
         .single();
 
       if (error) throw error;
