@@ -75,11 +75,11 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
                 {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
               </Badge>
             )}
-            <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full sm:w-auto">
-              <Plus className="w-4 h-4" />
-              Nova Solicitação
-            </Button>
           </div>
+          <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full sm:w-auto">
+            <Plus className="w-4 h-4" />
+            Nova Solicitação
+          </Button>
         </CardContent>
       </Card>
 
