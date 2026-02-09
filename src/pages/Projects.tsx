@@ -1204,7 +1204,7 @@ export const Projects: React.FC = () => {
         <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTask}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
               <div className="space-y-2"><Label>Nome da Tarefa</Label><Input value={taskFormData.name} onChange={(e) => setTaskFormData({ ...taskFormData, name: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskFormData.description} onChange={(value) => setTaskFormData({ ...taskFormData, description: value })} disabled={submitting} minHeight="80px" /></div>
               <div className="grid grid-cols-2 gap-4">
