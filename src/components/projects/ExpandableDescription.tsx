@@ -15,10 +15,10 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
 }) => {
   const [expanded, setExpanded] = React.useState(false);
   const [isOverflowing, setIsOverflowing] = React.useState(false);
-  const contentContainerRef = React.useRef<HTMLDivElement>(null);
+  const collapsedMeasureRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    const element = contentContainerRef.current;
+    const element = collapsedMeasureRef.current;
     if (!element) return;
 
     const checkOverflow = () => {
@@ -35,28 +35,53 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
       resizeObserver.disconnect();
       window.removeEventListener('resize', checkOverflow);
     };
-  }, [content, expanded]);
+  }, [content]);
+
+  const toggleExpanded = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (stopPropagationOnToggle) {
+      event.stopPropagation();
+    }
+    setExpanded((current) => !current);
+  };
 
   if (!content) return null;
 
   return (
     <div className={cn('space-y-1', className)}>
-      <div ref={contentContainerRef} className={cn(!expanded && 'line-clamp-3')}>
-        <WysiwygContent content={content} />
+      <div className="relative">
+        <div className={cn(!expanded && 'line-clamp-3')}>
+          <WysiwygContent content={content} />
+        </div>
+
+        {isOverflowing && !expanded && (
+          <span className="absolute bottom-0 right-0 bg-background pl-1 text-xs text-muted-foreground">
+            ...
+            <button
+              type="button"
+              onClick={toggleExpanded}
+              className="underline underline-offset-2"
+            >
+              mais
+            </button>
+          </span>
+        )}
+
+        <div
+          ref={collapsedMeasureRef}
+          aria-hidden
+          className="absolute inset-0 invisible pointer-events-none line-clamp-3"
+        >
+          <WysiwygContent content={content} />
+        </div>
       </div>
 
-      {isOverflowing && (
+      {isOverflowing && expanded && (
         <button
           type="button"
-          onClick={(event) => {
-            if (stopPropagationOnToggle) {
-              event.stopPropagation();
-            }
-            setExpanded((current) => !current);
-          }}
+          onClick={toggleExpanded}
           className="text-xs text-muted-foreground underline underline-offset-2"
         >
-          {expanded ? '...menos' : '...mais'}
+          Recolher
         </button>
       )}
     </div>
