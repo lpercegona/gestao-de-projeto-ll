@@ -490,9 +490,24 @@ export const ClientReports: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Total de horas (todos os meses)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalContractHoursAllMonths)}</p>
                 </div>
-                <div>
+                <div className="col-span-2 lg:col-span-1">
                   <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
+                  <div className="mt-2 space-y-1.5">
+                    <div className="h-2.5 w-full rounded-full bg-muted">
+                      <div
+                        className="h-2.5 rounded-full bg-primary transition-all"
+                        style={{
+                          width: `${totalContractHoursAllMonths > 0
+                            ? Math.min((totalAllHours / totalContractHoursAllMonths) * 100, 100)
+                            : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Contratadas: {formatHours(totalContractHoursAllMonths)} • Usadas: {formatHours(totalAllHours)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -520,7 +535,7 @@ export const ClientReports: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Horas em reunião</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthMeetingHours)}</p>
                 </div>
-                <div>
+                <div className="col-span-2 lg:col-span-1">
                   <p className="text-xs text-muted-foreground">Horas remanescentes no mês</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(remainingHours)}</p>
                 </div>
