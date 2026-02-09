@@ -543,10 +543,10 @@ export const ClientReports: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Total de horas (todos os meses)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalContractHoursAllMonths)}</p>
                 </div>
-              </div>
-              <div className="col-span-2 lg:col-span-1">
                 <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
                 <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
+              </div>
+              <div className="col-span-2 lg:col-span-1">
                 <div className="mt-2 space-y-1.5">
                   <div className="h-2.5 w-full rounded-full bg-muted">
                     <div
