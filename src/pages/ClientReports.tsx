@@ -99,11 +99,25 @@ export const ClientReports: React.FC = () => {
     const fetchRequestHistory = async () => {
       if (!client) return;
 
-      const companyClientIds = data.clients
-        .filter((clientItem) => clientItem.company && clientItem.company === client.company)
+      const normalizedCompany = client.company?.trim().toLocaleLowerCase() || null;
+
+      const relatedClientIds = data.clients
+        .filter((clientItem) => {
+          const itemCompany = clientItem.company?.trim().toLocaleLowerCase() || null;
+
+          if (normalizedCompany) {
+            return itemCompany === normalizedCompany;
+          }
+
+          if (client.user_id) {
+            return clientItem.user_id === client.user_id;
+          }
+
+          return clientItem.id === client.id;
+        })
         .map((clientItem) => clientItem.id);
 
-      const clientIds = companyClientIds.length > 0 ? companyClientIds : [client.id];
+      const clientIds = Array.from(new Set([...relatedClientIds, client.id]));
 
       const [{ data: requests }, { data: editRequests }] = await Promise.all([
         supabase
