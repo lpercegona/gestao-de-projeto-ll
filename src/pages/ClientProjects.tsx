@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
 import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm';
@@ -73,7 +74,7 @@ type ClientTask = {
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
-  const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer } = useData();
+  const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [pendingTaskRequests, setPendingTaskRequests] = useState<PendingTaskRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -93,6 +94,7 @@ export const ClientProjects: React.FC = () => {
   const [taskRequestProjectId, setTaskRequestProjectId] = useState('');
   const [taskRequestSubmitting, setTaskRequestSubmitting] = useState(false);
   const [taskRequestForm, setTaskRequestForm] = useState({ name: '', description: '', due_date: '' });
+  const [taskRequestCustomFields, setTaskRequestCustomFields] = useState<Record<string, string>>({});
 
   const [taskEditDialogOpen, setTaskEditDialogOpen] = useState(false);
   const [taskEditSubmitting, setTaskEditSubmitting] = useState(false);
@@ -103,6 +105,19 @@ export const ClientProjects: React.FC = () => {
     description: '',
     due_date: '',
   });
+
+  const selectedTaskRequestProject = useMemo(() => {
+    if (!taskRequestProjectId) return null;
+    return data.projects.find((project) => project.id === taskRequestProjectId) || null;
+  }, [data.projects, taskRequestProjectId]);
+
+  const taskRequestProjectColumns = useMemo(() => {
+    if (!selectedTaskRequestProject) return [];
+
+    return data.projectColumns.filter(
+      (column) => column.client_id === selectedTaskRequestProject.client_id,
+    );
+  }, [data.projectColumns, selectedTaskRequestProject]);
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -310,8 +325,21 @@ export const ClientProjects: React.FC = () => {
   };
 
   const handleOpenTaskRequestDialog = (projectId: string) => {
+    const project = data.projects.find((item) => item.id === projectId);
+    const clientColumns = project
+      ? data.projectColumns.filter((column) => column.client_id === project.client_id)
+      : [];
+
+    const defaultCustomFields = clientColumns.reduce<Record<string, string>>((acc, column) => {
+      const currentValue = project?.custom_fields?.[column.id];
+      const defaultOption = column.type === 'select' ? (column.options?.[0] || '') : '';
+      acc[column.id] = currentValue || defaultOption;
+      return acc;
+    }, {});
+
     setTaskRequestProjectId(projectId);
     setTaskRequestForm({ name: '', description: '', due_date: '' });
+    setTaskRequestCustomFields(defaultCustomFields);
     setTaskRequestDialogOpen(true);
   };
 
@@ -336,6 +364,7 @@ export const ClientProjects: React.FC = () => {
             task_name: taskRequestForm.name.trim(),
             task_description: getWysiwygPlainText(taskRequestForm.description) ? taskRequestForm.description : null,
             task_due_date: taskRequestForm.due_date || null,
+            task_custom_fields: taskRequestCustomFields,
           },
         },
       ]).select('id, entity_id, status, proposed_data, created_at').single();
@@ -349,6 +378,7 @@ export const ClientProjects: React.FC = () => {
       toast.success('Solicitação de nova tarefa enviada para aprovação!');
       setTaskRequestDialogOpen(false);
       setTaskRequestProjectId('');
+      setTaskRequestCustomFields({});
     } catch (error) {
       console.error('Error creating task request:', error);
       toast.error('Erro ao solicitar nova tarefa');
@@ -471,7 +501,7 @@ export const ClientProjects: React.FC = () => {
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
           getActiveTimer={getActiveTimer}
-          getClientColumns={() => []}
+          getClientColumns={getClientColumns}
           onEditProject={(project) => openEditRequest(project as UnifiedProject)}
           onDeleteProject={() => {}}
           onArchiveProject={() => {}}
@@ -594,6 +624,40 @@ export const ClientProjects: React.FC = () => {
                 disabled={taskRequestSubmitting}
               />
             </div>
+
+            {taskRequestProjectColumns.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">Campos personalizados do cliente</p>
+                {taskRequestProjectColumns.map((column) => (
+                  <div key={column.id} className="space-y-2">
+                    <Label>{column.name}</Label>
+                    {column.type === 'select' ? (
+                      <Select value={taskRequestCustomFields[column.id] || ''} disabled>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Selecione ${column.name}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(column.options || []).map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        value={taskRequestCustomFields[column.id] || ''}
+                        onChange={(event) => setTaskRequestCustomFields((prev) => ({
+                          ...prev,
+                          [column.id]: event.target.value,
+                        }))}
+                        disabled={taskRequestSubmitting}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button>
