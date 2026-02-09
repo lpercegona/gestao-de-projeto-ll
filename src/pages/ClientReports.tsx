@@ -99,14 +99,24 @@ export const ClientReports: React.FC = () => {
     const fetchRequestHistory = async () => {
       if (!client) return;
 
-      const normalizedCompany = client.company?.trim().toLocaleLowerCase() || null;
+      const normalizedCompany = client.company?.trim() || null;
 
-      const relatedClientIds = data.clients
+      const relatedClientsRes = normalizedCompany
+        ? await supabase.from("clients").select("id, company").not("company", "is", null)
+        : client.user_id
+          ? await supabase.from("clients").select("id").eq("user_id", client.user_id)
+          : { data: [], error: null };
+
+      const queriedClientIds = normalizedCompany
+        ? ((relatedClientsRes.data || []) as Array<{ id: string; company: string | null }>)
+            .filter((clientItem) => clientItem.company?.trim().toLocaleLowerCase() === normalizedCompany.toLocaleLowerCase())
+            .map((clientItem) => clientItem.id)
+        : ((relatedClientsRes.data || []) as Array<{ id: string }>).map((clientItem) => clientItem.id);
+
+      const contextRelatedClientIds = data.clients
         .filter((clientItem) => {
-          const itemCompany = clientItem.company?.trim().toLocaleLowerCase() || null;
-
           if (normalizedCompany) {
-            return itemCompany === normalizedCompany;
+            return clientItem.company?.trim()?.toLocaleLowerCase() === normalizedCompany.toLocaleLowerCase();
           }
 
           if (client.user_id) {
@@ -117,7 +127,7 @@ export const ClientReports: React.FC = () => {
         })
         .map((clientItem) => clientItem.id);
 
-      const clientIds = Array.from(new Set([...relatedClientIds, client.id]));
+      const clientIds = Array.from(new Set([...queriedClientIds, ...contextRelatedClientIds, client.id]));
 
       const [{ data: requests }, { data: editRequests }] = await Promise.all([
         supabase
