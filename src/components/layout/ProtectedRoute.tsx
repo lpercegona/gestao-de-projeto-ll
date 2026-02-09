@@ -1,29 +1,22 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import simboloOras from '@/assets/simbolo-oras.svg';
-import { AppLayout } from './AppLayout';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import simboloOras from "@/assets/simbolo-oras.svg";
+import { AppLayout } from "./AppLayout";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'master_admin' | 'admin' | 'collaborator' | 'client';
+  requiredRole?: "master_admin" | "admin" | "collaborator" | "client";
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requiredRole 
-}) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
   const { user, loading, roleLoading, isMasterAdmin, isAdmin, isCollaborator, isClient } = useAuth();
 
   // Show loading while checking authentication
   if (loading || roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <img
-          src={simboloOras}
-          alt="Carregando ORAS"
-          className="w-12 h-12 animate-spin [animation-duration:3s]"
-        />
+        <img src={simboloOras} alt="Carregando ORAS" className="w-12 h-12 animate-spin [animation-duration:3s]" />
       </div>
     );
   }
@@ -38,18 +31,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     let hasAccess = false;
 
     switch (requiredRole) {
-      case 'master_admin':
+      case "master_admin":
         hasAccess = isMasterAdmin;
         break;
-      case 'admin':
+      case "admin":
         // Admin routes accessible by master_admin and admin
         hasAccess = isMasterAdmin || isAdmin;
         break;
-      case 'collaborator':
+      case "collaborator":
         // Collaborator routes accessible by master_admin, admin, and collaborator
         hasAccess = isMasterAdmin || isAdmin || isCollaborator;
         break;
-      case 'client':
+      case "client":
         // Client routes accessible by all roles
         hasAccess = isMasterAdmin || isAdmin || isCollaborator || isClient;
         break;
@@ -58,7 +51,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!hasAccess) {
       // Redirect based on role
       if (isClient) {
-        return <Navigate to="/client-dashboard" replace />;
+        return <Navigate to="/" replace />;
       }
       if (isCollaborator) {
         return <Navigate to="/projects" replace />;
