@@ -61,6 +61,12 @@ interface EditRequest {
   created_at: string;
 }
 
+type PendingApprovalTask = Task & {
+  is_pending_approval: true;
+  approval_label: string;
+  pending_request_id: string;
+};
+
 interface ProjectRequest {
   id: string;
   client_id: string;
@@ -352,7 +358,16 @@ export const Projects: React.FC = () => {
   const visibleEditRequests = useMemo<UnifiedProject[]>(() => {
     if (!isAdminOrMaster) return [];
 
-    let filteredEditRequests = editRequests.filter((request) => request.status === 'pending');
+    let filteredEditRequests = editRequests.filter((request) => {
+      if (request.status !== 'pending') return false;
+
+      if (request.entity_type !== 'project_request') {
+        const requestType = typeof request.proposed_data?.['request_type'] === 'string' ? request.proposed_data['request_type'] : null;
+        if (requestType === 'new_task') return false;
+      }
+
+      return true;
+    });
 
     if (filterClientId !== 'all') {
       filteredEditRequests = filteredEditRequests.filter((request) => request.client_id === filterClientId);
@@ -381,6 +396,38 @@ export const Projects: React.FC = () => {
     } as UnifiedProject);
     });
   }, [isAdminOrMaster, editRequests, filterClientId]);
+
+  const tasksWithPendingApprovals = useMemo<(Task | PendingApprovalTask)[]>(() => {
+    if (!isAdminOrMaster) return data.tasks;
+
+    const pendingTaskRequests = editRequests
+      .filter((request) => {
+        if (request.status !== 'pending' || request.entity_type !== 'project') return false;
+        return request.proposed_data?.['request_type'] === 'new_task';
+      })
+      .map((request) => {
+        const taskName = typeof request.proposed_data?.['task_name'] === 'string' ? request.proposed_data['task_name'] : 'Nova tarefa solicitada';
+        const taskDescription = typeof request.proposed_data?.['task_description'] === 'string' ? request.proposed_data['task_description'] : null;
+        const taskDueDate = typeof request.proposed_data?.['task_due_date'] === 'string' ? request.proposed_data['task_due_date'] : null;
+
+        return {
+          id: `pending-request-${request.id}`,
+          project_id: request.entity_id,
+          name: taskName,
+          description: taskDescription,
+          status: 'pending',
+          due_date: taskDueDate,
+          created_by: request.requested_by,
+          created_at: request.created_at,
+          is_pending_approval: true,
+          approval_label: 'Solicitação pendente',
+          pending_request_id: request.id,
+        } as PendingApprovalTask;
+      })
+      .filter((task) => data.projects.some((project) => project.id === task.project_id));
+
+    return [...data.tasks, ...pendingTaskRequests];
+  }, [data.tasks, data.projects, editRequests, isAdminOrMaster]);
   const filteredProjects: UnifiedProject[] = useMemo(() => {
     const unifiedList = [...(visibleProjects as UnifiedProject[]), ...visibleRequestProjects, ...visibleEditRequests];
 
@@ -416,6 +463,18 @@ export const Projects: React.FC = () => {
     if (!project.is_request || project.request_kind !== 'edit_request' || !project.edit_request_id) return;
 
     const request = editRequests.find((item) => item.id === project.edit_request_id);
+    if (!request) return;
+
+    setSelectedEditRequest(request);
+    setEditRequestAdminNotes(request.admin_notes || '');
+    setIsEditRequestDialogOpen(true);
+  };
+
+  const handleOpenPendingTaskRequest = (task: Task | PendingApprovalTask) => {
+    const requestId = task.pending_request_id;
+    if (!requestId) return;
+
+    const request = editRequests.find((item) => item.id === requestId);
     if (!request) return;
 
     setSelectedEditRequest(request);
@@ -902,7 +961,7 @@ export const Projects: React.FC = () => {
         <ProjectListView
           projects={filteredProjects}
           clients={data.clients}
-          tasks={data.tasks}
+          tasks={tasksWithPendingApprovals}
           timeEntries={data.timeEntries}
           taskTimers={data.taskTimers}
           projectColumns={data.projectColumns}
@@ -928,6 +987,7 @@ export const Projects: React.FC = () => {
           hasPendingEditRequest={(project) => hasPendingEditRequest(project as UnifiedProject)}
           onOpenEditRequestReview={(project) => handleOpenEditRequestDialog(project as UnifiedProject)}
           onEditRequestCardClick={(project) => handleOpenEditRequestFromCard(project as UnifiedProject)}
+          onPendingTaskClick={(task) => handleOpenPendingTaskRequest(task as Task | PendingApprovalTask)}
         />
       ) : (
         <ProjectKanbanView
