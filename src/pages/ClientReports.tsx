@@ -439,7 +439,6 @@ export const ClientReports: React.FC = () => {
                     {selectedReportMonthLabel}
                   </span>
                 </span>
-                <SelectValue className="sr-only" />
               </SelectTrigger>
               <SelectContent align="start">
                 {monthOptions.map((option) => (
