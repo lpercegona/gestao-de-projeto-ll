@@ -433,7 +433,7 @@ export const ClientReports: React.FC = () => {
           <div className="flex items-center gap-4">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="h-auto w-auto border-none p-0 text-left shadow-none [&>svg]:text-primary">
-                <span className="font-semibold tracking-tight text-foreground">
+                <span className="font-semibold text-foreground">
                   Relatório de{" "}
                   <span className="text-primary underline decoration-dotted underline-offset-4">
                     {selectedReportMonthLabel}
