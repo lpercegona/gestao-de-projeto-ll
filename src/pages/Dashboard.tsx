@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface ProjectRequest {
   id: string;
@@ -57,6 +59,7 @@ export const Dashboard: React.FC = () => {
   const [recentRequestsOpen, setRecentRequestsOpen] = useState(true);
   const [activeProjectsOpen, setActiveProjectsOpen] = useState(true);
   const [proposalCount, setProposalCount] = useState(0);
+  const navigate = useNavigate();
 
   // Fetch client info and requests for client users
   useEffect(() => {
@@ -207,7 +210,9 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const recentRequests = projectRequests.slice(0, 5);
+  const recentRequests = projectRequests
+    .filter((request) => request.status === "pending")
+    .slice(0, 5);
 
   if (loading || (isClient && loadingRequests)) {
     return (
@@ -354,6 +359,14 @@ export const Dashboard: React.FC = () => {
                             <div className="shrink-0 max-w-full">{getStatusBadge(request.status)}</div>
                           </div>
                         ))}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => navigate('/my-reports?tab=requests')}
+                        >
+                          Ver todas
+                        </Button>
                       </div>
                     )}
                   </CardContent>
