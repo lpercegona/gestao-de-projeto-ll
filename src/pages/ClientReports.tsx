@@ -564,6 +564,7 @@ export const ClientReports: React.FC = () => {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Contratadas: {formatHours(totalContractHoursAllMonths)} • Usadas: {formatHours(totalAllHours)} •
+                    Remanecentes: {formatHours(remainingAllHours)}
                   </p>
                 </div>
               </div>
