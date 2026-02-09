@@ -592,7 +592,7 @@ export const ClientReports: React.FC = () => {
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthMeetingHours)}</p>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
-                  <p className="text-xs text-muted-foreground">Horas remanescentes</p>
+                  <p className="text-xs text-muted-foreground">Horas remanescentes no mês</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(remainingHours)}</p>
                 </div>
                 <div className="col-span-2 mt-1 space-y-2 lg:col-span-5">
