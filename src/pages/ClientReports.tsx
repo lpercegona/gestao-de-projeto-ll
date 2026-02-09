@@ -227,8 +227,6 @@ export const ClientReports: React.FC = () => {
 
   const remainingHours = Math.max(0, availableHours - totalMonthHours);
 
-  const remainingAllHours = Math.max(0, totalContractHoursAllMonths - totalAllHours);
-
   const visibleReportColumns = useMemo(
     () => projectColumns.filter((column) => column.show_in_report),
     [projectColumns],
@@ -564,7 +562,7 @@ export const ClientReports: React.FC = () => {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Contratadas: {formatHours(totalContractHoursAllMonths)} • Usadas: {formatHours(totalAllHours)} •
-                    Remanescentes: {formatHours(remainingAllHours)}
+                    Remanescentes:{" "}
                   </p>
                 </div>
               </div>
