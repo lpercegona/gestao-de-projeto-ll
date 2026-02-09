@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -25,6 +34,8 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   onOpenChange,
   onSubmit,
 }) => {
+  const { user } = useAuth();
+
   interface RequestedTask {
     title: string;
     description: string;
@@ -33,7 +44,9 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
   const [title, setTitle] = useState('');
   const [briefing, setBriefing] = useState('');
-  const [customField, setCustomField] = useState('');
+  const [customFieldColumns, setCustomFieldColumns] = useState<{ id: string; name: string; options: string[] }[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [customFieldsLoading, setCustomFieldsLoading] = useState(false);
   const [desiredDeadline, setDesiredDeadline] = useState('');
   const [requestedTasks, setRequestedTasks] = useState<RequestedTask[]>([]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -41,13 +54,78 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   const [taskForm, setTaskForm] = useState<RequestedTask>({ title: '', description: '', dueDate: '' });
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    const fetchCustomFields = async () => {
+      if (!user || !open) return;
+
+      setCustomFieldsLoading(true);
+      try {
+        const { data: userClientId, error: clientError } = await supabase.rpc('get_user_client_id', {
+          _user_id: user.id,
+        });
+
+        if (clientError) throw clientError;
+        if (!userClientId) {
+          setCustomFieldColumns([]);
+          setCustomFieldValues({});
+          return;
+        }
+
+        const { data: columnsData, error: columnsError } = await supabase
+          .from('project_columns')
+          .select('id, name, options, type')
+          .eq('client_id', userClientId)
+          .eq('type', 'select')
+          .order('created_at', { ascending: true });
+
+        if (columnsError) throw columnsError;
+
+        const parsedColumns = (columnsData || [])
+          .map((column) => ({
+            id: column.id,
+            name: column.name,
+            options: Array.isArray(column.options) ? column.options.filter((option): option is string => typeof option === 'string') : [],
+          }))
+          .filter((column) => column.options.length > 0);
+
+        setCustomFieldColumns(parsedColumns);
+        setCustomFieldValues((prev) => {
+          const nextValues: Record<string, string> = {};
+          parsedColumns.forEach((column) => {
+            nextValues[column.id] = prev[column.id] || column.options[0] || '';
+          });
+          return nextValues;
+        });
+      } catch (error) {
+        console.error('Erro ao carregar campos personalizados:', error);
+        setCustomFieldColumns([]);
+        setCustomFieldValues({});
+      } finally {
+        setCustomFieldsLoading(false);
+      }
+    };
+
+    fetchCustomFields();
+  }, [open, user]);
+
   const getContentText = (content: string) => content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
   const buildBriefingPayload = () => {
     let enrichedBriefing = briefing;
 
-    if (customField.trim()) {
-      enrichedBriefing += `<hr /><p><strong>Campo personalizado:</strong> ${customField.trim()}</p>`;
+    const selectedCustomFields = customFieldColumns
+      .map((column) => ({
+        label: column.name,
+        value: customFieldValues[column.id] || '',
+      }))
+      .filter((field) => field.value);
+
+    if (selectedCustomFields.length > 0) {
+      const customFieldItems = selectedCustomFields
+        .map((field) => `<li><strong>${field.label}:</strong> ${field.value}</li>`)
+        .join('');
+
+      enrichedBriefing += `<hr /><p><strong>Campos personalizados:</strong></p><ul>${customFieldItems}</ul>`;
     }
 
     if (requestedTasks.length > 0) {
@@ -94,7 +172,13 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
       await onSubmit(title.trim(), buildBriefingPayload(), desiredDeadline || undefined);
       setTitle('');
       setBriefing('');
-      setCustomField('');
+      setCustomFieldValues((prev) => {
+        const resetValues: Record<string, string> = {};
+        customFieldColumns.forEach((column) => {
+          resetValues[column.id] = column.options[0] || prev[column.id] || '';
+        });
+        return resetValues;
+      });
       setDesiredDeadline('');
       setRequestedTasks([]);
       setExpandedTasks([]);
@@ -153,16 +237,34 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="customField">Campo personalizado (opcional)</Label>
-              <Input
-                id="customField"
-                value={customField}
-                onChange={(e) => setCustomField(e.target.value)}
-                placeholder="Ex: Unidade, campanha, referência interna"
-                disabled={submitting}
-              />
-            </div>
+            {customFieldsLoading && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Carregando campos personalizados...
+              </div>
+            )}
+
+            {customFieldColumns.map((column) => (
+              <div key={column.id} className="space-y-2">
+                <Label>{column.name} (opcional)</Label>
+                <Select
+                  value={customFieldValues[column.id] || ''}
+                  onValueChange={(value) => setCustomFieldValues((prev) => ({ ...prev, [column.id]: value }))}
+                  disabled={submitting || customFieldsLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Selecione ${column.name}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {column.options.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
 
             <div className="space-y-3 rounded-lg border border-border p-3">
               <div className="flex items-center justify-between">
