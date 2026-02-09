@@ -75,7 +75,7 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
         <div
           ref={collapsedMeasureRef}
           aria-hidden
-          className="absolute inset-0 invisible pointer-events-none line-clamp-3"
+          className="absolute top-0 left-0 right-0 invisible pointer-events-none line-clamp-3"
         >
           <WysiwygContent content={content} />
         </div>
