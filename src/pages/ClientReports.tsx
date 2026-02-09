@@ -314,6 +314,16 @@ export const ClientReports: React.FC = () => {
     );
   }, [editRequestsHistory, projectRequestsHistory]);
 
+  const filteredRequestHistory = useMemo(() => {
+    const monthStart = startOfMonth(new Date(year, month - 1));
+    const monthEnd = endOfMonth(new Date(year, month - 1));
+
+    return requestHistory.filter((request) => {
+      const createdAt = parseISO(request.createdAt);
+      return isWithinInterval(createdAt, { start: monthStart, end: monthEnd });
+    });
+  }, [requestHistory, year, month]);
+
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       pending: "Pendente",
@@ -804,15 +814,15 @@ export const ClientReports: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="requests">
-          {requestHistory.length === 0 ? (
+          {filteredRequestHistory.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma solicitação encontrada.</p>
+                <p className="text-muted-foreground">Nenhuma solicitação encontrada para este mês.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
-              {requestHistory.map((request) => (
+              {filteredRequestHistory.map((request) => (
                 <Card key={`${request.type}-${request.id}`}>
                   <CardContent className="py-4 space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
