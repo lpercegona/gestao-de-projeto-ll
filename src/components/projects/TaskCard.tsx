@@ -14,7 +14,7 @@ import { format, parseISO, differenceInDays, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
 import { cn } from '@/lib/utils';
-import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
+import { ExpandableDescription } from './ExpandableDescription';
 import { Badge } from '@/components/ui/badge';
 
 interface TimeEntry {
@@ -219,7 +219,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
 
         {task.description && !compact && (
-          <WysiwygContent content={task.description} className="text-xs text-muted-foreground mb-2 line-clamp-2" />
+          <ExpandableDescription content={task.description} className="mb-2 text-xs text-muted-foreground" />
         )}
 
         {showTimeControls && (
