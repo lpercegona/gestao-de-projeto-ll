@@ -20,7 +20,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, AlertCircle, CalendarIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, AlertCircle, CalendarIcon, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
@@ -310,6 +310,45 @@ export const ClientReports: React.FC = () => {
     );
   }
 
+  const handleExportReport = () => {
+    const monthLabel = monthOptions.find((option) => option.value === selectedMonth)?.label || selectedMonth;
+    const rows = [
+      ['Projeto', 'Tarefa', 'Descrição', 'Horas Tarefas', 'Horas Reuniões', 'Total Horas'],
+    ];
+
+    reportData.forEach((project) => {
+      project.tasks.forEach((task) => {
+        rows.push([
+          project.name,
+          task.name,
+          task.description?.replace(/<[^>]*>/g, '') || '',
+          task.monthTaskHours.toFixed(2),
+          task.monthMeetingHours.toFixed(2),
+          task.monthHours.toFixed(2),
+        ]);
+      });
+    });
+
+    // Add totals row
+    rows.push([
+      'TOTAL',
+      '',
+      '',
+      totalMonthTaskHours.toFixed(2),
+      totalMonthMeetingHours.toFixed(2),
+      totalMonthHours.toFixed(2),
+    ]);
+
+    const csvContent = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `relatorio-${client.company || client.name}-${monthLabel}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <PageHeader
@@ -317,19 +356,29 @@ export const ClientReports: React.FC = () => {
         description={`Relatórios de horas - ${client.company || client.name}`}
         actions={
           user && client && (
-            <ReportShareDialog
-              clientId={client.id}
-              clientName={client.company || client.name}
-              userId={user.id}
-              share={reportShare}
-              onShareChange={setReportShare}
-              triggerButton={
-                <Button variant="outline" className="gap-2">
-                  <Share2 className="w-4 h-4" />
-                  Compartilhar
-                </Button>
-              }
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleExportReport}
+                className="h-8 w-8 rounded-lg"
+                title="Exportar relatório"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </Button>
+              <ReportShareDialog
+                clientId={client.id}
+                clientName={client.company || client.name}
+                userId={user.id}
+                share={reportShare}
+                onShareChange={setReportShare}
+                triggerButton={
+                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
+                    <Share2 className="w-3.5 h-3.5" />
+                  </Button>
+                }
+              />
+            </div>
           )
         }
       />
