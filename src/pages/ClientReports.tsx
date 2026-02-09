@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -28,8 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, AlertCircle, CalendarIcon, Download } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, CalendarIcon, Download } from 'lucide-react';
+import { differenceInCalendarMonths, format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
@@ -225,9 +224,53 @@ export const ClientReports: React.FC = () => {
   const totalMonthMeetingHours = reportData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
   const totalAllHours = timeEntries.reduce((sum, te) => sum + Number(te.hours), 0);
 
-  // Calculate displayed used hours based on contract type
-  const displayedUsedHours = isMonthly ? totalMonthHours : totalAllHours;
-  const remainingHours = Math.max(0, availableHours - displayedUsedHours);
+  const remainingHours = Math.max(0, availableHours - totalMonthHours);
+
+  const visibleReportColumns = useMemo(
+    () => projectColumns.filter((column) => column.show_in_report),
+    [projectColumns],
+  );
+
+  const customFieldSummaries = useMemo(() => {
+    if (!visibleReportColumns.length || !reportData.length) return [];
+
+    const projectById = new Map(projects.map((project) => [project.id, project]));
+    const registeredTaskProjects = reportData.flatMap((project) =>
+      project.tasks.map(() => projectById.get(project.id)),
+    );
+
+    return visibleReportColumns
+      .map((column) => {
+        const valueCount = new Map<string, number>();
+        let tasksWithValue = 0;
+
+        registeredTaskProjects.forEach((project) => {
+          const customFields = (project?.custom_fields || {}) as Record<string, string>;
+          const rawFieldValue = customFields[column.id];
+          const fieldValue = rawFieldValue?.trim();
+          if (!fieldValue) return;
+
+          tasksWithValue += 1;
+          valueCount.set(fieldValue, (valueCount.get(fieldValue) || 0) + 1);
+        });
+
+        const values = Array.from(valueCount.entries())
+          .map(([value, count]) => ({
+            value,
+            count,
+            percentage: tasksWithValue > 0 ? (count / tasksWithValue) * 100 : 0,
+          }))
+          .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, 'pt-BR'));
+
+        return {
+          id: column.id,
+          title: column.name,
+          tasksWithValue,
+          values,
+        };
+      })
+      .filter((summary) => summary.tasksWithValue > 0 && summary.values.length > 0);
+  }, [projects, reportData, visibleReportColumns]);
 
   const requestHistory = useMemo(() => {
     const projectHistoryItems = projectRequestsHistory.map((request) => ({
@@ -303,21 +346,26 @@ export const ClientReports: React.FC = () => {
 
   if (!client) {
     return (
-      <div>
-        <PageHeader
-          title="Meus Relatórios"
-          description="Visualize as horas dos seus projetos"
-        />
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              Sua conta não está vinculada a um cliente. Entre em contato com o administrador.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="py-12 text-center">
+          <p className="text-muted-foreground">
+            Sua conta não está vinculada a um cliente. Entre em contato com o administrador.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
+
+  const contractStartDate = (client as { contract_start_date?: string | null }).contract_start_date;
+  const contractEndDate = (client as { contract_end_date?: string | null }).contract_end_date;
+  const contractPeriodStart = contractStartDate ? startOfMonth(parseISO(contractStartDate)) : null;
+  const contractPeriodEnd = contractEndDate ? startOfMonth(parseISO(contractEndDate)) : startOfMonth(new Date());
+  const monthlyContractMonths = isMonthly && contractPeriodStart
+    ? Math.max(1, differenceInCalendarMonths(contractPeriodEnd, contractPeriodStart) + 1)
+    : 1;
+  const totalContractHoursAllMonths = isMonthly
+    ? client.contracted_hours * monthlyContractMonths
+    : client.contracted_hours;
 
   const handleExportReportCSV = () => {
     const monthLabel = monthOptions.find((option) => option.value === selectedMonth)?.label || selectedMonth;
@@ -366,38 +414,6 @@ export const ClientReports: React.FC = () => {
 
   return (
     <div>
-      <PageHeader
-        title="Meus Relatórios"
-        description={`Relatórios de horas - ${client.company || client.name}`}
-        actions={
-          user && client && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setExportDialogOpen(true)}
-                className="h-8 w-8 rounded-lg"
-                title="Exportar relatório"
-              >
-                <Download className="w-3.5 h-3.5" />
-              </Button>
-              <ReportShareDialog
-                clientId={client.id}
-                clientName={client.company || client.name}
-                userId={user.id}
-                share={reportShare}
-                onShareChange={setReportShare}
-                triggerButton={
-                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
-                    <Share2 className="w-3.5 h-3.5" />
-                  </Button>
-                }
-              />
-            </div>
-          )
-        }
-      />
-
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -413,142 +429,214 @@ export const ClientReports: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Contract Summary */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Resumo do Contrato</CardTitle>
-            <Badge variant={isMonthly ? "default" : "secondary"}>
-              {isMonthly ? (
-                <><RefreshCw className="w-3 h-3 mr-1" />Mensal</>
-              ) : (
-                <><Clock className="w-3 h-3 mr-1" />Único</>
-              )}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-5">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {isMonthly ? 'Disponível' : 'Horas Contratadas'}
-              </p>
-              <p className="text-2xl font-bold text-foreground">
-                {formatHours(availableHours)}
-              </p>
-              {isMonthly && previousOverflow > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)}
-                </p>
-              )}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {isMonthly ? 'Usado no Mês' : 'Total Utilizado'}
-              </p>
-              <p className="text-2xl font-bold text-foreground">
-                {formatHours(displayedUsedHours)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Horas em Tarefas</p>
-              <p className="text-2xl font-bold text-primary">
-                {formatHours(totalMonthTaskHours)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Horas em Reuniões</p>
-              <p className="text-2xl font-bold text-accent-foreground">
-                {formatHours(totalMonthMeetingHours)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {isMonthly ? 'Restante do Mês' : 'Restante'}
-              </p>
-              <p className="text-2xl font-bold text-foreground">
-                {formatHours(remainingHours)}
-              </p>
-            </div>
-          </div>
-          
-          {/* Overflow Alert for Monthly Contracts */}
-          {isMonthly && previousOverflow > 0 && (
-            <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 mt-4">
-              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                  Saldo Anterior: {formatHours(previousOverflow)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Horas excedentes do mês anterior descontadas do limite deste mês
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {/* Progress Bar */}
-          <div className="w-full bg-muted rounded-full h-3 mt-4">
-            <div
-              className="bg-primary h-3 rounded-full transition-all"
-              style={{ 
-                width: `${availableHours > 0 
-                  ? Math.min((displayedUsedHours / availableHours) * 100, 100) 
-                  : 0}%` 
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'hours' | 'requests')}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="hours">Horas</TabsTrigger>
-          <TabsTrigger value="requests">Solicitações</TabsTrigger>
-        </TabsList>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="hours">Horas</TabsTrigger>
+            <TabsTrigger value="requests">Solicitações</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setExportDialogOpen(true)}
+              className="h-8 w-8 rounded-lg"
+              title="Exportar relatório"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </Button>
+            {user && (
+              <ReportShareDialog
+                clientId={client.id}
+                clientName={client.company || client.name}
+                userId={user.id}
+                share={reportShare}
+                onShareChange={setReportShare}
+                triggerButton={
+                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
+                    <Share2 className="w-3.5 h-3.5" />
+                  </Button>
+                }
+              />
+            )}
+          </div>
+        </div>
 
         <TabsContent value="hours" className="space-y-6">
-          <Card className="mb-6">
+          <Card>
             <CardContent className="py-4">
-              <div className="w-full sm:w-72">
-                <Label className="mb-2 block">Mês</Label>
-                <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn('w-full justify-start text-left font-normal')}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {monthOptions.find((option) => option.value === selectedMonth)?.label}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-4" align="start">
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Selecione o mês</Label>
-                      <Select
-                        value={selectedMonth}
-                        onValueChange={(value) => {
-                          setSelectedMonth(value);
-                          setMonthPickerOpen(false);
-                        }}
+              <div className="flex flex-col gap-4">
+                <div className="w-full md:w-72">
+                  <Label className="mb-2 block">Mês</Label>
+                  <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn('w-full justify-start text-left font-normal')}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {monthOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {monthOptions.find((option) => option.value === selectedMonth)?.label}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-4" align="start">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Selecione o mês</Label>
+                        <Select
+                          value={selectedMonth}
+                          onValueChange={(value) => {
+                            setSelectedMonth(value);
+                            setMonthPickerOpen(false);
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {monthOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">Resumo do Contrato</CardTitle>
+                <Badge variant={isMonthly ? 'default' : 'secondary'}>
+                  {isMonthly ? (
+                    <><RefreshCw className="mr-1 h-3 w-3" />Mensal</>
+                  ) : (
+                    <><Clock className="mr-1 h-3 w-3" />Único</>
+                  )}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                <div>
+                  <p className="text-xs text-muted-foreground">Tipo de contrato</p>
+                  <p className="text-lg font-semibold text-foreground">{isMonthly ? 'Mensal' : 'Único'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Horas contratadas</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(client.contracted_hours)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Previsão de término</p>
+                  <p className="text-lg font-semibold text-foreground">{contractEndDate ? format(parseISO(contractEndDate), 'dd/MM/yyyy') : 'Não definida'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total de horas (todos os meses)</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalContractHoursAllMonths)}</p>
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
+                  <div className="mt-2 space-y-1.5">
+                    <div className="h-2.5 w-full rounded-full bg-muted">
+                      <div
+                        className="h-2.5 rounded-full bg-primary transition-all"
+                        style={{
+                          width: `${totalContractHoursAllMonths > 0
+                            ? Math.min((totalAllHours / totalContractHoursAllMonths) * 100, 100)
+                            : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Contratadas: {formatHours(totalContractHoursAllMonths)} • Usadas: {formatHours(totalAllHours)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Resumo do Mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                <div>
+                  <p className="text-xs text-muted-foreground">Horas disponíveis no mês</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(availableHours)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Horas utilizadas no mês</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthHours)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Horas em tarefas</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthTaskHours)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Horas em reunião</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthMeetingHours)}</p>
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <p className="text-xs text-muted-foreground">Horas remanescentes no mês</p>
+                  <p className="text-lg font-semibold text-foreground">{formatHours(remainingHours)}</p>
+                </div>
+                <div className="col-span-2 mt-1 space-y-2 lg:col-span-5">
+                  <div className="h-3 w-full rounded-full bg-muted">
+                    <div
+                      className="h-3 rounded-full bg-primary transition-all"
+                      style={{ width: `${availableHours > 0 ? Math.min((totalMonthHours / availableHours) * 100, 100) : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Remanescentes: {formatHours(remainingHours)}
+                    {isMonthly ? ` • Saldo do mês anterior descontado: ${formatHours(previousOverflow)}` : ''}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+
+          {visibleReportColumns.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Campos personalizados por tarefas registradas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {customFieldSummaries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Não há tarefas registradas no período com campos personalizados preenchidos.
+                  </p>
+                ) : (
+                  <div className="space-y-5">
+                    {customFieldSummaries.map((summary) => (
+                      <div key={summary.id} className="space-y-3 border-b border-border pb-5 last:border-b-0 last:pb-0">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{summary.title}</p>
+                          <p className="text-xs text-muted-foreground">Base: {summary.tasksWithValue} tarefas com campo preenchido</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                          {summary.values.map((item) => (
+                            <div key={`${summary.id}-${item.value}`}>
+                              <p className="text-xs text-muted-foreground">{item.value}</p>
+                              <p className="text-lg font-semibold text-foreground">{item.percentage.toFixed(1)}%</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {reportData.length === 0 ? (
             <Card>
