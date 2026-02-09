@@ -58,7 +58,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!hasAccess) {
       // Redirect based on role
       if (isClient) {
-        return <Navigate to="/client-dashboard" replace />;
+        return <Navigate to="/" replace />;
       }
       if (isCollaborator) {
         return <Navigate to="/projects" replace />;

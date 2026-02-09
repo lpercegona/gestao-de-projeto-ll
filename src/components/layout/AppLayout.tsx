@@ -221,7 +221,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // Client nav items (dashboard, reports, projects and calendar)
   const clientNavItems = [
     {
-      path: "/client-dashboard",
+      path: "/",
       icon: LayoutDashboard,
       label: "Painel",
     },

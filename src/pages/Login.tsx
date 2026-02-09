@@ -39,7 +39,7 @@ export const Login: React.FC = () => {
   React.useEffect(() => {
     if (user && !roleLoading && userRole !== undefined) {
       if (userRole === 'client') {
-        navigate('/my-reports', { replace: true });
+        navigate('/', { replace: true });
       } else if (userRole === 'collaborator') {
         navigate('/', { replace: true });
       } else {
@@ -271,7 +271,7 @@ export const Login: React.FC = () => {
         toast.success('Senha definida com sucesso! Você já está logado.');
         
         // Navigate directly to avoid race condition
-        navigate('/my-reports', { replace: true });
+        navigate('/', { replace: true });
       }
     } catch (err) {
       toast.error('Erro ao definir senha.');
