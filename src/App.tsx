@@ -30,6 +30,9 @@ import { PublicProposal } from "@/pages/PublicProposal";
 import { Contracts } from "@/pages/Contracts";
 import { PublicContract } from "@/pages/PublicContract";
 import { CalendarPage } from "@/pages/CalendarPage";
+import { DatabaseQueries } from "@/pages/DatabaseQueries";
+import { StyleClasses } from "@/pages/StyleClasses";
+import { PageConstants } from "@/pages/PageConstants";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -136,6 +139,25 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              {/* Consultas de banco - master admin only */}
+              <Route path="/database-queries" element={
+                <ProtectedRoute requiredRole="master_admin">
+                  <DatabaseQueries />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/style-classes" element={
+                <ProtectedRoute requiredRole="master_admin">
+                  <StyleClasses />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/page-constants" element={
+                <ProtectedRoute requiredRole="master_admin">
+                  <PageConstants />
+                </ProtectedRoute>
+              } />
+
               {/* Preferences - accessible by all authenticated users */}
               <Route path="/preferences" element={
                 <ProtectedRoute>
