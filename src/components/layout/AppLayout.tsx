@@ -316,9 +316,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               isCollapsed ? "lg:px-2 lg:justify-center" : "px-4",
             )}
           >
-            <div className="flex items-center justify-center w-full">
+            <div className="flex items-center justify-start w-full">
               {/* Desktop: Workspace selector */}
-              <div className="hidden lg:flex w-full justify-center">
+              <div className="hidden lg:flex w-full justify-start">
                 <WorkspaceSelector isCollapsed={isCollapsed} />
               </div>
               {/* Mobile: Workspace selector (always expanded) */}
