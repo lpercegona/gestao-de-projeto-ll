@@ -55,7 +55,7 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
 
         {isOverflowing && !expanded && (
           <span className="absolute bottom-0 right-0 bg-background pl-1 text-xs text-muted-foreground">
-            ...{' '}
+            ...
             <button
               type="button"
               onClick={toggleExpanded}
