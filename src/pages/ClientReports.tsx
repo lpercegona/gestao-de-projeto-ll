@@ -384,15 +384,42 @@ export const ClientReports: React.FC = () => {
       </Dialog>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'hours' | 'requests')}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="hours">Horas</TabsTrigger>
-          <TabsTrigger value="requests">Solicitações</TabsTrigger>
-        </TabsList>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="hours">Horas</TabsTrigger>
+            <TabsTrigger value="requests">Solicitações</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setExportDialogOpen(true)}
+              className="h-8 w-8 rounded-lg"
+              title="Exportar relatório"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </Button>
+            {user && (
+              <ReportShareDialog
+                clientId={client.id}
+                clientName={client.company || client.name}
+                userId={user.id}
+                share={reportShare}
+                onShareChange={setReportShare}
+                triggerButton={
+                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
+                    <Share2 className="w-3.5 h-3.5" />
+                  </Button>
+                }
+              />
+            )}
+          </div>
+        </div>
 
         <TabsContent value="hours" className="space-y-6">
           <Card>
             <CardContent className="py-4">
-              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="flex flex-col gap-4">
                 <div className="w-full md:w-72">
                   <Label className="mb-2 block">Mês</Label>
                   <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
@@ -429,31 +456,6 @@ export const ClientReports: React.FC = () => {
                       </div>
                     </PopoverContent>
                   </Popover>
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setExportDialogOpen(true)}
-                    className="h-8 w-8 rounded-lg"
-                    title="Exportar relatório"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </Button>
-                  {user && (
-                    <ReportShareDialog
-                      clientId={client.id}
-                      clientName={client.company || client.name}
-                      userId={user.id}
-                      share={reportShare}
-                      onShareChange={setReportShare}
-                      triggerButton={
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
-                          <Share2 className="w-3.5 h-3.5" />
-                        </Button>
-                      }
-                    />
-                  )}
                 </div>
               </div>
             </CardContent>
