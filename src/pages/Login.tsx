@@ -48,10 +48,10 @@ export const Login: React.FC = () => {
   // Redirect when user is logged in and role is loaded
   React.useEffect(() => {
     if (user && !roleLoading && userRole !== undefined) {
-      if (userRole === "client") {
-        navigate("/", { replace: true });
-      } else if (userRole === "collaborator") {
-        navigate("/", { replace: true });
+      if (userRole === 'client') {
+        navigate('/', { replace: true });
+      } else if (userRole === 'collaborator') {
+        navigate('/', { replace: true });
       } else {
         // master_admin, admin, or any other role
         navigate("/", { replace: true });
@@ -277,10 +277,11 @@ export const Login: React.FC = () => {
 
         // Force refresh the user role to ensure it's loaded before redirect
         await refreshRole();
-
-        toast.success("Senha definida com sucesso! Você já está logado.");
-
-        navigate("/", { replace: true });
+        
+        toast.success('Senha definida com sucesso! Você já está logado.');
+        
+        // Navigate directly to avoid race condition
+        navigate('/', { replace: true });
       }
     } catch (err) {
       toast.error("Erro ao definir senha.");
