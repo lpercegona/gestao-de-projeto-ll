@@ -3,13 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -18,13 +16,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, CalendarIcon, Download } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, Download } from "lucide-react";
 import { differenceInCalendarMonths, format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatHours } from "@/lib/formatHours";
 import { ReportShareDialog, ReportShare } from "@/components/reports/ReportShareDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
 import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 
 interface ProjectRequestHistory {
@@ -56,7 +53,6 @@ export const ClientReports: React.FC = () => {
 
   const currentMonth = format(new Date(), "yyyy-MM");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"hours" | "requests">("hours");
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -368,6 +364,7 @@ export const ClientReports: React.FC = () => {
   const totalContractHoursAllMonths = isMonthly
     ? client.contracted_hours * monthlyContractMonths
     : client.contracted_hours;
+  const selectedReportMonthLabel = format(new Date(year, month - 1, 1), "MMMM 'de' yyyy", { locale: ptBR });
 
   const remainingAllHours = Math.max(0, totalContractHoursAllMonths - totalAllHours);
 
@@ -432,11 +429,30 @@ export const ClientReports: React.FC = () => {
       </Dialog>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "hours" | "requests")}>
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <TabsList>
-            <TabsTrigger value="hours">Horas</TabsTrigger>
-            <TabsTrigger value="requests">Solicitações</TabsTrigger>
-          </TabsList>
+        <div className="mb-6 hidden items-center justify-between gap-3 md:flex">
+          <div className="flex items-center gap-4">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="h-auto w-auto border-none p-0 text-left shadow-none [&>svg]:text-primary">
+                <span className="text-xl font-semibold tracking-tight text-foreground">
+                  Relatório de <span className="text-primary underline decoration-dotted underline-offset-4">{selectedReportMonthLabel}</span>
+                </span>
+                <SelectValue className="sr-only" />
+              </SelectTrigger>
+              <SelectContent align="start">
+                {monthOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <TabsList>
+              <TabsTrigger value="hours">Horas</TabsTrigger>
+              <TabsTrigger value="requests">Solicitações</TabsTrigger>
+            </TabsList>
+          </div>
+
           <div className="flex items-center justify-end gap-2">
             <Button
               variant="outline"
@@ -464,48 +480,58 @@ export const ClientReports: React.FC = () => {
           </div>
         </div>
 
-        <TabsContent value="hours" className="space-y-6">
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex flex-col gap-4">
-                <div className="w-full md:w-72">
-                  <Label className="mb-2 block">Mês</Label>
-                  <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {monthOptions.find((option) => option.value === selectedMonth)?.label}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-4" align="start">
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Selecione o mês</Label>
-                        <Select
-                          value={selectedMonth}
-                          onValueChange={(value) => {
-                            setSelectedMonth(value);
-                            setMonthPickerOpen(false);
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {monthOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mb-6 space-y-3 md:hidden">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="h-auto w-full border-none p-0 text-left shadow-none [&>svg]:text-primary">
+              <span className="text-lg font-semibold tracking-tight text-foreground">
+                Relatório de <span className="text-primary underline decoration-dotted underline-offset-4">{selectedReportMonthLabel}</span>
+              </span>
+              <SelectValue className="sr-only" />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {monthOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
+          <div className="flex items-center justify-between gap-3">
+            <TabsList>
+              <TabsTrigger value="hours">Horas</TabsTrigger>
+              <TabsTrigger value="requests">Solicitações</TabsTrigger>
+            </TabsList>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setExportDialogOpen(true)}
+                className="h-8 w-8 rounded-lg"
+                title="Exportar relatório"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </Button>
+              {user && (
+                <ReportShareDialog
+                  clientId={client.id}
+                  clientName={client.company || client.name}
+                  userId={user.id}
+                  share={reportShare}
+                  onShareChange={setReportShare}
+                  triggerButton={
+                    <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
+                      <Share2 className="w-3.5 h-3.5" />
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <TabsContent value="hours" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
