@@ -226,6 +226,47 @@ export const ClientReports: React.FC = () => {
 
   const remainingHours = Math.max(0, availableHours - totalMonthHours);
 
+  const customFieldSummaries = useMemo(() => {
+    const visibleColumns = projectColumns.filter((column) => column.show_in_report);
+    if (!visibleColumns.length || !reportData.length) return [];
+
+    const projectById = new Map(projects.map((project) => [project.id, project]));
+    const registeredTaskProjects = reportData.flatMap((project) =>
+      project.tasks.map(() => projectById.get(project.id)),
+    );
+
+    return visibleColumns
+      .map((column) => {
+        const valueCount = new Map<string, number>();
+        let tasksWithValue = 0;
+
+        registeredTaskProjects.forEach((project) => {
+          const customFields = (project?.custom_fields || {}) as Record<string, string>;
+          const fieldValue = customFields[column.id];
+          if (!fieldValue || !fieldValue.trim()) return;
+
+          tasksWithValue += 1;
+          valueCount.set(fieldValue, (valueCount.get(fieldValue) || 0) + 1);
+        });
+
+        const values = Array.from(valueCount.entries())
+          .map(([value, count]) => ({
+            value,
+            count,
+            percentage: tasksWithValue > 0 ? (count / tasksWithValue) * 100 : 0,
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        return {
+          id: column.id,
+          title: column.name,
+          tasksWithValue,
+          values,
+        };
+      })
+      .filter((summary) => summary.tasksWithValue > 0 && summary.values.length > 0);
+  }, [projectColumns, projects, reportData]);
+
   const requestHistory = useMemo(() => {
     const projectHistoryItems = projectRequestsHistory.map((request) => ({
       id: request.id,
@@ -481,7 +522,7 @@ export const ClientReports: React.FC = () => {
                   <p className="text-lg font-semibold text-foreground">{isMonthly ? 'Mensal' : 'Único'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Horas/Mês</p>
+                  <p className="text-xs text-muted-foreground">Horas contratadas</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(client.contracted_hours)}</p>
                 </div>
                 <div>
@@ -489,11 +530,11 @@ export const ClientReports: React.FC = () => {
                   <p className="text-lg font-semibold text-foreground">{contractEndDate ? format(parseISO(contractEndDate), 'dd/MM/yyyy') : 'Não definida'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Total disponíveis</p>
+                  <p className="text-xs text-muted-foreground">Total de horas (todos os meses)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalContractHoursAllMonths)}</p>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
-                  <p className="text-xs text-muted-foreground">Utilizadas (geral)</p>
+                  <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
                   <div className="mt-2 space-y-1.5">
                     <div className="h-2.5 w-full rounded-full bg-muted">
@@ -522,19 +563,19 @@ export const ClientReports: React.FC = () => {
             <CardContent>
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <div>
-                  <p className="text-xs text-muted-foreground">Disponíveis</p>
+                  <p className="text-xs text-muted-foreground">Horas disponíveis no mês</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(availableHours)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Utilizadas</p>
+                  <p className="text-xs text-muted-foreground">Horas utilizadas no mês</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthHours)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Tarefas</p>
+                  <p className="text-xs text-muted-foreground">Horas em tarefas</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthTaskHours)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Reuniões</p>
+                  <p className="text-xs text-muted-foreground">Horas em reunião</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalMonthMeetingHours)}</p>
                 </div>
                 <div className="col-span-2 lg:col-span-1">
@@ -556,6 +597,33 @@ export const ClientReports: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+
+          {customFieldSummaries.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Campos personalizados por tarefas registradas</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {customFieldSummaries.map((summary) => (
+                  <div key={summary.id} className="space-y-3 border-b border-border pb-5 last:border-b-0 last:pb-0">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{summary.title}</p>
+                      <p className="text-xs text-muted-foreground">Base: {summary.tasksWithValue} tarefas com campo preenchido</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                      {summary.values.map((item) => (
+                        <div key={`${summary.id}-${item.value}`}>
+                          <p className="text-xs text-muted-foreground">{item.value}</p>
+                          <p className="text-lg font-semibold text-foreground">{item.percentage.toFixed(1)}%</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {reportData.length === 0 ? (
             <Card>
