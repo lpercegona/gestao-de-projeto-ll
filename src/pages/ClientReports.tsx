@@ -485,13 +485,12 @@ export const ClientReports: React.FC = () => {
         <div className="mb-6 space-y-3 md:hidden">
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="h-auto w-full border-none p-0 text-left shadow-none [&>svg]:text-primary">
-              <span className="text-lg font-semibold tracking-tight text-foreground">
+              <span className=" font-semibold text-foreground">
                 Relatório de{" "}
                 <span className="text-primary underline decoration-dotted underline-offset-4">
                   {selectedReportMonthLabel}
                 </span>
               </span>
-              <SelectValue className="sr-only" />
             </SelectTrigger>
             <SelectContent align="start">
               {monthOptions.map((option) => (
