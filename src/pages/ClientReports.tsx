@@ -433,8 +433,11 @@ export const ClientReports: React.FC = () => {
           <div className="flex items-center gap-4">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="h-auto w-auto border-none p-0 text-left shadow-none [&>svg]:text-primary">
-                <span className="text-xl font-semibold tracking-tight text-foreground">
-                  Relatório de <span className="text-primary underline decoration-dotted underline-offset-4">{selectedReportMonthLabel}</span>
+                <span className="font-semibold tracking-tight text-foreground">
+                  Relatório de{" "}
+                  <span className="text-primary underline decoration-dotted underline-offset-4">
+                    {selectedReportMonthLabel}
+                  </span>
                 </span>
                 <SelectValue className="sr-only" />
               </SelectTrigger>
@@ -484,7 +487,10 @@ export const ClientReports: React.FC = () => {
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="h-auto w-full border-none p-0 text-left shadow-none [&>svg]:text-primary">
               <span className="text-lg font-semibold tracking-tight text-foreground">
-                Relatório de <span className="text-primary underline decoration-dotted underline-offset-4">{selectedReportMonthLabel}</span>
+                Relatório de{" "}
+                <span className="text-primary underline decoration-dotted underline-offset-4">
+                  {selectedReportMonthLabel}
+                </span>
               </span>
               <SelectValue className="sr-only" />
             </SelectTrigger>
