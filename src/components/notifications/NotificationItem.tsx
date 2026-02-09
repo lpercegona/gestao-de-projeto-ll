@@ -9,6 +9,9 @@ import {
   Plus,
   Trash2,
   X,
+  FileText,
+  FilePenLine,
+  ListPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -43,7 +46,14 @@ const getIcon = (type: string) => {
     case 'task_completed':
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     case 'time_entry':
+    case 'collaborator_time_entry_created':
       return <Clock className="h-4 w-4 text-purple-500" />;
+    case 'client_project_request_created':
+      return <FileText className="h-4 w-4 text-orange-500" />;
+    case 'client_edit_request_created':
+      return <FilePenLine className="h-4 w-4 text-blue-500" />;
+    case 'client_task_request_created':
+      return <ListPlus className="h-4 w-4 text-green-500" />;
     default:
       return <FolderKanban className="h-4 w-4 text-muted-foreground" />;
   }
