@@ -39,8 +39,8 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({ isCollapse
   // Collapsed mode: show only avatar with tooltip
   if (isCollapsed) {
     return (
-      <Tooltip className="justfy-start">
-        <TooltipTrigger asChild>
+      <Tooltip>
+        <TooltipTrigger asChild className="justify-between">
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <Avatar className="h-7 w-7">
               <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
