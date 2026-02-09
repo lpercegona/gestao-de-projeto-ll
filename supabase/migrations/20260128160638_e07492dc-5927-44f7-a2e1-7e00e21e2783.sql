@@ -39,3 +39,98 @@ USING (
     )
   )
 );
+
+-- Update request policies so all users linked to the same company can view/create requests
+DROP POLICY IF EXISTS "Clients can view own project requests" ON public.project_requests;
+
+CREATE POLICY "Clients can view own project requests"
+ON public.project_requests
+FOR SELECT
+USING (
+  has_role(auth.uid(), 'client'::app_role)
+  AND EXISTS (
+    SELECT 1
+    FROM public.clients c
+    WHERE c.id = project_requests.client_id
+      AND (
+        c.user_id = auth.uid()
+        OR EXISTS (
+          SELECT 1
+          FROM public.client_users cu
+          WHERE cu.client_id = c.id
+            AND cu.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+DROP POLICY IF EXISTS "Clients can create own project requests" ON public.project_requests;
+
+CREATE POLICY "Clients can create own project requests"
+ON public.project_requests
+FOR INSERT
+WITH CHECK (
+  has_role(auth.uid(), 'client'::app_role)
+  AND created_by = auth.uid()
+  AND EXISTS (
+    SELECT 1
+    FROM public.clients c
+    WHERE c.id = project_requests.client_id
+      AND (
+        c.user_id = auth.uid()
+        OR EXISTS (
+          SELECT 1
+          FROM public.client_users cu
+          WHERE cu.client_id = c.id
+            AND cu.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+DROP POLICY IF EXISTS "Clients can view own edit requests" ON public.edit_requests;
+
+CREATE POLICY "Clients can view own edit requests"
+ON public.edit_requests
+FOR SELECT
+USING (
+  has_role(auth.uid(), 'client'::app_role)
+  AND EXISTS (
+    SELECT 1
+    FROM public.clients c
+    WHERE c.id = edit_requests.client_id
+      AND (
+        c.user_id = auth.uid()
+        OR EXISTS (
+          SELECT 1
+          FROM public.client_users cu
+          WHERE cu.client_id = c.id
+            AND cu.user_id = auth.uid()
+        )
+      )
+  )
+);
+
+DROP POLICY IF EXISTS "Clients can create edit requests" ON public.edit_requests;
+
+CREATE POLICY "Clients can create edit requests"
+ON public.edit_requests
+FOR INSERT
+WITH CHECK (
+  has_role(auth.uid(), 'client'::app_role)
+  AND requested_by = auth.uid()
+  AND EXISTS (
+    SELECT 1
+    FROM public.clients c
+    WHERE c.id = edit_requests.client_id
+      AND (
+        c.user_id = auth.uid()
+        OR EXISTS (
+          SELECT 1
+          FROM public.client_users cu
+          WHERE cu.client_id = c.id
+            AND cu.user_id = auth.uid()
+        )
+      )
+  )
+);
