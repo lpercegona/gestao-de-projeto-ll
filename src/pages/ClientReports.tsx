@@ -1,24 +1,15 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useData } from '@/contexts/DataContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useData } from "@/contexts/DataContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -26,15 +17,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, CalendarIcon, Download } from 'lucide-react';
-import { differenceInCalendarMonths, format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { formatHours } from '@/lib/formatHours';
-import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
-import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
+} from "@/components/ui/dialog";
+import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, CalendarIcon, Download } from "lucide-react";
+import { differenceInCalendarMonths, format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { formatHours } from "@/lib/formatHours";
+import { ReportShareDialog, ReportShare } from "@/components/reports/ReportShareDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 
 interface ProjectRequestHistory {
   id: string;
@@ -249,57 +240,37 @@ export const ClientReports: React.FC = () => {
       project.tasks.map(() => projectById.get(project.id)),
     );
 
-    return visibleReportColumns.map((column) => {
-      const valueCount = new Map<string, number>();
-      let tasksEligible = 0;
-      let tasksWithValue = 0;
+    return visibleReportColumns
+      .map((column) => {
+        const valueCount = new Map<string, number>();
+        let tasksWithValue = 0;
 
-      registeredTaskProjects.forEach((project) => {
-        const customFields = (project?.custom_fields || {}) as Record<string, string>;
-        if (!(column.id in customFields)) return;
+        registeredTaskProjects.forEach((project) => {
+          const customFields = (project?.custom_fields || {}) as Record<string, string>;
+          const rawFieldValue = customFields[column.id];
+          const fieldValue = rawFieldValue?.trim();
+          if (!fieldValue) return;
 
-        tasksEligible += 1;
+          tasksWithValue += 1;
+          valueCount.set(fieldValue, (valueCount.get(fieldValue) || 0) + 1);
+        });
 
-        const rawFieldValue = customFields[column.id];
-        const fieldValue = typeof rawFieldValue === 'string' ? rawFieldValue.trim() : '';
-        if (!fieldValue) return;
+        const values = Array.from(valueCount.entries())
+          .map(([value, count]) => ({
+            value,
+            count,
+            percentage: tasksWithValue > 0 ? (count / tasksWithValue) * 100 : 0,
+          }))
+          .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "pt-BR"));
 
-        tasksWithValue += 1;
-        valueCount.set(fieldValue, (valueCount.get(fieldValue) || 0) + 1);
-      });
-
-      if (column.type === 'select' && Array.isArray(column.options)) {
-        column.options
-          .map((option) => option.trim())
-          .filter(Boolean)
-          .forEach((option) => {
-            if (!valueCount.has(option)) {
-              valueCount.set(option, 0);
-            }
-          });
-      }
-
-      const notInformedCount = Math.max(0, tasksEligible - tasksWithValue);
-      if (tasksEligible > 0 && notInformedCount > 0) {
-        valueCount.set('Não informado', notInformedCount);
-      }
-
-      const values = Array.from(valueCount.entries())
-        .map(([value, count]) => ({
-          value,
-          count,
-          percentage: tasksEligible > 0 ? (count / tasksEligible) * 100 : 0,
-        }))
-        .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, 'pt-BR'));
-
-      return {
-        id: column.id,
-        title: column.name,
-        tasksEligible,
-        tasksWithValue,
-        values,
-      };
-    });
+        return {
+          id: column.id,
+          title: column.name,
+          tasksWithValue,
+          values,
+        };
+      })
+      .filter((summary) => summary.tasksWithValue > 0 && summary.values.length > 0);
   }, [projects, reportData, visibleReportColumns]);
 
   const requestHistory = useMemo(() => {
@@ -390,12 +361,15 @@ export const ClientReports: React.FC = () => {
   const contractEndDate = (client as { contract_end_date?: string | null }).contract_end_date;
   const contractPeriodStart = contractStartDate ? startOfMonth(parseISO(contractStartDate)) : null;
   const contractPeriodEnd = contractEndDate ? startOfMonth(parseISO(contractEndDate)) : startOfMonth(new Date());
-  const monthlyContractMonths = isMonthly && contractPeriodStart
-    ? Math.max(1, differenceInCalendarMonths(contractPeriodEnd, contractPeriodStart) + 1)
-    : 1;
+  const monthlyContractMonths =
+    isMonthly && contractPeriodStart
+      ? Math.max(1, differenceInCalendarMonths(contractPeriodEnd, contractPeriodStart) + 1)
+      : 1;
   const totalContractHoursAllMonths = isMonthly
     ? client.contracted_hours * monthlyContractMonths
     : client.contracted_hours;
+
+  const remainingAllHours = Math.max(0, totalContractHoursAllMonths - totalAllHours);
 
   const handleExportReportCSV = () => {
     const monthLabel = monthOptions.find((option) => option.value === selectedMonth)?.label || selectedMonth;
@@ -446,18 +420,18 @@ export const ClientReports: React.FC = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Exportar relatório</DialogTitle>
-            <DialogDescription>
-              Escolha o formato do arquivo para baixar o relatório deste período.
-            </DialogDescription>
+            <DialogDescription>Escolha o formato do arquivo para baixar o relatório deste período.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={handleExportReportCSV}>Baixar CSV</Button>
+            <Button variant="outline" onClick={handleExportReportCSV}>
+              Baixar CSV
+            </Button>
             <Button onClick={handleExportReportPDF}>Baixar PDF</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'hours' | 'requests')}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "hours" | "requests")}>
         <div className="mb-6 flex items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="hours">Horas</TabsTrigger>
@@ -498,10 +472,7 @@ export const ClientReports: React.FC = () => {
                   <Label className="mb-2 block">Mês</Label>
                   <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn('w-full justify-start text-left font-normal')}
-                      >
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {monthOptions.find((option) => option.value === selectedMonth)?.label}
                       </Button>
@@ -539,11 +510,17 @@ export const ClientReports: React.FC = () => {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base">Resumo do Contrato</CardTitle>
-                <Badge variant={isMonthly ? 'default' : 'secondary'}>
+                <Badge variant={isMonthly ? "default" : "secondary"}>
                   {isMonthly ? (
-                    <><RefreshCw className="mr-1 h-3 w-3" />Mensal</>
+                    <>
+                      <RefreshCw className="mr-1 h-3 w-3" />
+                      Mensal
+                    </>
                   ) : (
-                    <><Clock className="mr-1 h-3 w-3" />Único</>
+                    <>
+                      <Clock className="mr-1 h-3 w-3" />
+                      Único
+                    </>
                   )}
                 </Badge>
               </div>
@@ -552,7 +529,7 @@ export const ClientReports: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <div>
                   <p className="text-xs text-muted-foreground">Tipo de contrato</p>
-                  <p className="text-lg font-semibold text-foreground">{isMonthly ? 'Mensal' : 'Único'}</p>
+                  <p className="text-lg font-semibold text-foreground">{isMonthly ? "Mensal" : "Único"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horas contratadas</p>
@@ -560,7 +537,9 @@ export const ClientReports: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Previsão de término</p>
-                  <p className="text-lg font-semibold text-foreground">{contractEndDate ? format(parseISO(contractEndDate), 'dd/MM/yyyy') : 'Não definida'}</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    {contractEndDate ? format(parseISO(contractEndDate), "dd/MM/yyyy") : "Não definida"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total de horas (todos os meses)</p>
@@ -569,21 +548,24 @@ export const ClientReports: React.FC = () => {
                 <div className="col-span-2 lg:col-span-1">
                   <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
-                  <div className="mt-2 space-y-1.5">
-                    <div className="h-2.5 w-full rounded-full bg-muted">
-                      <div
-                        className="h-2.5 rounded-full bg-primary transition-all"
-                        style={{
-                          width: `${totalContractHoursAllMonths > 0
+                </div>
+                <div className="col-span-2 mt-1 space-y-2 lg:col-span-5">
+                  <div className="h-2.5 w-full rounded-full bg-muted">
+                    <div
+                      className="h-2.5 rounded-full bg-primary transition-all"
+                      style={{
+                        width: `${
+                          totalContractHoursAllMonths > 0
                             ? Math.min((totalAllHours / totalContractHoursAllMonths) * 100, 100)
-                            : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Contratadas: {formatHours(totalContractHoursAllMonths)} • Usadas: {formatHours(totalAllHours)}
-                    </p>
+                            : 0
+                        }%`,
+                      }}
+                    />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Contratadas: {formatHours(totalContractHoursAllMonths)} • Usadas: {formatHours(totalAllHours)} •
+                    Remanecentes: {formatHours(remainingAllHours)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -619,18 +601,20 @@ export const ClientReports: React.FC = () => {
                   <div className="h-3 w-full rounded-full bg-muted">
                     <div
                       className="h-3 rounded-full bg-primary transition-all"
-                      style={{ width: `${availableHours > 0 ? Math.min((totalMonthHours / availableHours) * 100, 100) : 0}%` }}
+                      style={{
+                        width: `${availableHours > 0 ? Math.min((totalMonthHours / availableHours) * 100, 100) : 0}%`,
+                      }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Remanescentes: {formatHours(remainingHours)}
-                    {isMonthly ? ` • Saldo do mês anterior descontado: ${formatHours(previousOverflow)}` : ''}
+                    Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Remanescentes:{" "}
+                    {formatHours(remainingHours)}
+                    {isMonthly ? ` • Saldo do mês anterior descontado: ${formatHours(previousOverflow)}` : ""}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
 
           {visibleReportColumns.length > 0 && (
             <Card>
@@ -640,7 +624,7 @@ export const ClientReports: React.FC = () => {
               <CardContent>
                 {customFieldSummaries.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Não há tarefas registradas no período para calcular os campos personalizados.
+                    Não há tarefas registradas no período com campos personalizados preenchidos.
                   </p>
                 ) : (
                   <div className="space-y-5">
@@ -648,20 +632,18 @@ export const ClientReports: React.FC = () => {
                       <div key={summary.id} className="space-y-3 border-b border-border pb-5 last:border-b-0 last:pb-0">
                         <div>
                           <p className="text-sm font-medium text-foreground">{summary.title}</p>
-                          <p className="text-xs text-muted-foreground">Base: {summary.tasksEligible} tarefas registradas • Com valor preenchido: {summary.tasksWithValue}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Base: {summary.tasksWithValue} tarefas com campo preenchido
+                          </p>
                         </div>
-                        {summary.values.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">Nenhum valor preenchido para este campo no período.</p>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-                            {summary.values.map((item) => (
-                              <div key={`${summary.id}-${item.value}`}>
-                                <p className="text-xs text-muted-foreground">{item.value}</p>
-                                <p className="text-lg font-semibold text-foreground">{item.percentage.toFixed(1)}%</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                          {summary.values.map((item) => (
+                            <div key={`${summary.id}-${item.value}`}>
+                              <p className="text-xs text-muted-foreground">{item.value}</p>
+                              <p className="text-lg font-semibold text-foreground">{item.percentage.toFixed(1)}%</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
