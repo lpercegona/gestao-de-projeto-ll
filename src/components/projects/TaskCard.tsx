@@ -15,6 +15,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
 import { cn } from '@/lib/utils';
 import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
+import { Badge } from '@/components/ui/badge';
 
 interface TimeEntry {
   id: string;
@@ -47,6 +48,8 @@ interface TaskCardProps {
     status: string;
     due_date?: string | null;
     created_by: string | null;
+    is_pending_approval?: boolean;
+    approval_label?: string;
   };
   taskHours: number;
   timeEntries: TimeEntry[];
@@ -132,6 +135,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const stageInfo = getStageInfo(task.status);
+  const isPendingApproval = Boolean(task.is_pending_approval);
 
   return (
     <div className="bg-card border rounded-lg p-3 group relative">
@@ -171,6 +175,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className="pr-16">
         <div className="flex items-center gap-2 flex-wrap mb-2">
           <h4 className="font-medium text-sm text-foreground">{task.name}</h4>
+          {isPendingApproval && (
+            <Badge variant="outline" className="text-[10px] h-5">
+              {task.approval_label || 'Aguardando aprovação'}
+            </Badge>
+          )}
           {showStatus && (
             <span 
               className="text-xs px-2 py-0.5 rounded-full font-medium"

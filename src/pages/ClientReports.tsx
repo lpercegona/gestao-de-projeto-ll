@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -18,12 +19,34 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, AlertCircle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, AlertCircle, CalendarIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+
+interface ProjectRequestHistory {
+  id: string;
+  title: string;
+  briefing: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  desired_deadline: string | null;
+}
+
+interface EditRequestHistory {
+  id: string;
+  entity_type: string;
+  status: string;
+  proposed_data: Record<string, unknown>;
+  admin_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export const ClientReports: React.FC = () => {
   const { user } = useAuth();
@@ -31,7 +54,6 @@ export const ClientReports: React.FC = () => {
     data, 
     loading, 
     getClientColumns, 
-    getClientMonthlyHours, 
     getClientPreviousMonthOverflow 
   } = useData();
   
@@ -39,7 +61,11 @@ export const ClientReports: React.FC = () => {
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'hours' | 'requests'>('hours');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [projectRequestsHistory, setProjectRequestsHistory] = useState<ProjectRequestHistory[]>([]);
+  const [editRequestsHistory, setEditRequestsHistory] = useState<EditRequestHistory[]>([]);
 
   // Get client for current user (RLS ensures only their data is returned)
   const client = useMemo(() => {
@@ -65,6 +91,30 @@ export const ClientReports: React.FC = () => {
       setReportShare(shareData);
     };
     fetchShareSettings();
+  }, [client]);
+
+  useEffect(() => {
+    const fetchRequestHistory = async () => {
+      if (!client) return;
+
+      const [{ data: requests }, { data: editRequests }] = await Promise.all([
+        supabase
+          .from('project_requests')
+          .select('id, title, briefing, status, created_at, updated_at, desired_deadline')
+          .eq('client_id', client.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('edit_requests')
+          .select('id, entity_type, status, proposed_data, admin_notes, created_at, updated_at')
+          .eq('client_id', client.id)
+          .order('created_at', { ascending: false }),
+      ]);
+
+      setProjectRequestsHistory((requests || []) as ProjectRequestHistory[]);
+      setEditRequestsHistory((editRequests || []) as EditRequestHistory[]);
+    };
+
+    fetchRequestHistory();
   }, [client]);
 
   // Generate month options (last 12 months)
@@ -168,6 +218,70 @@ export const ClientReports: React.FC = () => {
   // Calculate displayed used hours based on contract type
   const displayedUsedHours = isMonthly ? totalMonthHours : totalAllHours;
   const remainingHours = Math.max(0, availableHours - displayedUsedHours);
+
+  const requestHistory = useMemo(() => {
+    const projectHistoryItems = projectRequestsHistory.map((request) => ({
+      id: request.id,
+      type: 'new_project' as const,
+      title: request.title,
+      description: request.briefing,
+      status: request.status,
+      createdAt: request.created_at,
+      updatedAt: request.updated_at,
+      deadline: request.desired_deadline,
+      adminNotes: null,
+    }));
+
+    const editHistoryItems = editRequestsHistory.map((request) => {
+      const requestType = typeof request.proposed_data?.request_type === 'string'
+        ? request.proposed_data.request_type
+        : 'edit_project';
+
+      const titleMap: Record<string, string> = {
+        new_task: 'Solicitação de nova tarefa',
+        edit_task: 'Solicitação de edição de tarefa',
+        edit_project: 'Solicitação de edição de projeto',
+      };
+
+      return {
+        id: request.id,
+        type: 'edit' as const,
+        title: titleMap[requestType] || 'Solicitação de edição',
+        description:
+          (typeof request.proposed_data?.task_name === 'string' && request.proposed_data.task_name) ||
+          (typeof request.proposed_data?.name === 'string' && request.proposed_data.name) ||
+          (typeof request.proposed_data?.description === 'string' && request.proposed_data.description) ||
+          null,
+        status: request.status,
+        createdAt: request.created_at,
+        updatedAt: request.updated_at,
+        deadline: null,
+        adminNotes: request.admin_notes,
+      };
+    });
+
+    return [...projectHistoryItems, ...editHistoryItems]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [editRequestsHistory, projectRequestsHistory]);
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Pendente',
+      analyzing: 'Em análise',
+      in_review: 'Em revisão',
+      approved: 'Aprovada',
+      rejected: 'Rejeitada',
+      converted: 'Convertida',
+    };
+    return labels[status] || status;
+  };
+
+  const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    if (status === 'approved' || status === 'converted') return 'default';
+    if (status === 'rejected') return 'destructive';
+    if (status === 'pending' || status === 'analyzing' || status === 'in_review') return 'secondary';
+    return 'outline';
+  };
 
   if (loading) {
     return (
@@ -307,39 +421,66 @@ export const ClientReports: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="py-4">
-          <div className="w-64">
-            <Label className="mb-2 block">Mês</Label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'hours' | 'requests')}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="hours">Horas</TabsTrigger>
+          <TabsTrigger value="requests">Solicitações</TabsTrigger>
+        </TabsList>
 
-      {/* Report List */}
-      {reportData.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              Nenhum projeto com horas registradas no período selecionado.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {reportData.map((project) => {
+        <TabsContent value="hours" className="space-y-6">
+          <Card className="mb-6">
+            <CardContent className="py-4">
+              <div className="w-full sm:w-72">
+                <Label className="mb-2 block">Mês</Label>
+                <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn('w-full justify-start text-left font-normal')}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {monthOptions.find((option) => option.value === selectedMonth)?.label}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-4" align="start">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Selecione o mês</Label>
+                      <Select
+                        value={selectedMonth}
+                        onValueChange={(value) => {
+                          setSelectedMonth(value);
+                          setMonthPickerOpen(false);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {monthOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </CardContent>
+          </Card>
+
+          {reportData.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  Nenhum projeto com horas registradas no período selecionado.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {reportData.map((project) => {
             const isExpanded = expandedProjects.has(project.id);
             const originalProject = projects.find(p => p.id === project.id);
             const customFields = originalProject?.custom_fields || {};
@@ -423,9 +564,59 @@ export const ClientReports: React.FC = () => {
                 </Collapsible>
               </Card>
             );
-          })}
-        </div>
-      )}
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="requests">
+          {requestHistory.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Nenhuma solicitação encontrada.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {requestHistory.map((request) => (
+                <Card key={`${request.type}-${request.id}`}>
+                  <CardContent className="py-4 space-y-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">{request.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Criada em {format(parseISO(request.createdAt), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
+                        </p>
+                      </div>
+                      <Badge variant={getStatusVariant(request.status)}>{getStatusLabel(request.status)}</Badge>
+                    </div>
+
+                    {request.description && (
+                      <p className="text-sm text-muted-foreground">{request.description}</p>
+                    )}
+
+                    <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                      <span>
+                        Última atualização: {format(parseISO(request.updatedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                      {request.deadline && (
+                        <span>Prazo solicitado: {format(parseISO(request.deadline), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                      )}
+                    </div>
+
+                    {request.adminNotes && (
+                      <div className="rounded-md border border-border bg-muted/40 p-2">
+                        <p className="text-xs font-medium text-foreground">Observação da equipe</p>
+                        <p className="text-sm text-muted-foreground">{request.adminNotes}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

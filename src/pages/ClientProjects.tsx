@@ -30,6 +30,14 @@ interface ProjectRequest {
   updated_at?: string;
 }
 
+interface PendingTaskRequest {
+  id: string;
+  entity_id: string;
+  status: string;
+  proposed_data: Record<string, unknown>;
+  created_at: string;
+}
+
 type UnifiedProject = {
   id: string;
   client_id: string;
@@ -56,12 +64,15 @@ type ClientTask = {
   due_date?: string | null;
   created_by: string | null;
   created_at: string;
+  is_pending_approval?: boolean;
+  approval_label?: string;
 };
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
   const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
+  const [pendingTaskRequests, setPendingTaskRequests] = useState<PendingTaskRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -125,7 +136,11 @@ export const ClientProjects: React.FC = () => {
     if (viewMode === 'kanban') return [];
 
     return requests
-      .filter((request) => !request.converted_project_id)
+      .filter(
+        (request) =>
+          !request.converted_project_id &&
+          (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')
+      )
       .map((request) => ({
         id: `request-${request.id}`,
         client_id: request.client_id,
@@ -151,6 +166,33 @@ export const ClientProjects: React.FC = () => {
     });
   }, [visibleProjects, visibleRequestProjects]);
 
+  const tasksWithPendingRequests = useMemo<ClientTask[]>(() => {
+    const pendingTasks = pendingTaskRequests
+      .map((request) => {
+        const taskName = request.proposed_data?.task_name;
+        if (typeof taskName !== 'string' || !taskName.trim()) return null;
+
+        const taskDescription = request.proposed_data?.task_description;
+        const taskDueDate = request.proposed_data?.task_due_date;
+
+        return {
+          id: `pending-task-request-${request.id}`,
+          project_id: request.entity_id,
+          name: taskName,
+          description: typeof taskDescription === 'string' ? taskDescription : null,
+          status: 'pending',
+          due_date: typeof taskDueDate === 'string' ? taskDueDate : null,
+          created_by: user?.id || null,
+          created_at: request.created_at,
+          is_pending_approval: true,
+          approval_label: 'Aguardando aprovação',
+        } as ClientTask;
+      })
+      .filter((task): task is ClientTask => task !== null);
+
+    return [...data.tasks, ...pendingTasks];
+  }, [data.tasks, pendingTaskRequests, user?.id]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
@@ -169,14 +211,27 @@ export const ClientProjects: React.FC = () => {
 
         setClientId(clientData.id);
 
-        const { data: requestsData, error } = await supabase
-          .from('project_requests')
-          .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
-          .eq('client_id', clientData.id)
-          .order('created_at', { ascending: false });
+        const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
+          supabase
+            .from('project_requests')
+            .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+            .eq('client_id', clientData.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('edit_requests')
+            .select('id, entity_id, status, proposed_data, created_at')
+            .eq('client_id', clientData.id)
+            .eq('entity_type', 'project')
+            .in('status', ['pending', 'analyzing', 'in_review'])
+            .contains('proposed_data', { request_type: 'new_task' })
+            .order('created_at', { ascending: false }),
+        ]);
 
-        if (error) throw error;
+        if (requestError) throw requestError;
+        if (pendingTaskError) throw pendingTaskError;
+
         setRequests((requestsData || []) as ProjectRequest[]);
+        setPendingTaskRequests((pendingTaskData || []) as PendingTaskRequest[]);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -266,7 +321,7 @@ export const ClientProjects: React.FC = () => {
     setTaskRequestSubmitting(true);
 
     try {
-      const { error } = await supabase.from('edit_requests').insert([
+      const { data: createdRequest, error } = await supabase.from('edit_requests').insert([
         {
           entity_type: 'project',
           entity_id: taskRequestProjectId,
@@ -280,9 +335,13 @@ export const ClientProjects: React.FC = () => {
             task_due_date: taskRequestForm.due_date || null,
           },
         },
-      ]);
+      ]).select('id, entity_id, status, proposed_data, created_at').single();
 
       if (error) throw error;
+
+      if (createdRequest) {
+        setPendingTaskRequests((prev) => [createdRequest as PendingTaskRequest, ...prev]);
+      }
 
       toast.success('Solicitação de nova tarefa enviada para aprovação!');
       setTaskRequestDialogOpen(false);
@@ -397,7 +456,7 @@ export const ClientProjects: React.FC = () => {
         <ProjectListView
           projects={filteredProjects}
           clients={data.clients}
-          tasks={data.tasks}
+          tasks={tasksWithPendingRequests}
           timeEntries={data.timeEntries}
           taskTimers={data.taskTimers}
           projectColumns={data.projectColumns}
@@ -426,7 +485,7 @@ export const ClientProjects: React.FC = () => {
         <ProjectKanbanView
           projects={visibleProjects}
           clients={data.clients}
-          tasks={data.tasks}
+          tasks={tasksWithPendingRequests}
           timeEntries={data.timeEntries}
           taskTimers={data.taskTimers}
           kanbanStages={data.kanbanStages}
