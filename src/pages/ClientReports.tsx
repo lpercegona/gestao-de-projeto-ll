@@ -26,6 +26,8 @@ import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 
 interface ProjectRequestHistory {
   id: string;
+  client_id: string;
+  requested_by?: string;
   title: string;
   briefing: string;
   status: string;
@@ -36,6 +38,8 @@ interface ProjectRequestHistory {
 
 interface EditRequestHistory {
   id: string;
+  client_id: string;
+  requested_by?: string;
   entity_type: string;
   status: string;
   proposed_data: Record<string, unknown>;
@@ -129,25 +133,54 @@ export const ClientReports: React.FC = () => {
 
       const clientIds = Array.from(new Set([...queriedClientIds, ...contextRelatedClientIds, client.id]));
 
-      const [{ data: requests }, { data: editRequests }] = await Promise.all([
+      const [projectRequestsRes, editRequestsRes, legacyProjectRequestsRes, legacyEditRequestsRes] = await Promise.all([
         supabase
           .from("project_requests")
-          .select("id, title, briefing, status, created_at, updated_at, desired_deadline")
+          .select("id, client_id, requested_by, title, briefing, status, created_at, updated_at, desired_deadline")
           .in("client_id", clientIds)
           .order("created_at", { ascending: false }),
         supabase
           .from("edit_requests")
-          .select("id, entity_type, status, proposed_data, admin_notes, created_at, updated_at")
+          .select("id, client_id, requested_by, entity_type, status, proposed_data, admin_notes, created_at, updated_at")
           .in("client_id", clientIds)
           .order("created_at", { ascending: false }),
+        user?.id
+          ? supabase
+              .from("project_requests")
+              .select("id, client_id, requested_by, title, briefing, status, created_at, updated_at, desired_deadline")
+              .eq("requested_by", user.id)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        user?.id
+          ? supabase
+              .from("edit_requests")
+              .select("id, client_id, requested_by, entity_type, status, proposed_data, admin_notes, created_at, updated_at")
+              .eq("requested_by", user.id)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
-      setProjectRequestsHistory((requests || []) as ProjectRequestHistory[]);
-      setEditRequestsHistory((editRequests || []) as EditRequestHistory[]);
+      const projectRequestsMap = new Map<string, ProjectRequestHistory>();
+      ((projectRequestsRes.data || []) as ProjectRequestHistory[]).forEach((request) => projectRequestsMap.set(request.id, request));
+      ((legacyProjectRequestsRes.data || []) as ProjectRequestHistory[]).forEach((request) => projectRequestsMap.set(request.id, request));
+
+      const editRequestsMap = new Map<string, EditRequestHistory>();
+      ((editRequestsRes.data || []) as EditRequestHistory[]).forEach((request) => editRequestsMap.set(request.id, request));
+      ((legacyEditRequestsRes.data || []) as EditRequestHistory[]).forEach((request) => editRequestsMap.set(request.id, request));
+
+      const projectRequests = Array.from(projectRequestsMap.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      const editRequests = Array.from(editRequestsMap.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+
+      setProjectRequestsHistory(projectRequests);
+      setEditRequestsHistory(editRequests);
     };
 
     fetchRequestHistory();
-  }, [client, data.clients]);
+  }, [client, data.clients, user?.id]);
 
   // Generate month options (last 12 months)
   const monthOptions = useMemo(() => {
