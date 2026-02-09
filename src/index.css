@@ -139,6 +139,15 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
