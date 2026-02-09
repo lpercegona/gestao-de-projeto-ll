@@ -116,7 +116,7 @@ export const SolicitacoesPanel: React.FC = () => {
                 <FileText className="h-4 w-4" />
                 Solicitações
                 {pendingCount > 0 && (
-                  <Badge variant="outlined" className="ml-1 bg-blue-500/10">
+                  <Badge variant="outline" className="ml-1 bg-blue-500/10">
                     {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
                   </Badge>
                 )}

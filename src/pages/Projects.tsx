@@ -471,7 +471,7 @@ export const Projects: React.FC = () => {
   };
 
   const handleOpenPendingTaskRequest = (task: Task | PendingApprovalTask) => {
-    const requestId = task.pending_request_id;
+    const requestId = 'pending_request_id' in task ? task.pending_request_id : undefined;
     if (!requestId) return;
 
     const request = editRequests.find((item) => item.id === requestId);
@@ -961,7 +961,7 @@ export const Projects: React.FC = () => {
         <ProjectListView
           projects={filteredProjects}
           clients={data.clients}
-          tasks={tasksWithPendingApprovals}
+          tasks={tasksWithPendingApprovals as any}
           timeEntries={data.timeEntries}
           taskTimers={data.taskTimers}
           projectColumns={data.projectColumns}
