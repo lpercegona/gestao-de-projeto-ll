@@ -37,10 +37,15 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
     };
   }, [content]);
 
+  const preventParentToggle = (event: React.SyntheticEvent) => {
+    if (!stopPropagationOnToggle) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   const toggleExpanded = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (stopPropagationOnToggle) {
-      event.stopPropagation();
-    }
+    preventParentToggle(event);
     setExpanded((current) => !current);
   };
 
@@ -54,16 +59,17 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
         </div>
 
         {isOverflowing && !expanded && (
-          <span className="absolute bottom-0 right-0 bg-background pl-1 text-xs text-muted-foreground">
-            ...
+    
             <button
               type="button"
+              onPointerDown={preventParentToggle}
+              onMouseDown={preventParentToggle}
               onClick={toggleExpanded}
               className="underline underline-offset-2"
             >
               mais
             </button>
-          </span>
+        
         )}
 
         <div
@@ -78,6 +84,8 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
       {isOverflowing && expanded && (
         <button
           type="button"
+          onPointerDown={preventParentToggle}
+          onMouseDown={preventParentToggle}
           onClick={toggleExpanded}
           className="text-xs text-muted-foreground underline underline-offset-2"
         >
