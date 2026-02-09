@@ -99,16 +99,46 @@ export const ClientReports: React.FC = () => {
     const fetchRequestHistory = async () => {
       if (!client) return;
 
+      const normalizedCompany = client.company?.trim() || null;
+
+      const relatedClientsRes = normalizedCompany
+        ? await supabase.from("clients").select("id, company").not("company", "is", null)
+        : client.user_id
+          ? await supabase.from("clients").select("id").eq("user_id", client.user_id)
+          : { data: [], error: null };
+
+      const queriedClientIds = normalizedCompany
+        ? ((relatedClientsRes.data || []) as Array<{ id: string; company: string | null }>)
+            .filter((clientItem) => clientItem.company?.trim().toLocaleLowerCase() === normalizedCompany.toLocaleLowerCase())
+            .map((clientItem) => clientItem.id)
+        : ((relatedClientsRes.data || []) as Array<{ id: string }>).map((clientItem) => clientItem.id);
+
+      const contextRelatedClientIds = data.clients
+        .filter((clientItem) => {
+          if (normalizedCompany) {
+            return clientItem.company?.trim()?.toLocaleLowerCase() === normalizedCompany.toLocaleLowerCase();
+          }
+
+          if (client.user_id) {
+            return clientItem.user_id === client.user_id;
+          }
+
+          return clientItem.id === client.id;
+        })
+        .map((clientItem) => clientItem.id);
+
+      const clientIds = Array.from(new Set([...queriedClientIds, ...contextRelatedClientIds, client.id]));
+
       const [{ data: requests }, { data: editRequests }] = await Promise.all([
         supabase
           .from("project_requests")
           .select("id, title, briefing, status, created_at, updated_at, desired_deadline")
-          .eq("client_id", client.id)
+          .in("client_id", clientIds)
           .order("created_at", { ascending: false }),
         supabase
           .from("edit_requests")
           .select("id, entity_type, status, proposed_data, admin_notes, created_at, updated_at")
-          .eq("client_id", client.id)
+          .in("client_id", clientIds)
           .order("created_at", { ascending: false }),
       ]);
 
@@ -117,7 +147,7 @@ export const ClientReports: React.FC = () => {
     };
 
     fetchRequestHistory();
-  }, [client]);
+  }, [client, data.clients]);
 
   // Generate month options (last 12 months)
   const monthOptions = useMemo(() => {
