@@ -59,8 +59,7 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
         </div>
 
         {isOverflowing && !expanded && (
-          <span className="absolute bottom-0 right-0 bg-background pl-1 text-xs text-muted-foreground">
-            ...{' '}
+    
             <button
               type="button"
               onPointerDown={preventParentToggle}
@@ -70,7 +69,7 @@ export const ExpandableDescription: React.FC<ExpandableDescriptionProps> = ({
             >
               mais
             </button>
-          </span>
+        
         )}
 
         <div
