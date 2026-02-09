@@ -209,7 +209,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     {
       path: "/collaborator-dashboard",
       icon: LayoutDashboard,
-      label: "Dashboard",
+      label: "Painel",
     },
     {
       path: "/projects",
@@ -223,7 +223,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     {
       path: "/client-dashboard",
       icon: LayoutDashboard,
-      label: "Dashboard",
+      label: "Painel",
     },
     {
       path: "/my-reports",
