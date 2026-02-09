@@ -41,6 +41,8 @@ interface Task {
   due_date?: string | null;
   created_by: string | null;
   created_at: string;
+  is_pending_approval?: boolean;
+  approval_label?: string;
 }
 
 interface TimeEntry {
@@ -357,6 +359,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       {projectTasks.map((task) => {
                         const taskTimeEntries = timeEntries.filter((te) => te.task_id === task.id);
                         const activeTimer = getActiveTimer(task.id);
+                        const isPendingApprovalTask = Boolean(task.is_pending_approval);
 
                         return (
                           <TaskCard
@@ -367,18 +370,18 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             activeTimer={activeTimer}
                             kanbanStages={kanbanStages}
                             getCreatorName={getCreatorName}
-                            onEditTask={() => onEditTask(task)}
-                            onDeleteTask={() => onDeleteTask(task)}
-                            onRequestEdit={isClientRestrictedMode && onRequestTaskEdit ? () => onRequestTaskEdit(task) : undefined}
+                            onEditTask={() => !isPendingApprovalTask && onEditTask(task)}
+                            onDeleteTask={() => !isPendingApprovalTask && onDeleteTask(task)}
+                            onRequestEdit={!isPendingApprovalTask && isClientRestrictedMode && onRequestTaskEdit ? () => onRequestTaskEdit(task) : undefined}
                             onRegisterTime={onRegisterTime}
-                            onStartTimer={() => onStartTimer(task.id)}
-                            onStopTimer={() => onStopTimer(task.id)}
-                            onCompleteTask={() => onCompleteTask(task.id)}
+                            onStartTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStartTimer(task.id))}
+                            onStopTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStopTimer(task.id))}
+                            onCompleteTask={() => (isPendingApprovalTask ? Promise.resolve() : onCompleteTask(task.id))}
                             showStatus={true}
-                            allowTaskEdit={!isClientRestrictedMode}
-                            allowTaskDelete={!isClientRestrictedMode}
-                            showRegisterTimeButton={!isClientRestrictedMode}
-                            allowTimeEntryEdit={!isClientRestrictedMode}
+                            allowTaskEdit={!isPendingApprovalTask && !isClientRestrictedMode}
+                            allowTaskDelete={!isPendingApprovalTask && !isClientRestrictedMode}
+                            showRegisterTimeButton={!isPendingApprovalTask && !isClientRestrictedMode}
+                            allowTimeEntryEdit={!isPendingApprovalTask && !isClientRestrictedMode}
                           />
                         );
                       })}

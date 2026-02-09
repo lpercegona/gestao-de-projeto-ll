@@ -30,6 +30,8 @@ interface Task {
   due_date?: string | null;
   created_by: string | null;
   created_at: string;
+  is_pending_approval?: boolean;
+  approval_label?: string;
 }
 
 interface TimeEntry {
@@ -256,6 +258,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                           const client = project ? getClient(project.client_id) : null;
                           const taskTimeEntries = timeEntries.filter((te) => te.task_id === task.id);
                           const activeTimer = getActiveTimer(task.id);
+                          const isPendingApprovalTask = Boolean(task.is_pending_approval);
 
                           return (
                             <div
@@ -278,20 +281,20 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 timeEntries={taskTimeEntries}
                                 activeTimer={activeTimer}
                                 getCreatorName={getCreatorName}
-                                onEditTask={() => onEditTask(task)}
-                                onDeleteTask={() => onDeleteTask(task)}
-                                onRequestEdit={clientRestrictedMode && onRequestTaskEdit ? () => onRequestTaskEdit(task) : undefined}
+                                onEditTask={() => !isPendingApprovalTask && onEditTask(task)}
+                                onDeleteTask={() => !isPendingApprovalTask && onDeleteTask(task)}
+                                onRequestEdit={!isPendingApprovalTask && clientRestrictedMode && onRequestTaskEdit ? () => onRequestTaskEdit(task) : undefined}
                                 onRegisterTime={onRegisterTime}
-                                onStartTimer={() => onStartTimer(task.id)}
-                                onStopTimer={() => onStopTimer(task.id)}
-                                onCompleteTask={() => onCompleteTask(task.id)}
+                                onStartTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStartTimer(task.id))}
+                                onStopTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStopTimer(task.id))}
+                                onCompleteTask={() => (isPendingApprovalTask ? Promise.resolve() : onCompleteTask(task.id))}
                                 compact
                                 showStatus={false}
                                 iconOnly
-                                allowTaskEdit={!clientRestrictedMode}
-                                allowTaskDelete={!clientRestrictedMode}
-                                showRegisterTimeButton={!clientRestrictedMode}
-                                allowTimeEntryEdit={!clientRestrictedMode}
+                                allowTaskEdit={!isPendingApprovalTask && !clientRestrictedMode}
+                                allowTaskDelete={!isPendingApprovalTask && !clientRestrictedMode}
+                                showRegisterTimeButton={!isPendingApprovalTask && !clientRestrictedMode}
+                                allowTimeEntryEdit={!isPendingApprovalTask && !clientRestrictedMode}
                               />
                             </div>
                           );
