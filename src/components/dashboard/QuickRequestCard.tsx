@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
-import { toast } from 'sonner';
-import { FileText, Plus } from 'lucide-react';
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ProjectRequestForm } from "@/components/client/ProjectRequestForm";
+import { toast } from "sonner";
+import { FileText, Plus } from "lucide-react";
 
 interface QuickRequestCardProps {
   pendingCount?: number;
@@ -22,37 +22,35 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
     try {
       // Get client_id from client_users
       const { data: clientUserData, error: clientUserError } = await supabase
-        .from('client_users')
-        .select('client_id')
-        .eq('user_id', user.id)
+        .from("client_users")
+        .select("client_id")
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (clientUserError || !clientUserData?.client_id) {
-        throw new Error('Cliente não encontrado');
+        throw new Error("Cliente não encontrado");
       }
 
       // Insert new project request
-      const { error } = await supabase
-        .from('project_requests')
-        .insert({
-          client_id: clientUserData.client_id,
-          title,
-          briefing,
-          desired_deadline: desiredDeadline || null,
-          created_by: user.id,
-          status: 'pending',
-        });
+      const { error } = await supabase.from("project_requests").insert({
+        client_id: clientUserData.client_id,
+        title,
+        briefing,
+        desired_deadline: desiredDeadline || null,
+        created_by: user.id,
+        status: "pending",
+      });
 
       if (error) throw error;
 
-      toast.success('Solicitação enviada com sucesso!');
+      toast.success("Solicitação enviada com sucesso!");
       setIsFormOpen(false);
-      
+
       // Reload the page to refresh the data
       window.location.reload();
     } catch (error) {
-      console.error('Error submitting request:', error);
-      toast.error('Erro ao enviar solicitação');
+      console.error("Error submitting request:", error);
+      toast.error("Erro ao enviar solicitação");
     }
   };
 
@@ -67,31 +65,25 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
               </div>
               <div className="min-w-0">
                 <h3 className="font-semibold text-lg">Solicitação Rápida</h3>
-                <p className="text-sm text-muted-foreground">
-                  Solicite um novo projeto ou serviço
-                </p>
+                <p className="text-sm text-muted-foreground">Solicite um novo projeto ou serviço</p>
               </div>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
               {pendingCount > 0 && (
                 <Badge variant="secondary" className="text-xs shrink-0">
-                  {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
+                  {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
                 </Badge>
               )}
-              <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full sm:w-auto">
-                <Plus className="w-4 h-4" />
-                Nova Solicitação
-              </Button>
             </div>
+            <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full sm:w-auto">
+              <Plus className="w-4 h-4" />
+              Nova Solicitação
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <ProjectRequestForm
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        onSubmit={handleSubmitRequest}
-      />
+      <ProjectRequestForm open={isFormOpen} onOpenChange={setIsFormOpen} onSubmit={handleSubmitRequest} />
     </>
   );
 };
