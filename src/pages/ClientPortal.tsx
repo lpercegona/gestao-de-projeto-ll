@@ -20,6 +20,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'da
 import { ptBR } from 'date-fns/locale';
 import { Client, Project, Task, TimeEntry } from '@/types';
 import { formatHours } from '@/lib/formatHours';
+import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
 
 export const ClientPortal: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -410,7 +411,7 @@ export const ClientPortal: React.FC = () => {
                                   <div>
                                     <p className="font-medium text-foreground">{task.name}</p>
                                     {task.description && (
-                                      <p className="text-sm text-muted-foreground">{task.description}</p>
+                                      <WysiwygContent content={task.description} className="text-sm text-muted-foreground" />
                                     )}
                                   </div>
                                   <div className="text-right">

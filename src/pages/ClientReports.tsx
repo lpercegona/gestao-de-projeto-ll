@@ -27,6 +27,7 @@ import { formatHours } from '@/lib/formatHours';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
 
 interface ProjectRequestHistory {
   id: string;
@@ -546,7 +547,7 @@ export const ClientReports: React.FC = () => {
                               <div>
                                 <p className="font-medium text-foreground">{task.name}</p>
                                 {task.description && (
-                                  <p className="text-sm text-muted-foreground">{task.description}</p>
+                                  <WysiwygContent content={task.description} className="text-sm text-muted-foreground" />
                                 )}
                               </div>
                               <div className="text-right">
@@ -592,7 +593,7 @@ export const ClientReports: React.FC = () => {
                     </div>
 
                     {request.description && (
-                      <p className="text-sm text-muted-foreground">{request.description}</p>
+                      <WysiwygContent content={request.description} className="text-sm text-muted-foreground" />
                     )}
 
                     <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
