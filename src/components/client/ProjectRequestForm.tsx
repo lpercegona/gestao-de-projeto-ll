@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Loader2, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface ProjectColumn {
+  id: string;
+  name: string;
+  type: 'text' | 'select';
+  options: string[] | null;
+}
 
 interface ProjectRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (title: string, briefing: string, desiredDeadline?: string) => Promise<void>;
+  onSubmit: (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => Promise<void>;
 }
 
 export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
@@ -25,6 +34,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   onOpenChange,
   onSubmit,
 }) => {
+  const { user } = useAuth();
   interface RequestedTask {
     title: string;
     description: string;
@@ -33,22 +43,68 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
   const [title, setTitle] = useState('');
   const [briefing, setBriefing] = useState('');
-  const [customField, setCustomField] = useState('');
+  const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const [desiredDeadline, setDesiredDeadline] = useState('');
   const [requestedTasks, setRequestedTasks] = useState<RequestedTask[]>([]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<number[]>([]);
   const [taskForm, setTaskForm] = useState<RequestedTask>({ title: '', description: '', dueDate: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [loadingFields, setLoadingFields] = useState(false);
+
+  useEffect(() => {
+    if (!open || !user) return;
+
+    const fetchColumns = async () => {
+      setLoadingFields(true);
+      try {
+        const [{ data: client }, { data: clientUser }] = await Promise.all([
+          supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+          supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+        ]);
+
+        const resolvedClientId = client?.id || clientUser?.client_id;
+        if (!resolvedClientId) {
+          setProjectColumns([]);
+          setCustomFields({});
+          return;
+        }
+
+        const { data: columns, error } = await supabase
+          .from('project_columns')
+          .select('id, name, type, options')
+          .eq('client_id', resolvedClientId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const typedColumns = (columns || []) as ProjectColumn[];
+        setProjectColumns(typedColumns);
+        setCustomFields((previous) => {
+          const next: Record<string, string> = {};
+          typedColumns.forEach((column) => {
+            next[column.id] = previous[column.id] || column.options?.[0] || '';
+          });
+          return next;
+        });
+      } finally {
+        setLoadingFields(false);
+      }
+    };
+
+    fetchColumns();
+  }, [open, user]);
+
+  const selectedCustomFields = useMemo(
+    () => Object.fromEntries(Object.entries(customFields).filter(([, value]) => value.trim())),
+    [customFields],
+  );
 
   const getContentText = (content: string) => content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
   const buildBriefingPayload = () => {
     let enrichedBriefing = briefing;
-
-    if (customField.trim()) {
-      enrichedBriefing += `<hr /><p><strong>Campo personalizado:</strong> ${customField.trim()}</p>`;
-    }
 
     if (requestedTasks.length > 0) {
       const tasksSection = requestedTasks
@@ -91,10 +147,10 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), buildBriefingPayload(), desiredDeadline || undefined);
+      await onSubmit(title.trim(), buildBriefingPayload(), selectedCustomFields, desiredDeadline || undefined);
       setTitle('');
       setBriefing('');
-      setCustomField('');
+      setCustomFields({});
       setDesiredDeadline('');
       setRequestedTasks([]);
       setExpandedTasks([]);
@@ -153,16 +209,41 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="customField">Campo personalizado (opcional)</Label>
-              <Input
-                id="customField"
-                value={customField}
-                onChange={(e) => setCustomField(e.target.value)}
-                placeholder="Ex: Unidade, campanha, referência interna"
-                disabled={submitting}
-              />
-            </div>
+            {projectColumns.length > 0 && (
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <p className="text-sm font-medium">Campos personalizados</p>
+                {loadingFields ? (
+                  <p className="text-xs text-muted-foreground">Carregando campos personalizados...</p>
+                ) : (
+                  projectColumns.map((column) => (
+                    <div className="space-y-2" key={column.id}>
+                      <Label htmlFor={column.id}>{column.name}</Label>
+                      {column.type === 'select' && column.options?.length ? (
+                        <select
+                          id={column.id}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={customFields[column.id] || ''}
+                          onChange={(event) => setCustomFields((prev) => ({ ...prev, [column.id]: event.target.value }))}
+                          disabled={submitting}
+                        >
+                          {column.options.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          id={column.id}
+                          value={customFields[column.id] || ''}
+                          onChange={(event) => setCustomFields((prev) => ({ ...prev, [column.id]: event.target.value }))}
+                          placeholder={`Digite ${column.name.toLowerCase()}`}
+                          disabled={submitting}
+                        />
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
 
             <div className="space-y-3 rounded-lg border border-border p-3">
               <div className="flex items-center justify-between">
