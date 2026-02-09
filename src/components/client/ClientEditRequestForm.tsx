@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -160,12 +160,11 @@ export const ClientEditRequestForm: React.FC<ClientEditRequestFormProps> = ({
             <Label htmlFor="description">
               {entityType === 'project' ? 'Descrição' : 'Briefing'}
             </Label>
-            <Textarea
-              id="description"
+            <WysiwygEditor
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
               placeholder={entityType === 'project' ? 'Descrição do projeto' : 'Descreva sua necessidade'}
-              rows={4}
+              minHeight="120px"
             />
           </div>
 

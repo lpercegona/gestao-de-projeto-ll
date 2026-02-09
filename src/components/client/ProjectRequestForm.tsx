@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -29,13 +29,15 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   const [desiredDeadline, setDesiredDeadline] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const getContentText = (content: string) => content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !briefing.trim()) return;
+    if (!title.trim() || !getContentText(briefing)) return;
 
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), briefing.trim(), desiredDeadline || undefined);
+      await onSubmit(title.trim(), briefing, desiredDeadline || undefined);
       setTitle('');
       setBriefing('');
       setDesiredDeadline('');
@@ -69,14 +71,11 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="briefing">Briefing Detalhado *</Label>
-              <Textarea
-                id="briefing"
+              <WysiwygEditor
                 value={briefing}
-                onChange={(e) => setBriefing(e.target.value)}
-                placeholder="Descreva o projeto em detalhes: objetivos, escopo, prazo desejado, referências, etc."
-                rows={6}
-                required
+                onChange={setBriefing}
                 disabled={submitting}
+                minHeight="120px"
               />
               <p className="text-xs text-muted-foreground">
                 Quanto mais detalhes você fornecer, melhor conseguiremos entender suas necessidades.
@@ -106,7 +105,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting || !title.trim() || !briefing.trim()}>
+            <Button type="submit" disabled={submitting || !title.trim() || !getContentText(briefing)}>
               {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Enviar Solicitação
             </Button>

@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
 import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm';
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { Plus, FolderKanban, Loader2 } from 'lucide-react';
+import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { toast } from 'sonner';
 import { endOfDay, isWithinInterval, startOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -54,6 +54,9 @@ type UnifiedProject = {
   desired_deadline?: string | null;
 };
 
+
+
+const getWysiwygPlainText = (content: string) => content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
 type ClientTask = {
   id: string;
@@ -331,7 +334,7 @@ export const ClientProjects: React.FC = () => {
           proposed_data: {
             request_type: 'new_task',
             task_name: taskRequestForm.name.trim(),
-            task_description: taskRequestForm.description.trim() || null,
+            task_description: getWysiwygPlainText(taskRequestForm.description) ? taskRequestForm.description : null,
             task_due_date: taskRequestForm.due_date || null,
           },
         },
@@ -390,7 +393,7 @@ export const ClientProjects: React.FC = () => {
             request_type: 'edit_task',
             task_id: taskEditForm.taskId,
             task_name: taskEditForm.name.trim(),
-            task_description: taskEditForm.description.trim() || null,
+            task_description: getWysiwygPlainText(taskEditForm.description) ? taskEditForm.description : null,
             task_due_date: taskEditForm.due_date || null,
           },
         },
@@ -526,12 +529,11 @@ export const ClientProjects: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="task-edit-description">Descrição</Label>
-              <Textarea
-                id="task-edit-description"
+              <WysiwygEditor
                 value={taskEditForm.description}
-                onChange={(event) => setTaskEditForm((prev) => ({ ...prev, description: event.target.value }))}
-                rows={4}
+                onChange={(value) => setTaskEditForm((prev) => ({ ...prev, description: value }))}
                 disabled={taskEditSubmitting}
+                minHeight="120px"
               />
             </div>
             <div className="space-y-2">
@@ -574,13 +576,12 @@ export const ClientProjects: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="task-request-description">Descrição</Label>
-              <Textarea
-                id="task-request-description"
+              <WysiwygEditor
                 value={taskRequestForm.description}
-                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, description: event.target.value }))}
+                onChange={(value) => setTaskRequestForm((prev) => ({ ...prev, description: value }))}
                 placeholder="Descreva o que precisa ser feito"
-                rows={4}
                 disabled={taskRequestSubmitting}
+                minHeight="120px"
               />
             </div>
             <div className="space-y-2">
