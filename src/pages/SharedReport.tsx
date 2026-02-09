@@ -13,6 +13,7 @@ import { ptBR } from "date-fns/locale";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatHours } from "@/lib/formatHours";
 import orasLogo from "@/assets/logo-oras.svg";
+import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 
 interface ProjectColumn {
   id: string;
@@ -691,7 +692,7 @@ export const SharedReport: React.FC = () => {
                                   <div>
                                     <p className="font-medium text-foreground">{task.name}</p>
                                     {task.description && (
-                                      <p className="text-sm text-muted-foreground">{task.description}</p>
+                                      <WysiwygContent content={task.description} className="text-sm text-muted-foreground" />
                                     )}
                                   </div>
                                   <div className="text-right">

@@ -317,12 +317,12 @@ export const CalendarPage: React.FC = () => {
               <div
                 key={`${item.type}-${item.id}`}
                 className={cn(
-                  "flex items-center justify-between p-3 rounded-lg border transition-colors",
+                  "flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
                   !isClient && "cursor-pointer hover:bg-accent/50"
                 )}
                 onClick={() => !isClient && handleNavigate(item)}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                   <div className={cn("p-1.5 rounded", getStatusColor(item.status))}>
                     {item.type === 'project' ? (
                       <FolderKanban className="h-3.5 w-3.5" />
@@ -333,11 +333,11 @@ export const CalendarPage: React.FC = () => {
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{item.name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {item.clientName} {item.projectName && `• ${item.projectName}`}
+                      {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end sm:shrink-0">
                   <span className="text-xs text-muted-foreground">
                     {format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}
                   </span>

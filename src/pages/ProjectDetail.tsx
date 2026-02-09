@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
+import { WysiwygContent, WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import {
   Select,
   SelectContent,
@@ -268,7 +268,7 @@ export const ProjectDetail: React.FC = () => {
       {project.description && (
         <Card className="mb-6">
           <CardContent className="py-4">
-            <p className="text-muted-foreground">{project.description}</p>
+            <WysiwygContent content={project.description} className="text-muted-foreground" />
           </CardContent>
         </Card>
       )}
@@ -377,7 +377,9 @@ export const ProjectDetail: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
+                  {task.description && (
+                    <WysiwygContent content={task.description} className="text-sm text-muted-foreground mb-3" />
+                  )}
                   <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm mb-4">
                     <span className="font-medium text-foreground">{formatHours(taskHours)} registradas</span>
                     <span className="text-muted-foreground text-xs">Criada por: {getCreatorName(task.created_by)}</span>

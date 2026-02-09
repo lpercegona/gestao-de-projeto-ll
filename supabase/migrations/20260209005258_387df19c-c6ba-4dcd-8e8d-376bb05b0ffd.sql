@@ -1,78 +1,3 @@
-
-# Plano: Ativar Notificações para Administradores
-
-## Visão Geral
-Ativar o sistema de notificações para administradores, cobrindo:
-- Solicitações de novos projetos de clientes
-- Solicitações de edição de clientes (projetos e tarefas)
-- Registro de horas por colaboradores
-
-O sistema já possui a infraestrutura de notificações (tabela, realtime, componentes), mas os triggers no banco de dados não foram aplicados corretamente.
-
----
-
-## Etapa 1: Corrigir Erros de Build Existentes
-
-### 1.1 SolicitacoesPanel.tsx
-- Linha 119: Alterar `variant="outlined"` para `variant="outline"`
-
-### 1.2 Projects.tsx
-- Linha 474: Adicionar verificação de tipo para acessar `pending_request_id`
-- Linha 964: Ajustar tipo passado para o componente `ProjectListView`
-
----
-
-## Etapa 2: Criar Triggers de Notificação no Banco de Dados
-
-### 2.1 Trigger para Solicitações de Novos Projetos
-Quando um cliente cria uma solicitação de novo projeto, notificar o administrador responsável (baseado em `client.owner_id`).
-
-```text
-Evento: INSERT em project_requests
-Destinatário: owner_id do cliente
-Tipo: client_project_request_created
-```
-
-### 2.2 Trigger para Solicitações de Edição
-Quando um cliente solicita edição em projeto ou solicitação, notificar o administrador. Distinguir entre:
-- Edição de projeto/solicitação
-- Solicitação de nova tarefa
-
-```text
-Evento: INSERT em edit_requests
-Destinatário: owner_id do cliente
-Tipos: 
-  - client_edit_request_created
-  - client_task_request_created
-```
-
-### 2.3 Trigger para Registro de Horas por Colaboradores
-Quando um colaborador registra horas, notificar o administrador responsável pelo cliente do projeto.
-
-```text
-Evento: INSERT em time_entries
-Destinatário: owner_id do cliente (via project -> client)
-Tipo: collaborator_time_entry_created
-```
-
----
-
-## Etapa 3: Atualizar Ícones nas Notificações
-
-### NotificationItem.tsx
-Adicionar ícones para os novos tipos:
-- `client_project_request_created` - ícone de solicitação
-- `client_edit_request_created` - ícone de edição
-- `client_task_request_created` - ícone de tarefa
-- `collaborator_time_entry_created` - ícone de tempo
-
----
-
-## Detalhes Técnicos
-
-### Migração SQL
-
-```sql
 -- Função: Notificar admin sobre nova solicitação de projeto
 CREATE OR REPLACE FUNCTION public.notify_admin_project_request_created()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
@@ -97,12 +22,13 @@ BEGIN
     v_admin_user_id,
     'client_project_request_created',
     'Nova solicitação de projeto',
-    v_requester_name || ' solicitou novo projeto: "' || NEW.title || '".'
+    COALESCE(v_requester_name, 'Cliente') || ' solicitou novo projeto: "' || NEW.title || '".'
   );
   RETURN NEW;
 END; $$;
 
--- Trigger
+-- Trigger para solicitações de novos projetos
+DROP TRIGGER IF EXISTS on_project_request_created_notify_admin ON project_requests;
 CREATE TRIGGER on_project_request_created_notify_admin
   AFTER INSERT ON project_requests
   FOR EACH ROW EXECUTE FUNCTION notify_admin_project_request_created();
@@ -137,11 +63,11 @@ BEGIN
   IF v_request_type = 'new_task' THEN
     v_notif_type := 'client_task_request_created';
     v_title := 'Nova solicitação de tarefa';
-    v_message := v_requester_name || ' solicitou nova tarefa para "' || v_client_name || '".';
+    v_message := COALESCE(v_requester_name, 'Cliente') || ' solicitou nova tarefa para "' || v_client_name || '".';
   ELSE
     v_notif_type := 'client_edit_request_created';
     v_title := 'Nova solicitação de edição';
-    v_message := v_requester_name || ' solicitou edição para "' || v_client_name || '".';
+    v_message := COALESCE(v_requester_name, 'Cliente') || ' solicitou edição para "' || v_client_name || '".';
   END IF;
 
   INSERT INTO notifications (user_id, type, title, message, project_id)
@@ -149,7 +75,8 @@ BEGIN
   RETURN NEW;
 END; $$;
 
--- Trigger
+-- Trigger para solicitações de edição
+DROP TRIGGER IF EXISTS on_edit_request_created_notify_admin ON edit_requests;
 CREATE TRIGGER on_edit_request_created_notify_admin
   AFTER INSERT ON edit_requests
   FOR EACH ROW EXECUTE FUNCTION notify_admin_edit_request_created();
@@ -184,33 +111,14 @@ BEGIN
     v_admin_user_id,
     'collaborator_time_entry_created',
     'Horas registradas',
-    v_collab_name || ' registrou ' || NEW.hours || 'h em "' || v_task_name || '".',
+    COALESCE(v_collab_name, 'Colaborador') || ' registrou ' || NEW.hours || 'h em "' || v_task_name || '".',
     v_project_id
   );
   RETURN NEW;
 END; $$;
 
--- Trigger
+-- Trigger para registro de horas
+DROP TRIGGER IF EXISTS on_time_entry_created_notify_admin ON time_entries;
 CREATE TRIGGER on_time_entry_created_notify_admin
   AFTER INSERT ON time_entries
   FOR EACH ROW EXECUTE FUNCTION notify_admin_new_time_entry();
-```
-
-### Alterações em NotificationItem.tsx
-
-Adicionar casos no switch de ícones:
-- `client_project_request_created` → FileText (laranja)
-- `client_edit_request_created` → FilePenLine (azul)
-- `client_task_request_created` → ListPlus (verde)
-- `collaborator_time_entry_created` → Clock (roxo)
-
----
-
-## Resumo de Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| Migração SQL | Criar 3 funções e 3 triggers |
-| `SolicitacoesPanel.tsx` | Corrigir variante do Badge |
-| `Projects.tsx` | Ajustar tipos TypeScript |
-| `NotificationItem.tsx` | Adicionar ícones para novos tipos |
