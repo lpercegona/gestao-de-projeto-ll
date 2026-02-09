@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +67,7 @@ export const ClientReports: React.FC = () => {
   } = useData();
   
   const [reportShare, setReportShare] = useState<ReportShare | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -75,6 +77,17 @@ export const ClientReports: React.FC = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [projectRequestsHistory, setProjectRequestsHistory] = useState<ProjectRequestHistory[]>([]);
   const [editRequestsHistory, setEditRequestsHistory] = useState<EditRequestHistory[]>([]);
+
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'requests' || tabParam === 'hours') {
+      setActiveTab(tabParam);
+      return;
+    }
+
+    setActiveTab('hours');
+  }, [searchParams]);
 
   // Get client for current user (RLS ensures only their data is returned)
   const client = useMemo(() => {
