@@ -1,50 +1,60 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Users, Building2, Mail, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
-import simboloOras from '@/assets/simbolo-oras.svg';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Users, Building2, Mail, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import simboloOras from "@/assets/simbolo-oras.svg";
 
-type ClientLoginStep = 'email' | 'password' | 'set-password';
+type ClientLoginStep = "email" | "password" | "set-password";
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, signInWithGoogle, resetPassword, user, userRole, loading: authLoading, roleLoading, refreshRole } = useAuth();
+  const {
+    signIn,
+    signUp,
+    signInWithGoogle,
+    resetPassword,
+    user,
+    userRole,
+    loading: authLoading,
+    roleLoading,
+    refreshRole,
+  } = useAuth();
   const [loading, setLoading] = useState(false);
-  
+
   // Admin/Collaborator login
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [signupData, setSignupData] = useState({ email: '', password: '', fullName: '' });
-  
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [signupData, setSignupData] = useState({ email: "", password: "", fullName: "" });
+
   // Client login
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientPassword, setClientPassword] = useState('');
-  const [clientNewPassword, setClientNewPassword] = useState('');
-  const [clientConfirmPassword, setClientConfirmPassword] = useState('');
-  const [clientLoginStep, setClientLoginStep] = useState<ClientLoginStep>('email');
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPassword, setClientPassword] = useState("");
+  const [clientNewPassword, setClientNewPassword] = useState("");
+  const [clientConfirmPassword, setClientConfirmPassword] = useState("");
+  const [clientLoginStep, setClientLoginStep] = useState<ClientLoginStep>("email");
   const [clientId, setClientId] = useState<string | null>(null);
-  
+
   // Forgot password
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotEmail, setForgotEmail] = useState("");
 
   // Redirect when user is logged in and role is loaded
   React.useEffect(() => {
     if (user && !roleLoading && userRole !== undefined) {
-      if (userRole === 'client') {
-        navigate('/my-reports', { replace: true });
-      } else if (userRole === 'collaborator') {
-        navigate('/', { replace: true });
+      if (userRole === "client") {
+        navigate("/", { replace: true });
+      } else if (userRole === "collaborator") {
+        navigate("/", { replace: true });
       } else {
         // master_admin, admin, or any other role
-        navigate('/', { replace: true });
+        navigate("/", { replace: true });
       }
     }
   }, [user, userRole, roleLoading, navigate]);
@@ -52,14 +62,14 @@ export const Login: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const { error } = await signIn(loginData.email, loginData.password);
-    
+
     if (error) {
-      toast.error('Erro ao entrar: ' + error.message);
+      toast.error("Erro ao entrar: " + error.message);
       setLoading(false);
     } else {
-      toast.success('Login realizado com sucesso!');
+      toast.success("Login realizado com sucesso!");
       // Navigation is handled by useEffect when role is loaded
     }
   };
@@ -67,40 +77,40 @@ export const Login: React.FC = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const { error } = await signUp(signupData.email, signupData.password, signupData.fullName);
-    
+
     if (error) {
-      toast.error('Erro ao criar conta: ' + error.message);
+      toast.error("Erro ao criar conta: " + error.message);
     } else {
-      toast.success('Conta criada com sucesso! Você já pode fazer login.');
+      toast.success("Conta criada com sucesso! Você já pode fazer login.");
     }
-    
+
     setLoading(false);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const trimmedEmail = forgotEmail.toLowerCase().trim();
-    
+
     if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
-      toast.error('Digite um email válido.');
+      toast.error("Digite um email válido.");
       return;
     }
-    
+
     setLoading(true);
-    
+
     const { error } = await resetPassword(trimmedEmail);
-    
+
     if (error) {
-      toast.error('Erro ao enviar email de recuperação.');
+      toast.error("Erro ao enviar email de recuperação.");
     } else {
-      toast.success('Email de recuperação enviado! Verifique sua caixa de entrada.');
+      toast.success("Email de recuperação enviado! Verifique sua caixa de entrada.");
       setShowForgotPassword(false);
-      setForgotEmail('');
+      setForgotEmail("");
     }
-    
+
     setLoading(false);
   };
 
@@ -108,7 +118,7 @@ export const Login: React.FC = () => {
     setLoading(true);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error('Erro ao conectar com Google: ' + error.message);
+      toast.error("Erro ao conectar com Google: " + error.message);
       setLoading(false);
     }
     // Don't set loading to false on success - redirect will happen
@@ -122,7 +132,7 @@ export const Login: React.FC = () => {
     const storageKey = `ratelimit_${key}`;
     const data = localStorage.getItem(storageKey);
     const now = Date.now();
-    
+
     if (data) {
       try {
         const { count, timestamp } = JSON.parse(data);
@@ -146,87 +156,87 @@ export const Login: React.FC = () => {
   // Client login flow
   const handleClientEmailCheck = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const trimmedEmail = clientEmail.toLowerCase().trim();
-    
+
     // Input validation - email format and length
     if (!trimmedEmail || trimmedEmail.length > 255 || !emailRegex.test(trimmedEmail)) {
-      toast.error('Email inválido');
+      toast.error("Email inválido");
       return;
     }
-    
+
     // Rate limiting - 5 attempts per 5 minutes
-    if (!checkRateLimit('check_client_email', 5, 300000)) {
-      toast.error('Muitas tentativas. Aguarde alguns minutos.');
+    if (!checkRateLimit("check_client_email", 5, 300000)) {
+      toast.error("Muitas tentativas. Aguarde alguns minutos.");
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
-      const { data, error } = await supabase.rpc('check_client_email', {
-        check_email: trimmedEmail
+      const { data, error } = await supabase.rpc("check_client_email", {
+        check_email: trimmedEmail,
       });
-      
+
       if (error) {
         // Generic error to prevent information leakage
-        toast.error('Erro ao processar solicitação. Tente novamente.');
+        toast.error("Erro ao processar solicitação. Tente novamente.");
         setLoading(false);
         return;
       }
-      
+
       if (!data || data.length === 0) {
         // Generic error to prevent email enumeration
-        toast.error('Credenciais inválidas ou conta não encontrada.');
+        toast.error("Credenciais inválidas ou conta não encontrada.");
         setLoading(false);
         return;
       }
-      
+
       const clientInfo = data[0];
       setClientId(clientInfo.client_id);
-      
+
       if (clientInfo.has_password) {
-        setClientLoginStep('password');
+        setClientLoginStep("password");
       } else {
-        setClientLoginStep('set-password');
+        setClientLoginStep("set-password");
       }
     } catch (err) {
-      toast.error('Erro ao processar solicitação.');
+      toast.error("Erro ao processar solicitação.");
     }
-    
+
     setLoading(false);
   };
 
   const handleClientLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const { error } = await signIn(clientEmail.toLowerCase().trim(), clientPassword);
-    
+
     if (error) {
-      toast.error('Senha incorreta. Tente novamente.');
+      toast.error("Senha incorreta. Tente novamente.");
       setLoading(false);
     } else {
-      toast.success('Login realizado com sucesso!');
+      toast.success("Login realizado com sucesso!");
       // Navigation is handled by useEffect when role is loaded
     }
   };
 
   const handleClientSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (clientNewPassword !== clientConfirmPassword) {
-      toast.error('As senhas não coincidem.');
+      toast.error("As senhas não coincidem.");
       return;
     }
-    
+
     if (clientNewPassword.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres.');
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       // Create the user account with the client email
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -234,70 +244,64 @@ export const Login: React.FC = () => {
         password: clientNewPassword,
         options: {
           emailRedirectTo: window.location.origin,
-        }
+        },
       });
-      
+
       if (signUpError) {
         // If user already exists, try to sign in
-        if (signUpError.message.includes('already registered')) {
-          toast.error('Este e-mail já possui uma conta. Use a opção de entrar com senha.');
-          setClientLoginStep('password');
+        if (signUpError.message.includes("already registered")) {
+          toast.error("Este e-mail já possui uma conta. Use a opção de entrar com senha.");
+          setClientLoginStep("password");
           setLoading(false);
           return;
         }
-        toast.error('Erro ao criar conta: ' + signUpError.message);
+        toast.error("Erro ao criar conta: " + signUpError.message);
         setLoading(false);
         return;
       }
-      
+
       if (signUpData.user) {
         // Use the secure function to set up client account
-        const { error: setupError } = await supabase.rpc('setup_client_account', {
+        const { error: setupError } = await supabase.rpc("setup_client_account", {
           p_user_id: signUpData.user.id,
           p_client_id: clientId,
-          p_email: clientEmail.toLowerCase().trim()
+          p_email: clientEmail.toLowerCase().trim(),
         });
-        
+
         if (setupError) {
-          console.error('Error setting up client account:', setupError);
-          toast.error('Erro ao configurar conta. Tente novamente.');
+          console.error("Error setting up client account:", setupError);
+          toast.error("Erro ao configurar conta. Tente novamente.");
           setLoading(false);
           return;
         }
-        
+
         // Force refresh the user role to ensure it's loaded before redirect
         await refreshRole();
-        
-        toast.success('Senha definida com sucesso! Você já está logado.');
-        
-        // Navigate directly to avoid race condition
-        navigate('/my-reports', { replace: true });
+
+        toast.success("Senha definida com sucesso! Você já está logado.");
+
+        navigate("/", { replace: true });
       }
     } catch (err) {
-      toast.error('Erro ao definir senha.');
+      toast.error("Erro ao definir senha.");
     }
-    
+
     setLoading(false);
   };
 
   const resetClientLogin = () => {
-    setClientEmail('');
-    setClientPassword('');
-    setClientNewPassword('');
-    setClientConfirmPassword('');
-    setClientLoginStep('email');
+    setClientEmail("");
+    setClientPassword("");
+    setClientNewPassword("");
+    setClientConfirmPassword("");
+    setClientLoginStep("email");
     setClientId(null);
   };
-
 
   if (authLoading || (user && roleLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <img
-          src={simboloOras}
-          alt="Carregando ORAS"
-          className="w-12 h-12 animate-spin [animation-duration:3s]"
-        />
+        <img src={simboloOras} alt="Carregando ORAS" className="w-12 h-12 animate-spin [animation-duration:3s]" />
       </div>
     );
   }
@@ -321,7 +325,7 @@ export const Login: React.FC = () => {
                 Cliente
               </TabsTrigger>
             </TabsList>
-            
+
             {/* Admin/Collaborator Login */}
             <TabsContent value="admin">
               {showForgotPassword ? (
@@ -356,13 +360,13 @@ export const Login: React.FC = () => {
                       </>
                     )}
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
+                  <Button
+                    type="button"
+                    variant="ghost"
                     className="w-full"
                     onClick={() => {
                       setShowForgotPassword(false);
-                      setForgotEmail('');
+                      setForgotEmail("");
                     }}
                     disabled={loading}
                   >
@@ -414,11 +418,11 @@ export const Login: React.FC = () => {
                           Entrando...
                         </>
                       ) : (
-                        'Entrar'
+                        "Entrar"
                       )}
                     </Button>
                   </form>
-                  
+
                   <div className="relative my-6">
                     <div className="absolute inset-0 flex items-center">
                       <Separator className="w-full" />
@@ -427,7 +431,7 @@ export const Login: React.FC = () => {
                       <span className="bg-card px-2 text-muted-foreground">ou</span>
                     </div>
                   </div>
-                  
+
                   <Button
                     type="button"
                     variant="outline"
@@ -458,11 +462,11 @@ export const Login: React.FC = () => {
                 </>
               )}
             </TabsContent>
-            
+
             {/* Client Login */}
             <TabsContent value="client">
               <div className="space-y-4 pt-4">
-                {clientLoginStep === 'email' && (
+                {clientLoginStep === "email" && (
                   <form onSubmit={handleClientEmailCheck} className="space-y-4">
                     <div className="text-center mb-4">
                       <p className="text-sm text-muted-foreground">
@@ -488,21 +492,17 @@ export const Login: React.FC = () => {
                           Verificando...
                         </>
                       ) : (
-                        'Continuar'
+                        "Continuar"
                       )}
                     </Button>
                   </form>
                 )}
-                
-                {clientLoginStep === 'password' && (
+
+                {clientLoginStep === "password" && (
                   <form onSubmit={handleClientLogin} className="space-y-4">
                     <div className="text-center mb-4">
-                      <p className="text-sm text-muted-foreground">
-                        Digite sua senha para acessar
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {clientEmail}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Digite sua senha para acessar</p>
+                      <p className="text-xs text-muted-foreground mt-1">{clientEmail}</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="client-password">Senha</Label>
@@ -523,22 +523,22 @@ export const Login: React.FC = () => {
                           Entrando...
                         </>
                       ) : (
-                        'Entrar'
+                        "Entrar"
                       )}
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="link" 
-                      className="w-full text-xs text-muted-foreground hover:text-primary" 
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="w-full text-xs text-muted-foreground hover:text-primary"
                       onClick={() => setShowForgotPassword(true)}
                       disabled={loading}
                     >
                       Esqueci minha senha
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      className="w-full" 
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
                       onClick={resetClientLogin}
                       disabled={loading}
                     >
@@ -546,19 +546,15 @@ export const Login: React.FC = () => {
                     </Button>
                   </form>
                 )}
-                
-                {clientLoginStep === 'set-password' && (
+
+                {clientLoginStep === "set-password" && (
                   <form onSubmit={handleClientSetPassword} className="space-y-4">
                     <div className="text-center mb-4">
-                      <p className="text-sm font-medium text-foreground">
-                        Bem-vindo! 🎉
-                      </p>
+                      <p className="text-sm font-medium text-foreground">Bem-vindo! 🎉</p>
                       <p className="text-sm text-muted-foreground">
                         Este é seu primeiro acesso. Defina uma senha para continuar.
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {clientEmail}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{clientEmail}</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="client-new-password">Nova Senha</Label>
@@ -593,13 +589,13 @@ export const Login: React.FC = () => {
                           Definindo senha...
                         </>
                       ) : (
-                        'Definir Senha e Entrar'
+                        "Definir Senha e Entrar"
                       )}
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      className="w-full" 
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
                       onClick={resetClientLogin}
                       disabled={loading}
                     >
