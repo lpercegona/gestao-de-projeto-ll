@@ -23,6 +23,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
 import { Badge } from '@/components/ui/badge';
 import { ReportShareDialog, ReportShare } from '@/components/reports/ReportShareDialog';
+import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
 
 export const Reports: React.FC = () => {
   const { user } = useAuth();
@@ -292,7 +293,7 @@ export const Reports: React.FC = () => {
                       <div>
                         <p className="font-medium text-foreground">{task.name}</p>
                         {task.description && (
-                          <p className="text-sm text-muted-foreground">{task.description}</p>
+                          <WysiwygContent content={task.description} className="text-sm text-muted-foreground" />
                         )}
                       </div>
                       <div className="text-right">
