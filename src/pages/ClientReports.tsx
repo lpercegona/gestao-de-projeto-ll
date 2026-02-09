@@ -547,7 +547,7 @@ export const ClientReports: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Horas já utilizadas (geral)</p>
                   <p className="text-lg font-semibold text-foreground">{formatHours(totalAllHours)}</p>
                 </div>
-                <div className="mt-2 space-y-1.5">
+                <div className="col-span-2 mt-1 space-y-2 lg:col-span-5">
                   <div className="h-2.5 w-full rounded-full bg-muted">
                     <div
                       className="h-2.5 rounded-full bg-primary transition-all"
