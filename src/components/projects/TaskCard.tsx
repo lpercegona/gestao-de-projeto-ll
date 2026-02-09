@@ -50,6 +50,7 @@ interface TaskCardProps {
     created_by: string | null;
     is_pending_approval?: boolean;
     approval_label?: string;
+    pending_request_id?: string;
   };
   taskHours: number;
   timeEntries: TimeEntry[];
@@ -66,10 +67,12 @@ interface TaskCardProps {
   compact?: boolean;
   showStatus?: boolean;
   iconOnly?: boolean;
+  showTimeControls?: boolean;
   allowTaskEdit?: boolean;
   allowTaskDelete?: boolean;
   showRegisterTimeButton?: boolean;
   allowTimeEntryEdit?: boolean;
+  onPendingApprovalClick?: () => void;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -89,10 +92,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   compact = false,
   showStatus = false,
   iconOnly = false,
+  showTimeControls = true,
   allowTaskEdit = true,
   allowTaskDelete = true,
   showRegisterTimeButton = true,
   allowTimeEntryEdit = true,
+  onPendingApprovalClick,
 }) => {
   const [entriesOpen, setEntriesOpen] = React.useState(false);
 
@@ -138,9 +143,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const isPendingApproval = Boolean(task.is_pending_approval);
 
   return (
-    <div className="bg-card border rounded-lg p-3 group relative">
+    <div
+      role={isPendingApproval ? 'button' : undefined}
+      tabIndex={isPendingApproval ? 0 : undefined}
+      className={cn(
+        'w-full text-left bg-card border rounded-lg p-3 group relative',
+        isPendingApproval && 'bg-amber-50/70 border-amber-300 dark:bg-amber-950/30 dark:border-amber-700',
+      )}
+      onClick={() => {
+        if (isPendingApproval) {
+          onPendingApprovalClick?.();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (!isPendingApproval) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onPendingApprovalClick?.();
+        }
+      }}
+    >
       {/* Actions */}
-      {(allowTaskEdit || allowTaskDelete || onRequestEdit) && (
+      {(allowTaskEdit || allowTaskDelete || onRequestEdit) && !isPendingApproval && (
         <div className="absolute top-2 right-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -198,32 +222,34 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <WysiwygContent content={task.description} className="text-xs text-muted-foreground mb-2 line-clamp-2" />
         )}
 
-        <div className="flex items-center gap-2 flex-wrap mb-2">
-          <TaskTimer
-            taskId={task.id}
-            taskStatus={task.status}
-            activeTimer={activeTimer}
-            onStart={onStartTimer}
-            onStop={onStopTimer}
-            onComplete={onCompleteTask}
-            iconOnly={iconOnly}
-          />
-          {showRegisterTimeButton && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => onRegisterTime(task.id)} 
-                  className="h-7 px-2 text-xs"
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Registrar tempo</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+        {showTimeControls && (
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <TaskTimer
+              taskId={task.id}
+              taskStatus={task.status}
+              activeTimer={activeTimer}
+              onStart={onStartTimer}
+              onStop={onStopTimer}
+              onComplete={onCompleteTask}
+              iconOnly={iconOnly}
+            />
+            {showRegisterTimeButton && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => onRegisterTime(task.id)} 
+                    className="h-7 px-2 text-xs"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Registrar tempo</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-foreground">{formatHours(taskHours)}</span>

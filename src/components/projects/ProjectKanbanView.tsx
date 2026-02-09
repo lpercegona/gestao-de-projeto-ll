@@ -291,6 +291,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 compact
                                 showStatus={false}
                                 iconOnly
+                                showTimeControls={!clientRestrictedMode}
                                 allowTaskEdit={!isPendingApprovalTask && !clientRestrictedMode}
                                 allowTaskDelete={!isPendingApprovalTask && !clientRestrictedMode}
                                 showRegisterTimeButton={!isPendingApprovalTask && !clientRestrictedMode}

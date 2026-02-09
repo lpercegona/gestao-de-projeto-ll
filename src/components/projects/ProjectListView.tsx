@@ -43,6 +43,7 @@ interface Task {
   created_at: string;
   is_pending_approval?: boolean;
   approval_label?: string;
+  pending_request_id?: string;
 }
 
 interface TimeEntry {
@@ -120,6 +121,7 @@ interface ProjectListViewProps {
   onOpenEditRequestReview?: (project: Project) => void;
   onRequestTaskEdit?: (task: Task) => void;
   onEditRequestCardClick?: (project: Project) => void;
+  onPendingTaskClick?: (task: Task) => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -152,6 +154,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onOpenEditRequestReview,
   onRequestTaskEdit,
   onEditRequestCardClick,
+  onPendingTaskClick,
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
 
@@ -378,10 +381,12 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             onStopTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStopTimer(task.id))}
                             onCompleteTask={() => (isPendingApprovalTask ? Promise.resolve() : onCompleteTask(task.id))}
                             showStatus={true}
+                            showTimeControls={!isClientRestrictedMode}
                             allowTaskEdit={!isPendingApprovalTask && !isClientRestrictedMode}
                             allowTaskDelete={!isPendingApprovalTask && !isClientRestrictedMode}
                             showRegisterTimeButton={!isPendingApprovalTask && !isClientRestrictedMode}
                             allowTimeEntryEdit={!isPendingApprovalTask && !isClientRestrictedMode}
+                            onPendingApprovalClick={isPendingApprovalTask ? () => onPendingTaskClick?.(task) : undefined}
                           />
                         );
                       })}
