@@ -164,15 +164,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: "Painel",
     },
     {
-      path: "/clients",
-      icon: Users,
-      label: "Clientes",
-    },
-    {
       path: "/projects",
       icon: FolderKanban,
       label: "Projetos",
     },
+    {
+      path: "/clients",
+      icon: Users,
+      label: "Clientes",
+    },
+
     {
       path: "/calendar",
       icon: Calendar,
@@ -188,15 +189,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: "Painel",
     },
     {
-      path: "/clients",
-      icon: Users,
-      label: "Clientes",
-    },
-    {
       path: "/projects",
       icon: FolderKanban,
       label: "Projetos",
     },
+    {
+      path: "/clients",
+      icon: Users,
+      label: "Clientes",
+    },
+
     {
       path: "/calendar",
       icon: Calendar,
@@ -226,19 +228,21 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: "Painel",
     },
     {
-      path: "/my-reports",
-      icon: FileBarChart,
-      label: "Relatórios",
-    },
-    {
       path: "/my-projects",
       icon: FolderKanban,
       label: "Projetos",
     },
+
     {
       path: "/calendar",
       icon: Calendar,
       label: "Calendário",
+    },
+
+    {
+      path: "/my-reports",
+      icon: FileBarChart,
+      label: "Relatórios",
     },
   ];
 
