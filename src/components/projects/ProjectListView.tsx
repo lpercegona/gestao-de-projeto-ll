@@ -12,7 +12,7 @@ import {
 import { TaskCard } from "./TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { formatHours } from "@/lib/formatHours";
-import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
+import { ExpandableDescription } from "./ExpandableDescription";
 
 interface Project {
   id: string;
@@ -306,9 +306,10 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                           )}
                         </div>
                         {project.description && (
-                          <WysiwygContent
+                          <ExpandableDescription
                             content={project.description}
-                            className="text-sm text-muted-foreground mb-2 line-clamp-1"
+                            className="mb-2 text-sm text-muted-foreground"
+                            stopPropagationOnToggle
                           />
                         )}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
