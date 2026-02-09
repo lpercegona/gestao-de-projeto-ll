@@ -239,24 +239,29 @@ export const ClientReports: React.FC = () => {
 
   const remainingHours = Math.max(0, availableHours - totalMonthHours);
 
+  const visibleReportColumns = useMemo(
+    () => projectColumns.filter((column) => column.show_in_report),
+    [projectColumns],
+  );
+
   const customFieldSummaries = useMemo(() => {
-    const visibleColumns = projectColumns.filter((column) => column.show_in_report);
-    if (!visibleColumns.length || !reportData.length) return [];
+    if (!visibleReportColumns.length || !reportData.length) return [];
 
     const projectById = new Map(projects.map((project) => [project.id, project]));
     const registeredTaskProjects = reportData.flatMap((project) =>
       project.tasks.map(() => projectById.get(project.id)),
     );
 
-    return visibleColumns
+    return visibleReportColumns
       .map((column) => {
         const valueCount = new Map<string, number>();
         let tasksWithValue = 0;
 
         registeredTaskProjects.forEach((project) => {
           const customFields = (project?.custom_fields || {}) as Record<string, string>;
-          const fieldValue = customFields[column.id];
-          if (!fieldValue || !fieldValue.trim()) return;
+          const rawFieldValue = customFields[column.id];
+          const fieldValue = rawFieldValue?.trim();
+          if (!fieldValue) return;
 
           tasksWithValue += 1;
           valueCount.set(fieldValue, (valueCount.get(fieldValue) || 0) + 1);
@@ -268,7 +273,7 @@ export const ClientReports: React.FC = () => {
             count,
             percentage: tasksWithValue > 0 ? (count / tasksWithValue) * 100 : 0,
           }))
-          .sort((a, b) => b.count - a.count);
+          .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, 'pt-BR'));
 
         return {
           id: column.id,
@@ -278,7 +283,7 @@ export const ClientReports: React.FC = () => {
         };
       })
       .filter((summary) => summary.tasksWithValue > 0 && summary.values.length > 0);
-  }, [projectColumns, projects, reportData]);
+  }, [projects, reportData, visibleReportColumns]);
 
   const requestHistory = useMemo(() => {
     const projectHistoryItems = projectRequestsHistory.map((request) => ({
@@ -437,10 +442,7 @@ export const ClientReports: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setSearchParams({ tab: value as 'hours' | 'requests' })}
-      >
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'hours' | 'requests')}>
         <div className="mb-6 flex items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="hours">Horas</TabsTrigger>
@@ -615,28 +617,36 @@ export const ClientReports: React.FC = () => {
           </Card>
 
 
-          {customFieldSummaries.length > 0 && (
+          {visibleReportColumns.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Campos personalizados por tarefas registradas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-5">
-                {customFieldSummaries.map((summary) => (
-                  <div key={summary.id} className="space-y-3 border-b border-border pb-5 last:border-b-0 last:pb-0">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{summary.title}</p>
-                      <p className="text-xs text-muted-foreground">Base: {summary.tasksWithValue} tarefas com campo preenchido</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-                      {summary.values.map((item) => (
-                        <div key={`${summary.id}-${item.value}`}>
-                          <p className="text-xs text-muted-foreground">{item.value}</p>
-                          <p className="text-lg font-semibold text-foreground">{item.percentage.toFixed(1)}%</p>
+              <CardContent>
+                {customFieldSummaries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Não há tarefas registradas no período com campos personalizados preenchidos.
+                  </p>
+                ) : (
+                  <div className="space-y-5">
+                    {customFieldSummaries.map((summary) => (
+                      <div key={summary.id} className="space-y-3 border-b border-border pb-5 last:border-b-0 last:pb-0">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{summary.title}</p>
+                          <p className="text-xs text-muted-foreground">Base: {summary.tasksWithValue} tarefas com campo preenchido</p>
                         </div>
-                      ))}
-                    </div>
+                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                          {summary.values.map((item) => (
+                            <div key={`${summary.id}-${item.value}`}>
+                              <p className="text-xs text-muted-foreground">{item.value}</p>
+                              <p className="text-lg font-semibold text-foreground">{item.percentage.toFixed(1)}%</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </CardContent>
             </Card>
           )}
