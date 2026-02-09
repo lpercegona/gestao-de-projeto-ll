@@ -81,7 +81,7 @@ export const Clients: React.FC = () => {
     getClientPreviousMonthOverflow,
   } = useData();
   const [mainTab, setMainTab] = useState<"clients" | "proposals">("clients");
-  const [activeTab, setActiveTab] = useState<"lead" | "proposal" | "active" | "churned">("lead");
+  const [activeTab, setActiveTab] = useState<"lead" | "proposal" | "active" | "churned">("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
