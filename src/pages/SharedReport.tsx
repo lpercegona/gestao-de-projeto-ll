@@ -81,6 +81,7 @@ export const SharedReport: React.FC = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
   const [requests, setRequests] = useState<SharedRequestItem[]>([]);
+  const [requestsLoadError, setRequestsLoadError] = useState<string | null>(null);
 
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -169,6 +170,35 @@ export const SharedReport: React.FC = () => {
     }
   };
 
+  const fetchSharedReportRequests = useCallback(async (shareToken: string) => {
+    const requestParamCandidates: Array<Record<string, string>> = [
+      { p_token: shareToken },
+      { token: shareToken },
+      { share_token: shareToken },
+    ];
+
+    let lastError: unknown = null;
+
+    for (const params of requestParamCandidates) {
+      const response = await supabase.rpc("get_shared_report_requests", params);
+      if (!response.error) {
+        return { data: response.data || [], errorMessage: null };
+      }
+
+      lastError = response.error;
+      if (response.error.code !== "PGRST202") {
+        break;
+      }
+    }
+
+    const message =
+      lastError && typeof lastError === "object" && "message" in lastError
+        ? String((lastError as { message?: string }).message)
+        : "Não foi possível carregar as solicitações deste relatório.";
+
+    return { data: [], errorMessage: message };
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!token || !authenticated || !isValidToken) return;
@@ -202,14 +232,14 @@ export const SharedReport: React.FC = () => {
             supabase.rpc("get_shared_report_project_columns", { p_token: token }),
             supabase.rpc("get_shared_report_tasks", { p_token: token }),
             supabase.rpc("get_shared_report_time_entries", { p_token: token }),
-            supabase.rpc("get_shared_report_requests", { p_token: token }),
+            fetchSharedReportRequests(token),
           ]);
 
         const projectsData = projectsResult.status === "fulfilled" ? projectsResult.value.data : [];
         const columnsData = columnsResult.status === "fulfilled" ? columnsResult.value.data : [];
         const tasksData = tasksResult.status === "fulfilled" ? tasksResult.value.data : [];
         const entriesData = entriesResult.status === "fulfilled" ? entriesResult.value.data : [];
-        const requestsData = requestsResult.status === "fulfilled" ? requestsResult.value.data : [];
+        const requestsData = requestsResult.status === "fulfilled" ? requestsResult.value.data.data : [];
 
         setProjects(
           (projectsData || []).map((projectRow) => {
@@ -261,8 +291,14 @@ export const SharedReport: React.FC = () => {
           }),
         );
 
-        if (requestsResult.status === "rejected" || (requestsResult.status === "fulfilled" && requestsResult.value.error)) {
-          console.error("Error fetching shared report requests:", requestsResult.status === "rejected" ? requestsResult.reason : requestsResult.value.error);
+        if (requestsResult.status === "rejected") {
+          console.error("Error fetching shared report requests:", requestsResult.reason);
+          setRequestsLoadError("Não foi possível carregar as solicitações deste relatório.");
+        } else if (requestsResult.value.errorMessage) {
+          console.error("Error fetching shared report requests:", requestsResult.value.errorMessage);
+          setRequestsLoadError("Solicitações temporariamente indisponíveis neste link compartilhável.");
+        } else {
+          setRequestsLoadError(null);
         }
 
         setRequests(
@@ -278,7 +314,18 @@ export const SharedReport: React.FC = () => {
     };
 
     fetchData();
-  }, [token, authenticated, isValidToken]);
+  }, [token, authenticated, isValidToken, fetchSharedReportRequests]);
+
+
+  const parseRequestDate = useCallback((dateValue: string) => {
+    const parsedIso = parseISO(dateValue);
+    if (isValid(parsedIso)) return parsedIso;
+
+    const parsedNative = new Date(dateValue);
+    if (isValid(parsedNative)) return parsedNative;
+
+    return null;
+  }, []);
 
 
   const parseRequestDate = useCallback((dateValue: string) => {
@@ -736,6 +783,14 @@ export const SharedReport: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="requests">
+              {requestsLoadError && (
+                <Card className="mb-4 border-amber-500/40 bg-amber-500/5">
+                  <CardContent className="py-3">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">{requestsLoadError}</p>
+                  </CardContent>
+                </Card>
+              )}
+
               {filteredRequestHistory.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center space-y-2">
