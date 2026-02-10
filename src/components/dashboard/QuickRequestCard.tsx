@@ -20,10 +20,14 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
     if (!user) return;
 
     try {
-      const [{ data: ownerClientData }, { data: clientUserData }] = await Promise.all([
+      const [{ data: ownerClientData, error: ownerClientError }, { data: clientUserData, error: clientUserError }] = await Promise.all([
         supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle(),
         supabase.from("client_users").select("client_id").eq("user_id", user.id).maybeSingle(),
       ]);
+
+      if (ownerClientError && clientUserError) {
+        throw ownerClientError;
+      }
 
       const resolvedClientId = ownerClientData?.id || clientUserData?.client_id;
 
