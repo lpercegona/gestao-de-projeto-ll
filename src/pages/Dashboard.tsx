@@ -106,7 +106,7 @@ export const Dashboard: React.FC = () => {
           // Get project requests
           const { data: requestsData } = await supabase
             .from("project_requests")
-            .select("*")
+            .select("id, client_id, title, briefing, status, admin_notes, created_at")
             .eq("client_id", resolvedClientId)
             .order("created_at", { ascending: false });
 

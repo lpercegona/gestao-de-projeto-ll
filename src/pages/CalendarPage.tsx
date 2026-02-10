@@ -56,7 +56,6 @@ export const CalendarPage: React.FC = () => {
         client_id: resolvedClientId,
         title,
         briefing,
-        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       });

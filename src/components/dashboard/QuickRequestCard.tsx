@@ -44,7 +44,6 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
         client_id: resolvedClientId,
         title,
         briefing,
-        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
         status: "pending",

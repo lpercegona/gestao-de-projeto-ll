@@ -238,7 +238,7 @@ export const ClientProjects: React.FC = () => {
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
-            .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
+            .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
             .eq('client_id', resolvedClientId)
             .order('created_at', { ascending: false }),
           supabase
@@ -291,11 +291,10 @@ export const ClientProjects: React.FC = () => {
         client_id: resolvedClientId,
         title,
         briefing,
-        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       })
-      .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
+      .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();
 
     if (error) {
