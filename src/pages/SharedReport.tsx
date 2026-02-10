@@ -2,8 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, ChevronRight, Loader2, Lock, KeyRound, FileDown, Share2, RefreshCw, Clock, AlertCircle } from "lucide-react";
@@ -348,7 +347,51 @@ export const SharedReport: React.FC = () => {
   const totalMonthMeetingHours = reportData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
   const totalAllHours = timeEntries.reduce((sum, te) => sum + te.hours, 0);
 
-  const availableHours = clientInfo ? clientInfo.contracted_hours : 0;
+  const previousOverflow = useMemo(() => {
+    if (!clientInfo || !isMonthly) return 0;
+
+    const targetMonthIndex = year * 12 + (month - 1);
+    const startDate = clientInfo.contract_start_date ? new Date(clientInfo.contract_start_date) : null;
+
+    if (startDate) {
+      const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
+      if (targetMonthIndex <= startMonthIndex) return 0;
+    }
+
+    const MAX_LOOKBACK_MONTHS = 120;
+    const firstMonthToEvaluate = Math.max(0, targetMonthIndex - MAX_LOOKBACK_MONTHS);
+
+    let overflow = 0;
+    for (let monthIndex = firstMonthToEvaluate; monthIndex < targetMonthIndex; monthIndex += 1) {
+      if (startDate) {
+        const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
+        if (monthIndex <= startMonthIndex) continue;
+      }
+
+      const monthYear = Math.floor(monthIndex / 12);
+      const monthNumber = (monthIndex % 12) + 1;
+      const monthStart = startOfMonth(new Date(monthYear, monthNumber - 1));
+      const monthEnd = endOfMonth(new Date(monthYear, monthNumber - 1));
+
+      const usedHours = timeEntries
+        .filter((entry) => {
+          const entryDate = parseISO(entry.date);
+          return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
+        })
+        .reduce((sum, entry) => sum + entry.hours, 0);
+
+      const availableMonthHours = Math.max(0, clientInfo.contracted_hours - overflow);
+      overflow = Math.max(0, usedHours - availableMonthHours);
+    }
+
+    return overflow;
+  }, [clientInfo, isMonthly, timeEntries, year, month]);
+
+  const availableHours = clientInfo
+    ? isMonthly
+      ? Math.max(0, clientInfo.contracted_hours - previousOverflow)
+      : clientInfo.contracted_hours
+    : 0;
   const remainingHours = Math.max(0, availableHours - totalMonthHours);
 
   const contractPeriodStart = clientInfo?.contract_start_date ? startOfMonth(parseISO(clientInfo.contract_start_date)) : null;
@@ -439,14 +482,10 @@ export const SharedReport: React.FC = () => {
           <div className="container py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <img src={orasLogo} alt="Oras" className="h-8" />
                 {clientInfo.client_logo_url && (
-                  <>
-                    <div className="h-6 w-px bg-border" />
-                    <img src={clientInfo.client_logo_url} alt={displayName} className="h-8 max-w-[120px] object-contain" />
-                  </>
+                  <img src={clientInfo.client_logo_url} alt={displayName} className="h-8 max-w-[120px] object-contain" />
                 )}
-                <div className={clientInfo.client_logo_url ? "ml-2" : ""}>
+                <div>
                   <h1 className="text-xl font-semibold text-foreground">Relatório de Horas</h1>
                   <p className="text-sm text-muted-foreground">{displayName}</p>
                 </div>
@@ -495,12 +534,13 @@ export const SharedReport: React.FC = () => {
             </div>
 
             <div className="mb-6 space-y-3 md:hidden">
-              <Label className="mb-1 block">Mês</Label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="h-auto w-full border-none p-0 text-left shadow-none [&>svg]:text-primary">
+                  <span className="font-semibold text-foreground">
+                    Relatório de <span className="text-primary underline decoration-dotted underline-offset-4">{selectedReportMonthLabel}</span>
+                  </span>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start">
                   {monthOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -552,7 +592,7 @@ export const SharedReport: React.FC = () => {
                     <div className="col-span-2 lg:col-span-1"><p className="text-xs text-muted-foreground">Horas remanescentes no mês</p><p className="text-lg font-semibold text-foreground">{formatHours(remainingHours)}</p></div>
                     <div className="col-span-2 mt-1 space-y-2 lg:col-span-5">
                       <div className="h-3 w-full rounded-full bg-muted"><div className="h-3 rounded-full bg-primary transition-all" style={{ width: `${availableHours > 0 ? Math.min((totalMonthHours / availableHours) * 100, 100) : 0}%` }} /></div>
-                      <p className="text-xs text-muted-foreground">Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Restantes: {formatHours(remainingHours)}</p>
+                      <p className="text-xs text-muted-foreground">Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Restantes: {formatHours(remainingHours)}{isMonthly ? ` • Saldo do mês anterior descontado: ${formatHours(previousOverflow)}` : ""}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -669,6 +709,10 @@ export const SharedReport: React.FC = () => {
               )}
             </TabsContent>
           </Tabs>
+
+          <div className="mt-10 flex justify-center border-t border-border pt-4 print:hidden">
+            <img src={orasLogo} alt="Oras" className="h-4 opacity-70" />
+          </div>
         </div>
       </div>
     </TooltipProvider>
