@@ -79,6 +79,21 @@ export const FirstAccess: React.FC = () => {
     navigate("/", { replace: true });
   };
 
+  const cancelRegistration = async () => {
+    setSubmitting(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      toast.error("Não foi possível cancelar o cadastro neste momento.");
+      setSubmitting(false);
+      return;
+    }
+
+    toast.success("Cadastro cancelado com sucesso.");
+    navigate("/login", { replace: true });
+  };
+
   if (loading || roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -105,6 +120,12 @@ export const FirstAccess: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="button" variant="ghost" onClick={cancelRegistration} disabled={submitting}>
+              Cancelar cadastro
+            </Button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-4">
             <Button
               type="button"
