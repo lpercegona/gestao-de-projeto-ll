@@ -81,6 +81,7 @@ export const Clients: React.FC = () => {
     getClientPreviousMonthOverflow,
   } = useData();
   const [mainTab, setMainTab] = useState<"clients" | "proposals">("clients");
+  const [documentsCount, setDocumentsCount] = useState(0);
   const [activeTab, setActiveTab] = useState<"lead" | "proposal" | "active" | "churned">("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -191,11 +192,15 @@ export const Clients: React.FC = () => {
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "clients" | "proposals")}>
         <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-6">
           <span className="block sm:hidden text-sm font-semibold text-foreground whitespace-nowrap ">
-            {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
+            {mainTab === "clients"
+              ? `${clientCount} ${clientCount === 1 ? "cliente" : "clientes"}`
+              : `${documentsCount} ${documentsCount === 1 ? "arquivo" : "arquivos"}`}
           </span>
           <div className="flex items-center justify-between gap-4 sm:justify-start">
             <span className=" hidden sm:inline text-sm font-semibold text-foreground whitespace-nowrap ">
-              {clientCount} {clientCount === 1 ? "cliente" : "clientes"}
+              {mainTab === "clients"
+                ? `${clientCount} ${clientCount === 1 ? "cliente" : "clientes"}`
+                : `${documentsCount} ${documentsCount === 1 ? "arquivo" : "arquivos"}`}
             </span>
 
             <TabsList className="flex rounded-lg">
@@ -206,18 +211,22 @@ export const Clients: React.FC = () => {
 
               <TabsTrigger value="proposals">
                 <FolderOpen className="w-3.5 h-3.5" />
-                Documentos
+                Arquivos
               </TabsTrigger>
             </TabsList>
-            <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg sm:hidden">
-              <Plus className="w-3.5 h-3.5" />
-            </Button>
+            {mainTab === "clients" && (
+              <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg sm:hidden">
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
 
           <div className="hidden sm:flex justify-end">
-            <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
-              <Plus className="w-3.5 h-3.5" />
-            </Button>
+            {mainTab === "clients" && (
+              <Button onClick={() => handleOpenDialog()} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
         </div>
         <TabsContent value="clients" className="mt-6">
@@ -401,7 +410,7 @@ export const Clients: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="proposals" className="mt-6">
-          <ProposalsTab />
+          <ProposalsTab onDocumentsCountChange={setDocumentsCount} />
         </TabsContent>
       </Tabs>
 
