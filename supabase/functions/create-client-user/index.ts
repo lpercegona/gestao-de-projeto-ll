@@ -149,8 +149,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate a secure password (user will set their own via invite link)
-    const userPassword = password || crypto.randomUUID() + 'A1!';
+    // Generate a random password if not provided
+    const userPassword = password || Math.random().toString(36).slice(-12) + 'A1!';
 
     // Create the new user via Admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -221,21 +221,12 @@ Deno.serve(async (req) => {
       console.error('Error linking user to client:', clientLinkError);
     }
 
-    // Generate invite link so user can set their password
-    try {
-      await supabaseAdmin.auth.admin.generateLink({
-        type: 'invite',
-        email: email.trim(),
-      });
-    } catch (inviteError) {
-      console.error('Error generating invite link:', inviteError);
-    }
-
     return new Response(
       JSON.stringify({ 
         success: true, 
         user_id: userId,
-        message: 'Client user created successfully. Invite link sent.',
+        temporaryPassword: password ? undefined : userPassword,
+        message: 'Client user created successfully',
         isExisting: false
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

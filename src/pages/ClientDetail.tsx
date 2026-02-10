@@ -202,9 +202,12 @@ export const ClientDetail: React.FC = () => {
 
   // Client user management state
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [editingUserData, setEditingUserData] = useState<UserProfile | null>(null);
+  const [newClientUserEmail, setNewClientUserEmail] = useState('');
+  const [newClientUserName, setNewClientUserName] = useState('');
   
   // Collaborator management
   const [allCollaborators, setAllCollaborators] = useState<UserProfile[]>([]);
@@ -768,17 +771,53 @@ export const ClientDetail: React.FC = () => {
     }
   };
 
-  // Send password reset link
-  const handleSendPasswordReset = async (email: string) => {
+  // Create client user account
+  const handleCreateClientUser = async () => {
+    if (!clientId || !newClientUserEmail) return;
+    setCreatingUser(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('create-client-user', {
+        body: { 
+          clientId, 
+          email: newClientUserEmail.trim(), 
+          fullName: newClientUserName.trim() || null,
+          isPrimary: clientUsers.length === 0 // First user is primary
+        },
+        headers: {
+          Authorization: `Bearer ${sessionData.session?.access_token}`
+        }
       });
-      if (error) throw error;
-      toast.success('Link de redefinição de senha enviado!');
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const result = response.data;
+      if (result.success) {
+        if (result.isExisting) {
+          toast.success('Usuário existente vinculado ao cliente!');
+        } else if (result.temporaryPassword) {
+          toast.success(`Usuário criado! Senha temporária: ${result.temporaryPassword}`, {
+            duration: 10000,
+          });
+        } else {
+          toast.success('Usuário cliente criado com sucesso!');
+        }
+        setIsCreateUserDialogOpen(false);
+        setNewClientUserEmail('');
+        setNewClientUserName('');
+        // Refresh team data
+        setActiveTab('overview');
+        setTimeout(() => setActiveTab('team'), 100);
+      } else {
+        throw new Error(result.error || 'Erro ao criar usuário');
+      }
     } catch (error: any) {
-      console.error('Error sending password reset:', error);
-      toast.error('Erro ao enviar link de redefinição de senha');
+      console.error('Error creating client user:', error);
+      toast.error(error?.message || 'Erro ao criar usuário cliente');
+    } finally {
+      setCreatingUser(false);
     }
   };
 
@@ -1512,7 +1551,14 @@ export const ClientDetail: React.FC = () => {
                       <Mail className="w-4 h-4" />
                       Acesso do Cliente ({clientUsers.length})
                     </CardTitle>
-                    <Button size="sm" onClick={() => setIsCreateUserDialogOpen(true)}>
+                    <Button size="sm" onClick={() => {
+                      // Pre-fill with client email if no users yet
+                      if (clientUsers.length === 0 && client?.email) {
+                        setNewClientUserEmail(client.email);
+                        setNewClientUserName(client.name);
+                      }
+                      setIsCreateUserDialogOpen(true);
+                    }}>
                       <UserPlus className="w-4 h-4 mr-2" />
                       Adicionar Acesso
                     </Button>
@@ -1540,7 +1586,11 @@ export const ClientDetail: React.FC = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => setIsCreateUserDialogOpen(true)}
+                          onClick={() => {
+                            setNewClientUserEmail(client.email);
+                            setNewClientUserName(client.name);
+                            setIsCreateUserDialogOpen(true);
+                          }}
                         >
                           <UserPlus className="w-4 h-4 mr-2" />
                           Criar Acesso
@@ -1579,32 +1629,24 @@ export const ClientDetail: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               {clientUser.profile && getRoleBadge(clientUser.profile.role)}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => clientUser.profile && handleOpenEditUser(clientUser.profile)}>
-                                    <Pencil className="w-4 h-4 mr-2" />
-                                    Editar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => clientUser.profile?.email && handleSendPasswordReset(clientUser.profile.email)}>
-                                    <Mail className="w-4 h-4 mr-2" />
-                                    Enviar link de redefinição de senha
-                                  </DropdownMenuItem>
-                                  {!isMainEmail && (
-                                    <DropdownMenuItem 
-                                      className="text-destructive focus:text-destructive"
-                                      onClick={() => handleRemoveClientUser(clientUser.id)}
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Remover acesso
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8"
+                                onClick={() => clientUser.profile && handleOpenEditUser(clientUser.profile)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              {!isMainEmail && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => handleRemoveClientUser(clientUser.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
@@ -1952,19 +1994,60 @@ export const ClientDetail: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Create Client User Dialog - using reusable component */}
-      <UserCreateDialog
-        open={isCreateUserDialogOpen}
-        onOpenChange={setIsCreateUserDialogOpen}
-        onCreated={() => {
-          setActiveTab('overview');
-          setTimeout(() => setActiveTab('team'), 100);
-        }}
-        defaultRole="client"
-        defaultClientId={clientId}
-        title="Adicionar Acesso ao Portal"
-        description="Crie um novo usuário com acesso ao portal do cliente. O usuário receberá um convite para definir sua senha."
-      />
+      {/* Create Client User Dialog */}
+      <Dialog open={isCreateUserDialogOpen} onOpenChange={(open) => {
+        setIsCreateUserDialogOpen(open);
+        if (!open) {
+          setNewClientUserEmail('');
+          setNewClientUserName('');
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Acesso ao Portal</DialogTitle>
+            <DialogDescription>
+              Adicione um usuário com acesso ao portal do cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-client-user-name">Nome</Label>
+              <Input
+                id="new-client-user-name"
+                placeholder="Nome do usuário"
+                value={newClientUserName}
+                onChange={(e) => setNewClientUserName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-client-user-email">Email</Label>
+              <Input
+                id="new-client-user-email"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={newClientUserEmail}
+                onChange={(e) => setNewClientUserEmail(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O usuário receberá uma senha temporária. Se já existir um usuário com esse email, ele será vinculado automaticamente.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)} disabled={creatingUser}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateClientUser} disabled={creatingUser || !newClientUserEmail}>
+              {creatingUser ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <UserPlus className="w-4 h-4 mr-2" />
+              )}
+              Criar Acesso
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Dialog - using reusable component */}
       <UserEditDialog

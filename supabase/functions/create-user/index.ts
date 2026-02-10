@@ -180,22 +180,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Generate invite link so user can set their password
-    try {
-      await supabaseAdmin.auth.admin.generateLink({
-        type: 'invite',
-        email: email.trim(),
-      });
-    } catch (inviteError) {
-      console.error('Error generating invite link:', inviteError);
-      // Non-fatal: user was created successfully, just couldn't send invite
-    }
-
     return new Response(
       JSON.stringify({ 
         success: true, 
         user_id: newUserId,
-        message: 'User created successfully. Invite link sent.' 
+        message: 'User created successfully' 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

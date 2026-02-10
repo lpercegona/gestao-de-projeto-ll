@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, User, Globe, Building2, Mail } from 'lucide-react';
+import { Loader2, User, Globe, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
@@ -469,42 +469,20 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
           </div>
         )}
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="sm:mr-auto"
-            disabled={saving || !email}
-            onClick={async () => {
-              try {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                  redirectTo: window.location.origin,
-                });
-                if (error) throw error;
-                toast.success('Link de redefinição de senha enviado!');
-              } catch (err: any) {
-                toast.error('Erro ao enviar link de redefinição');
-              }
-            }}
-          >
-            <Mail className="w-4 h-4 mr-2" />
-            Redefinir Senha
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                'Salvar'
-              )}
-            </Button>
-          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
