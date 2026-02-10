@@ -20,24 +20,20 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
     if (!user) return;
 
     try {
-      const [{ data: ownerClientData, error: ownerClientError }, { data: clientUserData, error: clientUserError }] = await Promise.all([
-        supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle(),
-        supabase.from("client_users").select("client_id").eq("user_id", user.id).maybeSingle(),
-      ]);
+      // Get client_id from client_users
+      const { data: clientUserData, error: clientUserError } = await supabase
+        .from("client_users")
+        .select("client_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (ownerClientError && clientUserError) {
-        throw ownerClientError;
-      }
-
-      const resolvedClientId = ownerClientData?.id || clientUserData?.client_id;
-
-      if (!resolvedClientId) {
+      if (clientUserError || !clientUserData?.client_id) {
         throw new Error("Cliente não encontrado");
       }
 
       // Insert new project request
       const { error } = await supabase.from("project_requests").insert({
-        client_id: resolvedClientId,
+        client_id: clientUserData.client_id,
         title,
         briefing,
         custom_fields: customFields,

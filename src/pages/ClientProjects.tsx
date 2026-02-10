@@ -111,22 +111,6 @@ export const ClientProjects: React.FC = () => {
     { value: 'archived', label: 'Arquivado' },
   ]), []);
 
-
-  const resolveClientId = async () => {
-    if (!user) return null;
-
-    const [{ data: ownerClientData, error: ownerClientError }, { data: clientUserData, error: clientUserError }] = await Promise.all([
-      supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
-      supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
-    ]);
-
-    if (ownerClientError && clientUserError) {
-      throw ownerClientError;
-    }
-
-    return ownerClientData?.id || clientUserData?.client_id || null;
-  };
-
   const visibleProjects = useMemo(() => {
     let projects = data.projects;
 
@@ -217,25 +201,29 @@ export const ClientProjects: React.FC = () => {
       if (!user) return;
 
       try {
-        const resolvedClientId = await resolveClientId();
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
 
-        if (!resolvedClientId) {
+        if (!clientData) {
           setLoading(false);
           return;
         }
 
-        setClientId(resolvedClientId);
+        setClientId(clientData.id);
 
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
             .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
-            .eq('client_id', resolvedClientId)
+            .eq('client_id', clientData.id)
             .order('created_at', { ascending: false }),
           supabase
             .from('edit_requests')
             .select('id, entity_id, status, proposed_data, created_at')
-            .eq('client_id', resolvedClientId)
+            .eq('client_id', clientData.id)
             .eq('entity_type', 'project')
             .in('status', ['pending', 'analyzing', 'in_review'])
             .contains('proposed_data', { request_type: 'new_task' })
@@ -260,9 +248,13 @@ export const ClientProjects: React.FC = () => {
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
-    const resolvedClientId = await resolveClientId();
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
 
-    if (!resolvedClientId) {
+    if (!clientData) {
       toast.error('Erro: Cliente não encontrado');
       return;
     }
@@ -270,7 +262,7 @@ export const ClientProjects: React.FC = () => {
     const { data: newRequest, error } = await supabase
       .from('project_requests')
       .insert({
-        client_id: resolvedClientId,
+        client_id: clientData.id,
         title,
         briefing,
         custom_fields: customFields,
