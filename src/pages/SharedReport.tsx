@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { ChevronDown, ChevronRight, Loader2, Lock, KeyRound, FileDown, Share2, R
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { differenceInCalendarMonths, format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { differenceInCalendarMonths, format, startOfMonth, endOfMonth, isWithinInterval, isValid, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatHours } from "@/lib/formatHours";
@@ -81,6 +81,7 @@ export const SharedReport: React.FC = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
   const [requests, setRequests] = useState<SharedRequestItem[]>([]);
+  const [requestsLoadError, setRequestsLoadError] = useState<string | null>(null);
 
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -169,6 +170,35 @@ export const SharedReport: React.FC = () => {
     }
   };
 
+  const fetchSharedReportRequests = useCallback(async (shareToken: string) => {
+    const requestParamCandidates: Array<Record<string, string>> = [
+      { p_token: shareToken },
+      { token: shareToken },
+      { share_token: shareToken },
+    ];
+
+    let lastError: unknown = null;
+
+    for (const params of requestParamCandidates) {
+      const response = await supabase.rpc("get_shared_report_requests", params);
+      if (!response.error) {
+        return { data: response.data || [], errorMessage: null };
+      }
+
+      lastError = response.error;
+      if (response.error.code !== "PGRST202") {
+        break;
+      }
+    }
+
+    const message =
+      lastError && typeof lastError === "object" && "message" in lastError
+        ? String((lastError as { message?: string }).message)
+        : "Não foi possível carregar as solicitações deste relatório.";
+
+    return { data: [], errorMessage: message };
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!token || !authenticated || !isValidToken) return;
@@ -202,7 +232,7 @@ export const SharedReport: React.FC = () => {
             supabase.rpc("get_shared_report_project_columns", { p_token: token }),
             supabase.rpc("get_shared_report_tasks", { p_token: token }),
             supabase.rpc("get_shared_report_time_entries", { p_token: token }),
-            supabase.rpc("get_shared_report_requests", { p_token: token }),
+            fetchSharedReportRequests(token),
           ]);
 
         const projectsData = projectsResult.status === "fulfilled" ? projectsResult.value.data : [];
@@ -261,8 +291,14 @@ export const SharedReport: React.FC = () => {
           }),
         );
 
-        if (requestsResult.status === "rejected" || (requestsResult.status === "fulfilled" && requestsResult.value.error)) {
-          console.error("Error fetching shared report requests:", requestsResult.status === "rejected" ? requestsResult.reason : requestsResult.value.error);
+        if (requestsResult.status === "rejected") {
+          console.error("Error fetching shared report requests:", requestsResult.reason);
+          setRequestsLoadError("Não foi possível carregar as solicitações deste relatório.");
+        } else if (requestsResult.value.errorMessage) {
+          console.error("Error fetching shared report requests:", requestsResult.value.errorMessage);
+          setRequestsLoadError("Solicitações temporariamente indisponíveis neste link compartilhável.");
+        } else {
+          setRequestsLoadError(null);
         }
 
         setRequests(
@@ -278,7 +314,18 @@ export const SharedReport: React.FC = () => {
     };
 
     fetchData();
-  }, [token, authenticated, isValidToken]);
+  }, [token, authenticated, isValidToken, fetchSharedReportRequests]);
+
+
+  const parseRequestDate = useCallback((dateValue: string) => {
+    const parsedIso = parseISO(dateValue);
+    if (isValid(parsedIso)) return parsedIso;
+
+    const parsedNative = new Date(dateValue);
+    if (isValid(parsedNative)) return parsedNative;
+
+    return null;
+  }, []);
 
   const monthOptions = useMemo(() => {
     const monthKeys = new Set<string>();
@@ -295,7 +342,8 @@ export const SharedReport: React.FC = () => {
     });
 
     requests.forEach((request) => {
-      const createdAt = parseISO(request.created_at);
+      const createdAt = parseRequestDate(request.created_at);
+      if (!createdAt) return;
       monthKeys.add(format(createdAt, "yyyy-MM"));
     });
 
@@ -306,9 +354,10 @@ export const SharedReport: React.FC = () => {
         const date = new Date(optionYear, optionMonth - 1, 1);
         return { value, label: format(date, "MMMM 'de' yyyy", { locale: ptBR }) };
       });
-  }, [requests, timeEntries]);
+  }, [parseRequestDate, requests, timeEntries]);
 
   const [year, month] = selectedMonth.split("-").map(Number);
+
   const isMonthly = clientInfo?.contract_type === "monthly";
 
   const reportData = useMemo(() => {
@@ -349,11 +398,15 @@ export const SharedReport: React.FC = () => {
   }, [projects, tasks, timeEntries, year, month]);
 
   const filteredRequestHistory = useMemo(() => {
+    const monthStart = startOfMonth(new Date(year, month - 1));
+    const monthEnd = endOfMonth(new Date(year, month - 1));
+
     return requests.filter((request) => {
-      const createdAt = parseISO(request.created_at);
-      return format(createdAt, "yyyy-MM") === selectedMonth;
+      const createdAt = parseRequestDate(request.created_at);
+      if (!createdAt) return false;
+      return isWithinInterval(createdAt, { start: monthStart, end: monthEnd });
     });
-  }, [requests, selectedMonth]);
+  }, [parseRequestDate, requests, year, month]);
 
   const toggleProject = (projectId: string) => {
     const newExpanded = new Set(expandedProjects);
@@ -719,6 +772,14 @@ export const SharedReport: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="requests">
+              {requestsLoadError && (
+                <Card className="mb-4 border-amber-500/40 bg-amber-500/5">
+                  <CardContent className="py-3">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">{requestsLoadError}</p>
+                  </CardContent>
+                </Card>
+              )}
+
               {filteredRequestHistory.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center space-y-2">
@@ -736,7 +797,7 @@ export const SharedReport: React.FC = () => {
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <p className="font-medium text-foreground">{request.title}</p>
-                            <p className="text-xs text-muted-foreground">Criada em {format(parseISO(request.created_at), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}</p>
+                            <p className="text-xs text-muted-foreground">Criada em {format(parseRequestDate(request.created_at) || new Date(request.created_at), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}</p>
                           </div>
                           <Badge variant={getStatusVariant(request.status)}>{getStatusLabel(request.status)}</Badge>
                         </div>
@@ -744,7 +805,7 @@ export const SharedReport: React.FC = () => {
                         {request.description && <WysiwygContent content={request.description} className="text-sm text-muted-foreground" />}
 
                         <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-                          <span>Última atualização: {format(parseISO(request.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                          <span>Última atualização: {format(parseRequestDate(request.updated_at) || new Date(request.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                           {request.deadline && <span>Prazo solicitado: {format(parseISO(request.deadline), "dd/MM/yyyy", { locale: ptBR })}</span>}
                         </div>
 
