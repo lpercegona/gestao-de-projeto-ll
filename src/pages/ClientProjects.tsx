@@ -335,6 +335,21 @@ export const ClientProjects: React.FC = () => {
     setEditFormOpen(true);
   };
 
+  const handleDeleteRequest = async (project: UnifiedProject) => {
+    if (!project.is_request || !project.request_id) return;
+
+    try {
+      const { error } = await supabase.from('project_requests').delete().eq('id', project.request_id);
+      if (error) throw error;
+
+      setRequests((prev) => prev.filter((item) => item.id !== project.request_id));
+      toast.success('Solicitação excluída com sucesso!');
+    } catch (error) {
+      console.error('Error deleting project request:', error);
+      toast.error('Erro ao excluir solicitação');
+    }
+  };
+
   const handleOpenTaskRequestDialog = (projectId: string) => {
     setTaskRequestProjectId(projectId);
     setTaskRequestForm({ name: '', description: '', due_date: '' });
@@ -509,6 +524,8 @@ export const ClientProjects: React.FC = () => {
           onStopTimer={async () => {}}
           onCompleteTask={async () => {}}
           onRequestTaskEdit={handleOpenTaskEditDialog}
+          onEditRequest={(project) => openEditRequest(project as UnifiedProject)}
+          onDeleteRequest={(project) => handleDeleteRequest(project as UnifiedProject)}
         />
       ) : (
         <ProjectKanbanView
