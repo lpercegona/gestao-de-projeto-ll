@@ -1,19 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { addDays, endOfMonth, eachDayOfInterval, format, isSameDay, isSameMonth, parseISO, startOfMonth } from 'date-fns';
+import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, ChevronLeft, ChevronRight, FolderKanban, GanttChartSquare, ListTodo, Plus } from 'lucide-react';
+import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
@@ -31,57 +26,13 @@ interface CalendarItem {
   status: 'overdue' | 'near' | 'normal';
 }
 
-type CalendarViewMode = 'calendar' | 'gantt';
-type GanttViewMode = 'Day' | 'Week' | 'Month';
-
-type GanttTask = {
-  id: string;
-  name: string;
-  start: string;
-  end: string;
-  progress: number;
-  dependencies?: string;
-  custom_class?: string;
-};
-
-declare global {
-  interface Window {
-    Gantt?: new (
-      container: HTMLElement,
-      tasks: GanttTask[],
-      options?: {
-        view_mode?: GanttViewMode;
-        language?: string;
-        readonly?: boolean;
-        popup_on?: string;
-        on_click?: (task: GanttTask) => void;
-      },
-    ) => unknown;
-  }
-}
-
 export const CalendarPage: React.FC = () => {
-  const { data, createProject, createTask } = useData();
-  const { isAdminOrMaster, isClient, user } = useAuth();
+  const { data } = useData();
+  const { isClient, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showRequestForm, setShowRequestForm] = useState(false);
-  const [viewMode, setViewMode] = useState<CalendarViewMode>('calendar');
-  const [ganttViewMode, setGanttViewMode] = useState<GanttViewMode>('Month');
-  const [ganttReady, setGanttReady] = useState(false);
-  const [ganttLoadError, setGanttLoadError] = useState<string | null>(null);
-  const [showProjectDialog, setShowProjectDialog] = useState(false);
-  const [showTaskDialog, setShowTaskDialog] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectClientId, setNewProjectClientId] = useState('');
-  const [newProjectDueDate, setNewProjectDueDate] = useState('');
-  const [newTaskName, setNewTaskName] = useState('');
-  const [newTaskProjectId, setNewTaskProjectId] = useState('');
-  const [newTaskDueDate, setNewTaskDueDate] = useState('');
-  const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const ganttContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Handle project request submission for clients
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
@@ -177,162 +128,6 @@ export const CalendarPage: React.FC = () => {
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
-  const ganttItems = useMemo<GanttTask[]>(() => {
-    const projectNodeIds = new Set(data.projects.filter((project) => project.due_date).map((project) => `project-${project.id}`));
-
-    const mappedItems = allItems.map((item) => {
-      const dueDate = parseISO(item.due_date);
-      const startDate = addDays(dueDate, -2);
-      const itemTypeLabel = item.type === 'project' ? 'Projeto' : 'Tarefa';
-      const projectDependencyId = item.type === 'task' && item.projectId ? `project-${item.projectId}` : undefined;
-
-      return {
-        id: `${item.type}-${item.id}`,
-        name: `${itemTypeLabel}: ${item.name}`,
-        start: format(startDate, 'yyyy-MM-dd'),
-        end: format(dueDate, 'yyyy-MM-dd'),
-        progress: item.status === 'overdue' ? 100 : item.status === 'near' ? 70 : 40,
-        dependencies: projectDependencyId && projectNodeIds.has(projectDependencyId) ? projectDependencyId : undefined,
-        custom_class:
-          item.status === 'overdue'
-            ? 'calendar-gantt-overdue'
-            : item.status === 'near'
-              ? 'calendar-gantt-near'
-              : 'calendar-gantt-normal',
-      };
-    });
-
-    if (mappedItems.length > 0) {
-      return mappedItems;
-    }
-
-    const today = format(new Date(), 'yyyy-MM-dd');
-    return [
-      {
-        id: 'empty-state',
-        name: 'Sem entregas no período. Crie projetos e tarefas para começar.',
-        start: today,
-        end: today,
-        progress: 0,
-        custom_class: 'calendar-gantt-empty',
-      },
-    ];
-  }, [allItems]);
-
-  const resetProjectForm = () => {
-    setNewProjectName('');
-    setNewProjectClientId('');
-    setNewProjectDueDate('');
-  };
-
-  const resetTaskForm = () => {
-    setNewTaskName('');
-    setNewTaskProjectId('');
-    setNewTaskDueDate('');
-  };
-
-  const handleCreateProject = async () => {
-    if (!newProjectName || !newProjectClientId || !newProjectDueDate) {
-      toast.error('Preencha os campos obrigatórios para criar o projeto.');
-      return;
-    }
-
-    setIsCreatingProject(true);
-    const createdProject = await createProject({
-      client_id: newProjectClientId,
-      name: newProjectName,
-      description: null,
-      status: 'active',
-      due_date: newProjectDueDate,
-      custom_fields: {},
-    });
-    setIsCreatingProject(false);
-
-    if (!createdProject) {
-      toast.error('Não foi possível criar o projeto.');
-      return;
-    }
-
-    toast.success('Projeto criado com sucesso no planejamento.');
-    setShowProjectDialog(false);
-    resetProjectForm();
-  };
-
-  const handleCreateTask = async () => {
-    if (!newTaskName || !newTaskProjectId || !newTaskDueDate) {
-      toast.error('Preencha os campos obrigatórios para criar a tarefa.');
-      return;
-    }
-
-    setIsCreatingTask(true);
-    const createdTask = await createTask({
-      project_id: newTaskProjectId,
-      name: newTaskName,
-      description: null,
-      status: 'todo',
-      due_date: newTaskDueDate,
-    });
-    setIsCreatingTask(false);
-
-    if (!createdTask) {
-      toast.error('Não foi possível criar a tarefa.');
-      return;
-    }
-
-    toast.success('Tarefa criada com sucesso no planejamento.');
-    setShowTaskDialog(false);
-    resetTaskForm();
-  };
-
-  useEffect(() => {
-    if (window.Gantt) {
-      setGanttReady(true);
-      return;
-    }
-
-    const cssId = 'frappe-gantt-css';
-    if (!document.getElementById(cssId)) {
-      const link = document.createElement('link');
-      link.id = cssId;
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css';
-      document.head.appendChild(link);
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.umd.js';
-    script.async = true;
-    script.onload = () => setGanttReady(true);
-    script.onerror = () => setGanttLoadError('Não foi possível carregar o gráfico de Gantt.');
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ganttReady || viewMode !== 'gantt' || !ganttContainerRef.current || !window.Gantt) return;
-
-    ganttContainerRef.current.innerHTML = '';
-    const Gantt = window.Gantt;
-
-    new Gantt(ganttContainerRef.current, ganttItems, {
-      view_mode: ganttViewMode,
-      language: 'pt-BR',
-      readonly: true,
-      popup_on: 'hover',
-      on_click: (task) => {
-        const [itemType, ...idParts] = task.id.split('-');
-        const itemId = idParts.join('-');
-        const item = allItems.find((entry) => entry.id === itemId && entry.type === itemType);
-        if (item && !isClient) {
-          handleNavigate(item);
-        }
-      },
-    });
-  }, [allItems, ganttItems, ganttReady, ganttViewMode, isClient, viewMode]);
-
   const handleNavigate = (item: CalendarItem) => {
     // For clients, navigate to /my-projects instead of /projects
     const basePath = isClient ? '/my-projects' : '/projects';
@@ -357,153 +152,94 @@ export const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <style>{`
-        .calendar-gantt-overdue .bar { fill: hsl(var(--destructive)); }
-        .calendar-gantt-near .bar { fill: #f59e0b; }
-        .calendar-gantt-normal .bar { fill: hsl(var(--primary)); }
-        .calendar-gantt-empty .bar { fill: hsl(var(--muted)); }
-      `}</style>
-
-      <div className="flex items-center justify-end">
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(value) => value && setViewMode(value as CalendarViewMode)}
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
-        >
-          <ToggleGroupItem value="calendar" variant="tab" size="tb" aria-label="Visualização em calendário">
-            <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
-            Calendário
-          </ToggleGroupItem>
-          <ToggleGroupItem value="gantt" variant="tab" size="tb" aria-label="Visualização em Gantt">
-            <GanttChartSquare className="mr-1.5 h-3.5 w-3.5" />
-            Gantt
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-
       <div className="grid lg:grid-cols-[1fr_400px] gap-6">
         {/* Calendar View */}
         <Card>
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">
-                {viewMode === 'calendar' ? format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR }) : 'Planejamento Gantt'}
+                {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
               </CardTitle>
-              {viewMode === 'calendar' ? (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentMonth(new Date())}>
-                    Hoje
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  {isAdminOrMaster && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => setShowProjectDialog(true)}>
-                        <Plus className="mr-1 h-3.5 w-3.5" />
-                        Projeto
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowTaskDialog(true)}>
-                        <Plus className="mr-1 h-3.5 w-3.5" />
-                        Tarefa
-                      </Button>
-                    </>
-                  )}
-                  <ToggleGroup
-                    type="single"
-                    value={ganttViewMode}
-                    onValueChange={(value) => value && setGanttViewMode(value as GanttViewMode)}
-                  >
-                    <ToggleGroupItem value="Day" aria-label="Dia" variant="outline" size="sm">Dia</ToggleGroupItem>
-                    <ToggleGroupItem value="Week" aria-label="Semana" variant="outline" size="sm">Semana</ToggleGroupItem>
-                    <ToggleGroupItem value="Month" aria-label="Mês" variant="outline" size="sm">Mês</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentMonth(new Date())}
+                >
+                  Hoje
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            {viewMode === 'calendar' ? (
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(d) => d && setSelectedDate(d)}
-                month={currentMonth}
-                onMonthChange={setCurrentMonth}
-                locale={ptBR}
-                className="rounded-md w-full"
-                classNames={{
-                  months: 'w-full',
-                  month: 'w-full space-y-4',
-                  table: 'w-full border-collapse',
-                  head_row: 'flex w-full',
-                  head_cell: 'text-muted-foreground rounded-md flex-1 font-normal text-[0.8rem]',
-                  row: 'flex w-full mt-2',
-                  cell: 'flex-1 h-12 text-center text-sm p-0 relative',
-                  day: 'h-12 w-full p-0 font-normal aria-selected:opacity-100',
-                }}
-                components={{
-                  DayContent: ({ date: dayDate }) => {
-                    const dayItems = allItems.filter((item) => isSameDay(parseISO(item.due_date), dayDate));
-                    const hasDeadlines = dayItems.length > 0;
-                    const isSelected = isSameDay(dayDate, selectedDate);
-                    const isCurrentMonth = isSameMonth(dayDate, currentMonth);
-
-                    return (
-                      <div
-                        className={cn(
-                          'relative w-full h-full flex flex-col items-center justify-center rounded-md transition-colors cursor-pointer hover:bg-accent',
-                          isSelected && 'bg-primary text-primary-foreground hover:bg-primary',
-                          !isCurrentMonth && 'text-muted-foreground opacity-50',
-                        )}
-                      >
-                        <span>{dayDate.getDate()}</span>
-                        {hasDeadlines && (
-                          <div className="absolute bottom-1 flex gap-0.5">
-                            {dayItems.slice(0, 3).map((item, i) => (
-                              <div
-                                key={i}
-                                className={cn(
-                                  'w-1.5 h-1.5 rounded-full',
-                                  item.status === 'overdue'
-                                    ? 'bg-destructive'
-                                    : item.status === 'near'
-                                      ? 'bg-amber-500'
-                                      : isSelected
-                                        ? 'bg-primary-foreground'
-                                        : 'bg-primary',
-                                )}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  },
-                }}
-              />
-            ) : ganttLoadError ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">{ganttLoadError}</p>
-            ) : (
-              <div ref={ganttContainerRef} className="min-h-[460px] overflow-x-auto" />
-            )}
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => d && setSelectedDate(d)}
+              month={currentMonth}
+              onMonthChange={setCurrentMonth}
+              locale={ptBR}
+              className="rounded-md w-full"
+              classNames={{
+                months: "w-full",
+                month: "w-full space-y-4",
+                table: "w-full border-collapse",
+                head_row: "flex w-full",
+                head_cell: "text-muted-foreground rounded-md flex-1 font-normal text-[0.8rem]",
+                row: "flex w-full mt-2",
+                cell: "flex-1 h-12 text-center text-sm p-0 relative",
+                day: "h-12 w-full p-0 font-normal aria-selected:opacity-100",
+              }}
+              components={{
+                DayContent: ({ date: dayDate }) => {
+                  const dayItems = allItems.filter(item => isSameDay(parseISO(item.due_date), dayDate));
+                  const hasDeadlines = dayItems.length > 0;
+                  const isSelected = isSameDay(dayDate, selectedDate);
+                  const isCurrentMonth = isSameMonth(dayDate, currentMonth);
+                  
+                  return (
+                    <div className={cn(
+                      "relative w-full h-full flex flex-col items-center justify-center rounded-md transition-colors cursor-pointer hover:bg-accent",
+                      isSelected && "bg-primary text-primary-foreground hover:bg-primary",
+                      !isCurrentMonth && "text-muted-foreground opacity-50"
+                    )}>
+                      <span>{dayDate.getDate()}</span>
+                      {hasDeadlines && (
+                        <div className="absolute bottom-1 flex gap-0.5">
+                          {dayItems.slice(0, 3).map((item, i) => (
+                            <div 
+                              key={i}
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                item.status === 'overdue' ? "bg-destructive" :
+                                item.status === 'near' ? "bg-amber-500" : 
+                                isSelected ? "bg-primary-foreground" : "bg-primary"
+                              )}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                },
+              }}
+            />
           </CardContent>
         </Card>
 
@@ -629,74 +365,6 @@ export const CalendarPage: React.FC = () => {
           onSubmit={handleSubmitRequest}
         />
       )}
-
-      <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo projeto no Gantt</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Nome do projeto</Label>
-              <Input value={newProjectName} onChange={(event) => setNewProjectName(event.target.value)} placeholder="Ex.: Rebranding" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Cliente</Label>
-              <Select value={newProjectClientId} onValueChange={setNewProjectClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Prazo</Label>
-              <Input type="date" value={newProjectDueDate} onChange={(event) => setNewProjectDueDate(event.target.value)} />
-            </div>
-            <Button onClick={handleCreateProject} disabled={isCreatingProject} className="w-full">
-              {isCreatingProject ? 'Criando...' : 'Criar projeto'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova tarefa no Gantt</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Nome da tarefa</Label>
-              <Input value={newTaskName} onChange={(event) => setNewTaskName(event.target.value)} placeholder="Ex.: Aprovar wireframes" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Projeto</Label>
-              <Select value={newTaskProjectId} onValueChange={setNewTaskProjectId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um projeto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Prazo</Label>
-              <Input type="date" value={newTaskDueDate} onChange={(event) => setNewTaskDueDate(event.target.value)} />
-            </div>
-            <Button onClick={handleCreateTask} disabled={isCreatingTask} className="w-full">
-              {isCreatingTask ? 'Criando...' : 'Criar tarefa'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
