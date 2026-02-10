@@ -265,7 +265,11 @@ export const SharedReport: React.FC = () => {
           console.error("Error fetching shared report requests:", requestsResult.status === "rejected" ? requestsResult.reason : requestsResult.value.error);
         }
 
-        setRequests((requestsData || []) as SharedRequestItem[]);
+        setRequests(
+          ((requestsData || []) as SharedRequestItem[]).sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          ),
+        );
       } catch (error) {
         console.error("Error fetching shared report:", error);
       } finally {
@@ -277,14 +281,32 @@ export const SharedReport: React.FC = () => {
   }, [token, authenticated, isValidToken]);
 
   const monthOptions = useMemo(() => {
-    const options = [];
+    const monthKeys = new Set<string>();
     const now = new Date();
+
     for (let i = 0; i < 12; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      options.push({ value: format(date, "yyyy-MM"), label: format(date, "MMMM 'de' yyyy", { locale: ptBR }) });
+      monthKeys.add(format(date, "yyyy-MM"));
     }
-    return options;
-  }, []);
+
+    timeEntries.forEach((entry) => {
+      const entryDate = parseISO(entry.date);
+      monthKeys.add(format(entryDate, "yyyy-MM"));
+    });
+
+    requests.forEach((request) => {
+      const createdAt = parseISO(request.created_at);
+      monthKeys.add(format(createdAt, "yyyy-MM"));
+    });
+
+    return Array.from(monthKeys)
+      .sort((a, b) => b.localeCompare(a))
+      .map((value) => {
+        const [optionYear, optionMonth] = value.split("-").map(Number);
+        const date = new Date(optionYear, optionMonth - 1, 1);
+        return { value, label: format(date, "MMMM 'de' yyyy", { locale: ptBR }) };
+      });
+  }, [requests, timeEntries]);
 
   const [year, month] = selectedMonth.split("-").map(Number);
   const isMonthly = clientInfo?.contract_type === "monthly";
@@ -327,14 +349,11 @@ export const SharedReport: React.FC = () => {
   }, [projects, tasks, timeEntries, year, month]);
 
   const filteredRequestHistory = useMemo(() => {
-    const monthStart = startOfMonth(new Date(year, month - 1));
-    const monthEnd = endOfMonth(new Date(year, month - 1));
-
     return requests.filter((request) => {
       const createdAt = parseISO(request.created_at);
-      return isWithinInterval(createdAt, { start: monthStart, end: monthEnd });
+      return format(createdAt, "yyyy-MM") === selectedMonth;
     });
-  }, [requests, year, month]);
+  }, [requests, selectedMonth]);
 
   const toggleProject = (projectId: string) => {
     const newExpanded = new Set(expandedProjects);
