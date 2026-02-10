@@ -509,52 +509,30 @@ export const SharedReport: React.FC = () => {
       <div className="min-h-screen bg-background">
         <div className="border-b border-border bg-card print:hidden">
           <div className="container py-6">
-  <div className="flex items-center justify-between w-full">
-
-    {/* Bloco esquerdo: logo + textos */}
-    <div className="flex items-center gap-4 min-w-0">
-      
-      {clientInfo.client_logo_url && (
-        <img
-          src={clientInfo.client_logo_url}
-          alt={displayName}
-          className="h-8 max-w-[120px] object-contain shrink-0"
-        />
-      )}
-
-      <div className="flex flex-col leading-tight">
-        <span className="text-sm text-muted-foreground">
-          {displayName}
-        </span>
-
-        <h1 className="text-xl font-semibold text-foreground">
-          Relatório de Horas
-        </h1>
-      </div>
-
-    </div>
-
-    {/* Bloco direito: botões */}
-    <div className="flex items-center gap-2 shrink-0">
-      <Button variant="outline" size="icon" onClick={handleCopyShareLink}>
-        <Share2 className="w-5 h-5" />
-      </Button>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="icon" onClick={handleExportPDF}>
-            <FileDown className="w-5 h-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Exportar PDF</TooltipContent>
-      </Tooltip>
-    </div>
-
-  </div>
-</div>
-    </div>
-
-  </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 w-full">
+                {clientInfo.client_logo_url && (
+                  <img src={clientInfo.client_logo_url} alt={displayName} className="h-8 max-w-[120px] object-contain" />
+                )}
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-foreground">Relatório de Horas</h1>
+                  <p className="text-sm text-muted-foreground">{displayName}</p>
+                </div>
+              
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" onClick={handleCopyShareLink}>
+                  <Share2 className="w-5 h-5" />
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleExportPDF}>
+                      <FileDown className="w-5 h-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Exportar PDF</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
         </div>
