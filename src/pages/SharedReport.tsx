@@ -239,7 +239,7 @@ export const SharedReport: React.FC = () => {
         const columnsData = columnsResult.status === "fulfilled" ? columnsResult.value.data : [];
         const tasksData = tasksResult.status === "fulfilled" ? tasksResult.value.data : [];
         const entriesData = entriesResult.status === "fulfilled" ? entriesResult.value.data : [];
-        const requestsData = requestsResult.status === "fulfilled" ? requestsResult.value.data : [];
+        const requestsData = requestsResult.status === "fulfilled" ? requestsResult.value.data.data : [];
 
         setProjects(
           (projectsData || []).map((projectRow) => {
