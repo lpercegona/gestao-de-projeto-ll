@@ -327,17 +327,6 @@ export const SharedReport: React.FC = () => {
     return null;
   }, []);
 
-
-  const parseRequestDate = useCallback((dateValue: string) => {
-    const parsedIso = parseISO(dateValue);
-    if (isValid(parsedIso)) return parsedIso;
-
-    const parsedNative = new Date(dateValue);
-    if (isValid(parsedNative)) return parsedNative;
-
-    return null;
-  }, []);
-
   const monthOptions = useMemo(() => {
     const monthKeys = new Set<string>();
     const now = new Date();
