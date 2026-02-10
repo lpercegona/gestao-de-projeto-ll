@@ -71,3 +71,17 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Configuração do Google Auth (Supabase)
+
+Para que o login com Google funcione, é obrigatório habilitar o provedor no painel do Supabase:
+
+1. Acesse **Authentication > Providers > Google**.
+2. Ative o provedor **Google**.
+3. Configure **Client ID** e **Client Secret** do OAuth.
+4. Em **Redirect URLs**, inclua:
+   - `https://SEU-PROJETO.supabase.co/auth/v1/callback`
+   - `http://localhost:5173/login` (desenvolvimento)
+
+Se o provedor não estiver habilitado, a API retorna erro `Unsupported provider: provider is not enabled`.
+

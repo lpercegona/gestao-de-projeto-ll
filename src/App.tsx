@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GlobalTimerProvider } from "@/contexts/GlobalTimerContext";
@@ -25,6 +25,7 @@ import { SharedReport } from "@/pages/SharedReport";
 import { Preferences } from "@/pages/Preferences";
 import { ResetPassword } from "@/pages/ResetPassword";
 import { Landing } from "@/pages/Landing";
+import { FirstAccess } from "@/pages/FirstAccess";
 import { Proposals } from "@/pages/Proposals";
 import { PublicProposal } from "@/pages/PublicProposal";
 import { Contracts } from "@/pages/Contracts";
@@ -36,6 +37,24 @@ import { PageConstants } from "@/pages/PageConstants";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const RootRoute = () => {
+  const { user, loading, roleLoading } = useAuth();
+
+  if (loading || (user && roleLoading)) {
+    return <div className="min-h-screen bg-muted/40" />;
+  }
+
+  if (!user) {
+    return <Landing />;
+  }
+
+  return (
+    <ProtectedRoute requiredRole="client">
+      <Dashboard />
+    </ProtectedRoute>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -53,17 +72,14 @@ const App = () => (
               <Route path="/home" element={<Navigate to="/landing" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/first-access" element={<FirstAccess />} />
               <Route path="/portal/:token" element={<ClientPortal />} />
               <Route path="/report/:token" element={<SharedReport />} />
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
               
-              {/* Dashboard - accessible by all authenticated roles */}
-              <Route path="/" element={
-                <ProtectedRoute requiredRole="client">
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
+              {/* Home: Landing for visitors, dashboard for authenticated users */}
+              <Route path="/" element={<RootRoute />} />
               
               {/* Clients - admin only */}
               <Route path="/clients" element={
