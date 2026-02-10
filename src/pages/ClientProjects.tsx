@@ -196,6 +196,26 @@ export const ClientProjects: React.FC = () => {
     return [...data.tasks, ...pendingTasks];
   }, [data.tasks, pendingTaskRequests, user?.id]);
 
+  const resolveClientId = async (userId: string) => {
+    const { data: rpcClientId, error: rpcError } = await supabase.rpc('get_user_client_id', {
+      _user_id: userId,
+    });
+
+    if (rpcError) {
+      console.error('Error resolving client id via RPC:', rpcError);
+    }
+
+    if (rpcClientId) return rpcClientId;
+
+    // Fallback para ambientes ainda sem função atualizada
+    const [{ data: client }, { data: clientUser }] = await Promise.all([
+      supabase.from('clients').select('id').eq('user_id', userId).maybeSingle(),
+      supabase.from('client_users').select('client_id').eq('user_id', userId).maybeSingle(),
+    ]);
+
+    return client?.id || clientUser?.client_id || null;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
@@ -259,6 +279,10 @@ export const ClientProjects: React.FC = () => {
     if (!resolvedClientId) {
       toast.error('Erro: Cliente não encontrado');
       return;
+    }
+
+    if (!clientId) {
+      setClientId(resolvedClientId);
     }
 
     const { data: newRequest, error } = await supabase
