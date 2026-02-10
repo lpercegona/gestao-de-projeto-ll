@@ -4,10 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { addDays, format, isSameDay, isSameMonth, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { addDays, endOfMonth, eachDayOfInterval, format, isSameDay, isSameMonth, parseISO, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarDays, ChevronLeft, ChevronRight, FolderKanban, GanttChartSquare, ListTodo, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -36,6 +40,7 @@ type GanttTask = {
   start: string;
   end: string;
   progress: number;
+  dependencies?: string;
   custom_class?: string;
 };
 
@@ -56,8 +61,8 @@ declare global {
 }
 
 export const CalendarPage: React.FC = () => {
-  const { data } = useData();
-  const { isClient, user } = useAuth();
+  const { data, createProject, createTask } = useData();
+  const { isAdminOrMaster, isClient, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -66,6 +71,16 @@ export const CalendarPage: React.FC = () => {
   const [ganttViewMode, setGanttViewMode] = useState<GanttViewMode>('Month');
   const [ganttReady, setGanttReady] = useState(false);
   const [ganttLoadError, setGanttLoadError] = useState<string | null>(null);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectClientId, setNewProjectClientId] = useState('');
+  const [newProjectDueDate, setNewProjectDueDate] = useState('');
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newTaskProjectId, setNewTaskProjectId] = useState('');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
   const ganttContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Handle project request submission for clients
@@ -163,10 +178,13 @@ export const CalendarPage: React.FC = () => {
   }, [currentMonth]);
 
   const ganttItems = useMemo<GanttTask[]>(() => {
-    return allItems.map((item) => {
+    const projectNodeIds = new Set(data.projects.filter((project) => project.due_date).map((project) => `project-${project.id}`));
+
+    const mappedItems = allItems.map((item) => {
       const dueDate = parseISO(item.due_date);
       const startDate = addDays(dueDate, -2);
       const itemTypeLabel = item.type === 'project' ? 'Projeto' : 'Tarefa';
+      const projectDependencyId = item.type === 'task' && item.projectId ? `project-${item.projectId}` : undefined;
 
       return {
         id: `${item.type}-${item.id}`,
@@ -174,6 +192,7 @@ export const CalendarPage: React.FC = () => {
         start: format(startDate, 'yyyy-MM-dd'),
         end: format(dueDate, 'yyyy-MM-dd'),
         progress: item.status === 'overdue' ? 100 : item.status === 'near' ? 70 : 40,
+        dependencies: projectDependencyId && projectNodeIds.has(projectDependencyId) ? projectDependencyId : undefined,
         custom_class:
           item.status === 'overdue'
             ? 'calendar-gantt-overdue'
@@ -182,7 +201,88 @@ export const CalendarPage: React.FC = () => {
               : 'calendar-gantt-normal',
       };
     });
+
+    if (mappedItems.length > 0) {
+      return mappedItems;
+    }
+
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return [
+      {
+        id: 'empty-state',
+        name: 'Sem entregas no período. Crie projetos e tarefas para começar.',
+        start: today,
+        end: today,
+        progress: 0,
+        custom_class: 'calendar-gantt-empty',
+      },
+    ];
   }, [allItems]);
+
+  const resetProjectForm = () => {
+    setNewProjectName('');
+    setNewProjectClientId('');
+    setNewProjectDueDate('');
+  };
+
+  const resetTaskForm = () => {
+    setNewTaskName('');
+    setNewTaskProjectId('');
+    setNewTaskDueDate('');
+  };
+
+  const handleCreateProject = async () => {
+    if (!newProjectName || !newProjectClientId || !newProjectDueDate) {
+      toast.error('Preencha os campos obrigatórios para criar o projeto.');
+      return;
+    }
+
+    setIsCreatingProject(true);
+    const createdProject = await createProject({
+      client_id: newProjectClientId,
+      name: newProjectName,
+      description: null,
+      status: 'active',
+      due_date: newProjectDueDate,
+      custom_fields: {},
+    });
+    setIsCreatingProject(false);
+
+    if (!createdProject) {
+      toast.error('Não foi possível criar o projeto.');
+      return;
+    }
+
+    toast.success('Projeto criado com sucesso no planejamento.');
+    setShowProjectDialog(false);
+    resetProjectForm();
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTaskName || !newTaskProjectId || !newTaskDueDate) {
+      toast.error('Preencha os campos obrigatórios para criar a tarefa.');
+      return;
+    }
+
+    setIsCreatingTask(true);
+    const createdTask = await createTask({
+      project_id: newTaskProjectId,
+      name: newTaskName,
+      description: null,
+      status: 'todo',
+      due_date: newTaskDueDate,
+    });
+    setIsCreatingTask(false);
+
+    if (!createdTask) {
+      toast.error('Não foi possível criar a tarefa.');
+      return;
+    }
+
+    toast.success('Tarefa criada com sucesso no planejamento.');
+    setShowTaskDialog(false);
+    resetTaskForm();
+  };
 
   useEffect(() => {
     if (window.Gantt) {
@@ -261,6 +361,7 @@ export const CalendarPage: React.FC = () => {
         .calendar-gantt-overdue .bar { fill: hsl(var(--destructive)); }
         .calendar-gantt-near .bar { fill: #f59e0b; }
         .calendar-gantt-normal .bar { fill: hsl(var(--primary)); }
+        .calendar-gantt-empty .bar { fill: hsl(var(--muted)); }
       `}</style>
 
       <div className="flex items-center justify-end">
@@ -312,15 +413,29 @@ export const CalendarPage: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <ToggleGroup
-                  type="single"
-                  value={ganttViewMode}
-                  onValueChange={(value) => value && setGanttViewMode(value as GanttViewMode)}
-                >
-                  <ToggleGroupItem value="Day" aria-label="Dia" variant="outline" size="sm">Dia</ToggleGroupItem>
-                  <ToggleGroupItem value="Week" aria-label="Semana" variant="outline" size="sm">Semana</ToggleGroupItem>
-                  <ToggleGroupItem value="Month" aria-label="Mês" variant="outline" size="sm">Mês</ToggleGroupItem>
-                </ToggleGroup>
+                <div className="flex items-center gap-2">
+                  {isAdminOrMaster && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => setShowProjectDialog(true)}>
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Projeto
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowTaskDialog(true)}>
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Tarefa
+                      </Button>
+                    </>
+                  )}
+                  <ToggleGroup
+                    type="single"
+                    value={ganttViewMode}
+                    onValueChange={(value) => value && setGanttViewMode(value as GanttViewMode)}
+                  >
+                    <ToggleGroupItem value="Day" aria-label="Dia" variant="outline" size="sm">Dia</ToggleGroupItem>
+                    <ToggleGroupItem value="Week" aria-label="Semana" variant="outline" size="sm">Semana</ToggleGroupItem>
+                    <ToggleGroupItem value="Month" aria-label="Mês" variant="outline" size="sm">Mês</ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
               )}
             </div>
           </CardHeader>
@@ -514,6 +629,74 @@ export const CalendarPage: React.FC = () => {
           onSubmit={handleSubmitRequest}
         />
       )}
+
+      <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo projeto no Gantt</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Nome do projeto</Label>
+              <Input value={newProjectName} onChange={(event) => setNewProjectName(event.target.value)} placeholder="Ex.: Rebranding" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Cliente</Label>
+              <Select value={newProjectClientId} onValueChange={setNewProjectClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {data.clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Prazo</Label>
+              <Input type="date" value={newProjectDueDate} onChange={(event) => setNewProjectDueDate(event.target.value)} />
+            </div>
+            <Button onClick={handleCreateProject} disabled={isCreatingProject} className="w-full">
+              {isCreatingProject ? 'Criando...' : 'Criar projeto'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova tarefa no Gantt</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Nome da tarefa</Label>
+              <Input value={newTaskName} onChange={(event) => setNewTaskName(event.target.value)} placeholder="Ex.: Aprovar wireframes" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Projeto</Label>
+              <Select value={newTaskProjectId} onValueChange={setNewTaskProjectId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {data.projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Prazo</Label>
+              <Input type="date" value={newTaskDueDate} onChange={(event) => setNewTaskDueDate(event.target.value)} />
+            </div>
+            <Button onClick={handleCreateTask} disabled={isCreatingTask} className="w-full">
+              {isCreatingTask ? 'Criando...' : 'Criar tarefa'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
