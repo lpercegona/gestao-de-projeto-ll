@@ -38,13 +38,14 @@ export const CalendarPage: React.FC = () => {
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
+      supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+    ]);
 
-    if (!clientData) {
+    const resolvedClientId = clientData?.id || clientUserData?.client_id;
+
+    if (!resolvedClientId) {
       toast.error('Erro: Cliente não encontrado');
       return;
     }
@@ -52,10 +53,9 @@ export const CalendarPage: React.FC = () => {
     const { error } = await supabase
       .from('project_requests')
       .insert({
-        client_id: clientData.id,
+        client_id: resolvedClientId,
         title,
         briefing,
-        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       });
