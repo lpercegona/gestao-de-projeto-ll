@@ -196,14 +196,20 @@ export const SharedReport: React.FC = () => {
           is_public: clientData.is_public,
         });
 
-        const [{ data: projectsData }, { data: columnsData }, { data: tasksData }, { data: entriesData }, { data: requestsData }] =
-          await Promise.all([
+        const [projectsResult, columnsResult, tasksResult, entriesResult, requestsResult] =
+          await Promise.allSettled([
             supabase.rpc("get_shared_report_projects", { p_token: token }),
             supabase.rpc("get_shared_report_project_columns", { p_token: token }),
             supabase.rpc("get_shared_report_tasks", { p_token: token }),
             supabase.rpc("get_shared_report_time_entries", { p_token: token }),
             supabase.rpc("get_shared_report_requests", { p_token: token }),
           ]);
+
+        const projectsData = projectsResult.status === "fulfilled" ? projectsResult.value.data : [];
+        const columnsData = columnsResult.status === "fulfilled" ? columnsResult.value.data : [];
+        const tasksData = tasksResult.status === "fulfilled" ? tasksResult.value.data : [];
+        const entriesData = entriesResult.status === "fulfilled" ? entriesResult.value.data : [];
+        const requestsData = requestsResult.status === "fulfilled" ? requestsResult.value.data : [];
 
         setProjects(
           (projectsData || []).map((projectRow) => {
@@ -254,6 +260,10 @@ export const SharedReport: React.FC = () => {
           });
           }),
         );
+
+        if (requestsResult.status === "rejected" || (requestsResult.status === "fulfilled" && requestsResult.value.error)) {
+          console.error("Error fetching shared report requests:", requestsResult.status === "rejected" ? requestsResult.reason : requestsResult.value.error);
+        }
 
         setRequests((requestsData || []) as SharedRequestItem[]);
       } catch (error) {
@@ -675,7 +685,14 @@ export const SharedReport: React.FC = () => {
 
             <TabsContent value="requests">
               {filteredRequestHistory.length === 0 ? (
-                <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground">Nenhuma solicitação encontrada para este mês.</p></CardContent></Card>
+                <Card>
+                  <CardContent className="py-12 text-center space-y-2">
+                    <p className="text-muted-foreground">Nenhuma solicitação encontrada para este mês.</p>
+                    {requests.length > 0 && (
+                      <p className="text-xs text-muted-foreground">Há {requests.length} solicitação(ões) em outros meses. Selecione outro mês para visualizar.</p>
+                    )}
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="space-y-4">
                   {filteredRequestHistory.map((request) => (
