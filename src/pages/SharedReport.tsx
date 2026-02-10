@@ -522,14 +522,15 @@ export const SharedReport: React.FC = () => {
         />
       )}
 
-      <div className="flex flex-col leading-tight">
+      <div className="flex flex-col leading-tight w-full">
+        <h1 className="text-md font-semibold text-foreground">
+          Relatório de Horas
+        </h1>
         <span className="text-sm text-muted-foreground">
           {displayName}
         </span>
 
-        <h1 className="text-xl font-semibold text-foreground">
-          Relatório de Horas
-        </h1>
+        
       </div>
 
     </div>
