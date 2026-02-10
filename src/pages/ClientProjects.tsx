@@ -221,7 +221,12 @@ export const ClientProjects: React.FC = () => {
       if (!user) return;
 
       try {
-        const resolvedClientId = await resolveClientId(user.id);
+        const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
+          supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+          supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+        ]);
+
+        const resolvedClientId = clientData?.id || clientUserData?.client_id;
 
         if (!resolvedClientId) {
           setLoading(false);
@@ -264,7 +269,12 @@ export const ClientProjects: React.FC = () => {
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
-    const resolvedClientId = clientId || await resolveClientId(user.id);
+    const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
+      supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+    ]);
+
+    const resolvedClientId = clientData?.id || clientUserData?.client_id;
 
     if (!resolvedClientId) {
       toast.error('Erro: Cliente não encontrado');
