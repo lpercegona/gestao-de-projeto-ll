@@ -196,34 +196,50 @@ export const ClientProjects: React.FC = () => {
     return [...data.tasks, ...pendingTasks];
   }, [data.tasks, pendingTaskRequests, user?.id]);
 
+  const resolveClientId = async (userId: string) => {
+    const { data: rpcClientId, error: rpcError } = await supabase.rpc('get_user_client_id', {
+      _user_id: userId,
+    });
+
+    if (rpcError) {
+      console.error('Error resolving client id via RPC:', rpcError);
+    }
+
+    if (rpcClientId) return rpcClientId;
+
+    // Fallback para ambientes ainda sem função atualizada
+    const [{ data: client }, { data: clientUser }] = await Promise.all([
+      supabase.from('clients').select('id').eq('user_id', userId).maybeSingle(),
+      supabase.from('client_users').select('client_id').eq('user_id', userId).maybeSingle(),
+    ]);
+
+    return client?.id || clientUser?.client_id || null;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
 
       try {
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
+        const resolvedClientId = await resolveClientId(user.id);
 
-        if (!clientData) {
+        if (!resolvedClientId) {
           setLoading(false);
           return;
         }
 
-        setClientId(clientData.id);
+        setClientId(resolvedClientId);
 
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
             .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
-            .eq('client_id', clientData.id)
+            .eq('client_id', resolvedClientId)
             .order('created_at', { ascending: false }),
           supabase
             .from('edit_requests')
             .select('id, entity_id, status, proposed_data, created_at')
-            .eq('client_id', clientData.id)
+            .eq('client_id', resolvedClientId)
             .eq('entity_type', 'project')
             .in('status', ['pending', 'analyzing', 'in_review'])
             .contains('proposed_data', { request_type: 'new_task' })
@@ -248,21 +264,21 @@ export const ClientProjects: React.FC = () => {
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    const resolvedClientId = clientId || await resolveClientId(user.id);
 
-    if (!clientData) {
+    if (!resolvedClientId) {
       toast.error('Erro: Cliente não encontrado');
       return;
+    }
+
+    if (!clientId) {
+      setClientId(resolvedClientId);
     }
 
     const { data: newRequest, error } = await supabase
       .from('project_requests')
       .insert({
-        client_id: clientData.id,
+        client_id: resolvedClientId,
         title,
         briefing,
         custom_fields: customFields,
