@@ -147,9 +147,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/login`,
       },
     });
+
+    if (
+      error &&
+      typeof error.message === 'string' &&
+      (error.message.includes('Unsupported provider') || error.message.includes('provider is not enabled'))
+    ) {
+      return {
+        error: new Error(
+          'Google Auth não está habilitado no projeto Supabase. Ative em Authentication > Providers > Google e configure Client ID/Secret.',
+        ),
+      };
+    }
+
     return { error: error as Error | null };
   };
 
