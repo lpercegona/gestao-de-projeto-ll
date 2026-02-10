@@ -201,29 +201,30 @@ export const ClientProjects: React.FC = () => {
       if (!user) return;
 
       try {
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
+        const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
+          supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+          supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+        ]);
 
-        if (!clientData) {
+        const resolvedClientId = clientData?.id || clientUserData?.client_id;
+
+        if (!resolvedClientId) {
           setLoading(false);
           return;
         }
 
-        setClientId(clientData.id);
+        setClientId(resolvedClientId);
 
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
-            .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
-            .eq('client_id', clientData.id)
+            .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+            .eq('client_id', resolvedClientId)
             .order('created_at', { ascending: false }),
           supabase
             .from('edit_requests')
             .select('id, entity_id, status, proposed_data, created_at')
-            .eq('client_id', clientData.id)
+            .eq('client_id', resolvedClientId)
             .eq('entity_type', 'project')
             .in('status', ['pending', 'analyzing', 'in_review'])
             .contains('proposed_data', { request_type: 'new_task' })
@@ -248,13 +249,14 @@ export const ClientProjects: React.FC = () => {
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
+      supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+    ]);
 
-    if (!clientData) {
+    const resolvedClientId = clientData?.id || clientUserData?.client_id;
+
+    if (!resolvedClientId) {
       toast.error('Erro: Cliente não encontrado');
       return;
     }
@@ -262,14 +264,13 @@ export const ClientProjects: React.FC = () => {
     const { data: newRequest, error } = await supabase
       .from('project_requests')
       .insert({
-        client_id: clientData.id,
+        client_id: resolvedClientId,
         title,
         briefing,
-        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       })
-      .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
+      .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();
 
     if (error) {
