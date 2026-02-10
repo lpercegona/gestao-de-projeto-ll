@@ -70,19 +70,19 @@ export const Dashboard: React.FC = () => {
       }
 
       try {
-        // Get client_id from client_users
-        const { data: clientUserData } = await supabase
-          .from("client_users")
-          .select("client_id")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        const [{ data: ownerClientData }, { data: clientUserData }] = await Promise.all([
+          supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle(),
+          supabase.from("client_users").select("client_id").eq("user_id", user.id).maybeSingle(),
+        ]);
 
-        if (clientUserData?.client_id) {
+        const resolvedClientId = ownerClientData?.id || clientUserData?.client_id;
+
+        if (resolvedClientId) {
           // Get client info
           const { data: clientData } = await supabase
             .from("clients")
             .select("id, contracted_hours, contract_type, contract_end_date, contract_start_date")
-            .eq("id", clientUserData.client_id)
+            .eq("id", resolvedClientId)
             .single();
 
           if (clientData) {
@@ -99,7 +99,7 @@ export const Dashboard: React.FC = () => {
           const { data: requestsData } = await supabase
             .from("project_requests")
             .select("*")
-            .eq("client_id", clientUserData.client_id)
+            .eq("client_id", resolvedClientId)
             .order("created_at", { ascending: false });
 
           if (requestsData) {
