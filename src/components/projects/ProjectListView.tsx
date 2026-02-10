@@ -191,6 +191,20 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     return status || 'Solicitação';
   };
 
+  const getRequestCardClass = (project: Project) => {
+    if (!project.is_request) return '';
+
+    if (project.request_status === 'pending') {
+      return 'border-amber-300 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-950/20';
+    }
+
+    if (project.request_status === 'analyzing' || project.request_status === 'in_review') {
+      return 'border-blue-300 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-950/20';
+    }
+
+    return '';
+  };
+
   if (projects.length === 0) {
     return (
       <Card>
@@ -212,7 +226,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         const isOpen = openProjects[project.id] ?? false;
 
         return (
-          <Card key={project.id} className="relative overflow-hidden">
+          <Card key={project.id} className={`relative overflow-hidden ${getRequestCardClass(project)}`}>
             {/* Project Header */}
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">

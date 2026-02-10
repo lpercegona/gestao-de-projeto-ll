@@ -534,6 +534,16 @@ export const Projects: React.FC = () => {
 
         if (error) throw error;
 
+        setEditRequests((prev) => prev.map((item) => (
+          item.id === request.id
+            ? {
+                ...item,
+                status: 'approved',
+                admin_notes: request.admin_notes || null,
+              }
+            : item
+        )));
+
         toast.success('Solicitação de edição aprovada!');
         await refreshData();
         return;
@@ -564,6 +574,16 @@ export const Projects: React.FC = () => {
 
       if (error) throw error;
 
+      setRequestProjects((prev) => prev.map((item) => (
+        item.id === request.id
+          ? {
+              ...item,
+              status: 'converted',
+              converted_project_id: createdProject.id,
+            }
+          : item
+      )));
+
       toast.success('Solicitação aprovada e convertida em projeto!');
       await refreshData();
     } catch (error) {
@@ -592,6 +612,16 @@ export const Projects: React.FC = () => {
 
         if (error) throw error;
 
+        setEditRequests((prev) => prev.map((item) => (
+          item.id === request.id
+            ? {
+                ...item,
+                status: 'rejected',
+                admin_notes: request.admin_notes || null,
+              }
+            : item
+        )));
+
         toast.success('Solicitação de edição rejeitada!');
         await refreshData();
         return;
@@ -607,6 +637,15 @@ export const Projects: React.FC = () => {
         .eq('id', request.id);
 
       if (error) throw error;
+
+      setRequestProjects((prev) => prev.map((item) => (
+        item.id === request.id
+          ? {
+              ...item,
+              status: 'rejected',
+            }
+          : item
+      )));
 
       toast.success('Solicitação rejeitada!');
       await refreshData();
