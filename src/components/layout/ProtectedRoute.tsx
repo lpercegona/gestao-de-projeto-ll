@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
-  const { user, loading, roleLoading, isMasterAdmin, isAdmin, isCollaborator, isClient } = useAuth();
+  const { user, loading, roleLoading, userRole, isMasterAdmin, isAdmin, isCollaborator, isClient } = useAuth();
 
   // Show loading while checking authentication
   if (loading || roleLoading) {
@@ -24,6 +24,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user && userRole === null) {
+    return <Navigate to="/first-access" replace />;
   }
 
   // Check role access
