@@ -20,9 +20,10 @@ import { ChevronDown, ChevronRight, Loader2, Share2, RefreshCw, Clock, Download 
 import { differenceInCalendarMonths, format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatHours } from "@/lib/formatHours";
-import { ReportShareDialog, ReportShare } from "@/components/reports/ReportShareDialog";
+import { ReportShare } from "@/components/reports/ReportShareDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
+import { toast } from "sonner";
 
 interface ProjectRequestHistory {
   id: string;
@@ -421,6 +422,51 @@ export const ClientReports: React.FC = () => {
     window.print();
   };
 
+  const handleCopyShareLink = async () => {
+    if (!user || !client) return;
+
+    try {
+      let activeShare = reportShare;
+
+      if (!activeShare) {
+        const { data: createdShare, error: createError } = await supabase
+          .from("report_shares")
+          .insert({
+            client_id: client.id,
+            created_by: user.id,
+            is_public: true,
+            share_password: null,
+          })
+          .select("*")
+          .single();
+
+        if (createError) throw createError;
+        activeShare = createdShare as ReportShare;
+      }
+
+      if (!activeShare.is_public) {
+        const { data: updatedShare, error: updateError } = await supabase
+          .from("report_shares")
+          .update({ is_public: true })
+          .eq("id", activeShare.id)
+          .select("*")
+          .single();
+
+        if (updateError) throw updateError;
+        activeShare = updatedShare as ReportShare;
+      }
+
+      const shareUrl = `${window.location.origin}/report/${activeShare.share_token}`;
+      await navigator.clipboard.writeText(shareUrl);
+      setReportShare(activeShare);
+
+      toast.success("Link de compartilhamento copiado!");
+    } catch (error) {
+      console.error("Erro ao copiar link de compartilhamento:", error);
+      toast.error("Não foi possível copiar o link de compartilhamento.");
+    }
+  };
+
   return (
     <div>
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
@@ -476,18 +522,15 @@ export const ClientReports: React.FC = () => {
               <Download className="w-3.5 h-3.5" />
             </Button>
             {user && (
-              <ReportShareDialog
-                clientId={client.id}
-                clientName={client.company || client.name}
-                userId={user.id}
-                share={reportShare}
-                onShareChange={setReportShare}
-                triggerButton={
-                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
-                    <Share2 className="w-3.5 h-3.5" />
-                  </Button>
-                }
-              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                title="Compartilhar relatório"
+                onClick={handleCopyShareLink}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+              </Button>
             )}
           </div>
         </div>
@@ -528,18 +571,15 @@ export const ClientReports: React.FC = () => {
                 <Download className="w-3.5 h-3.5" />
               </Button>
               {user && (
-                <ReportShareDialog
-                  clientId={client.id}
-                  clientName={client.company || client.name}
-                  userId={user.id}
-                  share={reportShare}
-                  onShareChange={setReportShare}
-                  triggerButton={
-                    <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" title="Compartilhar relatório">
-                      <Share2 className="w-3.5 h-3.5" />
-                    </Button>
-                  }
-                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg"
+                  title="Compartilhar relatório"
+                  onClick={handleCopyShareLink}
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </Button>
               )}
             </div>
           </div>
