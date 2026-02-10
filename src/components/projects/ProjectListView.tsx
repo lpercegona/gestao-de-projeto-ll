@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive, FilePenLine } from "lucide-react";
+import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive, FilePenLine, Check, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +122,10 @@ interface ProjectListViewProps {
   onRequestTaskEdit?: (task: Task) => void;
   onEditRequestCardClick?: (project: Project) => void;
   onPendingTaskClick?: (task: Task) => void;
+  onEditRequest?: (project: Project) => void;
+  onDeleteRequest?: (project: Project) => void;
+  onApproveRequest?: (project: Project) => void;
+  onRejectRequest?: (project: Project) => void;
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
@@ -155,6 +159,10 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onRequestTaskEdit,
   onEditRequestCardClick,
   onPendingTaskClick,
+  onEditRequest,
+  onDeleteRequest,
+  onApproveRequest,
+  onRejectRequest,
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
 
@@ -183,6 +191,20 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     return status || 'Solicitação';
   };
 
+  const getRequestCardClass = (project: Project) => {
+    if (!project.is_request) return '';
+
+    if (project.request_status === 'pending') {
+      return 'border-amber-300 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-950/20';
+    }
+
+    if (project.request_status === 'analyzing' || project.request_status === 'in_review') {
+      return 'border-blue-300 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-950/20';
+    }
+
+    return '';
+  };
+
   if (projects.length === 0) {
     return (
       <Card>
@@ -204,7 +226,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         const isOpen = openProjects[project.id] ?? false;
 
         return (
-          <Card key={project.id} className="relative overflow-hidden">
+          <Card key={project.id} className={`relative overflow-hidden ${getRequestCardClass(project)}`}>
             {/* Project Header */}
             <Collapsible open={isOpen} onOpenChange={() => toggleProject(project.id)}>
               <div className="relative">
@@ -224,7 +246,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                   </div>
                 )}
 
-                {(allowProjectEditOnly || (isAdminOrMaster && !project.is_request)) && (
+                {(allowProjectEditOnly || isAdminOrMaster) && (
                   <div className="absolute top-3 right-3 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -236,12 +258,41 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (project.is_request) {
+                              onEditRequest?.(project);
+                              return;
+                            }
                             onEditProject(project);
                           }}
                         >
                           <Pencil className="w-4 h-4 mr-2" />
-                          {allowProjectEditOnly ? 'Solicitar Edição' : 'Editar'}
+                          {project.is_request ? 'Editar solicitação' : (allowProjectEditOnly ? 'Solicitar Edição' : 'Editar')}
                         </DropdownMenuItem>
+
+                        {project.is_request && isAdminOrMaster && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onApproveRequest?.(project);
+                              }}
+                            >
+                              <Check className="w-4 h-4 mr-2 text-green-600" />
+                              Aceitar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRejectRequest?.(project);
+                              }}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Rejeitar
+                            </DropdownMenuItem>
+                          </>
+                        )}
+
                         {isAdminOrMaster && !allowProjectEditOnly && !project.is_request && (
                           <>
                             <DropdownMenuItem
@@ -264,6 +315,19 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                               Excluir
                             </DropdownMenuItem>
                           </>
+                        )}
+
+                        {project.is_request && (
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteRequest?.(project);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir solicitação
+                          </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>

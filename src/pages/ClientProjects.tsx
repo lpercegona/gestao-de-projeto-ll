@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
@@ -96,6 +97,8 @@ export const ClientProjects: React.FC = () => {
 
   const [taskEditDialogOpen, setTaskEditDialogOpen] = useState(false);
   const [taskEditSubmitting, setTaskEditSubmitting] = useState(false);
+  const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
+  const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
   const [taskEditForm, setTaskEditForm] = useState({
     taskId: '',
     projectId: '',
@@ -201,29 +204,30 @@ export const ClientProjects: React.FC = () => {
       if (!user) return;
 
       try {
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
+        const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
+          supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+          supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+        ]);
 
-        if (!clientData) {
+        const resolvedClientId = clientData?.id || clientUserData?.client_id;
+
+        if (!resolvedClientId) {
           setLoading(false);
           return;
         }
 
-        setClientId(clientData.id);
+        setClientId(resolvedClientId);
 
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
-            .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
-            .eq('client_id', clientData.id)
+            .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+            .eq('client_id', resolvedClientId)
             .order('created_at', { ascending: false }),
           supabase
             .from('edit_requests')
             .select('id, entity_id, status, proposed_data, created_at')
-            .eq('client_id', clientData.id)
+            .eq('client_id', resolvedClientId)
             .eq('entity_type', 'project')
             .in('status', ['pending', 'analyzing', 'in_review'])
             .contains('proposed_data', { request_type: 'new_task' })
@@ -248,13 +252,14 @@ export const ClientProjects: React.FC = () => {
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
 
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
+      supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+    ]);
 
-    if (!clientData) {
+    const resolvedClientId = clientData?.id || clientUserData?.client_id;
+
+    if (!resolvedClientId) {
       toast.error('Erro: Cliente não encontrado');
       return;
     }
@@ -262,14 +267,13 @@ export const ClientProjects: React.FC = () => {
     const { data: newRequest, error } = await supabase
       .from('project_requests')
       .insert({
-        client_id: clientData.id,
+        client_id: resolvedClientId,
         title,
         briefing,
-        custom_fields: customFields,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
       })
-      .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, converted_project_id, created_at, updated_at')
+      .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();
 
     if (error) {
@@ -308,6 +312,24 @@ export const ClientProjects: React.FC = () => {
     }
 
     setEditFormOpen(true);
+  };
+
+  const handleDeleteRequest = async () => {
+    const project = deletingRequest;
+    if (!project || !project.is_request || !project.request_id) return;
+
+    try {
+      const { error } = await supabase.from('project_requests').delete().eq('id', project.request_id);
+      if (error) throw error;
+
+      setRequests((prev) => prev.filter((item) => item.id !== project.request_id));
+      toast.success('Solicitação excluída com sucesso!');
+      setIsDeleteRequestDialogOpen(false);
+      setDeletingRequest(null);
+    } catch (error) {
+      console.error('Error deleting project request:', error);
+      toast.error('Erro ao excluir solicitação');
+    }
   };
 
   const handleOpenTaskRequestDialog = (projectId: string) => {
@@ -484,6 +506,11 @@ export const ClientProjects: React.FC = () => {
           onStopTimer={async () => {}}
           onCompleteTask={async () => {}}
           onRequestTaskEdit={handleOpenTaskEditDialog}
+          onEditRequest={(project) => openEditRequest(project as UnifiedProject)}
+          onDeleteRequest={(project) => {
+            setDeletingRequest(project as UnifiedProject);
+            setIsDeleteRequestDialogOpen(true);
+          }}
         />
       ) : (
         <ProjectKanbanView
@@ -625,6 +652,27 @@ export const ClientProjects: React.FC = () => {
           }}
         />
       )}
+
+      <AlertDialog
+        open={isDeleteRequestDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteRequestDialogOpen(open);
+          if (!open) setDeletingRequest(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir solicitação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove definitivamente a solicitação "{deletingRequest?.name}" do banco de dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRequest}>Excluir solicitação</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

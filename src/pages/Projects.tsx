@@ -72,7 +72,6 @@ interface ProjectRequest {
   client_id: string;
   title: string;
   briefing: string;
-  custom_fields?: Record<string, string> | null;
   status: string;
   desired_deadline?: string | null;
   admin_notes?: string | null;
@@ -143,6 +142,8 @@ export const Projects: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+  const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
+  const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '', description: '', client_id: '', status: 'active', due_date: '', custom_fields: {} as Record<string, string>,
@@ -236,7 +237,7 @@ export const Projects: React.FC = () => {
 
       const { data: requestsData, error } = await supabase
         .from('project_requests')
-        .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -471,6 +472,220 @@ export const Projects: React.FC = () => {
     setIsEditRequestDialogOpen(true);
   };
 
+  const handleQuickApproveRequest = async (project: UnifiedProject) => {
+    if (!project.is_request) return;
+
+    try {
+      if (project.request_kind === 'edit_request') {
+        const request = editRequests.find((item) => item.id === project.edit_request_id);
+        if (!request || request.status !== 'pending') return;
+
+        const proposedData = request.proposed_data || {};
+        if (request.entity_type === 'project' && proposedData.request_type === 'new_task') {
+          const taskName = typeof proposedData.task_name === 'string' ? proposedData.task_name : 'Nova tarefa solicitada';
+          const taskDescription = typeof proposedData.task_description === 'string' ? proposedData.task_description : '';
+          const taskDueDate = typeof proposedData.task_due_date === 'string' ? proposedData.task_due_date : '';
+
+          await createTask({
+            project_id: request.entity_id,
+            name: taskName,
+            description: taskDescription,
+            status: 'pending',
+            due_date: taskDueDate || '',
+          });
+        } else if (request.entity_type === 'project' && proposedData.request_type === 'edit_task') {
+          const taskId = typeof proposedData.task_id === 'string' ? proposedData.task_id : '';
+          if (!taskId) throw new Error('Solicitação de edição de tarefa inválida');
+
+          const taskPatch: Record<string, unknown> = {};
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'task_name')) taskPatch.name = proposedData.task_name as string;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'task_description')) taskPatch.description = proposedData.task_description as string | null;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'task_due_date')) taskPatch.due_date = proposedData.task_due_date as string | null;
+
+          await updateTask(taskId, taskPatch);
+        } else if (request.entity_type === 'project') {
+          const patch: Record<string, unknown> = {};
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'description')) patch.description = proposedData.description as string | null;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'due_date')) patch.due_date = proposedData.due_date as string | null;
+          await updateProject(request.entity_id, patch);
+        } else if (request.entity_type === 'project_request') {
+          const requestPatch: Record<string, unknown> = {};
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'title')) requestPatch.title = proposedData.title as string;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'briefing')) requestPatch.briefing = proposedData.briefing as string;
+          if (Object.prototype.hasOwnProperty.call(proposedData, 'desired_deadline')) requestPatch.desired_deadline = proposedData.desired_deadline as string | null;
+
+          const { error: requestError } = await supabase
+            .from('project_requests')
+            .update(requestPatch)
+            .eq('id', request.entity_id);
+
+          if (requestError) throw requestError;
+        }
+
+        const { error } = await supabase
+          .from('edit_requests')
+          .update({
+            status: 'approved',
+            admin_notes: request.admin_notes || null,
+            processed_by: user?.id || null,
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', request.id);
+
+        if (error) throw error;
+
+        setEditRequests((prev) => prev.map((item) => (
+          item.id === request.id
+            ? {
+                ...item,
+                status: 'approved',
+                admin_notes: request.admin_notes || null,
+              }
+            : item
+        )));
+
+        toast.success('Solicitação de edição aprovada!');
+        await refreshData();
+        return;
+      }
+
+      if (!project.request_id) return;
+      const request = requestProjects.find((item) => item.id === project.request_id);
+      if (!request || request.status !== 'pending') return;
+
+      const createdProject = await createProject({
+        name: request.title,
+        description: request.briefing || '',
+        client_id: request.client_id,
+        status: 'active',
+        due_date: request.desired_deadline || null,
+        custom_fields: {},
+      });
+
+      if (!createdProject?.id) throw new Error('Falha ao criar projeto a partir da solicitação');
+
+      const { error } = await supabase
+        .from('project_requests')
+        .update({
+          status: 'converted',
+          converted_project_id: createdProject.id,
+        })
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      setRequestProjects((prev) => prev.map((item) => (
+        item.id === request.id
+          ? {
+              ...item,
+              status: 'converted',
+              converted_project_id: createdProject.id,
+            }
+          : item
+      )));
+
+      toast.success('Solicitação aprovada e convertida em projeto!');
+      await refreshData();
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast.error('Erro ao aprovar solicitação');
+    }
+  };
+
+  const handleQuickRejectRequest = async (project: UnifiedProject) => {
+    if (!project.is_request) return;
+
+    try {
+      if (project.request_kind === 'edit_request') {
+        const request = editRequests.find((item) => item.id === project.edit_request_id);
+        if (!request || request.status !== 'pending') return;
+
+        const { error } = await supabase
+          .from('edit_requests')
+          .update({
+            status: 'rejected',
+            admin_notes: request.admin_notes || null,
+            processed_by: user?.id || null,
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', request.id);
+
+        if (error) throw error;
+
+        setEditRequests((prev) => prev.map((item) => (
+          item.id === request.id
+            ? {
+                ...item,
+                status: 'rejected',
+                admin_notes: request.admin_notes || null,
+              }
+            : item
+        )));
+
+        toast.success('Solicitação de edição rejeitada!');
+        await refreshData();
+        return;
+      }
+
+      if (!project.request_id) return;
+      const request = requestProjects.find((item) => item.id === project.request_id);
+      if (!request || request.status !== 'pending') return;
+
+      const { error } = await supabase
+        .from('project_requests')
+        .update({ status: 'rejected' })
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      setRequestProjects((prev) => prev.map((item) => (
+        item.id === request.id
+          ? {
+              ...item,
+              status: 'rejected',
+            }
+          : item
+      )));
+
+      toast.success('Solicitação rejeitada!');
+      await refreshData();
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error('Erro ao rejeitar solicitação');
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    const project = deletingRequest;
+    if (!project || !project.is_request) return;
+
+    try {
+      if (project.request_kind === 'edit_request' && project.edit_request_id) {
+        const { error } = await supabase.from('edit_requests').delete().eq('id', project.edit_request_id);
+        if (error) throw error;
+        setEditRequests((prev) => prev.filter((item) => item.id !== project.edit_request_id));
+        toast.success('Solicitação de edição excluída!');
+        await refreshData();
+        setIsDeleteRequestDialogOpen(false);
+        setDeletingRequest(null);
+        return;
+      }
+
+      if (project.request_id) {
+        const { error } = await supabase.from('project_requests').delete().eq('id', project.request_id);
+        if (error) throw error;
+        setRequestProjects((prev) => prev.filter((item) => item.id !== project.request_id));
+        toast.success('Solicitação excluída!');
+        await refreshData();
+        setIsDeleteRequestDialogOpen(false);
+        setDeletingRequest(null);
+      }
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      toast.error('Erro ao excluir solicitação');
+    }
+  };
+
   const handleOpenPendingTaskRequest = (task: Task | PendingApprovalTask) => {
     const requestId = 'pending_request_id' in task ? task.pending_request_id : undefined;
     if (!requestId) return;
@@ -498,7 +713,7 @@ export const Projects: React.FC = () => {
           client_id: selectedRequest.client_id,
           status: 'active',
           due_date: selectedRequest.desired_deadline || null,
-          custom_fields: (selectedRequest.custom_fields as Record<string, string>) || {},
+          custom_fields: {},
         });
 
         if (!createdProject?.id) {
@@ -517,7 +732,7 @@ export const Projects: React.FC = () => {
           converted_project_id: convertedProjectId,
         })
         .eq('id', selectedRequest.id)
-        .select('id, client_id, title, briefing, custom_fields, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
         .single();
 
       if (error) throw error;
@@ -989,6 +1204,20 @@ export const Projects: React.FC = () => {
           onOpenEditRequestReview={(project) => handleOpenEditRequestDialog(project as UnifiedProject)}
           onEditRequestCardClick={(project) => handleOpenEditRequestFromCard(project as UnifiedProject)}
           onPendingTaskClick={(task) => handleOpenPendingTaskRequest(task as Task | PendingApprovalTask)}
+          onEditRequest={(project) => {
+            const unified = project as UnifiedProject;
+            if (unified.request_kind === 'edit_request') {
+              handleOpenEditRequestFromCard(unified);
+              return;
+            }
+            handleOpenRequestDialog(unified);
+          }}
+          onDeleteRequest={(project) => {
+            setDeletingRequest(project as UnifiedProject);
+            setIsDeleteRequestDialogOpen(true);
+          }}
+          onApproveRequest={(project) => handleQuickApproveRequest(project as UnifiedProject)}
+          onRejectRequest={(project) => handleQuickRejectRequest(project as UnifiedProject)}
         />
       ) : (
         <ProjectKanbanView
@@ -1318,6 +1547,27 @@ export const Projects: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Excluir projeto?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita. Isso excluirá permanentemente o projeto "{deletingProject?.name}".</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={isDeleteRequestDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteRequestDialogOpen(open);
+          if (!open) setDeletingRequest(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir solicitação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove definitivamente a solicitação "{deletingRequest?.name}" do banco de dados e ela deixará de aparecer para cliente e admin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRequest}>Excluir solicitação</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
