@@ -142,6 +142,8 @@ export const Projects: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
+  const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
+  const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '', description: '', client_id: '', status: 'active', due_date: '', custom_fields: {} as Record<string, string>,
@@ -614,8 +616,9 @@ export const Projects: React.FC = () => {
     }
   };
 
-  const handleDeleteRequest = async (project: UnifiedProject) => {
-    if (!project.is_request) return;
+  const handleDeleteRequest = async () => {
+    const project = deletingRequest;
+    if (!project || !project.is_request) return;
 
     try {
       if (project.request_kind === 'edit_request' && project.edit_request_id) {
@@ -624,6 +627,8 @@ export const Projects: React.FC = () => {
         setEditRequests((prev) => prev.filter((item) => item.id !== project.edit_request_id));
         toast.success('Solicitação de edição excluída!');
         await refreshData();
+        setIsDeleteRequestDialogOpen(false);
+        setDeletingRequest(null);
         return;
       }
 
@@ -633,6 +638,8 @@ export const Projects: React.FC = () => {
         setRequestProjects((prev) => prev.filter((item) => item.id !== project.request_id));
         toast.success('Solicitação excluída!');
         await refreshData();
+        setIsDeleteRequestDialogOpen(false);
+        setDeletingRequest(null);
       }
     } catch (error) {
       console.error('Error deleting request:', error);
@@ -1166,7 +1173,10 @@ export const Projects: React.FC = () => {
             }
             handleOpenRequestDialog(unified);
           }}
-          onDeleteRequest={(project) => handleDeleteRequest(project as UnifiedProject)}
+          onDeleteRequest={(project) => {
+            setDeletingRequest(project as UnifiedProject);
+            setIsDeleteRequestDialogOpen(true);
+          }}
           onApproveRequest={(project) => handleQuickApproveRequest(project as UnifiedProject)}
           onRejectRequest={(project) => handleQuickRejectRequest(project as UnifiedProject)}
         />
@@ -1498,6 +1508,27 @@ export const Projects: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Excluir projeto?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita. Isso excluirá permanentemente o projeto "{deletingProject?.name}".</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={isDeleteRequestDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteRequestDialogOpen(open);
+          if (!open) setDeletingRequest(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir solicitação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove definitivamente a solicitação "{deletingRequest?.name}" do banco de dados e ela deixará de aparecer para cliente e admin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRequest}>Excluir solicitação</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 

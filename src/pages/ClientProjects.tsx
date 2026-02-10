@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
@@ -96,6 +97,8 @@ export const ClientProjects: React.FC = () => {
 
   const [taskEditDialogOpen, setTaskEditDialogOpen] = useState(false);
   const [taskEditSubmitting, setTaskEditSubmitting] = useState(false);
+  const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
+  const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
   const [taskEditForm, setTaskEditForm] = useState({
     taskId: '',
     projectId: '',
@@ -335,8 +338,9 @@ export const ClientProjects: React.FC = () => {
     setEditFormOpen(true);
   };
 
-  const handleDeleteRequest = async (project: UnifiedProject) => {
-    if (!project.is_request || !project.request_id) return;
+  const handleDeleteRequest = async () => {
+    const project = deletingRequest;
+    if (!project || !project.is_request || !project.request_id) return;
 
     try {
       const { error } = await supabase.from('project_requests').delete().eq('id', project.request_id);
@@ -344,6 +348,8 @@ export const ClientProjects: React.FC = () => {
 
       setRequests((prev) => prev.filter((item) => item.id !== project.request_id));
       toast.success('Solicitação excluída com sucesso!');
+      setIsDeleteRequestDialogOpen(false);
+      setDeletingRequest(null);
     } catch (error) {
       console.error('Error deleting project request:', error);
       toast.error('Erro ao excluir solicitação');
@@ -525,7 +531,10 @@ export const ClientProjects: React.FC = () => {
           onCompleteTask={async () => {}}
           onRequestTaskEdit={handleOpenTaskEditDialog}
           onEditRequest={(project) => openEditRequest(project as UnifiedProject)}
-          onDeleteRequest={(project) => handleDeleteRequest(project as UnifiedProject)}
+          onDeleteRequest={(project) => {
+            setDeletingRequest(project as UnifiedProject);
+            setIsDeleteRequestDialogOpen(true);
+          }}
         />
       ) : (
         <ProjectKanbanView
@@ -667,6 +676,27 @@ export const ClientProjects: React.FC = () => {
           }}
         />
       )}
+
+      <AlertDialog
+        open={isDeleteRequestDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteRequestDialogOpen(open);
+          if (!open) setDeletingRequest(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir solicitação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove definitivamente a solicitação "{deletingRequest?.name}" do banco de dados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRequest}>Excluir solicitação</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
