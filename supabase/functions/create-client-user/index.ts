@@ -1,9 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://esm.sh/zod@3.25.76';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const CreateClientUserSchema = z.object({
+  clientId: z.string().uuid(),
+  email: z.string().trim().email('Invalid email').max(255),
+  fullName: z.string().trim().max(255).optional(),
+  password: z.string().min(6).max(128).optional(),
+  isPrimary: z.boolean().optional(),
+});
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -54,16 +63,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const { clientId, email, fullName, password, isPrimary } = await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const validated = CreateClientUserSchema.safeParse(rawBody);
 
-    if (!clientId || !email) {
+    if (!validated.success) {
       return new Response(
-        JSON.stringify({ error: 'Client ID and email are required' }),
+        JSON.stringify({ error: 'Invalid input', details: validated.error.flatten().fieldErrors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
+    const { clientId, email, fullName, password, isPrimary } = validated.data;
     const setAsPrimary = isPrimary !== false; // default to true for backwards compatibility
 
     // Create admin client to create user without affecting current session
@@ -234,9 +245,8 @@ Deno.serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Error in create-client-user function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
