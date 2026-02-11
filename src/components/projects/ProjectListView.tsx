@@ -350,14 +350,14 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                     onRequestCardClick(project);
                   }
                 }}>
-                  <CardContent className="p-4 sm:p-6 pr-24 cursor-pointer hover:bg-muted/30 transition-colors">
-                    <div className="flex items-start gap-3">
+                  <CardContent className="p-4 sm:p-6 pr-16 sm:pr-20 cursor-pointer hover:bg-muted/30 transition-colors">
+                    <div className="flex items-start gap-2">
                       <ChevronDown
-                        className={`w-5 h-5 mt-0.5 text-muted-foreground transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                        className={`w-4 h-4 mt-1 text-muted-foreground transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                          <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
+                          <h3 className="font-semibold text-base sm:text-[1.05rem] text-foreground">{project.name}</h3>
                           {project.is_request && <Badge variant="secondary">{project.request_label || 'Solicitação'}</Badge>}
                           <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>
                             {project.is_request ? getRequestStatusLabel(project.request_status) : getStatusLabel(project.status)}
@@ -372,7 +372,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         {project.description && (
                           <ExpandableDescription
                             content={project.description}
-                            className="mb-2 text-sm text-muted-foreground"
+                            className="mb-2 w-full max-w-none text-sm text-muted-foreground"
                             stopPropagationOnToggle
                           />
                         )}
