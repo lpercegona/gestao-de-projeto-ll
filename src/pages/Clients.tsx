@@ -56,7 +56,7 @@ interface Client {
   name: string;
   email: string;
   contracted_hours: number;
-  access_token: string;
+  access_token?: string;
   pipeline_status?: string;
   company?: string | null;
   phone?: string | null;
