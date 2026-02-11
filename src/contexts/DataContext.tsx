@@ -74,6 +74,8 @@ interface TaskTimer {
   task_id: string;
   user_id: string;
   started_at: string;
+  paused_at: string | null;
+  paused_elapsed_seconds: number | null;
   created_at: string;
 }
 
@@ -254,6 +256,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  // Keep task timers synced across devices/sessions
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`task-timers-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'task_timers',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          refreshData(false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, refreshData]);
 
   // Get creator name from user ID
   const getCreatorName = (userId: string | null): string => {
