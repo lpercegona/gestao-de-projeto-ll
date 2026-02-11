@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { lovable } from '@/integrations/lovable/index';
 
 type AppRole = 'master_admin' | 'admin' | 'collaborator' | 'client';
 
@@ -144,26 +145,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/login`,
-      },
+    const result = await lovable.auth.signInWithOAuth('google', {
+      redirect_uri: window.location.origin,
     });
 
-    if (
-      error &&
-      typeof error.message === 'string' &&
-      (error.message.includes('Unsupported provider') || error.message.includes('provider is not enabled'))
-    ) {
-      return {
-        error: new Error(
-          'Google Auth não está habilitado no projeto Supabase. Ative em Authentication > Providers > Google e configure Client ID/Secret.',
-        ),
-      };
+    if (result.error) {
+      return { error: result.error };
     }
 
-    return { error: error as Error | null };
+    return { error: null };
   };
 
   const isMasterAdmin = userRole === 'master_admin';
