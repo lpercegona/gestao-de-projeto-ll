@@ -33,7 +33,7 @@ interface GlobalTimerContextType {
   setShowCompleteDialog: (show: boolean) => void;
   getElapsedHours: () => number;
   resetTimer: () => void;
-  syncWithTaskTimer: (taskId: string, startedAt: string) => void;
+  syncWithTaskTimer: (taskId: string, startedAt: string, pausedAt?: string | null, pausedElapsedSeconds?: number) => void;
   wasPausedBeforeComplete: boolean;
 }
 
@@ -277,14 +277,24 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return Math.max(0.25, Math.round(hours * 4) / 4);
   }, [timerState.elapsedSeconds]);
 
-  const syncWithTaskTimer = useCallback((taskId: string, startedAt: string) => {
-    const startTime = new Date(startedAt).getTime();
+  const syncWithTaskTimer = useCallback((
+    taskId: string,
+    startedAt: string,
+    pausedAt: string | null = null,
+    pausedElapsedSeconds = 0,
+  ) => {
+    const isPaused = !!pausedAt;
+    const startTime = isPaused ? null : new Date(startedAt).getTime();
+    const elapsedSeconds = isPaused
+      ? pausedElapsedSeconds
+      : Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000) + pausedElapsedSeconds;
+
     const newState: GlobalTimerState = {
       isRunning: true,
-      isPaused: false,
-      elapsedSeconds: Math.floor((Date.now() - startTime) / 1000),
+      isPaused,
+      elapsedSeconds,
       startTime,
-      pausedElapsed: 0,
+      pausedElapsed: pausedElapsedSeconds,
       taskId,
     };
     setTimerState(newState);
