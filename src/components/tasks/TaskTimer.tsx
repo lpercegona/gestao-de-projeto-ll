@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 interface TaskTimerProps {
   taskId: string;
   taskStatus: string;
-  activeTimer: { id: string; started_at: string } | null;
+  activeTimer: { id: string; started_at: string; paused_at?: string | null; paused_elapsed_seconds?: number | null } | null;
   onStart: () => Promise<void>;
   onStop: () => Promise<void>;
   onComplete: () => Promise<void>;
@@ -49,11 +49,17 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
       return;
     }
 
+    if (activeTimer.paused_at) {
+      setElapsedSeconds(activeTimer.paused_elapsed_seconds ?? 0);
+      return;
+    }
+
     const startTime = new Date(activeTimer.started_at).getTime();
-    
+    const pausedElapsed = activeTimer.paused_elapsed_seconds ?? 0;
+
     const updateElapsed = () => {
       const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
+      const elapsed = Math.floor((now - startTime) / 1000) + pausedElapsed;
       setElapsedSeconds(elapsed);
     };
 
@@ -66,7 +72,12 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   // Sync with global timer when this task has an active timer
   useEffect(() => {
     if (activeTimer && timerState.taskId !== taskId) {
-      syncWithTaskTimer(taskId, activeTimer.started_at);
+      syncWithTaskTimer(
+        taskId,
+        activeTimer.started_at,
+        activeTimer.paused_at ?? null,
+        activeTimer.paused_elapsed_seconds ?? 0
+      );
     }
   }, [activeTimer, taskId, syncWithTaskTimer, timerState.taskId]);
 
