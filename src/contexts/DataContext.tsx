@@ -74,6 +74,8 @@ interface TaskTimer {
   task_id: string;
   user_id: string;
   started_at: string;
+  paused_at: string | null;
+  paused_elapsed_seconds: number;
   created_at: string;
 }
 
@@ -150,6 +152,8 @@ interface DataContextType {
   revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
   // Task Timer
   startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
+  pauseTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
+  resumeTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
   stopTaskTimer: (taskId: string, description?: string, entryType?: 'task' | 'meeting') => Promise<{ hours: number } | null>;
   cancelTaskTimer: (taskId: string) => Promise<boolean>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
@@ -241,7 +245,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })) as TimeEntry[],
         projectColumns: (columnsRes.data || []) as ProjectColumn[],
         projectAccess: (accessRes.data || []) as UserProjectAccess[],
-        taskTimers: (timersRes.data || []) as TaskTimer[],
+        taskTimers: (timersRes.data || []).map(timer => ({
+          ...timer,
+          paused_at: (timer as any).paused_at || null,
+          paused_elapsed_seconds: Number((timer as any).paused_elapsed_seconds || 0),
+        })) as TaskTimer[],
         kanbanStages: getEffectiveKanbanStages(allStages, user.id),
       });
     } catch (error) {
@@ -254,6 +262,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`task-timers-changes-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'task_timers',
+        },
+        (payload) => {
+          setData(prev => {
+            if (payload.eventType === 'DELETE') {
+              const deletedId = payload.old.id as string;
+              return {
+                ...prev,
+                taskTimers: prev.taskTimers.filter(timer => timer.id !== deletedId),
+              };
+            }
+
+            const nextTimer = {
+              ...(payload.new as TaskTimer),
+              paused_at: (payload.new as any).paused_at || null,
+              paused_elapsed_seconds: Number((payload.new as any).paused_elapsed_seconds || 0),
+            } as TaskTimer;
+            const withoutCurrent = prev.taskTimers.filter(timer => timer.id !== nextTimer.id);
+
+            return {
+              ...prev,
+              taskTimers: [...withoutCurrent, nextTimer],
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Get creator name from user ID
   const getCreatorName = (userId: string | null): string => {
@@ -675,11 +726,75 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Update local state immediately
+    const normalizedTimer = {
+      ...(timer as TaskTimer),
+      paused_at: (timer as any).paused_at || null,
+      paused_elapsed_seconds: Number((timer as any).paused_elapsed_seconds || 0),
+    } as TaskTimer;
+
     setData(prev => ({
       ...prev,
-      taskTimers: [...prev.taskTimers, timer as TaskTimer],
+      taskTimers: [...prev.taskTimers, normalizedTimer],
     }));
-    return timer as TaskTimer;
+    return normalizedTimer;
+  };
+
+  const pauseTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer || timer.paused_at) return timer || null;
+
+    const elapsedSeconds = Math.floor(
+      (Date.now() - new Date(timer.started_at).getTime()) / 1000
+    ) + (timer.paused_elapsed_seconds || 0);
+
+    const { data: updatedTimer, error } = await supabase
+      .from('task_timers')
+      .update({
+        paused_at: new Date().toISOString(),
+        paused_elapsed_seconds: elapsedSeconds,
+      })
+      .eq('id', timer.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error pausing timer:', error);
+      return null;
+    }
+
+    setData(prev => ({
+      ...prev,
+      taskTimers: prev.taskTimers.map(t => t.id === timer.id ? { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } : t),
+    }));
+
+    return { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } as TaskTimer;
+  };
+
+  const resumeTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer || !timer.paused_at) return timer || null;
+
+    const { data: updatedTimer, error } = await supabase
+      .from('task_timers')
+      .update({
+        started_at: new Date().toISOString(),
+        paused_at: null,
+      })
+      .eq('id', timer.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error resuming timer:', error);
+      return null;
+    }
+
+    setData(prev => ({
+      ...prev,
+      taskTimers: prev.taskTimers.map(t => t.id === timer.id ? { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } : t),
+    }));
+
+    return { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } as TaskTimer;
   };
 
   const stopTaskTimer = async (taskId: string, description?: string, entryType: 'task' | 'meeting' = 'task'): Promise<{ hours: number } | null> => {
@@ -689,9 +804,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!timer) return null;
 
     // Calculate elapsed time
-    const startTime = new Date(timer.started_at).getTime();
-    const now = Date.now();
-    const elapsedMs = now - startTime;
+    const pausedElapsedMs = (timer.paused_elapsed_seconds || 0) * 1000;
+    const elapsedMs = timer.paused_at
+      ? pausedElapsedMs
+      : pausedElapsedMs + (Date.now() - new Date(timer.started_at).getTime());
     const elapsedHours = elapsedMs / (1000 * 60 * 60);
     
     // Round to nearest 0.25 hours (15 minutes)
@@ -916,6 +1032,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         grantProjectAccess,
         revokeProjectAccess,
         startTaskTimer,
+        pauseTaskTimer,
+        resumeTaskTimer,
         stopTaskTimer,
         cancelTaskTimer,
         getActiveTimer,

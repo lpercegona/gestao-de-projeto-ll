@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 interface TaskTimerProps {
   taskId: string;
   taskStatus: string;
-  activeTimer: { id: string; started_at: string } | null;
+  activeTimer: { id: string; started_at: string; paused_at: string | null; paused_elapsed_seconds: number } | null;
   onStart: () => Promise<void>;
   onStop: () => Promise<void>;
   onComplete: () => Promise<void>;
@@ -49,11 +49,17 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
       return;
     }
 
+    if (activeTimer.paused_at) {
+      setElapsedSeconds(activeTimer.paused_elapsed_seconds || 0);
+      return;
+    }
+
     const startTime = new Date(activeTimer.started_at).getTime();
-    
+    const pausedElapsed = activeTimer.paused_elapsed_seconds || 0;
+
     const updateElapsed = () => {
       const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
+      const elapsed = Math.floor((now - startTime) / 1000) + pausedElapsed;
       setElapsedSeconds(elapsed);
     };
 
@@ -66,7 +72,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   // Sync with global timer when this task has an active timer
   useEffect(() => {
     if (activeTimer && timerState.taskId !== taskId) {
-      syncWithTaskTimer(taskId, activeTimer.started_at);
+      syncWithTaskTimer(taskId, activeTimer.started_at, activeTimer.paused_at, activeTimer.paused_elapsed_seconds || 0);
     }
   }, [activeTimer, taskId, syncWithTaskTimer, timerState.taskId]);
 
@@ -116,7 +122,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   const isTimerActive = !!activeTimer;
   const isThisTaskTimer = timerState.taskId === taskId;
-  const isPaused = isThisTaskTimer && timerState.isPaused;
+  const isPaused = !!activeTimer?.paused_at || (isThisTaskTimer && timerState.isPaused);
   const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isPaused;
   const showTimerControls = isTimerActive || isPaused;
   const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isPaused;
@@ -125,7 +131,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const anotherTimerRunning = hasActiveTimer && timerState.taskId !== taskId && !isTimerActive;
 
   // Get display time - use global timer elapsed if paused, otherwise local elapsed
-  const displayTime = isPaused ? timerState.elapsedSeconds : elapsedSeconds;
+  const displayTime = isPaused
+    ? (activeTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
+    : elapsedSeconds;
 
   return (
     <div className="flex items-center gap-1 sm:gap-2">
