@@ -1288,6 +1288,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_report_password: { Args: { p_password: string }; Returns: string }
       is_admin_or_master: { Args: { check_user_id: string }; Returns: boolean }
       is_collaborator: { Args: { check_user_id: string }; Returns: boolean }
       is_master_admin: { Args: { check_user_id: string }; Returns: boolean }

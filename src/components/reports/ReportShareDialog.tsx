@@ -73,13 +73,19 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
     
     setShareLoading(true);
     try {
+      // Hash the password server-side before storing
+      const { data: hashedPassword, error: hashError } = await supabase.rpc('hash_report_password', {
+        p_password: password
+      });
+      if (hashError) throw hashError;
+
       const { data: shareData, error } = await supabase
         .from('report_shares')
         .insert({
           client_id: clientId,
           created_by: userId,
           is_public: false,
-          share_password: password
+          share_password: hashedPassword
         })
         .select()
         .single();
@@ -105,9 +111,15 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
     
     setShareLoading(true);
     try {
+      // Hash the password server-side before storing
+      const { data: hashedPassword, error: hashError } = await supabase.rpc('hash_report_password', {
+        p_password: newPassword
+      });
+      if (hashError) throw hashError;
+
       const { data: updatedShare, error } = await supabase
         .from('report_shares')
-        .update({ share_password: newPassword })
+        .update({ share_password: hashedPassword })
         .eq('id', share.id)
         .select()
         .single();
