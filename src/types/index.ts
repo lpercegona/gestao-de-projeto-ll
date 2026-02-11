@@ -3,7 +3,7 @@ export interface Client {
   name: string;
   email: string;
   contracted_hours: number;
-  access_token: string;
+  access_token?: string;
   user_id: string | null;
   created_at: string;
   contract_type: 'one_time' | 'monthly';

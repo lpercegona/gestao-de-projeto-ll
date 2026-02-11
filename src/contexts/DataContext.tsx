@@ -8,7 +8,7 @@ interface Client {
   name: string;
   email: string;
   contracted_hours: number;
-  access_token: string;
+  access_token?: string;
   user_id: string | null;
   owner_id: string | null;
   created_by: string | null;
@@ -195,7 +195,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Fetch all data in parallel
       const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes] = await Promise.all([
-        supabase.from('clients').select('*').order('created_at', { ascending: false }),
+        supabase.from('clients').select('id, name, email, contracted_hours, user_id, owner_id, created_by, created_at, pipeline_status, company, phone, source, notes, converted_at, contract_type, contract_start_date, contract_end_date, contract_months, updated_at, password_set, logo_url').order('created_at', { ascending: false }),
         supabase.from('projects').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
         supabase.from('time_entries').select('*').order('created_at', { ascending: false }),
