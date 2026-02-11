@@ -1,11 +1,26 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://esm.sh/zod@3.25.76';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type UsageType = 'provider' | 'client';
+const OnboardingSchema = z.object({
+  usageType: z.enum(['provider', 'client']),
+  companyName: z.string().trim().min(1).max(255).optional(),
+  responsibleEmail: z.string().trim().email().max(255).optional(),
+  responsibleName: z.string().trim().max(255).optional(),
+  appOrigin: z.string().trim().url().max(500).optional(),
+}).refine(
+  (data) => {
+    if (data.usageType === 'client') {
+      return !!data.companyName && !!data.responsibleEmail;
+    }
+    return true;
+  },
+  { message: 'companyName and responsibleEmail are required for client usage type' }
+);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -46,19 +61,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const usageType = body.usageType as UsageType | undefined;
-    const companyName = (body.companyName as string | undefined)?.trim();
-    const responsibleEmail = (body.responsibleEmail as string | undefined)?.trim().toLowerCase();
-    const responsibleName = (body.responsibleName as string | undefined)?.trim();
-    const appOrigin = (body.appOrigin as string | undefined)?.trim() || undefined;
+    const rawBody = await req.json();
+    const validated = OnboardingSchema.safeParse(rawBody);
 
-    if (!usageType || !['provider', 'client'].includes(usageType)) {
-      return new Response(JSON.stringify({ error: 'usageType inválido' }), {
+    if (!validated.success) {
+      return new Response(JSON.stringify({ error: 'Invalid input', details: validated.error.flatten().fieldErrors }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const { usageType, companyName, responsibleEmail, responsibleName, appOrigin } = validated.data;
 
     if (usageType === 'provider') {
       const { data: existingProviderRole } = await supabaseAdmin
@@ -83,18 +96,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!companyName || !responsibleEmail) {
-      return new Response(JSON.stringify({ error: 'companyName e responsibleEmail são obrigatórios' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    // usageType === 'client' - companyName and responsibleEmail guaranteed by schema
     const { data: existingClient } = await supabaseAdmin
       .from('clients')
       .select('id')
       .eq('owner_id', callingUser.id)
-      .eq('name', companyName)
+      .eq('name', companyName!)
       .maybeSingle();
 
     if (existingClient) {
@@ -123,9 +130,9 @@ Deno.serve(async (req) => {
     const { data: createdClient, error: createClientError } = await supabaseAdmin
       .from('clients')
       .insert({
-        name: companyName,
-        company: companyName,
-        email: responsibleEmail,
+        name: companyName!,
+        company: companyName!,
+        email: responsibleEmail!,
         owner_id: callingUser.id,
         created_by: callingUser.id,
         user_id: callingUser.id,
@@ -149,12 +156,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const existingResponsible = usersList.users.find((u) => u.email?.toLowerCase() === responsibleEmail);
+    const existingResponsible = usersList.users.find((u) => u.email?.toLowerCase() === responsibleEmail!);
 
     let responsibleUserId: string | null = existingResponsible?.id ?? null;
 
     if (!responsibleUserId) {
-      const { data: invitedData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(responsibleEmail, {
+      const { data: invitedData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(responsibleEmail!, {
         redirectTo: appOrigin ? `${appOrigin}/login` : undefined,
         data: {
           full_name: responsibleName || null,
@@ -222,8 +229,7 @@ Deno.serve(async (req) => {
     );
   } catch (error: unknown) {
     console.error('Error in complete-onboarding function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

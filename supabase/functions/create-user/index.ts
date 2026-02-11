@@ -1,9 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://esm.sh/zod@3.25.76';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const CreateUserSchema = z.object({
+  email: z.string().trim().email('Invalid email').max(255),
+  password: z.string().min(6).max(128),
+  fullName: z.string().trim().max(255).optional(),
+  role: z.enum(['admin', 'client', 'collaborator', 'none']),
+  clientId: z.string().uuid().optional(),
+});
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -54,15 +63,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const { email, password, fullName, role, clientId } = await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const validated = CreateUserSchema.safeParse(rawBody);
 
-    if (!email || !password) {
+    if (!validated.success) {
       return new Response(
-        JSON.stringify({ error: 'Email and password are required' }),
+        JSON.stringify({ error: 'Invalid input', details: validated.error.flatten().fieldErrors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { email, password, fullName, role, clientId } = validated.data;
 
     // If role is client, clientId is required
     if (role === 'client' && !clientId) {
@@ -191,9 +203,8 @@ Deno.serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Error in create-user function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
