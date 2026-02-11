@@ -924,8 +924,6 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          paused_at: string | null
-          paused_elapsed_seconds: number
           started_at: string
           task_id: string
           user_id: string
@@ -933,8 +931,6 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          paused_at?: string | null
-          paused_elapsed_seconds?: number
           started_at?: string
           task_id: string
           user_id: string
@@ -942,8 +938,6 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          paused_at?: string | null
-          paused_elapsed_seconds?: number
           started_at?: string
           task_id?: string
           user_id?: string
