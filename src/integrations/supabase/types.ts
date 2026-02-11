@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_hours_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_users: {
@@ -83,6 +90,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
             referencedColumns: ["id"]
           },
         ]
@@ -330,6 +344,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
@@ -533,6 +554,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "project_columns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
         ]
       }
       project_requests: {
@@ -581,6 +609,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
             referencedColumns: ["id"]
           },
           {
@@ -638,6 +673,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
             referencedColumns: ["id"]
           },
         ]
@@ -815,6 +857,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "proposals_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -860,6 +909,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: true
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients_limited"
             referencedColumns: ["id"]
           },
         ]
@@ -1090,7 +1146,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      clients_limited: {
+        Row: {
+          company: string | null
+          contract_end_date: string | null
+          contract_months: number | null
+          contract_start_date: string | null
+          contract_type: string | null
+          contracted_hours: number | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          logo_url: string | null
+          name: string | null
+          owner_id: string | null
+          pipeline_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company?: string | null
+          contract_end_date?: string | null
+          contract_months?: number | null
+          contract_start_date?: string | null
+          contract_type?: string | null
+          contracted_hours?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          owner_id?: string | null
+          pipeline_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company?: string | null
+          contract_end_date?: string | null
+          contract_months?: number | null
+          contract_start_date?: string | null
+          contract_type?: string | null
+          contracted_hours?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          owner_id?: string | null
+          pipeline_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_project: {
