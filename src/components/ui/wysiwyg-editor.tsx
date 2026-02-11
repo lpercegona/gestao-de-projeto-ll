@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -227,10 +228,12 @@ export const WysiwygContent: React.FC<{ content: string; className?: string }> =
   // Process content to ensure proper HTML rendering
   const processedContent = useMemo(() => {
     if (!content) return '';
-    // Check if content already contains HTML tags
     const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
-    // If plain text, wrap in <p> for consistent rendering
-    return hasHtmlTags ? content : `<p>${content}</p>`;
+    const rawHtml = hasHtmlTags ? content : `<p>${content}</p>`;
+    return DOMPurify.sanitize(rawHtml, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'a', 'span'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+    });
   }, [content]);
 
   if (!content) return null;
