@@ -182,18 +182,18 @@ export const SharedReport: React.FC = () => {
           return;
         }
 
-        const clientData = reportData[0] as Record<string, unknown>;
+        const clientData = reportData[0] as any;
         setClientInfo({
-          client_id: clientData.client_id,
-          client_name: clientData.client_name,
-          client_company: clientData.client_company || null,
-          client_logo_url: clientData.client_logo_url || null,
-          contracted_hours: clientData.contracted_hours,
-          contract_type: clientData.contract_type || "one_time",
-          contract_start_date: clientData.contract_start_date || null,
-          contract_end_date: clientData.contract_end_date || null,
-          contract_months: clientData.contract_months || 1,
-          is_public: clientData.is_public,
+          client_id: clientData.client_id as string,
+          client_name: clientData.client_name as string,
+          client_company: (clientData.client_company as string) || null,
+          client_logo_url: (clientData.client_logo_url as string) || null,
+          contracted_hours: clientData.contracted_hours as number,
+          contract_type: (clientData.contract_type as "monthly" | "one_time") || "one_time",
+          contract_start_date: (clientData.contract_start_date as string) || null,
+          contract_end_date: (clientData.contract_end_date as string) || null,
+          contract_months: (clientData.contract_months as number) || 1,
+          is_public: clientData.is_public as boolean,
         });
 
         const [projectsResult, columnsResult, tasksResult, entriesResult, requestsResult] =
@@ -202,71 +202,69 @@ export const SharedReport: React.FC = () => {
             supabase.rpc("get_shared_report_project_columns", { p_token: token }),
             supabase.rpc("get_shared_report_tasks", { p_token: token }),
             supabase.rpc("get_shared_report_time_entries", { p_token: token }),
-            supabase.rpc("get_shared_report_requests", { p_token: token }),
+            supabase.rpc("get_shared_report_requests" as any, { p_token: token }),
           ]);
 
         const projectsData = projectsResult.status === "fulfilled" ? projectsResult.value.data : [];
         const columnsData = columnsResult.status === "fulfilled" ? columnsResult.value.data : [];
         const tasksData = tasksResult.status === "fulfilled" ? tasksResult.value.data : [];
         const entriesData = entriesResult.status === "fulfilled" ? entriesResult.value.data : [];
-        const requestsData = requestsResult.status === "fulfilled" ? requestsResult.value.data : [];
+        const requestsData = requestsResult.status === "fulfilled" ? (requestsResult.value as any).data : [];
 
         setProjects(
-          (projectsData || []).map((projectRow) => {
-            const p = projectRow as Record<string, unknown>;
-            return ({
-            id: p.project_id,
-            name: p.project_name,
-            status: p.project_status,
+          (projectsData || []).map((p: any) => ({
+            id: p.project_id as string,
+            name: p.project_name as string,
+            status: p.project_status as string,
             custom_fields: (p.custom_fields as Record<string, string> | null) || {},
-          });
-          }),
+          })),
         );
 
         setProjectColumns(
-          (columnsData || []).map((columnRow) => {
-            const c = columnRow as Record<string, unknown>;
-            return ({
-            id: c.column_id,
-            name: c.column_name,
-            type: c.column_type,
-            options: c.column_options,
-          });
-          }),
+          (columnsData || []).map((c: any) => ({
+            id: c.column_id as string,
+            name: c.column_name as string,
+            type: c.column_type as string,
+            options: c.column_options as string[] | null,
+          })),
         );
 
         setTasks(
-          (tasksData || []).map((taskRow) => {
-            const t = taskRow as Record<string, unknown>;
-            return ({
-            id: t.task_id,
-            name: t.task_name,
-            description: t.task_description,
-            project_id: t.project_id,
-          });
-          }),
+          (tasksData || []).map((t: any) => ({
+            id: t.task_id as string,
+            name: t.task_name as string,
+            description: t.task_description as string,
+            project_id: t.project_id as string,
+          })),
         );
 
         setTimeEntries(
-          (entriesData || []).map((entryRow) => {
-            const e = entryRow as Record<string, unknown>;
-            return ({
-            id: e.entry_id,
-            task_id: e.task_id,
+          (entriesData || []).map((e: any) => ({
+            id: e.entry_id as string,
+            task_id: e.task_id as string,
             hours: Number(e.hours),
-            date: e.entry_date,
-            entry_type: e.entry_type,
-            description: e.entry_description,
-          });
-          }),
+            date: e.entry_date as string,
+            entry_type: e.entry_type as string,
+            description: e.entry_description as string,
+          })),
         );
 
-        if (requestsResult.status === "rejected" || (requestsResult.status === "fulfilled" && requestsResult.value.error)) {
-          console.error("Error fetching shared report requests:", requestsResult.status === "rejected" ? requestsResult.reason : requestsResult.value.error);
+        if (requestsResult.status === "rejected" || (requestsResult.status === "fulfilled" && (requestsResult.value as any).error)) {
+          console.error("Error fetching shared report requests:", requestsResult.status === "rejected" ? requestsResult.reason : (requestsResult.value as any).error);
         }
 
         setRequests(
-          ((requestsData || []) as SharedRequestItem[]).sort(
+          ((requestsData || []) as any[]).map((r: any) => ({
+            request_id: r.request_id as string,
+            request_type: r.request_type as string,
+            title: r.title as string,
+            description: r.description as string,
+            status: r.status as string,
+            created_at: r.created_at as string,
+            updated_at: r.updated_at as string,
+            deadline: r.deadline as string | null,
+            admin_notes: r.admin_notes as string | null,
+          })).sort(
             (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
           ),
         );

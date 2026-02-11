@@ -1245,6 +1245,20 @@ export type Database = {
           project_status: string
         }[]
       }
+      get_shared_report_requests: {
+        Args: { p_token: string }
+        Returns: {
+          admin_notes: string
+          created_at: string
+          deadline: string
+          description: string
+          request_id: string
+          request_type: string
+          status: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_shared_report_tasks: {
         Args: { p_token: string }
         Returns: {
