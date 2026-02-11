@@ -1039,12 +1039,8 @@ export const Projects: React.FC = () => {
 
   // Timer handlers
   const handleStartTimer = async (taskId: string) => {
-    const timer = await startTaskTimer(taskId);
-    if (timer) {
-      toast.success('Timer iniciado!');
-    } else {
-      toast.error('Não foi possível iniciar o timer.');
-    }
+    await startTaskTimer(taskId);
+    toast.success('Timer iniciado!');
   };
 
   const handleStopTimer = async (taskId: string) => {

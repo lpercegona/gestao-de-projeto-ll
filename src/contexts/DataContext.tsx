@@ -245,11 +245,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })) as TimeEntry[],
         projectColumns: (columnsRes.data || []) as ProjectColumn[],
         projectAccess: (accessRes.data || []) as UserProjectAccess[],
-        taskTimers: (timersRes.data || []).map(timer => ({
-          ...timer,
-          paused_at: (timer as any).paused_at || null,
-          paused_elapsed_seconds: Number((timer as any).paused_elapsed_seconds || 0),
-        })) as TaskTimer[],
+        taskTimers: (timersRes.data || []) as TaskTimer[],
         kanbanStages: getEffectiveKanbanStages(allStages, user.id),
       });
     } catch (error) {
@@ -285,11 +281,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               };
             }
 
-            const nextTimer = {
-              ...(payload.new as TaskTimer),
-              paused_at: (payload.new as any).paused_at || null,
-              paused_elapsed_seconds: Number((payload.new as any).paused_elapsed_seconds || 0),
-            } as TaskTimer;
+            const nextTimer = payload.new as TaskTimer;
             const withoutCurrent = prev.taskTimers.filter(timer => timer.id !== nextTimer.id);
 
             return {
@@ -728,75 +720,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Update local state immediately
-    const normalizedTimer = {
-      ...(timer as TaskTimer),
-      paused_at: (timer as any).paused_at || null,
-      paused_elapsed_seconds: Number((timer as any).paused_elapsed_seconds || 0),
-    } as TaskTimer;
-
     setData(prev => ({
       ...prev,
-      taskTimers: [...prev.taskTimers, normalizedTimer],
+      taskTimers: [...prev.taskTimers, timer as TaskTimer],
     }));
-    return normalizedTimer;
-  };
-
-  const pauseTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
-    const timer = data.taskTimers.find(t => t.task_id === taskId);
-    if (!timer || timer.paused_at) return timer || null;
-
-    const elapsedSeconds = Math.floor(
-      (Date.now() - new Date(timer.started_at).getTime()) / 1000
-    ) + (timer.paused_elapsed_seconds || 0);
-
-    const { data: updatedTimer, error } = await supabase
-      .from('task_timers')
-      .update({
-        paused_at: new Date().toISOString(),
-        paused_elapsed_seconds: elapsedSeconds,
-      })
-      .eq('id', timer.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error pausing timer:', error);
-      return null;
-    }
-
-    setData(prev => ({
-      ...prev,
-      taskTimers: prev.taskTimers.map(t => t.id === timer.id ? { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } : t),
-    }));
-
-    return { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } as TaskTimer;
-  };
-
-  const resumeTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
-    const timer = data.taskTimers.find(t => t.task_id === taskId);
-    if (!timer || !timer.paused_at) return timer || null;
-
-    const { data: updatedTimer, error } = await supabase
-      .from('task_timers')
-      .update({
-        started_at: new Date().toISOString(),
-        paused_at: null,
-      })
-      .eq('id', timer.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error resuming timer:', error);
-      return null;
-    }
-
-    setData(prev => ({
-      ...prev,
-      taskTimers: prev.taskTimers.map(t => t.id === timer.id ? { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } : t),
-    }));
-
-    return { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } as TaskTimer;
+    return timer as TaskTimer;
   };
 
   const pauseTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
