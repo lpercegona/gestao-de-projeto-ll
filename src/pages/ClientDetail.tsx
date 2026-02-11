@@ -1250,7 +1250,10 @@ export const ClientDetail: React.FC = () => {
               onDeleteTask={(task) => navigate(`/projects/${task.project_id}`)}
               onRegisterTime={(taskId) => navigateToTaskProject(taskId, 'registrar horas')}
               onStartTimer={async (taskId) => {
-                await startTaskTimer(taskId);
+                const timer = await startTaskTimer(taskId);
+                if (!timer) {
+                  toast.error('Não foi possível iniciar o timer.');
+                }
               }}
               onStopTimer={async (taskId) => {
                 await stopTaskTimer(taskId);
