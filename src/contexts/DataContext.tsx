@@ -716,6 +716,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .insert({
         task_id: taskId,
         user_id: user.id,
+        paused_at: null,
+        paused_elapsed_seconds: 0,
       })
       .select()
       .single();
@@ -795,6 +797,64 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
 
     return { ...(updatedTimer as TaskTimer), paused_at: (updatedTimer as any).paused_at || null, paused_elapsed_seconds: Number((updatedTimer as any).paused_elapsed_seconds || 0) } as TaskTimer;
+  };
+
+  const pauseTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer || timer.paused_at) return timer || null;
+
+    const elapsedSeconds = Math.floor(
+      (Date.now() - new Date(timer.started_at).getTime()) / 1000
+    ) + (timer.paused_elapsed_seconds || 0);
+
+    const { data: updatedTimer, error } = await supabase
+      .from('task_timers')
+      .update({
+        paused_at: new Date().toISOString(),
+        paused_elapsed_seconds: elapsedSeconds,
+      })
+      .eq('id', timer.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error pausing timer:', error);
+      return null;
+    }
+
+    setData(prev => ({
+      ...prev,
+      taskTimers: prev.taskTimers.map(t => t.id === timer.id ? updatedTimer as TaskTimer : t),
+    }));
+
+    return updatedTimer as TaskTimer;
+  };
+
+  const resumeTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer || !timer.paused_at) return timer || null;
+
+    const { data: updatedTimer, error } = await supabase
+      .from('task_timers')
+      .update({
+        started_at: new Date().toISOString(),
+        paused_at: null,
+      })
+      .eq('id', timer.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error resuming timer:', error);
+      return null;
+    }
+
+    setData(prev => ({
+      ...prev,
+      taskTimers: prev.taskTimers.map(t => t.id === timer.id ? updatedTimer as TaskTimer : t),
+    }));
+
+    return updatedTimer as TaskTimer;
   };
 
   const stopTaskTimer = async (taskId: string, description?: string, entryType: 'task' | 'meeting' = 'task'): Promise<{ hours: number } | null> => {
