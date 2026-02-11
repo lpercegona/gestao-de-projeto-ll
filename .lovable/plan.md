@@ -1,216 +1,121 @@
 
-# Plano: Ativar Notificações para Administradores
+# Corrigir listagem de solicitacoes no relatorio compartilhavel
 
-## Visão Geral
-Ativar o sistema de notificações para administradores, cobrindo:
-- Solicitações de novos projetos de clientes
-- Solicitações de edição de clientes (projetos e tarefas)
-- Registro de horas por colaboradores
+## Problema identificado
 
-O sistema já possui a infraestrutura de notificações (tabela, realtime, componentes), mas os triggers no banco de dados não foram aplicados corretamente.
+O arquivo `SharedReport.tsx` chama uma funcao RPC `get_shared_report_requests` que nao existe no banco de dados. Alem disso, ha erros de TypeScript por falta de casting adequado nos dados retornados pelas RPCs existentes.
 
----
+## Plano de implementacao
 
-## Etapa 1: Corrigir Erros de Build Existentes
+### 1. Criar funcao RPC `get_shared_report_requests`
 
-### 1.1 SolicitacoesPanel.tsx
-- Linha 119: Alterar `variant="outlined"` para `variant="outline"`
-
-### 1.2 Projects.tsx
-- Linha 474: Adicionar verificação de tipo para acessar `pending_request_id`
-- Linha 964: Ajustar tipo passado para o componente `ProjectListView`
-
----
-
-## Etapa 2: Criar Triggers de Notificação no Banco de Dados
-
-### 2.1 Trigger para Solicitações de Novos Projetos
-Quando um cliente cria uma solicitação de novo projeto, notificar o administrador responsável (baseado em `client.owner_id`).
+Criar uma nova funcao no banco que retorne as solicitacoes (project_requests e edit_requests) do cliente associado ao token do relatorio compartilhado. A funcao deve retornar dados compativeis com a interface `SharedRequestItem`:
 
 ```text
-Evento: INSERT em project_requests
-Destinatário: owner_id do cliente
-Tipo: client_project_request_created
+request_id, request_type, title, description, status, created_at, updated_at, deadline, admin_notes
 ```
 
-### 2.2 Trigger para Solicitações de Edição
-Quando um cliente solicita edição em projeto ou solicitação, notificar o administrador. Distinguir entre:
-- Edição de projeto/solicitação
-- Solicitação de nova tarefa
+A funcao fara UNION entre:
+- `project_requests` (tipo 'project') -- solicitacoes de projeto
+- `edit_requests` (tipo baseado em proposed_data->>'request_type') -- solicitacoes de edicao/tarefa
+
+Ambas filtradas pelo `client_id` do token via `report_shares`.
+
+### 2. Corrigir erros de TypeScript em `SharedReport.tsx`
+
+- Linhas 185-196: Adicionar casting `as ClientInfo` direto no objeto retornado pela RPC `get_shared_report`.
+- Linhas 214-261: Adicionar `as string`, `as number` nos campos mapeados das RPCs de projects, columns, tasks e time_entries.
+- Linha 269: Corrigir o casting de requests para mapear os campos corretamente a partir do resultado da nova RPC.
+
+### 3. Filtragem por mes
+
+A filtragem por mes ja esta implementada corretamente no `filteredRequestHistory` (linhas 364-373), usando `isWithinInterval` com base no `created_at`. Os meses das solicitacoes tambem ja sao incluidos nas opcoes do seletor de mes (linhas 308-311). Nenhuma alteracao necessaria aqui -- basta que a RPC retorne os dados corretamente.
+
+## Detalhes tecnicos
+
+### SQL da nova funcao RPC
 
 ```text
-Evento: INSERT em edit_requests
-Destinatário: owner_id do cliente
-Tipos: 
-  - client_edit_request_created
-  - client_task_request_created
+CREATE OR REPLACE FUNCTION public.get_shared_report_requests(p_token text)
+RETURNS TABLE (
+  request_id uuid,
+  request_type text,
+  title text,
+  description text,
+  status text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  deadline date,
+  admin_notes text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  RETURN QUERY
+  -- Project requests
+  SELECT
+    pr.id,
+    'project'::text,
+    pr.title,
+    pr.briefing,
+    pr.status,
+    pr.created_at,
+    pr.updated_at,
+    pr.desired_deadline,
+    pr.admin_notes
+  FROM project_requests pr
+  JOIN report_shares rs ON rs.client_id = pr.client_id
+  WHERE rs.share_token = p_token AND rs.is_public = true
+
+  UNION ALL
+
+  -- Edit requests (edit/task)
+  SELECT
+    er.id,
+    COALESCE(er.proposed_data->>'request_type', 'edit')::text,
+    COALESCE(er.proposed_data->>'title', 'Solicitacao de edicao')::text,
+    COALESCE(er.proposed_data->>'description', '')::text,
+    er.status,
+    er.created_at,
+    er.updated_at,
+    NULL::date,
+    er.admin_notes
+  FROM edit_requests er
+  JOIN report_shares rs ON rs.client_id = er.client_id
+  WHERE rs.share_token = p_token AND rs.is_public = true
+
+  ORDER BY created_at DESC;
+END;
+$$;
 ```
 
-### 2.3 Trigger para Registro de Horas por Colaboradores
-Quando um colaborador registra horas, notificar o administrador responsável pelo cliente do projeto.
+### Correcoes no TypeScript
+
+Substituir o casting generico `as Record<string, unknown>` por casts tipados em cada campo, por exemplo:
 
 ```text
-Evento: INSERT em time_entries
-Destinatário: owner_id do cliente (via project -> client)
-Tipo: collaborator_time_entry_created
+client_id: clientData.client_id as string,
+client_name: clientData.client_name as string,
+...
 ```
 
----
+E para os requests, mapear os campos retornados pela RPC diretamente para `SharedRequestItem`:
 
-## Etapa 3: Atualizar Ícones nas Notificações
-
-### NotificationItem.tsx
-Adicionar ícones para os novos tipos:
-- `client_project_request_created` - ícone de solicitação
-- `client_edit_request_created` - ícone de edição
-- `client_task_request_created` - ícone de tarefa
-- `collaborator_time_entry_created` - ícone de tempo
-
----
-
-## Detalhes Técnicos
-
-### Migração SQL
-
-```sql
--- Função: Notificar admin sobre nova solicitação de projeto
-CREATE OR REPLACE FUNCTION public.notify_admin_project_request_created()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = 'public' AS $$
-DECLARE
-  v_admin_user_id UUID;
-  v_client_name TEXT;
-  v_requester_name TEXT;
-BEGIN
-  SELECT c.owner_id, c.name INTO v_admin_user_id, v_client_name
-  FROM clients c WHERE c.id = NEW.client_id;
-
-  IF v_admin_user_id IS NULL OR v_admin_user_id = NEW.created_by THEN
-    RETURN NEW;
-  END IF;
-
-  SELECT COALESCE(pr.full_name, pr.email, 'Cliente') INTO v_requester_name
-  FROM profiles pr WHERE pr.user_id = NEW.created_by;
-
-  INSERT INTO notifications (user_id, type, title, message)
-  VALUES (
-    v_admin_user_id,
-    'client_project_request_created',
-    'Nova solicitação de projeto',
-    v_requester_name || ' solicitou novo projeto: "' || NEW.title || '".'
-  );
-  RETURN NEW;
-END; $$;
-
--- Trigger
-CREATE TRIGGER on_project_request_created_notify_admin
-  AFTER INSERT ON project_requests
-  FOR EACH ROW EXECUTE FUNCTION notify_admin_project_request_created();
-
--- Função: Notificar admin sobre solicitação de edição
-CREATE OR REPLACE FUNCTION public.notify_admin_edit_request_created()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = 'public' AS $$
-DECLARE
-  v_admin_user_id UUID;
-  v_client_name TEXT;
-  v_requester_name TEXT;
-  v_project_id UUID;
-  v_request_type TEXT;
-  v_notif_type TEXT;
-  v_title TEXT;
-  v_message TEXT;
-BEGIN
-  SELECT c.owner_id, c.name INTO v_admin_user_id, v_client_name
-  FROM clients c WHERE c.id = NEW.client_id;
-
-  IF v_admin_user_id IS NULL OR v_admin_user_id = NEW.requested_by THEN
-    RETURN NEW;
-  END IF;
-
-  SELECT COALESCE(pr.full_name, pr.email, 'Cliente') INTO v_requester_name
-  FROM profiles pr WHERE pr.user_id = NEW.requested_by;
-
-  v_project_id := CASE WHEN NEW.entity_type = 'project' THEN NEW.entity_id::uuid ELSE NULL END;
-  v_request_type := COALESCE(NEW.proposed_data->>'request_type', 'edit');
-
-  IF v_request_type = 'new_task' THEN
-    v_notif_type := 'client_task_request_created';
-    v_title := 'Nova solicitação de tarefa';
-    v_message := v_requester_name || ' solicitou nova tarefa para "' || v_client_name || '".';
-  ELSE
-    v_notif_type := 'client_edit_request_created';
-    v_title := 'Nova solicitação de edição';
-    v_message := v_requester_name || ' solicitou edição para "' || v_client_name || '".';
-  END IF;
-
-  INSERT INTO notifications (user_id, type, title, message, project_id)
-  VALUES (v_admin_user_id, v_notif_type, v_title, v_message, v_project_id);
-  RETURN NEW;
-END; $$;
-
--- Trigger
-CREATE TRIGGER on_edit_request_created_notify_admin
-  AFTER INSERT ON edit_requests
-  FOR EACH ROW EXECUTE FUNCTION notify_admin_edit_request_created();
-
--- Função: Notificar admin sobre registro de horas de colaborador
-CREATE OR REPLACE FUNCTION public.notify_admin_new_time_entry()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = 'public' AS $$
-DECLARE
-  v_admin_user_id UUID;
-  v_project_id UUID;
-  v_project_name TEXT;
-  v_task_name TEXT;
-  v_collab_name TEXT;
-BEGIN
-  SELECT p.id, p.name, t.name, c.owner_id
-  INTO v_project_id, v_project_name, v_task_name, v_admin_user_id
-  FROM tasks t
-  JOIN projects p ON p.id = t.project_id
-  JOIN clients c ON c.id = p.client_id
-  WHERE t.id = NEW.task_id;
-
-  IF v_admin_user_id IS NULL OR v_admin_user_id = NEW.created_by THEN
-    RETURN NEW;
-  END IF;
-
-  SELECT COALESCE(pr.full_name, pr.email, 'Colaborador') INTO v_collab_name
-  FROM profiles pr WHERE pr.user_id = NEW.created_by;
-
-  INSERT INTO notifications (user_id, type, title, message, project_id)
-  VALUES (
-    v_admin_user_id,
-    'collaborator_time_entry_created',
-    'Horas registradas',
-    v_collab_name || ' registrou ' || NEW.hours || 'h em "' || v_task_name || '".',
-    v_project_id
-  );
-  RETURN NEW;
-END; $$;
-
--- Trigger
-CREATE TRIGGER on_time_entry_created_notify_admin
-  AFTER INSERT ON time_entries
-  FOR EACH ROW EXECUTE FUNCTION notify_admin_new_time_entry();
+```text
+setRequests(
+  (requestsData || []).map((r: any) => ({
+    request_id: r.request_id,
+    request_type: r.request_type,
+    title: r.title,
+    description: r.description,
+    status: r.status,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    deadline: r.deadline,
+    admin_notes: r.admin_notes,
+  }))
+  .sort(...)
+);
 ```
-
-### Alterações em NotificationItem.tsx
-
-Adicionar casos no switch de ícones:
-- `client_project_request_created` → FileText (laranja)
-- `client_edit_request_created` → FilePenLine (azul)
-- `client_task_request_created` → ListPlus (verde)
-- `collaborator_time_entry_created` → Clock (roxo)
-
----
-
-## Resumo de Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| Migração SQL | Criar 3 funções e 3 triggers |
-| `SolicitacoesPanel.tsx` | Corrigir variante do Badge |
-| `Projects.tsx` | Ajustar tipos TypeScript |
-| `NotificationItem.tsx` | Adicionar ícones para novos tipos |
