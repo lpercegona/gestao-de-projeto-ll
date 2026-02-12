@@ -153,18 +153,21 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   const isTimerActive = !!activeTimer;
   const isThisTaskTimer = timerState.taskId === taskId;
+  const isRunningFromGlobalLinkedTask = isThisTaskTimer && timerState.isRunning && !timerState.isPaused;
   const isPaused = !!activeTimer?.paused_at || (isThisTaskTimer && timerState.isPaused);
-  const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isPaused;
-  const showTimerControls = isTimerActive || isPaused;
-  const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isPaused;
+  const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isRunningFromGlobalLinkedTask && !isPaused;
+  const showTimerControls = isTimerActive || isRunningFromGlobalLinkedTask || isPaused;
+  const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isRunningFromGlobalLinkedTask && !isPaused;
 
   // Check if another timer is running (disable play if so)
   const anotherTimerRunning = hasActiveTimer && timerState.taskId !== taskId && !isTimerActive;
 
-  // Get display time - use global timer elapsed if paused, otherwise local elapsed
-  const displayTime = isPaused
-    ? (activeTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
-    : elapsedSeconds;
+  // Get display time - prefer global linked timer when running without DB task linkage
+  const displayTime = isRunningFromGlobalLinkedTask
+    ? timerState.elapsedSeconds
+    : isPaused
+      ? (activeTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
+      : elapsedSeconds;
 
   return (
     <div className="flex items-center gap-1 sm:gap-2">

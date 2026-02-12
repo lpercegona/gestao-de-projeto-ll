@@ -133,13 +133,16 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         ? pausedElapsed
         : Math.floor((Date.now() - new Date(activeTaskTimer.started_at).getTime()) / 1000) + pausedElapsed;
 
+      const preservedTaskId =
+        activeTaskTimer.task_id || (timerState.dbTimerId === activeTaskTimer.id ? timerState.taskId : null);
+
       const newState: GlobalTimerState = {
         isRunning: true,
         isPaused,
         elapsedSeconds,
         startTime,
         pausedElapsed,
-        taskId: activeTaskTimer.task_id,
+        taskId: preservedTaskId,
         dbTimerId: activeTaskTimer.id,
       };
 
@@ -163,7 +166,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setTimerState(initialState);
       clearPersistedState();
     }
-  }, [user, data.taskTimers]);
+  }, [user, data.taskTimers, timerState.dbTimerId, timerState.taskId]);
 
   // Update elapsed seconds every second when running
   useEffect(() => {
