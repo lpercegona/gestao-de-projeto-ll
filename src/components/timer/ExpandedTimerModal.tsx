@@ -90,6 +90,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
           id: task.id,
           name: task.name,
           status: task.status,
+          description: task.description,
           projectName: project?.name,
           clientName: client?.company || client?.name,
         };
