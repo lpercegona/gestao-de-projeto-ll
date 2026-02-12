@@ -1,121 +1,88 @@
+# Sincronizacao em tempo real do timer global entre dispositivos
 
-# Corrigir listagem de solicitacoes no relatorio compartilhavel
+## Situacao atual
 
-## Problema identificado
+O timer não está sincronizando entre dispositivos quando esta **vinculado a uma tarefa** (task timer). Isso funciona porque:
 
-O arquivo `SharedReport.tsx` chama uma funcao RPC `get_shared_report_requests` que nao existe no banco de dados. Alem disso, ha erros de TypeScript por falta de casting adequado nos dados retornados pelas RPCs existentes.
+- Os dados sao salvos no banco de dados (tabela `task_timers`)
+- Alteracoes sao transmitidas em tempo real via Realtime
+- O `GlobalTimerContext` reage a essas mudancas automaticamente
 
-## Plano de implementacao
+O problema esta no **"em todos os modais que possibilitam registros"** (timer iniciado sem tarefa, ou com tarefa, pausado em um dispositivo não está demonstrando atualização real time em outros dispositivos). Esse timer usa apenas `localStorage`, que nao sincroniza entre dispositivos.
 
-### 1. Criar funcao RPC `get_shared_report_requests`
+## Solucao
 
-Criar uma nova funcao no banco que retorne as solicitacoes (project_requests e edit_requests) do cliente associado ao token do relatorio compartilhado. A funcao deve retornar dados compativeis com a interface `SharedRequestItem`:
+Fazer com que o "Registro Rapido" tambem crie um registro na tabela `task_timers` no banco de dados, permitindo sincronizacao em tempo real, e verfrificar propagação de pause/play sem necessidade de atualozação da página de navegação.
 
-```text
-request_id, request_type, title, description, status, created_at, updated_at, deadline, admin_notes
+### Passo 1: Alteracao no banco de dados
+
+Tornar a coluna `task_id` da tabela `task_timers` **nullable**, para permitir timers sem tarefa vinculada.
+
+```sql
+ALTER TABLE public.task_timers ALTER COLUMN task_id DROP NOT NULL;
 ```
 
-A funcao fara UNION entre:
-- `project_requests` (tipo 'project') -- solicitacoes de projeto
-- `edit_requests` (tipo baseado em proposed_data->>'request_type') -- solicitacoes de edicao/tarefa
+Tambem sera necessario atualizar as politicas RLS para cobrir timers sem `task_id` (onde o usuario so pode gerenciar seus proprios timers):
 
-Ambas filtradas pelo `client_id` do token via `report_shares`.
+```sql
+-- Politica para admins/colaboradores gerenciarem seus proprios timers sem tarefa
+CREATE POLICY "Users can manage own unlinked timers"
+ON public.task_timers
+FOR ALL
+USING (user_id = auth.uid() AND task_id IS NULL);
+```
 
-### 2. Corrigir erros de TypeScript em `SharedReport.tsx`
+### Passo 2: Alterar GlobalTimerContext
 
-- Linhas 185-196: Adicionar casting `as ClientInfo` direto no objeto retornado pela RPC `get_shared_report`.
-- Linhas 214-261: Adicionar `as string`, `as number` nos campos mapeados das RPCs de projects, columns, tasks e time_entries.
-- Linha 269: Corrigir o casting de requests para mapear os campos corretamente a partir do resultado da nova RPC.
+Modificar as funcoes `startGlobalTimer`, `pauseGlobalTimer`, `resumeGlobalTimer` e `resetTimer` para usar o banco de dados em vez de apenas `localStorage`:
 
-### 3. Filtragem por mes
+- **startGlobalTimer**: Inserir registro em `task_timers` com `task_id = null`
+- **pauseGlobalTimer**: Atualizar o registro no banco (setar `paused_at` e `paused_elapsed_seconds`)
+- **resumeGlobalTimer**: Atualizar o registro no banco (limpar `paused_at`, atualizar `started_at`)
+- **resetTimer / cancelar**: Deletar o registro do banco
 
-A filtragem por mes ja esta implementada corretamente no `filteredRequestHistory` (linhas 364-373), usando `isWithinInterval` com base no `created_at`. Os meses das solicitacoes tambem ja sao incluidos nas opcoes do seletor de mes (linhas 308-311). Nenhuma alteracao necessaria aqui -- basta que a RPC retorne os dados corretamente.
+A sincronizacao automatica ja funciona: o `useEffect` que escuta `data.taskTimers` (que recebe updates via Realtime) ira atualizar o estado do timer em todos os dispositivos.
+
+### Passo 3: Ajustar sincronizacao no useEffect
+
+O `useEffect` existente (linhas 114-158) ja busca o timer ativo do usuario em `data.taskTimers`. Basta ajustar para tambem considerar timers com `task_id = null` (registros rapidos).
+
+### Passo 4: Manter localStorage como fallback
+
+Manter o `localStorage` como cache local para exibir o timer instantaneamente ao carregar a pagina, mas a fonte de verdade passa a ser o banco de dados.
+
+Passo 5: Validar propagação de ação sem necessidade de refresh da página de navegaçâo.
 
 ## Detalhes tecnicos
 
-### SQL da nova funcao RPC
+### Arquivos modificados
+
+
+| Arquivo                               | Alteracao                                                               |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| Nova migracao SQL                     | Tornar `task_id` nullable, adicionar politica RLS                       |
+| `src/contexts/GlobalTimerContext.tsx` | Usar `supabase` para CRUD do timer rapido em vez de apenas localStorage |
+| `src/contexts/DataContext.tsx`        | Pequeno ajuste nas funcoes de timer para aceitar `task_id` null         |
+
+
+### Fluxo de sincronizacao
 
 ```text
-CREATE OR REPLACE FUNCTION public.get_shared_report_requests(p_token text)
-RETURNS TABLE (
-  request_id uuid,
-  request_type text,
-  title text,
-  description text,
-  status text,
-  created_at timestamptz,
-  updated_at timestamptz,
-  deadline date,
-  admin_notes text
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-BEGIN
-  RETURN QUERY
-  -- Project requests
-  SELECT
-    pr.id,
-    'project'::text,
-    pr.title,
-    pr.briefing,
-    pr.status,
-    pr.created_at,
-    pr.updated_at,
-    pr.desired_deadline,
-    pr.admin_notes
-  FROM project_requests pr
-  JOIN report_shares rs ON rs.client_id = pr.client_id
-  WHERE rs.share_token = p_token AND rs.is_public = true
-
-  UNION ALL
-
-  -- Edit requests (edit/task)
-  SELECT
-    er.id,
-    COALESCE(er.proposed_data->>'request_type', 'edit')::text,
-    COALESCE(er.proposed_data->>'title', 'Solicitacao de edicao')::text,
-    COALESCE(er.proposed_data->>'description', '')::text,
-    er.status,
-    er.created_at,
-    er.updated_at,
-    NULL::date,
-    er.admin_notes
-  FROM edit_requests er
-  JOIN report_shares rs ON rs.client_id = er.client_id
-  WHERE rs.share_token = p_token AND rs.is_public = true
-
-  ORDER BY created_at DESC;
-END;
-$$;
+Dispositivo A                    Banco de Dados                 Dispositivo B
+     |                               |                               |
+     |-- INSERT task_timer -----------|                               |
+     |   (task_id=null)              |-- Realtime event ------------>|
+     |                               |                               |
+     |                               |       GlobalTimerContext      |
+     |                               |       detecta timer ativo     |
+     |                               |       e atualiza UI           |
+     |                               |                               |
+     |-- UPDATE paused_at -----------|                               |
+     |                               |-- Realtime event ------------>|
+     |                               |       UI mostra "pausado"     |
 ```
 
-### Correcoes no TypeScript
+### Riscos e mitigacoes
 
-Substituir o casting generico `as Record<string, unknown>` por casts tipados em cada campo, por exemplo:
-
-```text
-client_id: clientData.client_id as string,
-client_name: clientData.client_name as string,
-...
-```
-
-E para os requests, mapear os campos retornados pela RPC diretamente para `SharedRequestItem`:
-
-```text
-setRequests(
-  (requestsData || []).map((r: any) => ({
-    request_id: r.request_id,
-    request_type: r.request_type,
-    title: r.title,
-    description: r.description,
-    status: r.status,
-    created_at: r.created_at,
-    updated_at: r.updated_at,
-    deadline: r.deadline,
-    admin_notes: r.admin_notes,
-  }))
-  .sort(...)
-);
-```
+- **Politicas RLS existentes**: As politicas atuais verificam `task_id` via joins com `tasks` e `projects`. Timers sem `task_id` nao sao cobertos por essas politicas, por isso a nova politica `"Users can manage own unlinked timers"` e necessaria.
+- **Compatibilidade**: Timers vinculados a tarefas continuam funcionando exatamente como antes. Apenas o fluxo do "Registro Rapido" muda.
