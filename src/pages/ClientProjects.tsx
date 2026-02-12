@@ -18,6 +18,7 @@ import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { toast } from 'sonner';
 import { endOfDay, isWithinInterval, startOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { getWysiwygPlainText } from '@/lib/wysiwyg';
 
 interface ProjectRequest {
   id: string;
@@ -54,10 +55,6 @@ type UnifiedProject = {
   request_id?: string;
   desired_deadline?: string | null;
 };
-
-
-
-const getWysiwygPlainText = (content: string) => content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
 type ClientTask = {
   id: string;

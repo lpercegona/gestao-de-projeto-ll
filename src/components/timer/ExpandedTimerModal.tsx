@@ -11,6 +11,7 @@ import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
 import { toast } from 'sonner';
+import { getWysiwygPlainText } from '@/lib/wysiwyg';
 
 interface ExpandedTimerModalProps {
   open: boolean;
@@ -272,7 +273,9 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               {currentTaskInfo ? (
                 <>
                   <p className={`line-clamp-2 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
-                  <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>{currentTaskInfo.taskDescription}</p>
+                  <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
+                    {getWysiwygPlainText(currentTaskInfo.taskDescription)}
+                  </p>
                 </>
               ) : null}
             </div>

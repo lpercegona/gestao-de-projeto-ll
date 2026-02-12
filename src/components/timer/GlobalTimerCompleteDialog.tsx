@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { formatHours } from '@/lib/formatHours';
 import { reconcileTaskBinding, resolveSubmitTaskId } from '@/lib/taskBinding';
+import { getWysiwygPlainText } from '@/lib/wysiwyg';
 
 interface GlobalTimerCompleteDialogProps {
   open: boolean;
@@ -445,7 +446,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
                 {bindingContext.title.source === 'snapshot' && <span className="ml-1 text-amber-700">(snapshot)</span>}
               </div>
               <div>
-                <span className="font-medium text-foreground">Descrição:</span> {bindingContext.description.value}
+                <span className="font-medium text-foreground">Descrição:</span> {getWysiwygPlainText(bindingContext.description.value) || 'Sem descrição'}
                 {bindingContext.description.source === 'snapshot' && <span className="ml-1 text-amber-700">(snapshot)</span>}
               </div>
               <div>
