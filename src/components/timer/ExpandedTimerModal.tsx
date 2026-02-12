@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Play, Pause, Square, X, Check, Contrast } from 'lucide-react';
+import { CirclePause, CirclePlay, CircleStop, X, Check, Contrast } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -230,7 +230,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="stroke-[1.0]" />
+                  <CirclePlay className="stroke-[1.3]" />
                 </Button>
 
                 <div
@@ -258,7 +258,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Retomar timer"
                   title="Retomar timer"
                 >
-                  <Play className="h-4 w-4" />
+                  <CirclePlay className="h-4 w-4" />
                 </Button>
               ) : (
                 <Button
@@ -269,7 +269,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Pausar timer"
                   title="Pausar timer"
                 >
-                  <Pause className="h-4 w-4" />
+                  <CirclePause className="h-4 w-4" />
                 </Button>
               )}
               <Button
@@ -280,7 +280,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 aria-label="Concluir timer"
                 title="Concluir timer"
               >
-                <Square className="h-4 w-4" />
+                <CircleStop className="h-4 w-4" />
               </Button>
             </div>
 
@@ -368,7 +368,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                   aria-label={`Iniciar registro da tarefa ${task.name}`}
                                   title="Iniciar registro para esta tarefa"
                                 >
-                                  <Play className="h-4 w-4" />
+                                  <CirclePlay className="h-4 w-4" />
                                 </Button>
 
                                 <Button
