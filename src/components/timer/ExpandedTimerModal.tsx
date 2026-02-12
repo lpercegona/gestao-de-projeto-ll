@@ -69,11 +69,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-screen !max-w-none !h-screen rounded-none border-0 bg-[#F4F7FB] p-0 text-[#64748b] [&>button]:hidden">
+      <DialogContent className="!inset-0 !h-screen !max-h-none !w-screen !max-w-none !translate-x-0 !translate-y-0 !overflow-hidden rounded-none border-0 bg-[#F4F7FB] p-0 text-[#64748b] [&>button]:hidden">
         <DialogTitle className="sr-only">Timer expandido</DialogTitle>
 
-        <div className="relative flex h-full w-full flex-col px-5 pb-6 pt-6 md:px-8">
-          <div className="mb-3 flex justify-end">
+        <div className="relative flex h-full w-full min-h-0 flex-col px-5 pb-5 pt-4 md:px-8 md:pb-6 md:pt-6">
+          <div className="mb-2 flex justify-end md:mb-3">
             <Button
               variant="ghost"
               size="icon"
@@ -85,33 +85,33 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             </Button>
           </div>
 
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-            <p className="mb-8 text-center text-sm font-semibold leading-tight text-[#64748b] md:text-2xl">
+          <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col">
+            <p className="mb-5 text-center text-sm font-semibold leading-tight text-[#64748b] md:mb-8 md:text-2xl">
               Inicie o timer para começar
               <br />
               um novo registro
             </p>
 
-            <div className="mb-8 flex min-h-[320px] items-center justify-center">
-              <div className="relative flex items-center justify-center h-[400px] w-[400px]">
+            <div className="mb-5 flex min-h-[200px] items-center justify-center md:mb-8 md:min-h-[320px]">
+              <div className="relative flex h-[min(82vw,400px)] w-[min(82vw,400px)] items-center justify-center">
                 <img
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
+                  className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
                   style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
                 />
 
                 {!hasActiveTimer ? (
                   <Button
                     onClick={() => startGlobalTimer()}
-                    className="relative z-10 h-[220px] w-[220px] rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
+                    className="relative z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
                   >
-                    <Play className="h-32 w-32 stroke-[2.4]" />
+                    <Play className="h-[min(26vw,128px)] w-[min(26vw,128px)] stroke-[2.4]" />
                   </Button>
                 ) : (
-                  <div className="relative z-10 flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
-                    <span className={`text-3xl tabular-nums ${isRunning ? 'animate-pulse' : ''}`}>
+                  <div className="relative z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
+                    <span className={`text-2xl tabular-nums md:text-3xl ${isRunning ? 'animate-pulse' : ''}`}>
                       {formatTime(timerState.elapsedSeconds)}
                     </span>
                   </div>
@@ -120,10 +120,10 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             </div>
 
             {hasActiveTimer ? (
-              <div className="mb-6 flex items-center justify-center gap-3">
+              <div className="mb-4 flex items-center justify-center gap-3 md:mb-6">
                 {isPaused ? (
                   <Button onClick={() => resumeGlobalTimer()} className="gap-2 rounded-full">
-                    <Play className="h-64 w-64" />
+                    <Play className="h-4 w-4" />
                     Retomar
                   </Button>
                 ) : (
@@ -139,7 +139,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               </div>
             ) : null}
 
-            <div className="mt-auto">
+            <div className="mt-auto min-h-0">
               <div className="mb-2 flex items-center justify-between">
                 <Label htmlFor="distraction-free" className="text-sm font-medium text-[#64748b]">
                   Sem distrações
@@ -151,28 +151,30 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
               <div className={`${distractionFree ? 'hidden' : 'block'}`}>
                 <h3 className="mb-3 text-sm font-semibold text-[#64748b]">Próximas atividades</h3>
-                <ScrollArea className="max-h-[32vh] pr-2">
-                  <div className="space-y-3 pb-2">
-                    {upcomingTasks.length > 0 ? (
-                      upcomingTasks.map((task) => (
-                        <Card
-                          key={task.id}
-                          className="flex items-center justify-between rounded-2xl border border-[#d6dee8] bg-transparent px-4 py-3 shadow-none"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-lg font-semibold leading-tight text-[#0f172a]">{task.name}</p>
-                            <p className="truncate text-base font-medium text-[#64748b]">
-                              {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
-                            </p>
-                          </div>
-                          <Play className="h-6 w-6 shrink-0 text-[#64748b]" />
-                        </Card>
-                      ))
-                    ) : (
-                      <p className="text-xl text-[#64748b]">Nenhuma tarefa pendente no momento.</p>
-                    )}
-                  </div>
-                </ScrollArea>
+                <div className="rounded-2xl border border-[#d6dee8] bg-white/40 p-3">
+                  <ScrollArea className="h-[28vh] min-h-[180px] max-h-[320px] pr-2">
+                    <div className="space-y-3 pb-2">
+                      {upcomingTasks.length > 0 ? (
+                        upcomingTasks.map((task) => (
+                          <Card
+                            key={task.id}
+                            className="flex items-center justify-between rounded-2xl border border-[#d6dee8] bg-transparent px-4 py-3 shadow-none"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-base font-semibold leading-tight text-[#0f172a] md:text-lg">{task.name}</p>
+                              <p className="truncate text-sm font-medium text-[#64748b] md:text-base">
+                                {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
+                              </p>
+                            </div>
+                            <Play className="h-6 w-6 shrink-0 text-[#64748b]" />
+                          </Card>
+                        ))
+                      ) : (
+                        <p className="text-base text-[#64748b] md:text-xl">Nenhuma tarefa pendente no momento.</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
           </div>
