@@ -145,8 +145,10 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
           <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col">
             <p
-              className={`mb-5 text-center text-sm font-semibold leading-tight transition-all duration-500 md:mb-8 md:text-2xl ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
-                distractionFree ? 'pointer-events-none -translate-y-8 opacity-0' : 'translate-y-0 opacity-100'
+              className={`overflow-hidden text-center text-sm font-semibold leading-tight transition-all duration-500 md:text-2xl ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
+                hasActiveTimer || distractionFree
+                  ? 'pointer-events-none -translate-y-8 opacity-0 max-h-0 mb-0'
+                  : 'translate-y-0 opacity-100 max-h-24 mb-5 md:mb-8'
               }`}
             >
               Inicie o timer para começar
@@ -154,7 +156,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               um novo registro
             </p>
 
-            <div className="mb-5 flex min-h-[200px] items-center justify-center md:mb-8 md:min-h-[320px]">
+            <div
+              className={`flex items-center justify-center transition-all duration-500 ${
+                hasActiveTimer ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
+              }`}
+            >
               <div className="relative flex h-[min(82vw,400px)] w-[min(82vw,400px)] items-center justify-center">
                 <img
                   src={fundoTimer}
@@ -226,7 +232,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
             <div
               className={`overflow-hidden text-center transition-all duration-300 ${
-                currentTaskInfo ? 'mb-4 max-h-20 translate-y-0 opacity-100' : 'mb-0 max-h-0 -translate-y-2 opacity-0'
+                currentTaskInfo ? 'mb-4 max-h-24 translate-y-0 opacity-100' : 'mb-0 max-h-0 -translate-y-2 opacity-0'
               }`}
             >
               {currentTaskInfo ? (
