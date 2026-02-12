@@ -118,7 +118,11 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     if (!user || !data.taskTimers) return;
 
-    const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id);
+    const userTimers = data.taskTimers.filter((timer) => timer.user_id === user.id);
+    const activeTaskTimer = userTimers.find((timer) => !timer.paused_at && !!timer.task_id)
+      || userTimers.find((timer) => !timer.paused_at)
+      || userTimers.find((timer) => !!timer.task_id)
+      || userTimers[0];
 
     if (activeTaskTimer) {
       const isPaused = !!activeTaskTimer.paused_at;
@@ -222,7 +226,12 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const pauseGlobalTimer = useCallback(async () => {
     if (!timerState.isRunning || timerState.isPaused) return;
 
-    const activeUserTimer = data.taskTimers.find((timer) => timer.user_id === user?.id) || null;
+    const userTimers = data.taskTimers.filter((timer) => timer.user_id === user?.id);
+    const activeUserTimer = userTimers.find((timer) => !timer.paused_at && !!timer.task_id)
+      || userTimers.find((timer) => !timer.paused_at)
+      || userTimers.find((timer) => !!timer.task_id)
+      || userTimers[0]
+      || null;
     const effectiveTaskId = timerState.taskId || activeUserTimer?.task_id || null;
 
     if (effectiveTaskId) {
