@@ -173,7 +173,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
         <div className="relative flex h-full w-full min-h-0 flex-col px-5 pb-5 pt-4 md:px-8 md:pb-6 md:pt-6">
           <div className="mb-2 flex items-center justify-between md:mb-3">
             <Button
-              type="button"
+              type="ghost"
               variant="outline"
               size="icon"
               className={`h-9 w-9 rounded-lg ${highContrast ? 'border-white bg-black text-white hover:bg-white hover:text-black' : 'border-[#64748b] bg-white text-[#64748b] hover:bg-[#e2e8f0]'}`}
@@ -218,7 +218,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-100"
+                  className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-75"
                   style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 32px rgba(16,185,129,0.35))' }}
                 />
 
@@ -230,7 +230,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="stroke-[1.5]" />
+                  <Play className="stroke-[1.0]" />
                 </Button>
 
                 <div
