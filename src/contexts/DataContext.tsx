@@ -79,6 +79,42 @@ interface TaskTimer {
   created_at: string;
 }
 
+export type TimerErrorType = 'permission_denied' | 'network';
+
+export interface TimerOperationError {
+  type: TimerErrorType;
+  message: string;
+  rawMessage?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+  context: {
+    taskId: string;
+    timerId?: string;
+    userId?: string;
+    action: 'pause' | 'resume';
+  };
+}
+
+interface TimerOperationResult {
+  success: boolean;
+  timer: TaskTimer | null;
+  error?: TimerOperationError;
+}
+
+
+export const getTimerOperationErrorMessage = (error?: TimerOperationError): string => {
+  if (!error) {
+    return 'Erro de rede ao pausar/retomar timer. Tente novamente em instantes.';
+  }
+
+  if (error.type === 'permission_denied') {
+    return 'Permissão negada para pausar/retomar este timer.';
+  }
+
+  return 'Erro de rede ao pausar/retomar timer. Tente novamente em instantes.';
+};
+
 interface UserProjectAccess {
   id: string;
   user_id: string;
@@ -152,8 +188,8 @@ interface DataContextType {
   revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
   // Task Timer
   startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
-  pauseTaskTimer: (taskId: string, timerId?: string) => Promise<TaskTimer | null>;
-  resumeTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
+  pauseTaskTimer: (taskId: string, timerId?: string) => Promise<TimerOperationResult>;
+  resumeTaskTimer: (taskId: string) => Promise<TimerOperationResult>;
   stopTaskTimer: (taskId: string, description?: string, entryType?: 'task' | 'meeting') => Promise<{ hours: number } | null>;
   cancelTaskTimer: (taskId: string) => Promise<boolean>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
@@ -187,6 +223,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [data, setData] = useState<AppData>(emptyData);
   const [loading, setLoading] = useState(true);
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
+
+  const buildTimerOperationError = useCallback((
+    action: 'pause' | 'resume',
+    taskId: string,
+    timerId: string | undefined,
+    rawError: any,
+  ): TimerOperationError => {
+    const isPermissionDenied = rawError?.code === '42501';
+
+    return {
+      type: isPermissionDenied ? 'permission_denied' : 'network',
+      message: isPermissionDenied
+        ? 'Você não tem permissão para alterar este timer.'
+        : 'Não foi possível comunicar com o servidor. Tente novamente em instantes.',
+      rawMessage: rawError?.message,
+      code: rawError?.code,
+      details: rawError?.details,
+      hint: rawError?.hint,
+      context: {
+        taskId,
+        timerId,
+        userId: user?.id,
+        action,
+      },
+    };
+  }, [user?.id]);
 
   const refreshData = useCallback(async (showLoading = true) => {
     if (!user) {
@@ -721,8 +783,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return existingTaskTimer;
       }
 
-      const resumedTimer = await resumeTaskTimer(taskId);
-      return resumedTimer || existingTaskTimer;
+      const resumedTimerResult = await resumeTaskTimer(taskId);
+      return resumedTimerResult.timer || existingTaskTimer;
     }
 
     // First update task status to in_progress if it's pending
@@ -783,11 +845,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return runningTimers[0] || null;
   };
 
-  const pauseTaskTimer = async (taskId: string, timerId?: string): Promise<TaskTimer | null> => {
-    if (!user) return null;
+  const pauseTaskTimer = async (taskId: string, timerId?: string): Promise<TimerOperationResult> => {
+    if (!user) {
+      return {
+        success: false,
+        timer: null,
+        error: {
+          type: 'network',
+          message: 'Sessão inválida para pausar o timer. Faça login novamente.',
+          context: { taskId, timerId, action: 'pause' },
+        },
+      };
+    }
 
     const timer = getRunningTaskTimer(taskId, timerId);
-    if (!timer) return getMostRelevantTaskTimer(taskId);
+    if (!timer) {
+      return {
+        success: true,
+        timer: getMostRelevantTaskTimer(taskId),
+      };
+    }
 
     const elapsedSeconds = Math.floor(
       (Date.now() - new Date(timer.started_at).getTime()) / 1000
@@ -804,8 +881,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (error) {
-      console.error('Error pausing timer:', error);
-      return null;
+      const structuredError = buildTimerOperationError('pause', taskId, timer.id, error);
+      console.error('Error pausing timer:', structuredError);
+      return {
+        success: false,
+        timer: null,
+        error: structuredError,
+      };
     }
 
     setData(prev => ({
@@ -813,14 +895,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       taskTimers: prev.taskTimers.map(t => t.id === timer.id ? updatedTimer as TaskTimer : t),
     }));
 
-    return updatedTimer as TaskTimer;
+    return {
+      success: true,
+      timer: updatedTimer as TaskTimer,
+    };
   };
 
-  const resumeTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
-    if (!user) return null;
+  const resumeTaskTimer = async (taskId: string): Promise<TimerOperationResult> => {
+    if (!user) {
+      return {
+        success: false,
+        timer: null,
+        error: {
+          type: 'network',
+          message: 'Sessão inválida para retomar o timer. Faça login novamente.',
+          context: { taskId, action: 'resume' },
+        },
+      };
+    }
 
     const timer = getMostRelevantTaskTimer(taskId);
-    if (!timer || !timer.paused_at) return timer || null;
+    if (!timer || !timer.paused_at) {
+      return {
+        success: true,
+        timer: timer || null,
+      };
+    }
 
     const { data: updatedTimer, error } = await supabase
       .from('task_timers')
@@ -833,8 +933,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (error) {
-      console.error('Error resuming timer:', error);
-      return null;
+      const structuredError = buildTimerOperationError('resume', taskId, timer.id, error);
+      console.error('Error resuming timer:', structuredError);
+      return {
+        success: false,
+        timer: null,
+        error: structuredError,
+      };
     }
 
     setData(prev => ({
@@ -842,7 +947,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       taskTimers: prev.taskTimers.map(t => t.id === timer.id ? updatedTimer as TaskTimer : t),
     }));
 
-    return updatedTimer as TaskTimer;
+    return {
+      success: true,
+      timer: updatedTimer as TaskTimer,
+    };
   };
 
   const stopTaskTimer = async (taskId: string, description?: string, entryType: 'task' | 'meeting' = 'task'): Promise<{ hours: number } | null> => {
