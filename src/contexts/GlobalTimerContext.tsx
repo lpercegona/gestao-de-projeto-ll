@@ -30,6 +30,7 @@ interface PersistedTimerState {
   pausedElapsed: number;
   taskId: string | null;
   dbTimerId: string | null;
+  pendingTaskLink?: PendingTaskLink | null;
 }
 
 interface GlobalTimerContextType {
@@ -103,6 +104,18 @@ const loadPersistedState = (): GlobalTimerState => {
 };
 
 const persistState = (state: GlobalTimerState) => {
+  let persistedLink: PendingTaskLink | null = null;
+
+  try {
+    const stored = localStorage.getItem(TIMER_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as PersistedTimerState;
+      persistedLink = parsed.pendingTaskLink || null;
+    }
+  } catch {
+    persistedLink = null;
+  }
+
   const toPersist: PersistedTimerState = {
     isRunning: state.isRunning && !state.isPaused,
     isPaused: state.isPaused,
@@ -110,6 +123,7 @@ const persistState = (state: GlobalTimerState) => {
     pausedElapsed: state.pausedElapsed,
     taskId: state.taskId,
     dbTimerId: state.dbTimerId,
+    pendingTaskLink: persistedLink,
   };
   localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(toPersist));
 };
@@ -121,19 +135,23 @@ const clearPersistedState = () => {
 
 const loadPersistedPendingTaskLink = (): PendingTaskLink | null => {
   try {
-    const stored = localStorage.getItem(PENDING_TASK_LINK_STORAGE_KEY);
+    const stored = localStorage.getItem(TIMER_STORAGE_KEY);
     if (!stored) return null;
 
-    const parsed = JSON.parse(stored) as PendingTaskLink;
-    if (!parsed?.taskId || !parsed?.taskName) {
+    const parsed = JSON.parse(stored) as PersistedTimerState;
+    const hasActiveTimer = parsed.isRunning || parsed.isPaused;
+    if (!hasActiveTimer) return null;
+
+    const link = parsed.pendingTaskLink;
+    if (!link?.taskId || !link?.taskName) {
       return null;
     }
 
     return {
-      taskId: parsed.taskId,
-      taskName: parsed.taskName,
-      projectName: parsed.projectName || '',
-      clientName: parsed.clientName || '',
+      taskId: link.taskId,
+      taskName: link.taskName,
+      projectName: link.projectName || '',
+      clientName: link.clientName || '',
     };
   } catch {
     return null;
@@ -141,12 +159,24 @@ const loadPersistedPendingTaskLink = (): PendingTaskLink | null => {
 };
 
 const persistPendingTaskLink = (link: PendingTaskLink | null) => {
-  if (!link) {
-    localStorage.removeItem(PENDING_TASK_LINK_STORAGE_KEY);
-    return;
-  }
+  try {
+    const stored = localStorage.getItem(TIMER_STORAGE_KEY);
+    const parsed: PersistedTimerState = stored
+      ? JSON.parse(stored)
+      : {
+          isRunning: false,
+          isPaused: false,
+          startTime: null,
+          pausedElapsed: 0,
+          taskId: null,
+          dbTimerId: null,
+        };
 
-  localStorage.setItem(PENDING_TASK_LINK_STORAGE_KEY, JSON.stringify(link));
+    parsed.pendingTaskLink = link;
+    localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(parsed));
+  } catch {
+    // noop
+  }
 };
 
 export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
