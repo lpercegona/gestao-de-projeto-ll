@@ -303,7 +303,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               <div className="mb-2 flex items-center justify-end gap-2 transition-all duration-300">
                 <Label
                   htmlFor="distraction-free"
-                  className={`text-sm font-medium transition-all duration-300 ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
+                  className={`text-xs font-medium transition-all duration-300 ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
                     distractionFree ? 'pointer-events-none max-w-0 -translate-x-2 overflow-hidden opacity-0' : 'max-w-[160px] translate-x-0 opacity-100'
                   }`}
                 >
@@ -349,7 +349,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                               >
                                 {task.name}
                               </p>
-                              <p className={`text-[0.5rem] font-medium uppercase tracking-wide break-words whitespace-normal ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
+                              <p className={`text-[0.6rem] font-medium uppercase tracking-wide break-words whitespace-normal ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
                                 {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
                               </p>
                             </div>
