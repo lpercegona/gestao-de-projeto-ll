@@ -235,7 +235,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const effectiveTaskId = timerState.taskId || activeUserTimer?.task_id || null;
 
     if (effectiveTaskId) {
-      await pauseTaskTimer(effectiveTaskId);
+      await pauseTaskTimer(effectiveTaskId, timerState.dbTimerId || activeUserTimer?.id || undefined);
       return;
     }
 
@@ -308,7 +308,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // Auto-pause timer when showing complete dialog
     if (!timerState.isPaused && timerState.isRunning) {
       if (timerState.taskId) {
-        void pauseTaskTimer(timerState.taskId);
+        void pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
       } else {
         const elapsedSeconds = timerState.elapsedSeconds;
         const newState: GlobalTimerState = {

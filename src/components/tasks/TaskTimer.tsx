@@ -103,7 +103,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const handlePause = async () => {
     // Prioritize pausing the timer linked to this task card
     if (activeTimer || timerState.taskId === taskId) {
-      await pauseTaskTimer(taskId);
+      await pauseTaskTimer(taskId, activeTimer?.id);
       return;
     }
 
@@ -114,7 +114,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     }
 
     // Defensive fallback: if global state points to another task but this card still has an active timer
-    await pauseTaskTimer(taskId);
+    await pauseTaskTimer(taskId, activeTimer?.id);
   };
 
   const handleResume = () => {

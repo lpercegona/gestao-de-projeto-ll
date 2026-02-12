@@ -119,7 +119,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handlePauseTimer = useCallback(async () => {
     if (timerState.taskId) {
-      await pauseTaskTimer(timerState.taskId);
+      await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
       return;
     }
 

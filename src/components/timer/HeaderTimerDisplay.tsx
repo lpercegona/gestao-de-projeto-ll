@@ -60,7 +60,7 @@ export const HeaderTimerDisplay: React.FC = () => {
     } else if (timerState.isPaused) {
       resumeGlobalTimer();
     } else if (timerState.taskId) {
-      await pauseTaskTimer(timerState.taskId);
+      await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
     } else {
       pauseGlobalTimer();
     }
