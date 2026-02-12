@@ -187,11 +187,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             <Button
               variant="ghost"
               size="icon"
-              className={`h-9 w-9 rounded-full ${highContrast ? 'text-white hover:bg-white/10 hover:text-white' : 'text-[#64748b] hover:bg-transparent hover:text-[#475569]'}`}
+              className={`h-9 w-9 rounded-full ${highContrast ? 'text-white hover:bg-white/10 hover:text-white' : 'text-[#64748b] hover:bg-transparent hover:text-[#475569] [&_svg]:h-9 [&_svg]:w-9'}`}
               onClick={() => onOpenChange(false)}
               aria-label="Fechar modal"
             >
-              <X className="h-9 w-9 stroke-[1.8]" />
+              <X className=" stroke-[1.8]" />
             </Button>
           </div>
 
