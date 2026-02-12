@@ -191,7 +191,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               onClick={() => onOpenChange(false)}
               aria-label="Fechar modal"
             >
-              <X className="h-7 w-7 stroke-[1.8]" />
+              <X className="h-9 w-9 stroke-[1.8]" />
             </Button>
           </div>
 
@@ -218,8 +218,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
-                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 18px rgba(16,185,129,0.35))' }}
+                  className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-100"
+                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 32px rgba(16,185,129,0.35))' }}
                 />
 
                 <Button
@@ -230,7 +230,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="h-[clamp(36px,14vw,90px)] w-[clamp(36px,14vw,90px)] stroke-[2.4]" />
+                  <Play className="h-[clamp(36px,14vw,90px)] w-[clamp(36px,14vw,90px)] stroke-[1.5]" />
                 </Button>
 
                 <div
