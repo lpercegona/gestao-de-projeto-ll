@@ -32,9 +32,16 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     syncWithTaskTimer,
   } = useGlobalTimer();
 
-  const isRunning = timerState.isRunning && !timerState.isPaused;
-  const isPaused = timerState.isPaused;
-  const canStartNewTaskTimer = !hasActiveTimer;
+  const isTimerLocked =
+    hasActiveTimer && (
+      timerState.taskId !== null ||
+      timerState.dbTimerId !== null ||
+      timerState.startTime !== null ||
+      timerState.elapsedSeconds > 0
+    );
+  const isRunning = isTimerLocked && !timerState.isPaused;
+  const isPaused = isTimerLocked && timerState.isPaused;
+  const canStartNewTaskTimer = !isTimerLocked;
 
   const formatTime = useCallback((totalSeconds: number): string => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -90,7 +97,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handleStartTaskTimer = useCallback(
     async (taskId: string) => {
-      if (hasActiveTimer && timerState.taskId !== taskId) {
+      if (isTimerLocked && timerState.taskId !== taskId) {
         toast.error('Já existe um registro em andamento. Finalize o timer atual antes de iniciar outro.');
         return;
       }
@@ -104,7 +111,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
       setProcessingTaskId(null);
     },
-    [hasActiveTimer, timerState.taskId, startTaskTimer, syncWithTaskTimer],
+    [isTimerLocked, timerState.taskId, startTaskTimer, syncWithTaskTimer],
   );
 
   const handleCompleteTask = useCallback(
@@ -154,7 +161,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
           <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col">
             <p
               className={`overflow-hidden text-center text-sm font-semibold leading-tight transition-all duration-500 md:text-2xl ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
-                hasActiveTimer || distractionFree
+                isTimerLocked || distractionFree
                   ? 'pointer-events-none -translate-y-8 opacity-0 max-h-0 mb-0'
                   : 'translate-y-0 opacity-100 max-h-24 mb-5 md:mb-8'
               }`}
@@ -166,7 +173,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
             <div
               className={`flex items-center justify-center transition-all duration-500 ${
-                hasActiveTimer ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
+                isTimerLocked ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
               }`}
             >
               <div className="relative flex h-[min(82vw,400px)] w-[min(82vw,400px)] items-center justify-center">
@@ -180,7 +187,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
                 <Button
                   onClick={() => {
-                    if (!hasActiveTimer) {
+                    if (!isTimerLocked) {
                       startGlobalTimer();
                       return;
                     }
@@ -194,21 +201,21 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   }}
                   className="absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white"
                   aria-label={
-                    !hasActiveTimer
+                    !isTimerLocked
                       ? 'Iniciar timer'
                       : isPaused
                         ? 'Retomar timer'
                         : 'Pausar timer'
                   }
                   title={
-                    !hasActiveTimer
+                    !isTimerLocked
                       ? 'Iniciar timer'
                       : isPaused
                         ? 'Retomar timer'
                         : 'Pausar timer'
                   }
                 >
-                  {!hasActiveTimer || isPaused ? (
+                  {!isTimerLocked || isPaused ? (
                     <Play className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
                   ) : (
                     <Pause className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
@@ -217,7 +224,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
                 <div
                   className={`pointer-events-none absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
-                    hasActiveTimer ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
+                    isTimerLocked ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
                   }`}
                 >
                   <span className={`font-mono text-2xl tabular-nums md:text-3xl ${isRunning ? 'animate-pulse' : ''}`}>
@@ -229,7 +236,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
             <div
               className={`relative z-20 mb-4 flex items-center justify-center gap-2 transition-all duration-300 md:mb-6 ${
-                hasActiveTimer ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-3 opacity-0'
+                isTimerLocked ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-3 opacity-0'
               }`}
             >
               {isPaused ? (
@@ -354,7 +361,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                   variant="ghost"
                                   className={`h-9 w-9 rounded-full ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
                                   onClick={() => handleCompleteTask(task.id)}
-                                  disabled={isLoading || hasActiveTimer || task.status === 'completed' || task.status === 'done'}
+                                  disabled={isLoading || isTimerLocked || task.status === 'completed' || task.status === 'done'}
                                   aria-label={`Concluir tarefa ${task.name}`}
                                   title="Concluir tarefa"
                                 >
