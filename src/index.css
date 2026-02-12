@@ -151,6 +151,7 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
 }
 
 /* Marquee animation for sliding text with infinite loop and 3s pause */
