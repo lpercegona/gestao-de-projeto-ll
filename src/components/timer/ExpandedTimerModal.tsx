@@ -51,9 +51,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     if (taskBinding) {
       return {
         taskName: taskBinding.snapshot.taskTitle,
-        taskDescription:
-          taskBinding.snapshot.taskDescription ||
-          `${taskBinding.snapshot.projectName || 'Sem projeto'} - ${taskBinding.snapshot.clientName || 'Sem cliente'}`,
+        projectName: taskBinding.snapshot.projectName || 'Sem projeto',
+        clientName: taskBinding.snapshot.clientName || 'Sem cliente',
       };
     }
 
@@ -67,7 +66,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
     return {
       taskName: task.name,
-      taskDescription: `${project?.name || 'Sem projeto'} - ${client?.company || client?.name || 'Sem cliente'}`,
+      projectName: project?.name || 'Sem projeto',
+      clientName: client?.company || client?.name || 'Sem cliente',
     };
   }, [taskBinding, timerState.taskId, data.tasks, data.projects, data.clients]);
 
@@ -193,28 +193,28 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 shouldUseCollapsedHeroLayout ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
               }`}
             >
-              <div className="relative flex h-[min(82vw,400px)] w-[min(82vw,400px)] items-center justify-center">
+              <div className="relative flex aspect-square w-full max-w-[400px] items-center justify-center" style={{ width: "min(400px, calc(100vw - 4rem))" }}>
                 <img
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
                   className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
-                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
+                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 18px rgba(16,185,129,0.35))' }}
                 />
 
                 <Button
                   onClick={() => startGlobalTimer()}
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
+                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
                     buActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
                   }`}
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="h-[clamp(40px,16vw,90px)] w-[clamp(40px,16vw,90px)] stroke-[2.4]" />
+                  <Play className="h-[clamp(36px,14vw,90px)] w-[clamp(36px,14vw,90px)] stroke-[2.4]" />
                 </Button>
 
                 <div
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
+                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
                     buActiveTimer ? 'scale-100 opacity-100' : 'pointer-events-none scale-110 opacity-0'
                   }`}
                 >
@@ -272,7 +272,9 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               {currentTaskInfo ? (
                 <>
                   <p className={`line-clamp-2 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
-                  <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>{currentTaskInfo.taskDescription}</p>
+                  <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
+                    Projeto: {currentTaskInfo.projectName} • Cliente: {currentTaskInfo.clientName}
+                  </p>
                 </>
               ) : null}
             </div>
