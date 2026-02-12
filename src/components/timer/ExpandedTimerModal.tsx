@@ -98,7 +98,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute  animate-[spin_24s_linear_infinite] opacity-35"
+                  className="pointer-events-none absolute animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
                   style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
                 />
 
