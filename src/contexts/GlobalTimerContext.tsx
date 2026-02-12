@@ -2,10 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { TaskTimerBinding } from '@/types';
 
 const TIMER_STORAGE_KEY = 'oras-global-timer';
-const PENDING_TASK_LINK_STORAGE_KEY = 'oras-global-pending-task-link';
-
 interface GlobalTimerState {
   isRunning: boolean;
   isPaused: boolean;
@@ -16,7 +15,9 @@ interface GlobalTimerState {
   dbTimerId: string | null; // ID of the task_timers record
 }
 
-export interface PendingTaskLink {
+export interface PendingTaskLink extends TaskTimerBinding {}
+
+interface LegacyPendingTaskLink {
   taskId: string;
   taskName: string;
   taskDescription?: string | null;
@@ -31,7 +32,27 @@ interface PersistedTimerState {
   pausedElapsed: number;
   taskId: string | null;
   dbTimerId: string | null;
-  pendingTaskLink?: PendingTaskLink | null;
+  taskBinding?: TaskTimerBinding | null;
+  pendingTaskLink?: LegacyPendingTaskLink | null;
+}
+
+interface TaskTimerSyncRow {
+  id: string;
+  task_id: string | null;
+  user_id: string;
+  started_at: string;
+  paused_at: string | null;
+  paused_elapsed_seconds: number;
+  task_name_snapshot?: string | null;
+  task_description_snapshot?: string | null;
+  project_name_snapshot?: string | null;
+  client_name_snapshot?: string | null;
+}
+
+interface TaskBindingResolution {
+  taskId: string | null;
+  pendingTaskLink: PendingTaskLink | null;
+  shouldWarnMissingTask: boolean;
 }
 
 interface GlobalTimerContextType {
@@ -66,13 +87,41 @@ const initialState: GlobalTimerState = {
 };
 
 // Load persisted state from localStorage
+const toTaskBinding = (link?: LegacyPendingTaskLink | TaskTimerBinding | null): TaskTimerBinding | null => {
+  if (!link || !link.taskId) return null;
+
+  if ('taskTitleSnapshot' in link) {
+    return {
+      taskId: link.taskId,
+      taskTitleSnapshot: link.taskTitleSnapshot,
+      taskDescriptionSnapshot: link.taskDescriptionSnapshot || '',
+      projectNameSnapshot: link.projectNameSnapshot || '',
+      clientNameSnapshot: link.clientNameSnapshot || '',
+      boundAt: typeof link.boundAt === 'number' ? link.boundAt : Date.now(),
+    };
+  }
+
+  return {
+    taskId: link.taskId,
+    taskTitleSnapshot: link.taskName || '',
+    taskDescriptionSnapshot: '',
+    projectNameSnapshot: link.projectName || '',
+    clientNameSnapshot: link.clientName || '',
+    boundAt: Date.now(),
+  };
+};
+
+const getStoredTaskBinding = (parsed: PersistedTimerState): TaskTimerBinding | null => {
+  return toTaskBinding(parsed.taskBinding) || toTaskBinding(parsed.pendingTaskLink);
+};
+
 const loadPersistedState = (): GlobalTimerState => {
   try {
     const stored = localStorage.getItem(TIMER_STORAGE_KEY);
     if (!stored) return initialState;
-    
+
     const parsed: PersistedTimerState = JSON.parse(stored);
-    
+
     if (parsed.isRunning && parsed.startTime) {
       const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000) + parsed.pausedElapsed;
       return {
@@ -85,7 +134,7 @@ const loadPersistedState = (): GlobalTimerState => {
         dbTimerId: parsed.dbTimerId || null,
       };
     }
-    
+
     if (parsed.isPaused) {
       return {
         isRunning: true,
@@ -97,7 +146,7 @@ const loadPersistedState = (): GlobalTimerState => {
         dbTimerId: parsed.dbTimerId || null,
       };
     }
-    
+
     return initialState;
   } catch {
     return initialState;
@@ -105,16 +154,16 @@ const loadPersistedState = (): GlobalTimerState => {
 };
 
 const persistState = (state: GlobalTimerState) => {
-  let persistedLink: PendingTaskLink | null = null;
+  let persistedBinding: TaskTimerBinding | null = null;
 
   try {
     const stored = localStorage.getItem(TIMER_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as PersistedTimerState;
-      persistedLink = parsed.pendingTaskLink || null;
+      persistedBinding = getStoredTaskBinding(parsed);
     }
   } catch {
-    persistedLink = null;
+    persistedBinding = null;
   }
 
   const toPersist: PersistedTimerState = {
@@ -124,15 +173,15 @@ const persistState = (state: GlobalTimerState) => {
     pausedElapsed: state.pausedElapsed,
     taskId: state.taskId,
     dbTimerId: state.dbTimerId,
-    pendingTaskLink: persistedLink,
+    taskBinding: persistedBinding,
   };
+
   localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(toPersist));
 };
 
 const clearPersistedState = () => {
   localStorage.removeItem(TIMER_STORAGE_KEY);
 };
-
 
 const loadPersistedPendingTaskLink = (): PendingTaskLink | null => {
   try {
@@ -143,18 +192,7 @@ const loadPersistedPendingTaskLink = (): PendingTaskLink | null => {
     const hasActiveTimer = parsed.isRunning || parsed.isPaused;
     if (!hasActiveTimer) return null;
 
-    const link = parsed.pendingTaskLink;
-    if (!link?.taskId || !link?.taskName) {
-      return null;
-    }
-
-    return {
-      taskId: link.taskId,
-      taskName: link.taskName,
-      taskDescription: link.taskDescription || null,
-      projectName: link.projectName || '',
-      clientName: link.clientName || '',
-    };
+    return getStoredTaskBinding(parsed);
   } catch {
     return null;
   }
@@ -174,7 +212,8 @@ const persistPendingTaskLink = (link: PendingTaskLink | null) => {
           dbTimerId: null,
         };
 
-    parsed.pendingTaskLink = link;
+    parsed.taskBinding = link;
+    delete parsed.pendingTaskLink;
     localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(parsed));
   } catch {
     // noop
@@ -199,30 +238,90 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [wasPausedBeforeComplete, setWasPausedBeforeComplete] = useState(false);
 
+  const resolveTaskBinding = useCallback((
+    activeTaskTimer: TaskTimerSyncRow,
+    tasks: typeof data.tasks,
+    persistedState: PersistedTimerState | null,
+  ): TaskBindingResolution => {
+    // Quick timer (task_id = null): never populate binding metadata
+    if (!activeTaskTimer.task_id) {
+      return {
+        taskId: null,
+        pendingTaskLink: null,
+        shouldWarnMissingTask: false,
+      };
+    }
 
-  useEffect(() => {
-    setRehydrationChecked(false);
-    setTimerState(initialState);
-    setPendingTaskLinkState(null);
-  }, [user?.id]);
+    const task = tasks.find((item) => item.id === activeTaskTimer.task_id);
+    if (task) {
+      const project = data.projects.find((item) => item.id === task.project_id);
+      const client = project ? data.clients.find((item) => item.id === project.client_id) : null;
+
+      return {
+        taskId: task.id,
+        pendingTaskLink: {
+          taskId: task.id,
+          taskName: task.name,
+          projectName: project?.name || 'Sem projeto',
+          clientName: client?.company || client?.name || 'Sem cliente',
+        },
+        shouldWarnMissingTask: false,
+      };
+    }
+
+    const hasSnapshot = !!(
+      activeTaskTimer.task_name_snapshot ||
+      activeTaskTimer.task_description_snapshot ||
+      activeTaskTimer.project_name_snapshot ||
+      activeTaskTimer.client_name_snapshot
+    );
+
+    if (hasSnapshot) {
+      return {
+        taskId: null,
+        pendingTaskLink: {
+          taskId: activeTaskTimer.task_id,
+          taskName: activeTaskTimer.task_name_snapshot || 'Tarefa indisponível',
+          projectName: activeTaskTimer.project_name_snapshot || activeTaskTimer.task_description_snapshot || 'Sem projeto',
+          clientName: activeTaskTimer.client_name_snapshot || 'Sem cliente',
+        },
+        shouldWarnMissingTask: true,
+      };
+    }
+
+    const fallbackLink = persistedState?.pendingTaskLink;
+    if (fallbackLink?.taskName) {
+      return {
+        taskId: null,
+        pendingTaskLink: {
+          taskId: fallbackLink.taskId || activeTaskTimer.task_id,
+          taskName: fallbackLink.taskName,
+          projectName: fallbackLink.projectName || 'Sem projeto',
+          clientName: fallbackLink.clientName || 'Sem cliente',
+        },
+        shouldWarnMissingTask: true,
+      };
+    }
+
+    return {
+      taskId: null,
+      pendingTaskLink: {
+        taskId: activeTaskTimer.task_id,
+        taskName: 'Tarefa indisponível',
+        projectName: 'Sem projeto',
+        clientName: 'Sem cliente',
+      },
+      shouldWarnMissingTask: true,
+    };
+  }, [data.tasks, data.projects, data.clients]);
+
   // Sync with any active task timer from the database (including unlinked quick timers)
   useEffect(() => {
     if (!user || !data.taskTimers) return;
 
-    const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id);
+    const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id) as TaskTimerSyncRow | undefined;
 
     if (activeTaskTimer) {
-      if (activeTaskTimer.task_id) {
-        const dbLink: PendingTaskLink = {
-          taskId: activeTaskTimer.task_id,
-          taskName: (activeTaskTimer as any).task_title_snapshot || '',
-          taskDescription: (activeTaskTimer as any).task_description_snapshot || null,
-          projectName: (activeTaskTimer as any).project_name_snapshot || '',
-          clientName: (activeTaskTimer as any).client_name_snapshot || '',
-        };
-        setPendingTaskLinkState(dbLink);
-        persistPendingTaskLink(dbLink);
-      }
       const isPaused = !!activeTaskTimer.paused_at;
       const startTime = isPaused ? null : new Date(activeTaskTimer.started_at).getTime();
       const pausedElapsed = activeTaskTimer.paused_elapsed_seconds || 0;
@@ -236,7 +335,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         elapsedSeconds,
         startTime,
         pausedElapsed,
-        taskId: activeTaskTimer.task_id,
+        taskId: resolvedBinding.taskId,
         dbTimerId: activeTaskTimer.id,
       };
 
@@ -515,15 +614,6 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       dbTimerId: null,
     };
     setTimerState(newState);
-    const syncLink: PendingTaskLink = {
-      taskId,
-      taskName: snapshots.taskName || pendingTaskLink?.taskName || '',
-      taskDescription: snapshots.taskDescription || pendingTaskLink?.taskDescription || null,
-      projectName: snapshots.projectName || pendingTaskLink?.projectName || '',
-      clientName: snapshots.clientName || pendingTaskLink?.clientName || '',
-    };
-    setPendingTaskLinkState(syncLink);
-    persistPendingTaskLink(syncLink);
     persistState(newState);
   }, [pendingTaskLink]);
 

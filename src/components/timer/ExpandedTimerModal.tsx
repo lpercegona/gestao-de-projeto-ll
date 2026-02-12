@@ -49,8 +49,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const currentTaskInfo = useMemo(() => {
     if (pendingTaskLink) {
       return {
-        taskName: pendingTaskLink.taskName,
-        taskDescription: `${pendingTaskLink.projectName || 'Sem projeto'} - ${pendingTaskLink.clientName || 'Sem cliente'}`,
+        taskName: pendingTaskLink.taskTitleSnapshot,
+        taskDescription: pendingTaskLink.taskDescriptionSnapshot || `${pendingTaskLink.projectNameSnapshot || 'Sem projeto'} - ${pendingTaskLink.clientNameSnapshot || 'Sem cliente'}`,
       };
     }
 
@@ -116,10 +116,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
       setPendingTaskLink({
         taskId,
-        taskName: task.name,
-        taskDescription: task.description || null,
-        projectName: task.projectName || 'Sem projeto',
-        clientName: task.clientName || 'Sem cliente',
+        taskTitleSnapshot: task.name,
+        taskDescriptionSnapshot: `${task.projectName || 'Sem projeto'} - ${task.clientName || 'Sem cliente'}`,
+        projectNameSnapshot: task.projectName || 'Sem projeto',
+        clientNameSnapshot: task.clientName || 'Sem cliente',
+        boundAt: Date.now(),
       });
 
       setProcessingTaskId(null);

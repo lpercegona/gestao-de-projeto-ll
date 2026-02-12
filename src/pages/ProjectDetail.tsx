@@ -310,10 +310,11 @@ export const ProjectDetail: React.FC = () => {
             const handleStartTimer = async () => {
               setPendingTaskLink({
                 taskId: task.id,
-                taskName: task.name,
-                taskDescription: task.description || null,
-                projectName: project.name,
-                clientName: client.company || client.name,
+                taskTitleSnapshot: task.name,
+                taskDescriptionSnapshot: `${project.name} - ${client.company || client.name}`,
+                projectNameSnapshot: project.name,
+                clientNameSnapshot: client.company || client.name,
+                boundAt: Date.now(),
               });
               await startGlobalTimer();
               toast.success('Timer iniciado!');

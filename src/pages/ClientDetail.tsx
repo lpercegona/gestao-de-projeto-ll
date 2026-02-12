@@ -1264,10 +1264,11 @@ export const ClientDetail: React.FC = () => {
                 if (task && project) {
                   setPendingTaskLink({
                     taskId: task.id,
-                    taskName: task.name,
-                    taskDescription: task.description || null,
-                    projectName: project.name,
-                    clientName: client?.company || client?.name || 'Cliente',
+                    taskTitleSnapshot: task.name,
+                    taskDescriptionSnapshot: `${project.name} - ${client?.company || client?.name || 'Cliente'}`,
+                    projectNameSnapshot: project.name,
+                    clientNameSnapshot: client?.company || client?.name || 'Cliente',
+                    boundAt: Date.now(),
                   });
                 }
 
