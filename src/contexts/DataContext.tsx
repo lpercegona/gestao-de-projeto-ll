@@ -325,7 +325,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('project_columns').select('*').order('created_at', { ascending: true }),
         supabase.from('user_project_access').select('*'),
         supabase.from('profiles').select('user_id, full_name'),
-        supabase.from('task_timers').select('*'),
+        supabase.from('task_timers').select('*').eq('user_id', user.id),
         supabase.from('kanban_stages').select('*').order('order_position', { ascending: true }),
       ]);
 
@@ -406,11 +406,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return prev;
             }
 
+            const currentTimer = prev.taskTimers.find(timer => timer.id === nextTimer.id);
+            const mergedTimer: TaskTimer =
+              currentTimer && !nextTimer.task_id && currentTimer.task_id
+                ? { ...nextTimer, task_id: currentTimer.task_id }
+                : nextTimer;
+
             const withoutCurrent = prev.taskTimers.filter(timer => timer.id !== nextTimer.id);
 
             return {
               ...prev,
-              taskTimers: [...withoutCurrent, nextTimer],
+              taskTimers: [...withoutCurrent, mergedTimer],
             };
           });
         }
@@ -845,10 +851,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await updateTask(taskId, { status: 'in_progress' });
     }
 
+    // Linked task timers should behave like quick timers in backend (task_id = null).
+    // The link to the task is kept only in frontend state until completion.
     const { data: timer, error } = await supabase
       .from('task_timers')
       .insert({
-        task_id: taskId,
+        task_id: null,
         user_id: user.id,
       } as any)
       .select()
@@ -859,12 +867,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
+    const linkedTimer = { ...(timer as TaskTimer), task_id: taskId } as TaskTimer;
+
     // Update local state immediately
     setData(prev => ({
       ...prev,
-      taskTimers: [...prev.taskTimers, timer as TaskTimer],
+      taskTimers: [...prev.taskTimers.filter(t => t.id !== linkedTimer.id), linkedTimer],
     }));
-    return timer as TaskTimer;
+    return linkedTimer;
   };
 
 
@@ -872,12 +882,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return null;
 
     const taskTimers = data.taskTimers.filter(t => t.task_id === taskId && t.user_id === user.id);
-    if (taskTimers.length === 0) return null;
+    if (taskTimers.length > 0) {
+      const runningTimer = taskTimers.find(t => !t.paused_at);
+      if (runningTimer) return runningTimer;
 
-    const runningTimer = taskTimers.find(t => !t.paused_at);
-    if (runningTimer) return runningTimer;
+      return taskTimers.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0] || null;
+    }
 
-    return taskTimers.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0] || null;
+    // Fallback for linked-task flow backed by quick timer records (task_id = null in DB).
+    const userTimers = data.taskTimers.filter(t => t.user_id === user.id);
+    const runningFallback = userTimers.find(t => !t.paused_at);
+    if (runningFallback) return runningFallback;
+
+    return userTimers.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0] || null;
   };
 
   const getRunningTaskTimer = (taskId: string, timerId?: string): TaskTimer | null => {
@@ -891,7 +908,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const runningTimers = data.taskTimers
-      .filter((timer) => timer.task_id === taskId && timer.user_id === user.id && !timer.paused_at)
+      .filter((timer) => timer.user_id === user.id && !timer.paused_at && (timer.task_id === taskId || timer.task_id === null))
       .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
 
     return runningTimers[0] || null;
