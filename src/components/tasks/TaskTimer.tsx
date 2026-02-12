@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 interface TaskTimerProps {
   taskId: string;
   taskStatus: string;
-  activeTimer: { id: string; user_id?: string; started_at: string; paused_at: string | null; paused_elapsed_seconds: number } | null;
+  activeTimer: { id: string; user_id?: string; started_at: string; paused_at: string | null; paused_elapsed_seconds: number; task_title_snapshot?: string | null; task_description_snapshot?: string | null; project_name_snapshot?: string | null; client_name_snapshot?: string | null } | null;
   onStart: () => Promise<void>;
   onStop: () => Promise<void>;
   onComplete: () => Promise<void>;
@@ -82,7 +82,12 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   // Sync with global timer when this task has an active timer
   useEffect(() => {
     if (ownedActiveTimer && originTaskId !== taskId) {
-      syncWithTaskTimer(taskId, ownedActiveTimer.started_at, ownedActiveTimer.paused_at, ownedActiveTimer.paused_elapsed_seconds || 0);
+      syncWithTaskTimer(taskId, ownedActiveTimer.started_at, ownedActiveTimer.paused_at, ownedActiveTimer.paused_elapsed_seconds || 0, {
+        taskName: ownedActiveTimer.task_title_snapshot || undefined,
+        taskDescription: ownedActiveTimer.task_description_snapshot || undefined,
+        projectName: ownedActiveTimer.project_name_snapshot || undefined,
+        clientName: ownedActiveTimer.client_name_snapshot || undefined,
+      });
     }
   }, [ownedActiveTimer, taskId, syncWithTaskTimer, originTaskId]);
 
