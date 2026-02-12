@@ -86,7 +86,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
           </div>
 
           <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-            <p className="mb-8 text-center text-md font-semibold leading-tight text-[#64748b] md:text-2xl">
+            <p className="mb-8 text-center text-sm font-semibold leading-tight text-[#64748b] md:text-2xl">
               Inicie o timer para começar
               <br />
               um novo registro
