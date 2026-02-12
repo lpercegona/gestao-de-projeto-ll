@@ -4,6 +4,7 @@ import { Play, Pause, Square, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
+import { useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
 import { toast } from 'sonner';
 
@@ -41,6 +42,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     resumeGlobalTimer, 
     completeGlobalTimer,
   } = useGlobalTimer();
+  const { pauseTaskTimer } = useData();
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -85,7 +87,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   const handleStart = async () => {
     // Check if there's already an active global timer (either standalone or from another task)
-    if (hasActiveTimer && timerState.taskId !== taskId) {
+    if (hasActiveTimer && !timerState.isPaused && timerState.taskId !== taskId) {
       toast.error('Timer em andamento: Já existe um cronômetro ativo. Finalize-o antes de iniciar outro.');
       return;
     }
@@ -98,8 +100,21 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     }
   };
 
-  const handlePause = () => {
-    pauseGlobalTimer();
+  const handlePause = async () => {
+    // Prioritize pausing the timer linked to this task card
+    if (activeTimer || timerState.taskId === taskId) {
+      await pauseTaskTimer(taskId);
+      return;
+    }
+
+    // Quick timer (not linked to a task)
+    if (!timerState.taskId) {
+      pauseGlobalTimer();
+      return;
+    }
+
+    // Defensive fallback: if global state points to another task but this card still has an active timer
+    await pauseTaskTimer(taskId);
   };
 
   const handleResume = () => {
