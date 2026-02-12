@@ -17,7 +17,7 @@ export default {
   keyframes: {
     pulseScale: {
       '0%,100%': { transform: 'scale(1)' },
-      '50%': { transform: 'scale(1.08)' },
+      '50%': { transform: 'scale(0.8)' },
     },
   },
   animation: {
