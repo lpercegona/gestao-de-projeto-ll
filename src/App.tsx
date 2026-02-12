@@ -36,7 +36,15 @@ import { StyleClasses } from "@/pages/StyleClasses";
 import { PageConstants } from "@/pages/PageConstants";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+    },
+  },
+});
 
 const RootRoute = () => {
   const { user, loading, roleLoading } = useAuth();

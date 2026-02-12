@@ -8,11 +8,22 @@ import { ProjectRequestForm } from "@/components/client/ProjectRequestForm";
 import { toast } from "sonner";
 import { FileText, Plus } from "lucide-react";
 
-interface QuickRequestCardProps {
-  pendingCount?: number;
+interface CreatedProjectRequest {
+  id: string;
+  client_id: string;
+  title: string;
+  briefing: string;
+  status: string;
+  admin_notes: string | null;
+  created_at: string;
 }
 
-export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount = 0 }) => {
+interface QuickRequestCardProps {
+  pendingCount?: number;
+  onRequestCreated?: (request: CreatedProjectRequest) => void;
+}
+
+export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount = 0, onRequestCreated }) => {
   const { user } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -40,22 +51,24 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
       }
 
       // Insert new project request
-      const { error } = await supabase.from("project_requests").insert({
-        client_id: resolvedClientId,
-        title,
-        briefing,
-        desired_deadline: desiredDeadline || null,
-        created_by: user.id,
-        status: "pending",
-      });
+      const { data: createdRequest, error } = await supabase
+        .from("project_requests")
+        .insert({
+          client_id: resolvedClientId,
+          title,
+          briefing,
+          desired_deadline: desiredDeadline || null,
+          created_by: user.id,
+          status: "pending",
+        })
+        .select("id, client_id, title, briefing, status, admin_notes, created_at")
+        .single();
 
       if (error) throw error;
 
       toast.success("Solicitação enviada com sucesso!");
+      onRequestCreated?.(createdRequest);
       setIsFormOpen(false);
-
-      // Reload the page to refresh the data
-      window.location.reload();
     } catch (error) {
       console.error("Error submitting request:", error);
       toast.error("Erro ao enviar solicitação");

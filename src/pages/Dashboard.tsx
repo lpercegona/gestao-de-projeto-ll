@@ -222,6 +222,11 @@ export const Dashboard: React.FC = () => {
     .filter((request) => request.status === "pending")
     .slice(0, 5);
 
+  const handleRequestCreated = (request: ProjectRequest) => {
+    setProjectRequests((prev) => [request, ...prev]);
+  };
+
+
   if (loading || (isClient && loadingRequests)) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -443,7 +448,7 @@ export const Dashboard: React.FC = () => {
           {/* Right Column - Actions & Calendar */}
           <div className="space-y-6 order-first lg:order-last min-w-0">
             <div className="min-w-0 w-full">
-              <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} />
+              <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} onRequestCreated={handleRequestCreated} />
             </div>
             <div className="min-w-0 w-full">
               <DashboardCalendar />
