@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Play, Pause, Square, X, Check, Contrast } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,26 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const isRunning = timerState.isRunning && !timerState.isPaused;
   const isPaused = timerState.isPaused;
   const canStartNewTaskTimer = !buActiveTimer;
-  const shouldUseCollapsedHeroLayout = buActiveTimer && !taskBinding;
+  const [shouldAnimateIntroText, setShouldAnimateIntroText] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setShouldAnimateIntroText(false);
+      return;
+    }
+
+    const shouldHideIntroText = buActiveTimer || distractionFree;
+    if (!shouldHideIntroText) {
+      setShouldAnimateIntroText(false);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setShouldAnimateIntroText(true);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [open, buActiveTimer, distractionFree]);
 
   const formatTime = useCallback((totalSeconds: number): string => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -179,7 +198,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
           <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col">
             <p
               className={`overflow-hidden text-center text-sm font-semibold leading-tight transition-all duration-500 md:text-2xl ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
-                shouldUseCollapsedHeroLayout || distractionFree
+                shouldAnimateIntroText
                   ? 'pointer-events-none -translate-y-8 opacity-0 max-h-0 mb-0'
                   : 'translate-y-0 opacity-100 max-h-24 mb-5 md:mb-8'
               }`}
@@ -191,7 +210,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
             <div
               className={`flex items-center justify-center transition-all duration-500 ${
-                shouldUseCollapsedHeroLayout ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
+                distractionFree ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
               }`}
             >
               <div className="relative flex aspect-square w-full max-w-[400px] items-center justify-center" style={{ width: "min(400px, calc(100vw - 4rem))" }}>
@@ -272,8 +291,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             >
               {currentTaskInfo ? (
                 <div className="mx-auto w-full max-w-[66.666vw]">
-                  <p className={`line-clamp-2 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
-                  <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
+                  <p className={`text-sm font-semibold leading-snug break-words whitespace-normal ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
+                  <p className={`text-xs font-medium break-words whitespace-normal ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
                     Projeto: {currentTaskInfo.projectName} • Cliente: {currentTaskInfo.clientName}
                   </p>
                 </div>
@@ -330,7 +349,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                               >
                                 {task.name}
                               </p>
-                              <p className={`truncate text-[0.5rem] font-medium uppercase tracking-wide ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
+                              <p className={`text-[0.5rem] font-medium uppercase tracking-wide break-words whitespace-normal ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
                                 {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
                               </p>
                             </div>
