@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -106,6 +106,12 @@ export const ClientProjects: React.FC = () => {
     description: '',
     due_date: '',
   });
+
+  const getCurrentUserActiveTimer = useCallback((taskId: string) => {
+    const timer = getActiveTimer(taskId);
+    if (!timer || !user) return null;
+    return timer.user_id === user.id ? timer : null;
+  }, [getActiveTimer, user]);
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -517,7 +523,7 @@ export const ClientProjects: React.FC = () => {
           getProjectHours={getProjectHours}
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
-          getActiveTimer={getActiveTimer}
+          getActiveTimer={getCurrentUserActiveTimer}
           getClientColumns={getClientColumns}
           onEditProject={(project) => openEditRequest(project as UnifiedProject)}
           onDeleteProject={() => {}}
@@ -548,7 +554,7 @@ export const ClientProjects: React.FC = () => {
           getProjectHours={getProjectHours}
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
-          getActiveTimer={getActiveTimer}
+          getActiveTimer={getCurrentUserActiveTimer}
           onEditTask={() => {}}
           onDeleteTask={() => {}}
           onRegisterTime={() => {}}

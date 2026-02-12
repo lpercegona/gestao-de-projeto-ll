@@ -26,6 +26,7 @@ export const QuickActionsPanel: React.FC = () => {
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
+    pendingTaskLink,
     showCompleteDialog,
     setShowCompleteDialog,
   } = useGlobalTimer();
@@ -43,7 +44,8 @@ export const QuickActionsPanel: React.FC = () => {
   const isPaused = timerState.isPaused;
 
   // Get linked task info
-  const linkedTask = timerState.taskId ? data.tasks.find((t) => t.id === timerState.taskId) : null;
+  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const linkedTask = originTaskId ? data.tasks.find((t) => t.id === originTaskId) : null;
   const linkedProject = linkedTask ? data.projects.find((p) => p.id === linkedTask.project_id) : null;
   const linkedClient = linkedProject ? data.clients.find((c) => c.id === linkedProject.client_id) : null;
 
@@ -130,7 +132,7 @@ export const QuickActionsPanel: React.FC = () => {
             {/* Show linked task info or status */}
             {hasActiveTimer && (
               <div className="w-full text-center">
-                {timerState.taskId && linkedTask ? (
+                {originTaskId && linkedTask ? (
                   <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
                     <p className="font-medium text-foreground truncate">{linkedTask.name}</p>
                     <p className="truncate">

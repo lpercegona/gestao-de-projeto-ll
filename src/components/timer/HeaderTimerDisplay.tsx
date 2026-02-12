@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Play, Pause, Square, Clock, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -7,12 +7,6 @@ import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from './GlobalTimerCompleteDialog';
 import { MarqueeText } from './MarqueeText';
-
-interface LinkedInfo {
-  taskName: string;
-  projectName: string;
-  clientName: string;
-}
 
 export const HeaderTimerDisplay: React.FC = () => {
   const {
@@ -25,32 +19,6 @@ export const HeaderTimerDisplay: React.FC = () => {
     showCompleteDialog,
     setShowCompleteDialog,
   } = useGlobalTimer();
-
-  const { data } = useData();
-  const [pendingTaskLink, setPendingTaskLink] = useState<string | null>(null);
-  const [linkedInfo, setLinkedInfo] = useState<LinkedInfo | null>(null);
-
-  useEffect(() => {
-    setPendingTaskLink(hasActiveTimer ? timerState.taskId : null);
-  }, [hasActiveTimer, timerState.taskId]);
-
-  // Fetch linked task info when timer has a taskId
-  useEffect(() => {
-    if (pendingTaskLink) {
-      const task = data.tasks.find(t => t.id === pendingTaskLink);
-      if (task) {
-        const project = data.projects.find(p => p.id === task.project_id);
-        const client = project ? data.clients.find(c => c.id === project.client_id) : null;
-        setLinkedInfo({
-          taskName: task.name,
-          projectName: project?.name || 'Projeto desconhecido',
-          clientName: client?.name || 'Cliente desconhecido',
-        });
-      }
-    } else {
-      setLinkedInfo(null);
-    }
-  }, [pendingTaskLink, data.tasks, data.projects, data.clients]);
 
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -161,31 +129,25 @@ export const HeaderTimerDisplay: React.FC = () => {
 
 // Component that shows task info with slide animation
 export const HeaderTimerTaskInfo: React.FC = () => {
-  const { timerState, hasActiveTimer } = useGlobalTimer();
+  const { timerState, hasActiveTimer, pendingTaskLink } = useGlobalTimer();
   const { data } = useData();
-  const [pendingTaskLink, setPendingTaskLink] = useState<string | null>(null);
-  const [linkedInfo, setLinkedInfo] = useState<{ taskName: string; projectName: string; clientName: string } | null>(null);
+  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
 
-  useEffect(() => {
-    setPendingTaskLink(hasActiveTimer ? timerState.taskId : null);
-  }, [hasActiveTimer, timerState.taskId]);
+  const linkedInfo = useMemo(() => {
+    if (!originTaskId) return null;
 
-  useEffect(() => {
-    if (pendingTaskLink) {
-      const task = data.tasks.find(t => t.id === pendingTaskLink);
-      if (task) {
-        const project = data.projects.find(p => p.id === task.project_id);
-        const client = project ? data.clients.find(c => c.id === project.client_id) : null;
-        setLinkedInfo({
-          taskName: task.name,
-          projectName: project?.name || 'Projeto',
-          clientName: client?.name || 'Cliente',
-        });
-      }
-    } else {
-      setLinkedInfo(null);
-    }
-  }, [pendingTaskLink, data.tasks, data.projects, data.clients]);
+    const task = data.tasks.find((t) => t.id === originTaskId);
+    if (!task) return null;
+
+    const project = data.projects.find((p) => p.id === task.project_id);
+    const client = project ? data.clients.find((c) => c.id === project.client_id) : null;
+
+    return {
+      taskName: task.name,
+      projectName: project?.name || 'Projeto',
+      clientName: client?.name || 'Cliente',
+    };
+  }, [originTaskId, data.tasks, data.projects, data.clients]);
 
   if (!hasActiveTimer) return null;
 
