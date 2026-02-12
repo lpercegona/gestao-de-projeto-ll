@@ -1,0 +1,1 @@
+-- Migration intentionally left blank (previous SQL lines removed as requested).
