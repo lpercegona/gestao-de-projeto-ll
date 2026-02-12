@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const TIMER_STORAGE_KEY = 'oras-global-timer';
+const PENDING_TASK_LINK_STORAGE_KEY = 'oras-global-pending-task-link';
 
 interface GlobalTimerState {
   isRunning: boolean;
@@ -117,11 +118,42 @@ const clearPersistedState = () => {
   localStorage.removeItem(TIMER_STORAGE_KEY);
 };
 
+
+const loadPersistedPendingTaskLink = (): PendingTaskLink | null => {
+  try {
+    const stored = localStorage.getItem(PENDING_TASK_LINK_STORAGE_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored) as PendingTaskLink;
+    if (!parsed?.taskId || !parsed?.taskName) {
+      return null;
+    }
+
+    return {
+      taskId: parsed.taskId,
+      taskName: parsed.taskName,
+      projectName: parsed.projectName || '',
+      clientName: parsed.clientName || '',
+    };
+  } catch {
+    return null;
+  }
+};
+
+const persistPendingTaskLink = (link: PendingTaskLink | null) => {
+  if (!link) {
+    localStorage.removeItem(PENDING_TASK_LINK_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(PENDING_TASK_LINK_STORAGE_KEY, JSON.stringify(link));
+};
+
 export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const { data, pauseTaskTimer, resumeTaskTimer } = useData();
   const [timerState, setTimerState] = useState<GlobalTimerState>(() => loadPersistedState());
-  const [pendingTaskLink, setPendingTaskLink] = useState<PendingTaskLink | null>(null);
+  const [pendingTaskLink, setPendingTaskLinkState] = useState<PendingTaskLink | null>(() => loadPersistedPendingTaskLink());
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [wasPausedBeforeComplete, setWasPausedBeforeComplete] = useState(false);
 
@@ -133,7 +165,8 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     if (activeTaskTimer) {
       if (activeTaskTimer.task_id) {
-        setPendingTaskLink(null);
+        setPendingTaskLinkState(null);
+        persistPendingTaskLink(null);
       }
       const isPaused = !!activeTaskTimer.paused_at;
       const startTime = isPaused ? null : new Date(activeTaskTimer.started_at).getTime();
@@ -170,7 +203,8 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     } else if (timerState.dbTimerId || timerState.taskId) {
       // Timer was stopped externally (from another device), reset
       setTimerState(initialState);
-      setPendingTaskLink(null);
+      setPendingTaskLinkState(null);
+      persistPendingTaskLink(null);
       clearPersistedState();
     }
   }, [user, data.taskTimers]);
@@ -371,7 +405,8 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const dbTimerId = timerState.dbTimerId;
     
     setTimerState(initialState);
-    setPendingTaskLink(null);
+    setPendingTaskLinkState(null);
+    persistPendingTaskLink(null);
     setShowCompleteDialog(false);
     clearPersistedState();
 
@@ -411,12 +446,19 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       dbTimerId: null,
     };
     setTimerState(newState);
-    setPendingTaskLink(null);
+    setPendingTaskLinkState(null);
+    persistPendingTaskLink(null);
     persistState(newState);
-  }, [setPendingTaskLink]);
+  }, []);
+
+  const setPendingTaskLink = useCallback((link: PendingTaskLink | null) => {
+    setPendingTaskLinkState(link);
+    persistPendingTaskLink(link);
+  }, []);
 
   const clearPendingTaskLink = useCallback(() => {
-    setPendingTaskLink(null);
+    setPendingTaskLinkState(null);
+    persistPendingTaskLink(null);
   }, []);
 
   const hasActiveTimer = timerState.isRunning || timerState.isPaused;
