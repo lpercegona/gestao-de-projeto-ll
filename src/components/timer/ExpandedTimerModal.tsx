@@ -178,40 +178,14 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 />
 
                 <Button
-                  onClick={() => {
-                    if (!hasActiveTimer) {
-                      startGlobalTimer();
-                      return;
-                    }
-
-                    if (isPaused) {
-                      resumeGlobalTimer();
-                      return;
-                    }
-
-                    pauseGlobalTimer();
-                  }}
-                  className="absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white"
-                  aria-label={
-                    !hasActiveTimer
-                      ? 'Iniciar timer'
-                      : isPaused
-                        ? 'Retomar timer'
-                        : 'Pausar timer'
-                  }
-                  title={
-                    !hasActiveTimer
-                      ? 'Iniciar timer'
-                      : isPaused
-                        ? 'Retomar timer'
-                        : 'Pausar timer'
-                  }
+                  onClick={() => startGlobalTimer()}
+                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
+                    hasActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
+                  }`}
+                  aria-label="Iniciar timer rápido"
+                  title="Iniciar timer rápido"
                 >
-                  {!hasActiveTimer || isPaused ? (
-                    <Play className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
-                  ) : (
-                    <Pause className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
-                  )}
+                  <Play className="h-[clamp(40px,16vw,90px)] w-[clamp(40px,16vw,90px)] stroke-[2.4]" />
                 </Button>
 
                 <div
