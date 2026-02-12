@@ -148,11 +148,20 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
 
       let taskId = (hasLockedOriginTask ? bindingContext?.taskId : null) || selectedTaskId;
 
+      const submitResolution = resolveSubmitTaskId({
+        bindingContext,
+        selectedTaskId,
+        linkMode,
+      });
 
-      if (taskBinding && !bindingContext?.isValid && linkMode === 'existing' && selectedTaskId === taskBinding.taskId) {
+      if (submitResolution.blocked) {
         toast.error('A tarefa vinculada não existe mais. Selecione outra tarefa ou crie uma nova.');
         setLoading(false);
         return;
+      }
+
+      if (!hasLockedOriginTask && submitResolution.taskId) {
+        taskId = submitResolution.taskId;
       }
 
       // Create new project if needed
