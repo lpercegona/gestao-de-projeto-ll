@@ -737,7 +737,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const pauseTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
-    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!user) return null;
+
+    const timer = data.taskTimers.find(t => t.task_id === taskId && t.user_id === user.id);
     if (!timer || timer.paused_at) return timer || null;
 
     const elapsedSeconds = Math.floor(
@@ -768,7 +770,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resumeTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
-    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!user) return null;
+
+    const timer = data.taskTimers.find(t => t.task_id === taskId && t.user_id === user.id);
     if (!timer || !timer.paused_at) return timer || null;
 
     const { data: updatedTimer, error } = await supabase
@@ -797,7 +801,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const stopTaskTimer = async (taskId: string, description?: string, entryType: 'task' | 'meeting' = 'task'): Promise<{ hours: number } | null> => {
     if (!user) return null;
 
-    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    const timer = data.taskTimers.find(t => t.task_id === taskId && t.user_id === user.id);
     if (!timer) return null;
 
     // Calculate elapsed time
@@ -843,7 +847,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const cancelTaskTimer = async (taskId: string): Promise<boolean> => {
     if (!user) return false;
 
-    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    const timer = data.taskTimers.find(t => t.task_id === taskId && t.user_id === user.id);
     if (!timer) return false;
 
     // Delete the timer without creating a time entry
@@ -866,12 +870,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const getActiveTimer = (taskId: string): TaskTimer | null => {
-    return data.taskTimers.find(t => t.task_id === taskId) || null;
+    if (!user) return null;
+
+    return data.taskTimers.find(t => t.task_id === taskId && t.user_id === user.id) || null;
   };
 
   const completeTask = async (taskId: string): Promise<boolean> => {
     // If there's an active timer, stop it first
-    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    const timer = data.taskTimers.find(t => t.task_id === taskId && t.user_id === user?.id);
     if (timer) {
       await stopTaskTimer(taskId);
     }
