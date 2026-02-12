@@ -130,20 +130,22 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     }
   };
 
-  const isTimerActive = !!ownedActiveTimer;
-  const isThisTaskTimer = isOriginTaskTimer;
-  const isPaused = !!ownedActiveTimer?.paused_at || (isThisTaskTimer && timerState.isPaused);
+  const hasOriginGlobalTimer = isOriginTaskTimer && hasActiveTimer;
+  const isTimerActive = !!ownedActiveTimer || hasOriginGlobalTimer;
+  const isPaused = hasOriginGlobalTimer ? timerState.isPaused : !!ownedActiveTimer?.paused_at;
   const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isPaused;
-  const showTimerControls = isTimerActive || isPaused;
+  const showTimerControls = isTimerActive;
   const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isPaused;
 
   // Check if another timer is running (disable play if so)
-  const anotherTimerRunning = hasForeignActiveTimer && !isTimerActive;
+  const anotherTimerRunning = hasForeignActiveTimer;
 
-  // Get display time - use global timer elapsed if paused, otherwise local elapsed
-  const displayTime = isPaused
-    ? (ownedActiveTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
-    : elapsedSeconds;
+  // Get display time from global timer for origin task, otherwise local/owned timer
+  const displayTime = hasOriginGlobalTimer
+    ? timerState.elapsedSeconds
+    : isPaused
+      ? (ownedActiveTimer?.paused_elapsed_seconds ?? 0)
+      : elapsedSeconds;
 
   return (
     <div className="flex items-center gap-1 sm:gap-2">

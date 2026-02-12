@@ -112,7 +112,6 @@ export const Projects: React.FC = () => {
     deleteTimeEntry,
     getTaskHours,
     getCreatorName,
-    startTaskTimer,
     stopTaskTimer,
     cancelTaskTimer,
     getActiveTimer,
@@ -120,7 +119,7 @@ export const Projects: React.FC = () => {
     saveKanbanStages,
   } = useData();
   const { user, isAdminOrMaster, isCollaborator } = useAuth();
-  const { resetTimer } = useGlobalTimer();
+  const { resetTimer, startGlobalTimer, setPendingTaskLink } = useGlobalTimer();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // View state
@@ -1045,7 +1044,20 @@ export const Projects: React.FC = () => {
 
   // Timer handlers
   const handleStartTimer = async (taskId: string) => {
-    await startTaskTimer(taskId);
+    const task = data.tasks.find((item) => item.id === taskId);
+    const project = task ? data.projects.find((item) => item.id === task.project_id) : null;
+    const client = project ? data.clients.find((item) => item.id === project.client_id) : null;
+
+    if (task && project) {
+      setPendingTaskLink({
+        taskId: task.id,
+        taskName: task.name,
+        projectName: project.name,
+        clientName: client?.company || client?.name || 'Cliente',
+      });
+    }
+
+    await startGlobalTimer();
     toast.success('Timer iniciado!');
   };
 

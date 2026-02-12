@@ -208,7 +208,6 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       dbTimerId: null,
     };
     setTimerState(optimisticState);
-    setPendingTaskLink(null);
     persistState(optimisticState);
 
     // Insert into DB
