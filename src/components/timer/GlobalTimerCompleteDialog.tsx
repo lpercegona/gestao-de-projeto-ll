@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ClipboardList, Users, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +37,14 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   open,
   onOpenChange,
 }) => {
-  const { timerState, getElapsedHours, resetTimer, cancelCompleteDialog } = useGlobalTimer();
+  const {
+    timerState,
+    pendingTaskLink,
+    clearPendingTaskLink,
+    getElapsedHours,
+    resetTimer,
+    cancelCompleteDialog,
+  } = useGlobalTimer();
   const { data, createTimeEntry, createTask, createProject, cancelTaskTimer } = useData();
 
   const [linkMode, setLinkMode] = useState<'existing' | 'new'>('existing');
@@ -45,6 +52,10 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   const [description, setDescription] = useState('');
   const [entryType, setEntryType] = useState<'task' | 'meeting'>('task');
   const [loading, setLoading] = useState(false);
+
+  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const hasOriginTask = !!originTaskId;
+  const originTask = originTaskId ? data.tasks.find((task) => task.id === originTaskId) : null;
 
   // New task/project fields
   const [newTaskName, setNewTaskName] = useState('');
@@ -74,7 +85,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   }, [data]);
 
   const resetFormState = () => {
-    setSelectedTaskId('');
+    setSelectedTaskId(originTaskId || '');
     setDescription('');
     setEntryType('task');
     setLinkMode('existing');
@@ -84,6 +95,15 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     setNewProjectName('');
     setSelectedClientId('');
   };
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (originTaskId) {
+      setLinkMode('existing');
+      setSelectedTaskId(originTaskId);
+    }
+  }, [open, originTaskId]);
 
   // Called when user cancels or closes the dialog without saving
   const handleClose = () => {
@@ -116,7 +136,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         return;
       }
 
-      let taskId = timerState.taskId || selectedTaskId;
+      let taskId = originTaskId || selectedTaskId;
 
       // Create new project if needed
       if (linkMode === 'new') {
@@ -203,7 +223,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       });
 
       const activeTimerId = timerState.dbTimerId
-        || data.taskTimers.find((timer) => (timerState.taskId ? timer.task_id === timerState.taskId : !timer.task_id))?.id;
+        || data.taskTimers.find((timer) => (originTaskId ? timer.task_id === originTaskId : !timer.task_id))?.id;
 
       if (activeTimerId) {
         const { error: deleteTimerError } = await supabase
@@ -216,9 +236,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         }
       }
 
-      localStorage.removeItem('pendingTaskLink');
-      sessionStorage.removeItem('pendingTaskLink');
-
+      clearPendingTaskLink();
       resetTimer();
       toast.success(`Vínculo aplicado na finalização: ${formatHours(hours)} registradas com sucesso.`);
       handleSuccessClose();
@@ -242,6 +260,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     if (timerState.taskId) {
       await cancelTaskTimer(timerState.taskId);
     }
+    clearPendingTaskLink();
     resetTimer();
     // Don't call handleClose as it would try to resume the timer
     // Just close the dialog and reset form state
@@ -283,7 +302,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           </div>
 
           {/* Mode toggle - only show if not linked to a task */}
-          {!timerState.taskId && (
+          {!hasOriginTask && (
             <div className="space-y-2">
               <Label>Vincular a</Label>
               <ToggleGroup
@@ -304,7 +323,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           )}
 
           {/* Existing task selection */}
-          {linkMode === 'existing' && !timerState.taskId && (
+          {linkMode === 'existing' && !hasOriginTask && (
             <div className="space-y-2">
               <Label>Selecionar tarefa</Label>
               <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
@@ -330,7 +349,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           )}
 
           {/* New task creation */}
-          {linkMode === 'new' && !timerState.taskId && (
+          {linkMode === 'new' && !hasOriginTask && (
             <div className="space-y-4">
               {/* Create new project toggle */}
               <div className="flex items-center gap-2">
@@ -404,6 +423,12 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
                   placeholder="Nome da nova tarefa"
                 />
               </div>
+            </div>
+          )}
+
+          {hasOriginTask && originTask && (
+            <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+              <span className="font-medium text-foreground">Tarefa de origem:</span> {originTask.name}
             </div>
           )}
 

@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
 import { toast } from 'sonner';
 
 interface TaskTimerProps {
@@ -33,11 +32,11 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const { user } = useAuth();
   const { 
     hasActiveTimer, 
     timerState, 
+    pendingTaskLink,
     syncWithTaskTimer, 
     pauseGlobalTimer, 
     resumeGlobalTimer, 
@@ -48,6 +47,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const activeTimerBelongsToCurrentUser = !!activeTimer && !!user && (!activeTimer.user_id || activeTimer.user_id === user.id);
   const foreignActiveTimerOnTask = !!activeTimer && !!user && !!activeTimer.user_id && activeTimer.user_id !== user.id;
   const ownedActiveTimer = activeTimerBelongsToCurrentUser ? activeTimer : null;
+
+  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const isOriginTaskTimer = originTaskId === taskId;
+  const hasForeignActiveTimer = hasActiveTimer && !isOriginTaskTimer;
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -78,10 +81,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   // Sync with global timer when this task has an active timer
   useEffect(() => {
-    if (ownedActiveTimer && timerState.taskId !== taskId) {
+    if (ownedActiveTimer && originTaskId !== taskId) {
       syncWithTaskTimer(taskId, ownedActiveTimer.started_at, ownedActiveTimer.paused_at, ownedActiveTimer.paused_elapsed_seconds || 0);
     }
-  }, [ownedActiveTimer, taskId, syncWithTaskTimer, timerState.taskId]);
+  }, [ownedActiveTimer, taskId, syncWithTaskTimer, originTaskId]);
 
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -92,7 +95,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   const handleStart = async () => {
     // Check if there's already an active global timer (either standalone or from another task)
-    if (hasActiveTimer && timerState.taskId !== taskId) {
+    if (hasForeignActiveTimer) {
       toast.error('Timer em andamento: Já existe um cronômetro ativo. Finalize-o antes de iniciar outro.');
       return;
     }
@@ -128,14 +131,14 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   };
 
   const isTimerActive = !!ownedActiveTimer;
-  const isThisTaskTimer = timerState.taskId === taskId;
+  const isThisTaskTimer = isOriginTaskTimer;
   const isPaused = !!ownedActiveTimer?.paused_at || (isThisTaskTimer && timerState.isPaused);
   const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isPaused;
   const showTimerControls = isTimerActive || isPaused;
   const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isPaused;
 
   // Check if another timer is running (disable play if so)
-  const anotherTimerRunning = hasActiveTimer && timerState.taskId !== taskId && !isTimerActive;
+  const anotherTimerRunning = hasForeignActiveTimer && !isTimerActive;
 
   // Get display time - use global timer elapsed if paused, otherwise local elapsed
   const displayTime = isPaused
@@ -175,7 +178,11 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
             </Button>
           </TooltipTrigger>
           <TooltipContent className={iconOnly ? "" : "sm:hidden"}>
-            {foreignActiveTimerOnTask ? 'Outro usuário está registrando nesta tarefa' : anotherTimerRunning ? 'Você já possui outro timer em andamento' : 'Iniciar'}
+            {foreignActiveTimerOnTask
+              ? 'Outro usuário está registrando nesta tarefa'
+              : anotherTimerRunning
+                ? 'Outro timer está ativo em uma tarefa diferente'
+                : 'Iniciar'}
           </TooltipContent>
         </Tooltip>
       )}
@@ -190,7 +197,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={handleResume}
-                  disabled={loading || disabled}
+                  disabled={loading || disabled || hasForeignActiveTimer}
                   className="text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
                 >
                   <Play className="w-4 h-4" />
@@ -206,7 +213,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={handlePause}
-                  disabled={loading || disabled}
+                  disabled={loading || disabled || hasForeignActiveTimer}
                   className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30 px-2 sm:px-3"
                 >
                   <Pause className="w-4 h-4" />
@@ -223,7 +230,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleStop}
-                disabled={loading || disabled}
+                disabled={loading || disabled || hasForeignActiveTimer}
                 className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
               >
                 <Square className="w-4 h-4" />
