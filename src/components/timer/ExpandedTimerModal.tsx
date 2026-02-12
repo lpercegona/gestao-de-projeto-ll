@@ -11,6 +11,7 @@ import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
 import { toast } from 'sonner';
+import { getWysiwygPlainText } from '@/lib/wysiwyg';
 
 interface ExpandedTimerModalProps {
   open: boolean;
