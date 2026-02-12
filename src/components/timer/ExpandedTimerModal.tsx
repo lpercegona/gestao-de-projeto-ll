@@ -226,7 +226,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
             <div
               className={`overflow-hidden text-center transition-all duration-300 ${
-                distractionFree && currentTaskInfo ? 'mb-4 max-h-20 opacity-100' : 'mb-0 max-h-0 opacity-0'
+                currentTaskInfo ? 'mb-4 max-h-20 translate-y-0 opacity-100' : 'mb-0 max-h-0 -translate-y-2 opacity-0'
               }`}
             >
               {currentTaskInfo ? (
@@ -238,12 +238,13 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             </div>
 
             <div className="relative z-10 mt-auto min-h-0">
-              <div
-                className={`mb-2 flex items-center justify-between transition-all duration-500 ${
-                  distractionFree ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'
-                }`}
-              >
-                <Label htmlFor="distraction-free" className={`text-sm font-medium ${highContrast ? 'text-white' : 'text-[#64748b]'}`}>
+              <div className="mb-2 flex items-center justify-end gap-2 transition-all duration-300">
+                <Label
+                  htmlFor="distraction-free"
+                  className={`text-sm font-medium transition-all duration-300 ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
+                    distractionFree ? 'pointer-events-none max-w-0 -translate-x-2 overflow-hidden opacity-0' : 'max-w-[160px] translate-x-0 opacity-100'
+                  }`}
+                >
                   Sem distrações
                 </Label>
                 <Switch id="distraction-free" checked={distractionFree} onCheckedChange={setDistractionFree} />
