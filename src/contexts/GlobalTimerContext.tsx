@@ -238,16 +238,27 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setTimerState(newState);
     persistState(newState);
 
-    if (timerState.dbTimerId) {
+    const fallbackTimerId = data.taskTimers.find((timer) => timer.user_id === user?.id && !timer.task_id)?.id || null;
+    const timerIdToPause = timerState.dbTimerId || fallbackTimerId;
+
+    if (timerIdToPause) {
       await supabase
         .from('task_timers')
         .update({
           paused_at: new Date().toISOString(),
           paused_elapsed_seconds: elapsedSeconds,
         } as any)
-        .eq('id', timerState.dbTimerId);
+        .eq('id', timerIdToPause);
+
+      if (!timerState.dbTimerId && fallbackTimerId) {
+        setTimerState((prev) => {
+          const updated = { ...prev, dbTimerId: fallbackTimerId };
+          persistState(updated);
+          return updated;
+        });
+      }
     }
-  }, [timerState, pauseTaskTimer]);
+  }, [timerState, pauseTaskTimer, data.taskTimers, user?.id]);
 
   // Resume timer
   const resumeGlobalTimer = useCallback(async () => {

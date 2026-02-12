@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Play, Pause, Square, X } from 'lucide-react';
+import { Play, Pause, Square, X, Check, Contrast } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -18,7 +18,9 @@ interface ExpandedTimerModalProps {
 
 export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, onOpenChange }) => {
   const [distractionFree, setDistractionFree] = useState(false);
-  const { data } = useData();
+  const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
+  const [highContrast, setHighContrast] = useState(false);
+  const { data, startTaskTimer, completeTask } = useData();
   const {
     timerState,
     startGlobalTimer,
@@ -26,6 +28,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
+    syncWithTaskTimer,
   } = useGlobalTimer();
 
   const isRunning = timerState.isRunning && !timerState.isPaused;
@@ -39,6 +42,21 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
       .toString()
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }, []);
+
+  const currentTaskInfo = useMemo(() => {
+    if (!timerState.taskId) return null;
+
+    const task = data.tasks.find((item) => item.id === timerState.taskId);
+    if (!task) return null;
+
+    const project = data.projects.find((item) => item.id === task.project_id);
+    const client = project ? data.clients.find((item) => item.id === project.client_id) : null;
+
+    return {
+      taskName: task.name,
+      taskDescription: `${project?.name || 'Sem projeto'} - ${client?.company || client?.name || 'Sem cliente'}`,
+    };
+  }, [timerState.taskId, data.tasks, data.projects, data.clients]);
 
   const upcomingTasks = useMemo(() => {
     return [...data.tasks]
@@ -61,23 +79,63 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
         return {
           id: task.id,
           name: task.name,
+          status: task.status,
           projectName: project?.name,
           clientName: client?.company || client?.name,
         };
       });
   }, [data.tasks, data.projects, data.clients]);
 
+  const handleStartTaskTimer = useCallback(
+    async (taskId: string) => {
+      setProcessingTaskId(taskId);
+      const startedTimer = await startTaskTimer(taskId);
+
+      if (startedTimer) {
+        syncWithTaskTimer(taskId, startedTimer.started_at, startedTimer.paused_at, startedTimer.paused_elapsed_seconds || 0);
+      }
+
+      setProcessingTaskId(null);
+    },
+    [startTaskTimer, syncWithTaskTimer],
+  );
+
+  const handleCompleteTask = useCallback(
+    async (taskId: string) => {
+      setProcessingTaskId(taskId);
+      await completeTask(taskId);
+      setProcessingTaskId(null);
+    },
+    [completeTask],
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-screen !max-w-none !h-screen rounded-none border-0 bg-[#F4F7FB] p-0 text-[#64748b] [&>button]:hidden">
+      <DialogContent
+        className={`!inset-0 !h-screen !max-h-none !w-screen !max-w-none !translate-x-0 !translate-y-0 !overflow-hidden rounded-none border-0 p-0 [&>button]:hidden ${
+          highContrast ? 'bg-black text-white' : 'bg-[#F4F7FB] text-[#64748b]'
+        }`}
+      >
         <DialogTitle className="sr-only">Timer expandido</DialogTitle>
 
-        <div className="relative flex h-full w-full flex-col px-5 pb-6 pt-6 md:px-8">
-          <div className="mb-3 flex justify-end">
+        <div className="relative flex h-full w-full min-h-0 flex-col px-5 pb-5 pt-4 md:px-8 md:pb-6 md:pt-6">
+          <div className="mb-2 flex items-center justify-between md:mb-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className={`h-9 w-9 rounded-lg ${highContrast ? 'border-white bg-black text-white hover:bg-white hover:text-black' : 'border-[#64748b] bg-white text-[#64748b] hover:bg-[#e2e8f0]'}`}
+              onClick={() => setHighContrast((value) => !value)}
+              aria-label="Alternar alto contraste"
+              title="Alternar alto contraste"
+            >
+              <Contrast className="h-5 w-5" />
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full text-[#64748b] hover:bg-transparent hover:text-[#475569]"
+              className={`h-9 w-9 rounded-full ${highContrast ? 'text-white hover:bg-white/10 hover:text-white' : 'text-[#64748b] hover:bg-transparent hover:text-[#475569]'}`}
               onClick={() => onOpenChange(false)}
               aria-label="Fechar modal"
             >
@@ -85,91 +143,193 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             </Button>
           </div>
 
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-            <p className="mb-8 text-center text-sm font-semibold leading-tight text-[#64748b] md:text-2xl">
+          <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col">
+            <p
+              className={`overflow-hidden text-center text-sm font-semibold leading-tight transition-all duration-500 md:text-2xl ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
+                hasActiveTimer || distractionFree
+                  ? 'pointer-events-none -translate-y-8 opacity-0 max-h-0 mb-0'
+                  : 'translate-y-0 opacity-100 max-h-24 mb-5 md:mb-8'
+              }`}
+            >
               Inicie o timer para começar
               <br />
               um novo registro
             </p>
 
-            <div className="mb-8 flex min-h-[320px] items-center justify-center">
-              <div className="relative flex items-center justify-center h-[400px] w-[400px]">
+            <div
+              className={`flex items-center justify-center transition-all duration-500 ${
+                hasActiveTimer ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
+              }`}
+            >
+              <div className="relative flex h-[min(82vw,400px)] w-[min(82vw,400px)] items-center justify-center">
                 <img
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
+                  className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
                   style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
                 />
 
-                {!hasActiveTimer ? (
-                  <Button
-                    onClick={() => startGlobalTimer()}
-                    className="relative z-10 h-[220px] w-[220px] rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
-                  >
-                    <Play className="h-32 w-32 stroke-[2.4]" />
-                  </Button>
-                ) : (
-                  <div className="relative z-10 flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
-                    <span className={`text-3xl tabular-nums ${isRunning ? 'animate-pulse' : ''}`}>
-                      {formatTime(timerState.elapsedSeconds)}
-                    </span>
-                  </div>
-                )}
+                <Button
+                  onClick={() => startGlobalTimer()}
+                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
+                    hasActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
+                  }`}
+                >
+                  <Play className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
+                </Button>
+
+                <div
+                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
+                    hasActiveTimer ? 'scale-100 opacity-100' : 'pointer-events-none scale-110 opacity-0'
+                  }`}
+                >
+                  <span className={`font-mono text-2xl tabular-nums md:text-3xl ${isRunning ? 'animate-pulse' : ''}`}>
+                    {formatTime(timerState.elapsedSeconds)}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {hasActiveTimer ? (
-              <div className="mb-6 flex items-center justify-center gap-3">
-                {isPaused ? (
-                  <Button onClick={() => resumeGlobalTimer()} className="gap-2 rounded-full">
-                    <Play className="h-64 w-64" />
-                    Retomar
-                  </Button>
-                ) : (
-                  <Button onClick={() => pauseGlobalTimer()} variant="outline" className="gap-2 rounded-full bg-white">
-                    <Pause className="h-4 w-4" />
-                    Pausar
-                  </Button>
-                )}
-                <Button onClick={() => completeGlobalTimer()} variant="destructive" className="gap-2 rounded-full">
-                  <Square className="h-4 w-4" />
-                  Concluir
+            <div
+              className={`relative z-20 mb-4 flex items-center justify-center gap-2 transition-all duration-300 md:mb-6 ${
+                hasActiveTimer ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-3 opacity-0'
+              }`}
+            >
+              {isPaused ? (
+                <Button
+                  type="button"
+                  onClick={() => resumeGlobalTimer()}
+                  className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'bg-white text-black hover:bg-gray-200' : ''}`}
+                  aria-label="Retomar timer"
+                  title="Retomar timer"
+                >
+                  <Play className="h-4 w-4" />
                 </Button>
-              </div>
-            ) : null}
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => pauseGlobalTimer()}
+                  variant="outline"
+                  className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'border-white bg-black text-white hover:bg-white/10' : 'bg-white'}`}
+                  aria-label="Pausar timer"
+                  title="Pausar timer"
+                >
+                  <Pause className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                type="button"
+                onClick={() => completeGlobalTimer()}
+                variant="destructive"
+                className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'bg-white text-black hover:bg-gray-200' : ''}`}
+                aria-label="Concluir timer"
+                title="Concluir timer"
+              >
+                <Square className="h-4 w-4" />
+              </Button>
+            </div>
 
-            <div className="mt-auto">
-              <div className="mb-2 flex items-center justify-between">
-                <Label htmlFor="distraction-free" className="text-sm font-medium text-[#64748b]">
+            <div
+              className={`overflow-hidden text-center transition-all duration-300 ${
+                currentTaskInfo ? 'mb-4 max-h-24 translate-y-0 opacity-100' : 'mb-0 max-h-0 -translate-y-2 opacity-0'
+              }`}
+            >
+              {currentTaskInfo ? (
+                <>
+                  <p className={`line-clamp-2 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
+                  <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>{currentTaskInfo.taskDescription}</p>
+                </>
+              ) : null}
+            </div>
+
+            <div className="relative z-10 mt-auto min-h-0">
+              <div className="mb-2 flex items-center justify-end gap-2 transition-all duration-300">
+                <Label
+                  htmlFor="distraction-free"
+                  className={`text-sm font-medium transition-all duration-300 ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
+                    distractionFree ? 'pointer-events-none max-w-0 -translate-x-2 overflow-hidden opacity-0' : 'max-w-[160px] translate-x-0 opacity-100'
+                  }`}
+                >
                   Sem distrações
                 </Label>
                 <Switch id="distraction-free" checked={distractionFree} onCheckedChange={setDistractionFree} />
               </div>
 
-              <Separator className="mb-3 bg-[#dce4ee]" />
+              <Separator
+                className={`mb-3 transition-all duration-500 ${highContrast ? 'bg-white/30' : 'bg-[#dce4ee]'} ${
+                  distractionFree ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
 
-              <div className={`${distractionFree ? 'hidden' : 'block'}`}>
-                <h3 className="mb-3 text-sm font-semibold text-[#64748b]">Próximas atividades</h3>
-                <ScrollArea className="max-h-[32vh] pr-2">
-                  <div className="space-y-3 pb-2">
+              <div
+                className={`overflow-hidden transition-all duration-500 ${
+                  distractionFree ? 'pointer-events-none max-h-0 translate-y-12 opacity-0' : 'max-h-[420px] translate-y-0 opacity-100'
+                }`}
+              >
+                <h3 className={`mb-3 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#64748b]'}`}>Próximas atividades</h3>
+                <ScrollArea className="h-[28vh] min-h-[180px] max-h-[320px]">
+                  <div className="space-y-2 pb-2 pr-2">
                     {upcomingTasks.length > 0 ? (
-                      upcomingTasks.map((task) => (
-                        <Card
-                          key={task.id}
-                          className="flex items-center justify-between rounded-2xl border border-[#d6dee8] bg-transparent px-4 py-3 shadow-none"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-lg font-semibold leading-tight text-[#0f172a]">{task.name}</p>
-                            <p className="truncate text-base font-medium text-[#64748b]">
-                              {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
-                            </p>
-                          </div>
-                          <Play className="h-6 w-6 shrink-0 text-[#64748b]" />
-                        </Card>
-                      ))
+                      upcomingTasks.map((task) => {
+                        const isCurrentTaskTimer = timerState.taskId === task.id;
+                        const isLoading = processingTaskId === task.id;
+
+                        return (
+                          <Card
+                            key={task.id}
+                            className={`flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-2xl border px-3 py-2.5 shadow-none ${highContrast ? 'border-white bg-black' : 'border-[#d6dee8] bg-transparent'}`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`text-sm font-semibold leading-tight ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  wordBreak: 'break-word',
+                                }}
+                              >
+                                {task.name}
+                              </p>
+                              <p className={`truncate text-[0.5rem] font-medium uppercase tracking-wide ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
+                                {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
+                              </p>
+                            </div>
+
+                            <div className="ml-1 flex shrink-0 items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant={isCurrentTaskTimer ? 'default' : 'ghost'}
+                                className={`h-9 w-9 rounded-full ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
+                                onClick={() => handleStartTaskTimer(task.id)}
+                                disabled={isLoading}
+                                aria-label={`Iniciar registro da tarefa ${task.name}`}
+                                title="Iniciar registro para esta tarefa"
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
+
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className={`h-9 w-9 rounded-full ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
+                                onClick={() => handleCompleteTask(task.id)}
+                                disabled={isLoading || task.status === 'completed' || task.status === 'done'}
+                                aria-label={`Concluir tarefa ${task.name}`}
+                                title="Concluir tarefa"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </Card>
+                        );
+                      })
                     ) : (
-                      <p className="text-xl text-[#64748b]">Nenhuma tarefa pendente no momento.</p>
+                      <p className={`text-base md:text-xl ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>Nenhuma tarefa pendente no momento.</p>
                     )}
                   </div>
                 </ScrollArea>
