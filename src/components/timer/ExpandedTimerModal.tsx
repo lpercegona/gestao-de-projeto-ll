@@ -20,7 +20,7 @@ const RoundedPlayIcon = ({ className }: React.SVGProps<SVGSVGElement>) => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth={1.6}
+    strokeWidth={1.0}
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
@@ -207,7 +207,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               onClick={() => onOpenChange(false)}
               aria-label="Fechar modal"
             >
-              <X className="h-9 w-9 stroke-[1.8]" />
+              <X className="h-9 w-9 stroke-[1.0]" />
             </Button>
           </div>
 
