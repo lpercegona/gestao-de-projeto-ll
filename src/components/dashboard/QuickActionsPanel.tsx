@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Plus, Users, FileCheck, Play, Pause, Square } from "lucide-react";
+import { Plus, Users, FileCheck, Play, Pause, Square, Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,12 +10,14 @@ import { useGlobalTimer } from "@/contexts/GlobalTimerContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { GlobalTimerCompleteDialog } from "@/components/timer/GlobalTimerCompleteDialog";
+import { ExpandedTimerModal } from "@/components/timer/ExpandedTimerModal";
 
 export const QuickActionsPanel: React.FC = () => {
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [expandedTimerOpen, setExpandedTimerOpen] = useState(false);
   const { data, createClient } = useData();
   const {
     timerState,
@@ -88,10 +90,21 @@ export const QuickActionsPanel: React.FC = () => {
     <>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-            <Plus className="h-4 w-4" />
-            Ações Rápidas
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+              <Plus className="h-4 w-4" />
+              Ações Rápidas
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setExpandedTimerOpen(true)}
+              title="Expandir timer"
+            >
+              <Expand className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Botões na mesma linha */}
@@ -203,6 +216,8 @@ export const QuickActionsPanel: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ExpandedTimerModal open={expandedTimerOpen} onOpenChange={setExpandedTimerOpen} />
 
       <GlobalTimerCompleteDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog} />
     </>
