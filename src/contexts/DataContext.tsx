@@ -71,7 +71,7 @@ interface TimeEntry {
 
 interface TaskTimer {
   id: string;
-  task_id: string;
+  task_id: string | null;
   user_id: string;
   started_at: string;
   paused_at: string | null;
@@ -708,9 +708,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .insert({
         task_id: taskId,
         user_id: user.id,
-        paused_at: null,
-        paused_elapsed_seconds: 0,
-      })
+      } as any)
       .select()
       .single();
 
@@ -740,7 +738,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .update({
         paused_at: new Date().toISOString(),
         paused_elapsed_seconds: elapsedSeconds,
-      })
+      } as any)
       .eq('id', timer.id)
       .select()
       .single();
@@ -767,7 +765,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .update({
         started_at: new Date().toISOString(),
         paused_at: null,
-      })
+      } as any)
       .eq('id', timer.id)
       .select()
       .single();

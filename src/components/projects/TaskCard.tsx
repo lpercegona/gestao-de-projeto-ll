@@ -29,10 +29,10 @@ interface TimeEntry {
 
 interface TaskTimer {
   id: string;
-  task_id: string;
+  task_id: string | null;
   started_at: string;
-  paused_at?: string | null;
-  paused_elapsed_seconds?: number;
+  paused_at: string | null;
+  paused_elapsed_seconds: number;
 }
 
 interface KanbanStage {
