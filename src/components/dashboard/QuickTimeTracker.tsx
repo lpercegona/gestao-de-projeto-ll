@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ export const QuickTimeTracker: React.FC = () => {
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
+    pendingTaskLink,
     showCompleteDialog,
     setShowCompleteDialog,
   } = useGlobalTimer();
@@ -44,18 +45,16 @@ export const QuickTimeTracker: React.FC = () => {
     completeGlobalTimer();
   };
 
-  const [pendingTaskLink, setPendingTaskLink] = useState<string | null>(null);
-
   const isRunning = timerState.isRunning && !timerState.isPaused;
   const isPaused = timerState.isPaused;
-  const isLinkedToTask = !!pendingTaskLink;
-
-  useEffect(() => {
-    setPendingTaskLink(hasActiveTimer ? timerState.taskId : null);
-  }, [hasActiveTimer, timerState.taskId]);
+  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const isLinkedToTask = !!originTaskId;
 
   // Get linked task info
-  const linkedTask = pendingTaskLink ? data.tasks.find(t => t.id === pendingTaskLink) : null;
+  const linkedTask = useMemo(
+    () => (originTaskId ? data.tasks.find((t) => t.id === originTaskId) : null),
+    [data.tasks, originTaskId],
+  );
   const linkedProject = linkedTask ? data.projects.find(p => p.id === linkedTask.project_id) : null;
   const linkedClient = linkedProject ? data.clients.find(c => c.id === linkedProject.client_id) : null;
 

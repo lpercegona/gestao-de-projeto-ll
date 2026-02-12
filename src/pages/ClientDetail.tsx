@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -130,6 +131,7 @@ export const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { user, isAdminOrMaster } = useAuth();
+  const { startGlobalTimer, setPendingTaskLink } = useGlobalTimer();
   const {
     data,
     loading,
@@ -144,7 +146,6 @@ export const ClientDetail: React.FC = () => {
     getCreatorName,
     getActiveTimer,
     getClientColumns,
-    startTaskTimer,
     stopTaskTimer,
     completeTask,
   } = useData();
@@ -1257,7 +1258,19 @@ export const ClientDetail: React.FC = () => {
               onDeleteTask={(task) => navigate(`/projects/${task.project_id}`)}
               onRegisterTime={(taskId) => navigateToTaskProject(taskId, 'registrar horas')}
               onStartTimer={async (taskId) => {
-                await startTaskTimer(taskId);
+                const task = data.tasks.find((item) => item.id === taskId);
+                const project = task ? data.projects.find((item) => item.id === task.project_id) : null;
+
+                if (task && project) {
+                  setPendingTaskLink({
+                    taskId: task.id,
+                    taskName: task.name,
+                    projectName: project.name,
+                    clientName: client?.company || client?.name || 'Cliente',
+                  });
+                }
+
+                await startGlobalTimer();
               }}
               onStopTimer={async (taskId) => {
                 await stopTaskTimer(taskId);

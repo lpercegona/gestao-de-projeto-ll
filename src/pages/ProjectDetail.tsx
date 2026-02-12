@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +53,8 @@ import { formatHours } from '@/lib/formatHours';
 export const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { setPendingTaskLink, startGlobalTimer } = useGlobalTimer();
   const { 
     data,
     loading,
@@ -63,7 +67,6 @@ export const ProjectDetail: React.FC = () => {
     getTaskHours,
     getProjectHours,
     getCreatorName,
-    startTaskTimer,
     stopTaskTimer,
     getActiveTimer,
     completeTask
@@ -72,6 +75,12 @@ export const ProjectDetail: React.FC = () => {
   const project = data.projects.find(p => p.id === projectId);
   const client = project ? data.clients.find(c => c.id === project.client_id) : null;
   const tasks = data.tasks.filter(t => t.project_id === projectId);
+
+  const getCurrentUserActiveTimer = useCallback((taskId: string) => {
+    const timer = getActiveTimer(taskId);
+    if (!timer || !user) return null;
+    return timer.user_id === user.id ? timer : null;
+  }, [getActiveTimer, user]);
   
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
@@ -296,10 +305,16 @@ export const ProjectDetail: React.FC = () => {
           tasks.map((task) => {
             const taskHours = getTaskHours(task.id);
             const taskTimeEntries = data.timeEntries.filter(te => te.task_id === task.id);
-            const activeTimer = getActiveTimer(task.id);
+            const activeTimer = getCurrentUserActiveTimer(task.id);
 
             const handleStartTimer = async () => {
-              await startTaskTimer(task.id);
+              setPendingTaskLink({
+                taskId: task.id,
+                taskName: task.name,
+                projectName: project.name,
+                clientName: client.company || client.name,
+              });
+              await startGlobalTimer();
               toast.success('Timer iniciado!');
             };
 
@@ -310,7 +325,7 @@ export const ProjectDetail: React.FC = () => {
             };
 
             const handleCompleteTask = async () => {
-              const timer = getActiveTimer(task.id);
+              const timer = getCurrentUserActiveTimer(task.id);
               await completeTask(task.id);
               if (timer) {
                 toast.success('Timer parado e tarefa concluída!');
