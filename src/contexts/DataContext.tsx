@@ -270,10 +270,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           event: '*',
           schema: 'public',
           table: 'task_timers',
+          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           setData(prev => {
             if (payload.eventType === 'DELETE') {
+              const deletedTimer = payload.old as Partial<TaskTimer>;
+              if (deletedTimer.user_id && deletedTimer.user_id !== user.id) {
+                return prev;
+              }
+
               const deletedId = payload.old.id as string;
               return {
                 ...prev,
@@ -282,6 +288,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             const nextTimer = payload.new as TaskTimer;
+            if (nextTimer.user_id !== user.id) {
+              return prev;
+            }
+
             const withoutCurrent = prev.taskTimers.filter(timer => timer.id !== nextTimer.id);
 
             return {
