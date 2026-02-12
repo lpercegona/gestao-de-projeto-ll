@@ -193,28 +193,28 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 shouldUseCollapsedHeroLayout ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
               }`}
             >
-              <div className="relative flex h-[min(82vw,400px)] w-[min(82vw,400px)] items-center justify-center">
+              <div className="relative flex aspect-square w-full max-w-[400px] items-center justify-center" style={{ width: "min(400px, calc(100vw - 4rem))" }}>
                 <img
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
                   className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-35"
-                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
+                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 18px rgba(16,185,129,0.35))' }}
                 />
 
                 <Button
                   onClick={() => startGlobalTimer()}
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
+                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
                     buActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
                   }`}
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="h-[clamp(40px,16vw,90px)] w-[clamp(40px,16vw,90px)] stroke-[2.4]" />
+                  <Play className="h-[clamp(36px,14vw,90px)] w-[clamp(36px,14vw,90px)] stroke-[2.4]" />
                 </Button>
 
                 <div
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
+                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
                     buActiveTimer ? 'scale-100 opacity-100' : 'pointer-events-none scale-110 opacity-0'
                   }`}
                 >
