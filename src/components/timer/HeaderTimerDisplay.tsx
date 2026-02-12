@@ -27,12 +27,17 @@ export const HeaderTimerDisplay: React.FC = () => {
   } = useGlobalTimer();
 
   const { data } = useData();
+  const [pendingTaskLink, setPendingTaskLink] = useState<string | null>(null);
   const [linkedInfo, setLinkedInfo] = useState<LinkedInfo | null>(null);
+
+  useEffect(() => {
+    setPendingTaskLink(hasActiveTimer ? timerState.taskId : null);
+  }, [hasActiveTimer, timerState.taskId]);
 
   // Fetch linked task info when timer has a taskId
   useEffect(() => {
-    if (timerState.taskId) {
-      const task = data.tasks.find(t => t.id === timerState.taskId);
+    if (pendingTaskLink) {
+      const task = data.tasks.find(t => t.id === pendingTaskLink);
       if (task) {
         const project = data.projects.find(p => p.id === task.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;
@@ -45,7 +50,7 @@ export const HeaderTimerDisplay: React.FC = () => {
     } else {
       setLinkedInfo(null);
     }
-  }, [timerState.taskId, data.tasks, data.projects, data.clients]);
+  }, [pendingTaskLink, data.tasks, data.projects, data.clients]);
 
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -158,11 +163,16 @@ export const HeaderTimerDisplay: React.FC = () => {
 export const HeaderTimerTaskInfo: React.FC = () => {
   const { timerState, hasActiveTimer } = useGlobalTimer();
   const { data } = useData();
+  const [pendingTaskLink, setPendingTaskLink] = useState<string | null>(null);
   const [linkedInfo, setLinkedInfo] = useState<{ taskName: string; projectName: string; clientName: string } | null>(null);
 
   useEffect(() => {
-    if (timerState.taskId) {
-      const task = data.tasks.find(t => t.id === timerState.taskId);
+    setPendingTaskLink(hasActiveTimer ? timerState.taskId : null);
+  }, [hasActiveTimer, timerState.taskId]);
+
+  useEffect(() => {
+    if (pendingTaskLink) {
+      const task = data.tasks.find(t => t.id === pendingTaskLink);
       if (task) {
         const project = data.projects.find(p => p.id === task.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;
@@ -175,7 +185,7 @@ export const HeaderTimerTaskInfo: React.FC = () => {
     } else {
       setLinkedInfo(null);
     }
-  }, [timerState.taskId, data.tasks, data.projects, data.clients]);
+  }, [pendingTaskLink, data.tasks, data.projects, data.clients]);
 
   if (!hasActiveTimer) return null;
 

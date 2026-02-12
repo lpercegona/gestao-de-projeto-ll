@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -223,6 +223,13 @@ export const ClientDetail: React.FC = () => {
   const previousOverflow = clientId && isMonthly ? getClientPreviousMonthOverflow(clientId) : 0;
   const availableHours = isMonthly ? Math.max(0, (client?.contracted_hours || 0) - previousOverflow) : (client?.contracted_hours || 0);
   const displayedHours = isMonthly ? monthlyUsedHours : usedHours;
+
+
+  const getCurrentUserActiveTimer = useCallback((taskId: string) => {
+    const timer = getActiveTimer(taskId);
+    if (!timer || !user) return null;
+    return timer.user_id === user.id ? timer : null;
+  }, [getActiveTimer, user]);
 
   // Fetch request history for reports
   useEffect(() => {
@@ -1237,7 +1244,7 @@ export const ClientDetail: React.FC = () => {
               getProjectHours={getProjectHours}
               getTaskHours={getTaskHours}
               getCreatorName={getCreatorName}
-              getActiveTimer={getActiveTimer}
+              getActiveTimer={getCurrentUserActiveTimer}
               getClientColumns={getClientColumns}
               onEditProject={handleOpenProjectEdit}
               onDeleteProject={(project) => {

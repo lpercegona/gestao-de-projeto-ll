@@ -21,7 +21,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const [distractionFree, setDistractionFree] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
   const [highContrast, setHighContrast] = useState(false);
-  const { data, startTaskTimer, completeTask } = useData();
+  const { data, completeTask } = useData();
   const {
     timerState,
     startGlobalTimer,
@@ -29,7 +29,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
-    syncWithTaskTimer,
+    pendingTaskLink,
+    setPendingTaskLink,
   } = useGlobalTimer();
 
   const isRunning = timerState.isRunning && !timerState.isPaused;
@@ -46,6 +47,13 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   }, []);
 
   const currentTaskInfo = useMemo(() => {
+    if (pendingTaskLink) {
+      return {
+        taskName: pendingTaskLink.taskName,
+        taskDescription: `${pendingTaskLink.projectName || 'Sem projeto'} - ${pendingTaskLink.clientName || 'Sem cliente'}`,
+      };
+    }
+
     if (!timerState.taskId) return null;
 
     const task = data.tasks.find((item) => item.id === timerState.taskId);
@@ -58,7 +66,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
       taskName: task.name,
       taskDescription: `${project?.name || 'Sem projeto'} - ${client?.company || client?.name || 'Sem cliente'}`,
     };
-  }, [timerState.taskId, data.tasks, data.projects, data.clients]);
+  }, [pendingTaskLink, timerState.taskId, data.tasks, data.projects, data.clients]);
 
   const upcomingTasks = useMemo(() => {
     return [...data.tasks]
@@ -90,21 +98,31 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handleStartTaskTimer = useCallback(
     async (taskId: string) => {
-      if (hasActiveTimer && timerState.taskId !== taskId) {
+      const task = upcomingTasks.find((item) => item.id === taskId);
+      if (!task) return;
+
+      const isSamePendingTask = pendingTaskLink?.taskId === taskId;
+      if (hasActiveTimer && !isSamePendingTask) {
         toast.error('Já existe um registro em andamento. Finalize o timer atual antes de iniciar outro.');
         return;
       }
 
       setProcessingTaskId(taskId);
-      const startedTimer = await startTaskTimer(taskId);
 
-      if (startedTimer) {
-        syncWithTaskTimer(taskId, startedTimer.started_at, startedTimer.paused_at, startedTimer.paused_elapsed_seconds || 0);
+      if (!hasActiveTimer) {
+        await startGlobalTimer();
       }
+
+      setPendingTaskLink({
+        taskId,
+        taskName: task.name,
+        projectName: task.projectName || 'Sem projeto',
+        clientName: task.clientName || 'Sem cliente',
+      });
 
       setProcessingTaskId(null);
     },
-    [hasActiveTimer, timerState.taskId, startTaskTimer, syncWithTaskTimer],
+    [upcomingTasks, pendingTaskLink?.taskId, hasActiveTimer, startGlobalTimer, setPendingTaskLink],
   );
 
   const handleCompleteTask = useCallback(
@@ -281,7 +299,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   <div className="space-y-2 pb-2 pr-2">
                     {upcomingTasks.length > 0 ? (
                       upcomingTasks.map((task) => {
-                        const isCurrentTaskTimer = timerState.taskId === task.id;
+                        const isCurrentTaskTimer = (pendingTaskLink?.taskId || timerState.taskId) === task.id;
                         const isLoading = processingTaskId === task.id;
 
                         return (

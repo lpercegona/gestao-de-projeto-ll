@@ -15,6 +15,13 @@ interface GlobalTimerState {
   dbTimerId: string | null; // ID of the task_timers record
 }
 
+export interface PendingTaskLink {
+  taskId: string;
+  taskName: string;
+  projectName: string;
+  clientName: string;
+}
+
 interface PersistedTimerState {
   isRunning: boolean;
   isPaused: boolean;
@@ -25,6 +32,9 @@ interface PersistedTimerState {
 
 interface GlobalTimerContextType {
   timerState: GlobalTimerState;
+  pendingTaskLink: PendingTaskLink | null;
+  setPendingTaskLink: (link: PendingTaskLink | null) => void;
+  clearPendingTaskLink: () => void;
   startGlobalTimer: () => void;
   pauseGlobalTimer: () => void;
   resumeGlobalTimer: () => void;
@@ -109,6 +119,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const { user } = useAuth();
   const { data } = useData();
   const [timerState, setTimerState] = useState<GlobalTimerState>(() => loadPersistedState());
+  const [pendingTaskLink, setPendingTaskLink] = useState<PendingTaskLink | null>(null);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [wasPausedBeforeComplete, setWasPausedBeforeComplete] = useState(false);
 
@@ -119,6 +130,9 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id);
 
     if (activeTaskTimer) {
+      if (activeTaskTimer.task_id) {
+        setPendingTaskLink(null);
+      }
       const isPaused = !!activeTaskTimer.paused_at;
       const startTime = isPaused ? null : new Date(activeTaskTimer.started_at).getTime();
       const pausedElapsed = activeTaskTimer.paused_elapsed_seconds || 0;
@@ -154,6 +168,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     } else if (timerState.dbTimerId || timerState.taskId) {
       // Timer was stopped externally (from another device), reset
       setTimerState(initialState);
+      setPendingTaskLink(null);
       clearPersistedState();
     }
   }, [user, data.taskTimers]);
@@ -191,6 +206,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       dbTimerId: null,
     };
     setTimerState(optimisticState);
+    setPendingTaskLink(null);
     persistState(optimisticState);
 
     // Insert into DB
@@ -363,6 +379,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const dbTimerId = timerState.dbTimerId;
     
     setTimerState(initialState);
+    setPendingTaskLink(null);
     setShowCompleteDialog(false);
     clearPersistedState();
 
@@ -402,7 +419,12 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       dbTimerId: null,
     };
     setTimerState(newState);
+    setPendingTaskLink(null);
     persistState(newState);
+  }, [setPendingTaskLink]);
+
+  const clearPendingTaskLink = useCallback(() => {
+    setPendingTaskLink(null);
   }, []);
 
   const hasActiveTimer = timerState.isRunning || timerState.isPaused;
@@ -411,6 +433,9 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     <GlobalTimerContext.Provider
       value={{
         timerState,
+        pendingTaskLink,
+        setPendingTaskLink,
+        clearPendingTaskLink,
         startGlobalTimer,
         pauseGlobalTimer,
         resumeGlobalTimer,

@@ -4,13 +4,14 @@ import { Play, Pause, Square, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
 import { toast } from 'sonner';
 
 interface TaskTimerProps {
   taskId: string;
   taskStatus: string;
-  activeTimer: { id: string; started_at: string; paused_at: string | null; paused_elapsed_seconds: number } | null;
+  activeTimer: { id: string; user_id?: string; started_at: string; paused_at: string | null; paused_elapsed_seconds: number } | null;
   onStart: () => Promise<void>;
   onStop: () => Promise<void>;
   onComplete: () => Promise<void>;
@@ -33,6 +34,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const { user } = useAuth();
   const { 
     hasActiveTimer, 
     timerState, 
@@ -42,20 +44,25 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     completeGlobalTimer,
   } = useGlobalTimer();
 
+
+  const activeTimerBelongsToCurrentUser = !!activeTimer && !!user && (!activeTimer.user_id || activeTimer.user_id === user.id);
+  const foreignActiveTimerOnTask = !!activeTimer && !!user && !!activeTimer.user_id && activeTimer.user_id !== user.id;
+  const ownedActiveTimer = activeTimerBelongsToCurrentUser ? activeTimer : null;
+
   // Calculate initial elapsed time and update every second
   useEffect(() => {
-    if (!activeTimer) {
+    if (!ownedActiveTimer) {
       setElapsedSeconds(0);
       return;
     }
 
-    if (activeTimer.paused_at) {
-      setElapsedSeconds(activeTimer.paused_elapsed_seconds || 0);
+    if (ownedActiveTimer.paused_at) {
+      setElapsedSeconds(ownedActiveTimer.paused_elapsed_seconds || 0);
       return;
     }
 
-    const startTime = new Date(activeTimer.started_at).getTime();
-    const pausedElapsed = activeTimer.paused_elapsed_seconds || 0;
+    const startTime = new Date(ownedActiveTimer.started_at).getTime();
+    const pausedElapsed = ownedActiveTimer.paused_elapsed_seconds || 0;
 
     const updateElapsed = () => {
       const now = Date.now();
@@ -67,14 +74,14 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     const interval = setInterval(updateElapsed, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTimer]);
+  }, [ownedActiveTimer]);
 
   // Sync with global timer when this task has an active timer
   useEffect(() => {
-    if (activeTimer && timerState.taskId !== taskId) {
-      syncWithTaskTimer(taskId, activeTimer.started_at, activeTimer.paused_at, activeTimer.paused_elapsed_seconds || 0);
+    if (ownedActiveTimer && timerState.taskId !== taskId) {
+      syncWithTaskTimer(taskId, ownedActiveTimer.started_at, ownedActiveTimer.paused_at, ownedActiveTimer.paused_elapsed_seconds || 0);
     }
-  }, [activeTimer, taskId, syncWithTaskTimer, timerState.taskId]);
+  }, [ownedActiveTimer, taskId, syncWithTaskTimer, timerState.taskId]);
 
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -120,9 +127,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     }
   };
 
-  const isTimerActive = !!activeTimer;
+  const isTimerActive = !!ownedActiveTimer;
   const isThisTaskTimer = timerState.taskId === taskId;
-  const isPaused = !!activeTimer?.paused_at || (isThisTaskTimer && timerState.isPaused);
+  const isPaused = !!ownedActiveTimer?.paused_at || (isThisTaskTimer && timerState.isPaused);
   const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isPaused;
   const showTimerControls = isTimerActive || isPaused;
   const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isPaused;
@@ -132,7 +139,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   // Get display time - use global timer elapsed if paused, otherwise local elapsed
   const displayTime = isPaused
-    ? (activeTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
+    ? (ownedActiveTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
     : elapsedSeconds;
 
   return (
@@ -157,10 +164,10 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleStart}
-              disabled={loading || disabled || anotherTimerRunning}
+              disabled={loading || disabled || anotherTimerRunning || foreignActiveTimerOnTask}
               className={cn(
                 "text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3",
-                anotherTimerRunning && "opacity-50 cursor-not-allowed"
+                (anotherTimerRunning || foreignActiveTimerOnTask) && "opacity-50 cursor-not-allowed"
               )}
             >
               <Play className="w-4 h-4" />
@@ -168,7 +175,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
             </Button>
           </TooltipTrigger>
           <TooltipContent className={iconOnly ? "" : "sm:hidden"}>
-            {anotherTimerRunning ? 'Outro timer em andamento' : 'Iniciar'}
+            {foreignActiveTimerOnTask ? 'Outro usuário está registrando nesta tarefa' : anotherTimerRunning ? 'Você já possui outro timer em andamento' : 'Iniciar'}
           </TooltipContent>
         </Tooltip>
       )}

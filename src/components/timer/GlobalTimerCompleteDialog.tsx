@@ -26,6 +26,7 @@ import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { formatHours } from '@/lib/formatHours';
+import { supabase } from '@/integrations/supabase/client';
 
 interface GlobalTimerCompleteDialogProps {
   open: boolean;
@@ -37,7 +38,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   onOpenChange,
 }) => {
   const { timerState, getElapsedHours, resetTimer, cancelCompleteDialog } = useGlobalTimer();
-  const { data, createTimeEntry, createTask, createProject } = useData();
+  const { data, createTimeEntry, createTask, createProject, cancelTaskTimer } = useData();
 
   const [linkMode, setLinkMode] = useState<'existing' | 'new'>('existing');
   const [selectedTaskId, setSelectedTaskId] = useState('');
@@ -72,7 +73,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     });
     
     return grouped;
-  }, [data.projects, data.tasks, data.clients]);
+  }, [data]);
 
   const resetFormState = () => {
     setSelectedTaskId('');
@@ -105,7 +106,19 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     try {
       const hours = getElapsedHours();
 
-      let taskId = pendingTaskLink || selectedTaskId;
+      if (!entryType) {
+        toast.error('Selecione o tipo de registro (Tarefa ou Reunião).');
+        setLoading(false);
+        return;
+      }
+
+      if (!description.trim()) {
+        toast.error('Preencha a descrição para finalizar o registro.');
+        setLoading(false);
+        return;
+      }
+
+      let taskId = timerState.taskId || selectedTaskId;
 
       // Create new project if needed
       if (linkMode === 'new') {
@@ -186,17 +199,34 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       await createTimeEntry({
         task_id: taskId,
         hours,
-        description: description || 'Timer global',
+        description: description.trim(),
         date: format(new Date(), 'yyyy-MM-dd'),
         entry_type: entryType,
       });
 
+      const activeTimerId = timerState.dbTimerId
+        || data.taskTimers.find((timer) => (timerState.taskId ? timer.task_id === timerState.taskId : !timer.task_id))?.id;
+
+      if (activeTimerId) {
+        const { error: deleteTimerError } = await supabase
+          .from('task_timers')
+          .delete()
+          .eq('id', activeTimerId);
+
+        if (deleteTimerError) {
+          throw deleteTimerError;
+        }
+      }
+
+      localStorage.removeItem('pendingTaskLink');
+      sessionStorage.removeItem('pendingTaskLink');
+
       resetTimer();
-      toast.success(`${formatHours(hours)} registradas com sucesso.`);
+      toast.success(`Vínculo aplicado na finalização: ${formatHours(hours)} registradas com sucesso.`);
       handleSuccessClose();
     } catch (error) {
       console.error('Error completing timer:', error);
-      toast.error('Falha ao registrar tempo.');
+      toast.error('Falha ao aplicar vínculo na finalização e registrar tempo.');
     } finally {
       setLoading(false);
     }
@@ -383,7 +413,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Descrição (opcional)</Label>
+            <Label>Descrição</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
