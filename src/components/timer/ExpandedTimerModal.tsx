@@ -189,7 +189,6 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
         <div className="relative flex h-full w-full min-h-0 flex-col px-5 pb-5 pt-4 md:px-8 md:pb-6 md:pt-6">
           <div className="mb-2 flex items-center justify-between md:mb-3">
             <Button
-              type="ghost"
               variant="outline"
               size="icon"
               className={`h-9 w-9 rounded-lg ${highContrast ? 'border-white bg-black text-white hover:bg-white hover:text-black' : 'border-[#64748b] bg-white text-[#64748b] hover:bg-[#e2e8f0]'}`}
@@ -203,7 +202,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             <Button
               variant="ghost"
               size="icon"
-              className={`h-9 w-9 rounded-full ${highContrast ? 'text-white hover:bg-white/10 hover:text-white' : 'text-[#64748b] hover:bg-transparent hover:text-[#475569]'}`}
+              className={`h-9 w-9 rounded-full p-0 [&_svg]:h-9 [&_svg]:w-9 ${highContrast ? 'text-white hover:bg-white/10 hover:text-white' : 'text-[#64748b] hover:bg-transparent hover:text-[#475569]'}`}
               onClick={() => onOpenChange(false)}
               aria-label="Fechar modal"
             >
@@ -373,31 +372,31 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                             </div>
 
                             {(!isRunning || isCurrentTaskTimer) && (
-                              <div className="ml-1 flex shrink-0 items-center gap-1">
+                              <div className="ml-0.5 flex shrink-0 items-center gap-0.5">
                                 <Button
                                   type="button"
                                   size="icon"
                                   variant={isCurrentTaskTimer ? 'default' : 'ghost'}
-                                  className={`h-9 w-9 rounded-full ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
+                                  className={`h-7 w-7 rounded-full p-0 [&_svg]:h-3.5 [&_svg]:w-3.5 ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
                                   onClick={() => handleStartTaskTimer(task.id)}
                                   disabled={isLoading || (!isCurrentTaskTimer && !canStartNewTaskTimer)}
                                   aria-label={`Iniciar registro da tarefa ${task.name}`}
                                   title="Iniciar registro para esta tarefa"
                                 >
-                                  <RoundedPlayIcon className="h-4 w-4" />
+                                  <Play className={isCurrentTaskTimer ? 'fill-current' : ''} />
                                 </Button>
 
                                 <Button
                                   type="button"
                                   size="icon"
                                   variant="ghost"
-                                  className={`h-9 w-9 rounded-full ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
+                                  className={`h-7 w-7 rounded-full p-0 [&_svg]:h-3.5 [&_svg]:w-3.5 ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
                                   onClick={() => handleCompleteTask(task.id)}
                                   disabled={isLoading || task.status === 'completed' || task.status === 'done'}
                                   aria-label={`Concluir tarefa ${task.name}`}
                                   title="Concluir tarefa"
                                 >
-                                  <Check className="h-4 w-4" />
+                                  <Check className="fill-current" />
                                 </Button>
                               </div>
                             )}
