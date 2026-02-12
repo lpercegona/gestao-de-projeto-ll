@@ -26,7 +26,7 @@ import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { formatHours } from '@/lib/formatHours';
-import { supabase } from '@/integrations/supabase/client';
+import { reconcileTaskBinding, resolveSubmitTaskId } from '@/lib/taskBinding';
 
 interface GlobalTimerCompleteDialogProps {
   open: boolean;
@@ -39,8 +39,8 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
 }) => {
   const {
     timerState,
-    pendingTaskLink,
-    clearPendingTaskLink,
+    taskBinding,
+    clearTaskBinding,
     getElapsedHours,
     resetTimer,
     cancelCompleteDialog,
@@ -53,9 +53,19 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   const [entryType, setEntryType] = useState<'task' | 'meeting'>('task');
   const [loading, setLoading] = useState(false);
 
-  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
-  const hasOriginTask = !!originTaskId;
-  const originTask = originTaskId ? data.tasks.find((task) => task.id === originTaskId) : null;
+  const boundTask = taskBinding ? data.tasks.find((task) => task.id === taskBinding.taskId) || null : null;
+  const boundProject = boundTask ? data.projects.find((project) => project.id === boundTask.project_id) || null : null;
+  const boundClient = boundProject ? data.clients.find((client) => client.id === boundProject.client_id) || null : null;
+  const bindingContext = reconcileTaskBinding({
+    binding: taskBinding,
+    task: boundTask,
+    project: boundProject,
+    client: boundClient,
+  });
+
+  const originTaskId = bindingContext?.taskId || timerState.taskId;
+  const hasLockedOriginTask = !!bindingContext?.isValid;
+  const originTask = bindingContext?.isValid ? boundTask : (originTaskId ? data.tasks.find((task) => task.id === originTaskId) : null);
 
   // New task/project fields
   const [newTaskName, setNewTaskName] = useState('');
@@ -136,7 +146,14 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         return;
       }
 
-      let taskId = originTaskId || selectedTaskId;
+      let taskId = (hasLockedOriginTask ? bindingContext?.taskId : null) || selectedTaskId;
+
+
+      if (taskBinding && !bindingContext?.isValid && linkMode === 'existing' && selectedTaskId === taskBinding.taskId) {
+        toast.error('A tarefa vinculada não existe mais. Selecione outra tarefa ou crie uma nova.');
+        setLoading(false);
+        return;
+      }
 
       // Create new project if needed
       if (linkMode === 'new') {
@@ -222,21 +239,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         entry_type: entryType,
       });
 
-      const activeTimerId = timerState.dbTimerId
-        || data.taskTimers.find((timer) => (originTaskId ? timer.task_id === originTaskId : !timer.task_id))?.id;
-
-      if (activeTimerId) {
-        const { error: deleteTimerError } = await supabase
-          .from('task_timers')
-          .delete()
-          .eq('id', activeTimerId);
-
-        if (deleteTimerError) {
-          throw deleteTimerError;
-        }
-      }
-
-      clearPendingTaskLink();
+      clearTaskBinding();
       resetTimer();
       toast.success(`Vínculo aplicado na finalização: ${formatHours(hours)} registradas com sucesso.`);
       handleSuccessClose();
@@ -260,7 +263,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     if (timerState.taskId) {
       await cancelTaskTimer(timerState.taskId);
     }
-    clearPendingTaskLink();
+    clearTaskBinding();
     resetTimer();
     // Don't call handleClose as it would try to resume the timer
     // Just close the dialog and reset form state
@@ -302,7 +305,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           </div>
 
           {/* Mode toggle - only show if not linked to a task */}
-          {!hasOriginTask && (
+          {!hasLockedOriginTask && (
             <div className="space-y-2">
               <Label>Vincular a</Label>
               <ToggleGroup
@@ -323,7 +326,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           )}
 
           {/* Existing task selection */}
-          {linkMode === 'existing' && !hasOriginTask && (
+          {linkMode === 'existing' && !hasLockedOriginTask && (
             <div className="space-y-2">
               <Label>Selecionar tarefa</Label>
               <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
@@ -349,7 +352,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           )}
 
           {/* New task creation */}
-          {linkMode === 'new' && !hasOriginTask && (
+          {linkMode === 'new' && !hasLockedOriginTask && (
             <div className="space-y-4">
               {/* Create new project toggle */}
               <div className="flex items-center gap-2">
@@ -426,7 +429,25 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
             </div>
           )}
 
-          {hasOriginTask && originTask && (
+          {bindingContext && (
+            <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs space-y-1">
+              <div>
+                <span className="font-medium text-foreground">Título:</span> {bindingContext.title.value}
+                {bindingContext.title.source === 'snapshot' && <span className="ml-1 text-amber-700">(snapshot)</span>}
+              </div>
+              <div>
+                <span className="font-medium text-foreground">Descrição:</span> {bindingContext.description.value}
+                {bindingContext.description.source === 'snapshot' && <span className="ml-1 text-amber-700">(snapshot)</span>}
+              </div>
+              <div>
+                <span className="font-medium text-foreground">Projeto/Cliente:</span> {bindingContext.project.value} - {bindingContext.client.value}
+                {(bindingContext.project.source === 'snapshot' || bindingContext.client.source === 'snapshot') && <span className="ml-1 text-amber-700">(snapshot)</span>}
+              </div>
+              {!bindingContext.isValid && <div className="text-amber-700">Tarefa original não encontrada. Escolha outra tarefa para registrar.</div>}
+            </div>
+          )}
+
+          {!bindingContext && originTask && (
             <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
               <span className="font-medium text-foreground">Tarefa de origem:</span> {originTask.name}
             </div>

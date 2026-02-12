@@ -36,7 +36,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const { 
     hasActiveTimer, 
     timerState, 
-    pendingTaskLink,
+    taskBinding,
     syncWithTaskTimer, 
     pauseGlobalTimer, 
     resumeGlobalTimer, 
@@ -48,7 +48,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const foreignActiveTimerOnTask = !!activeTimer && !!user && !!activeTimer.user_id && activeTimer.user_id !== user.id;
   const ownedActiveTimer = activeTimerBelongsToCurrentUser ? activeTimer : null;
 
-  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const originTaskId = taskBinding?.taskId || timerState.taskId;
   const isOriginTaskTimer = originTaskId === taskId;
   const hasForeignActiveTimer = hasActiveTimer && !isOriginTaskTimer;
 

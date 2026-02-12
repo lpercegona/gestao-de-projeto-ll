@@ -17,7 +17,7 @@ export const QuickTimeTracker: React.FC = () => {
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
-    pendingTaskLink,
+    taskBinding,
     showCompleteDialog,
     setShowCompleteDialog,
   } = useGlobalTimer();
@@ -47,7 +47,7 @@ export const QuickTimeTracker: React.FC = () => {
 
   const isRunning = timerState.isRunning && !timerState.isPaused;
   const isPaused = timerState.isPaused;
-  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const originTaskId = taskBinding?.taskId || timerState.taskId;
   const isLinkedToTask = !!originTaskId;
 
   // Get linked task info

@@ -131,7 +131,7 @@ export const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const { user, isAdminOrMaster } = useAuth();
-  const { startGlobalTimer, setPendingTaskLink } = useGlobalTimer();
+  const { startGlobalTimer, setTaskBinding } = useGlobalTimer();
   const {
     data,
     loading,
@@ -1262,13 +1262,14 @@ export const ClientDetail: React.FC = () => {
                 const project = task ? data.projects.find((item) => item.id === task.project_id) : null;
 
                 if (task && project) {
-                  setPendingTaskLink({
+                  setTaskBinding({
                     taskId: task.id,
-                    taskTitleSnapshot: task.name,
-                    taskDescriptionSnapshot: `${project.name} - ${client?.company || client?.name || 'Cliente'}`,
-                    projectNameSnapshot: project.name,
-                    clientNameSnapshot: client?.company || client?.name || 'Cliente',
-                    boundAt: Date.now(),
+                    snapshot: {
+                      taskTitle: task.name,
+                      taskDescription: task.description,
+                      projectName: project.name,
+                      clientName: client?.company || client?.name || 'Cliente',
+                    },
                   });
                 }
 
