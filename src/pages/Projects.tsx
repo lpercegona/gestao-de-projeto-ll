@@ -1052,6 +1052,7 @@ export const Projects: React.FC = () => {
       setPendingTaskLink({
         taskId: task.id,
         taskName: task.name,
+        taskDescription: task.description || null,
         projectName: project.name,
         clientName: client?.company || client?.name || 'Cliente',
       });

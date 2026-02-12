@@ -922,24 +922,42 @@ export type Database = {
       }
       task_timers: {
         Row: {
+          client_name_snapshot: string | null
           created_at: string
           id: string
+          paused_at: string | null
+          paused_elapsed_seconds: number
+          project_name_snapshot: string | null
           started_at: string
+          task_description_snapshot: string | null
           task_id: string | null
+          task_title_snapshot: string | null
           user_id: string
         }
         Insert: {
+          client_name_snapshot?: string | null
           created_at?: string
           id?: string
+          paused_at?: string | null
+          paused_elapsed_seconds?: number
+          project_name_snapshot?: string | null
           started_at?: string
+          task_description_snapshot?: string | null
           task_id?: string | null
+          task_title_snapshot?: string | null
           user_id: string
         }
         Update: {
+          client_name_snapshot?: string | null
           created_at?: string
           id?: string
+          paused_at?: string | null
+          paused_elapsed_seconds?: number
+          project_name_snapshot?: string | null
           started_at?: string
+          task_description_snapshot?: string | null
           task_id?: string | null
+          task_title_snapshot?: string | null
           user_id?: string
         }
         Relationships: [

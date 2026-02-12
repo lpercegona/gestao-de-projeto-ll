@@ -90,6 +90,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
           id: task.id,
           name: task.name,
           status: task.status,
+          description: task.description,
           projectName: project?.name,
           clientName: client?.company || client?.name,
         };
@@ -116,6 +117,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
       setPendingTaskLink({
         taskId,
         taskName: task.name,
+        taskDescription: task.description || null,
         projectName: task.projectName || 'Sem projeto',
         clientName: task.clientName || 'Sem cliente',
       });

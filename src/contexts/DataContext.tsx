@@ -72,6 +72,10 @@ interface TimeEntry {
 interface TaskTimer {
   id: string;
   task_id: string | null;
+  task_title_snapshot: string | null;
+  task_description_snapshot: string | null;
+  project_name_snapshot: string | null;
+  client_name_snapshot: string | null;
   user_id: string;
   started_at: string;
   paused_at: string | null;
@@ -245,7 +249,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })) as TimeEntry[],
         projectColumns: (columnsRes.data || []) as ProjectColumn[],
         projectAccess: (accessRes.data || []) as UserProjectAccess[],
-        taskTimers: (timersRes.data || []) as TaskTimer[],
+        taskTimers: (timersRes.data || []).map((timer) => ({
+          ...timer,
+          task_title_snapshot: (timer as any).task_title_snapshot || null,
+          task_description_snapshot: (timer as any).task_description_snapshot || null,
+          project_name_snapshot: (timer as any).project_name_snapshot || null,
+          client_name_snapshot: (timer as any).client_name_snapshot || null,
+        })) as TaskTimer[],
         kanbanStages: getEffectiveKanbanStages(allStages, user.id),
       });
     } catch (error) {
@@ -281,7 +291,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               };
             }
 
-            const nextTimer = payload.new as TaskTimer;
+            const nextTimer = {
+              ...(payload.new as TaskTimer),
+              task_title_snapshot: (payload.new as any).task_title_snapshot || null,
+              task_description_snapshot: (payload.new as any).task_description_snapshot || null,
+              project_name_snapshot: (payload.new as any).project_name_snapshot || null,
+              client_name_snapshot: (payload.new as any).client_name_snapshot || null,
+            } as TaskTimer;
             const withoutCurrent = prev.taskTimers.filter(timer => timer.id !== nextTimer.id);
 
             return {
@@ -710,6 +726,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // First update task status to in_progress if it's pending
     const task = data.tasks.find(t => t.id === taskId);
+    const project = task ? data.projects.find((p) => p.id === task.project_id) : null;
+    const client = project ? data.clients.find((c) => c.id === project.client_id) : null;
     if (task?.status === 'pending') {
       await updateTask(taskId, { status: 'in_progress' });
     }
@@ -718,6 +736,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .from('task_timers')
       .insert({
         task_id: taskId,
+        task_title_snapshot: task?.name || null,
+        task_description_snapshot: task?.description || null,
+        project_name_snapshot: project?.name || null,
+        client_name_snapshot: client?.company || client?.name || null,
         user_id: user.id,
       } as any)
       .select()
@@ -749,6 +771,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .update({
         paused_at: new Date().toISOString(),
         paused_elapsed_seconds: elapsedSeconds,
+        task_title_snapshot: timer.task_title_snapshot,
+        task_description_snapshot: timer.task_description_snapshot,
+        project_name_snapshot: timer.project_name_snapshot,
+        client_name_snapshot: timer.client_name_snapshot,
       } as any)
       .eq('id', timer.id)
       .select()
@@ -776,6 +802,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .update({
         started_at: new Date().toISOString(),
         paused_at: null,
+        task_title_snapshot: timer.task_title_snapshot,
+        task_description_snapshot: timer.task_description_snapshot,
+        project_name_snapshot: timer.project_name_snapshot,
+        client_name_snapshot: timer.client_name_snapshot,
       } as any)
       .eq('id', timer.id)
       .select()
