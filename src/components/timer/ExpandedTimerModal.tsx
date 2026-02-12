@@ -224,7 +224,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
                 <Button
                   onClick={() => startGlobalTimer()}
-                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
+                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white [&_svg]:h-[clamp(40px,16vw,90px)] [&_svg]:w-[clamp(40px,16vw,90px)]  ${
                     buActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
                   }`}
                   aria-label="Iniciar timer rápido"
