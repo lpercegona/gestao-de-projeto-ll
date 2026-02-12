@@ -52,9 +52,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     if (taskBinding) {
       return {
         taskName: taskBinding.snapshot.taskTitle,
-        taskDescription:
-          taskBinding.snapshot.taskDescription ||
-          `${taskBinding.snapshot.projectName || 'Sem projeto'} - ${taskBinding.snapshot.clientName || 'Sem cliente'}`,
+        projectName: taskBinding.snapshot.projectName || 'Sem projeto',
+        clientName: taskBinding.snapshot.clientName || 'Sem cliente',
       };
     }
 
@@ -68,7 +67,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
     return {
       taskName: task.name,
-      taskDescription: `${project?.name || 'Sem projeto'} - ${client?.company || client?.name || 'Sem cliente'}`,
+      projectName: project?.name || 'Sem projeto',
+      clientName: client?.company || client?.name || 'Sem cliente',
     };
   }, [taskBinding, timerState.taskId, data.tasks, data.projects, data.clients]);
 
@@ -274,7 +274,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 <>
                   <p className={`line-clamp-2 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
                   <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
-                    {getWysiwygPlainText(currentTaskInfo.taskDescription)}
+                    Projeto: {currentTaskInfo.projectName} • Cliente: {currentTaskInfo.clientName}
                   </p>
                 </>
               ) : null}
