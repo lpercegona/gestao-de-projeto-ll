@@ -116,22 +116,6 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     [completeTask],
   );
 
-  const handleTaskPlayAction = useCallback(
-    async (taskId: string, isCurrentTaskTimer: boolean) => {
-      if (isCurrentTaskTimer && hasActiveTimer) {
-        if (isPaused) {
-          resumeGlobalTimer();
-          return;
-        }
-
-        pauseGlobalTimer();
-        return;
-      }
-
-      await handleStartTaskTimer(taskId);
-    },
-    [hasActiveTimer, isPaused, resumeGlobalTimer, pauseGlobalTimer, handleStartTaskTimer],
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,8 +216,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 </Button>
 
                 <div
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
-                    hasActiveTimer ? 'scale-100 opacity-100' : 'pointer-events-none scale-110 opacity-0'
+                  className={`pointer-events-none absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
+                    hasActiveTimer ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
                   }`}
                 >
                   <span className={`font-mono text-2xl tabular-nums md:text-3xl ${isRunning ? 'animate-pulse' : ''}`}>
@@ -350,35 +334,18 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                               </p>
                             </div>
 
-                            {(!isRunning || isCurrentTaskTimer) && (
-                              <div className="ml-1 flex shrink-0 items-center gap-1">
+                            <div className="ml-1 flex shrink-0 items-center gap-1">
                                 <Button
                                   type="button"
                                   size="icon"
                                   variant={isCurrentTaskTimer ? 'default' : 'ghost'}
                                   className={`h-9 w-9 rounded-full ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
-                                  onClick={() => handleTaskPlayAction(task.id, isCurrentTaskTimer)}
-                                  disabled={isLoading || (!isCurrentTaskTimer && !canStartNewTaskTimer)}
-                                  aria-label={
-                                    isCurrentTaskTimer && hasActiveTimer
-                                      ? isPaused
-                                        ? `Retomar registro da tarefa ${task.name}`
-                                        : `Pausar registro da tarefa ${task.name}`
-                                      : `Iniciar registro da tarefa ${task.name}`
-                                  }
-                                  title={
-                                    isCurrentTaskTimer && hasActiveTimer
-                                      ? isPaused
-                                        ? 'Retomar registro desta tarefa'
-                                        : 'Pausar registro desta tarefa'
-                                      : 'Iniciar registro para esta tarefa'
-                                  }
+                                  onClick={() => handleStartTaskTimer(task.id)}
+                                  disabled={isLoading || !canStartNewTaskTimer}
+                                  aria-label={`Iniciar registro da tarefa ${task.name}`}
+                                  title="Iniciar registro para esta tarefa"
                                 >
-                                  {isCurrentTaskTimer && hasActiveTimer && !isPaused ? (
-                                    <Pause className="h-4 w-4" />
-                                  ) : (
-                                    <Play className="h-4 w-4" />
-                                  )}
+                                  <Play className="h-4 w-4" />
                                 </Button>
 
                                 <Button
@@ -387,14 +354,13 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                   variant="ghost"
                                   className={`h-9 w-9 rounded-full ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
                                   onClick={() => handleCompleteTask(task.id)}
-                                  disabled={isLoading || task.status === 'completed' || task.status === 'done'}
+                                  disabled={isLoading || hasActiveTimer || task.status === 'completed' || task.status === 'done'}
                                   aria-label={`Concluir tarefa ${task.name}`}
                                   title="Concluir tarefa"
                                 >
                                   <Check className="h-4 w-4" />
                                 </Button>
                               </div>
-                            )}
                           </Card>
                         );
                       })
