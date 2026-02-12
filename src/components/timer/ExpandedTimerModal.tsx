@@ -204,7 +204,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 <Button
                   onClick={() => startGlobalTimer()}
                   className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
-                    hasActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
+                    hasActiveTimer ? 'pointer-events-none scale-0 opacity-0' : 'scale-100 opacity-100'
                   }`}
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
@@ -214,7 +214,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
                 <div
                   className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
-                    hasActiveTimer ? 'scale-100 opacity-100' : 'pointer-events-none scale-110 opacity-0'
+                    hasActiveTimer ? 'scale-100 opacity-100' : 'pointer-events-none scale-0 opacity-0'
                   }`}
                 >
                   <span className={`font-mono text-2xl tabular-nums md:text-3xl ${isRunning ? 'animate-pulse' : ''}`}>
