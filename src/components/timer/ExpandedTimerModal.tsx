@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useData } from '@/contexts/DataContext';
+import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
+import { useAuth } from '@/contexts/AuthContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
 import { toast } from 'sonner';
 
@@ -22,6 +23,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
   const [highContrast, setHighContrast] = useState(false);
   const { data, startTaskTimer, completeTask, pauseTaskTimer } = useData();
+  const { user } = useAuth();
   const {
     timerState,
     startGlobalTimer,
@@ -119,12 +121,21 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handlePauseTimer = useCallback(async () => {
     if (timerState.taskId) {
-      await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+      const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+      if (!result.success) {
+        console.error('ExpandedTimerModal.handlePauseTimer failed', {
+          taskId: timerState.taskId,
+          timerId: timerState.dbTimerId,
+          userId: user?.id,
+          error: result.error,
+        });
+        toast.error(getTimerOperationErrorMessage(result.error));
+      }
       return;
     }
 
     pauseGlobalTimer();
-  }, [timerState.taskId, pauseTaskTimer, pauseGlobalTimer]);
+  }, [timerState.taskId, timerState.dbTimerId, pauseTaskTimer, pauseGlobalTimer, user?.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

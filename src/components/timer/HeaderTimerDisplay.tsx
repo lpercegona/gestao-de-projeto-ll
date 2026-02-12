@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from './GlobalTimerCompleteDialog';
 import { MarqueeText } from './MarqueeText';
+import { toast } from 'sonner';
 
 interface LinkedInfo {
   taskName: string;
@@ -27,6 +29,7 @@ export const HeaderTimerDisplay: React.FC = () => {
   } = useGlobalTimer();
 
   const { data, pauseTaskTimer } = useData();
+  const { user } = useAuth();
   const [linkedInfo, setLinkedInfo] = useState<LinkedInfo | null>(null);
 
   // Fetch linked task info when timer has a taskId
@@ -60,7 +63,16 @@ export const HeaderTimerDisplay: React.FC = () => {
     } else if (timerState.isPaused) {
       resumeGlobalTimer();
     } else if (timerState.taskId) {
-      await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+      const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+      if (!result.success) {
+        console.error('HeaderTimerDisplay.handleMainAction failed', {
+          taskId: timerState.taskId,
+          timerId: timerState.dbTimerId,
+          userId: user?.id,
+          error: result.error,
+        });
+        toast.error(getTimerOperationErrorMessage(result.error));
+      }
     } else {
       pauseGlobalTimer();
     }

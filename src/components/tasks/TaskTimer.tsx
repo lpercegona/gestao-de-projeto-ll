@@ -4,7 +4,8 @@ import { Play, Pause, Square, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
 import { toast } from 'sonner';
 
@@ -43,6 +44,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     completeGlobalTimer,
   } = useGlobalTimer();
   const { pauseTaskTimer } = useData();
+  const { user } = useAuth();
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -101,9 +103,22 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   };
 
   const handlePause = async () => {
+    const handlePauseFailure = (result: Awaited<ReturnType<typeof pauseTaskTimer>>) => {
+      if (!result.success) {
+        console.error('TaskTimer.handlePause failed', {
+          taskId,
+          timerId: activeTimer?.id,
+          userId: user?.id,
+          error: result.error,
+        });
+        toast.error(getTimerOperationErrorMessage(result.error));
+      }
+    };
+
     // Prioritize pausing the timer linked to this task card
     if (activeTimer || timerState.taskId === taskId) {
-      await pauseTaskTimer(taskId, activeTimer?.id);
+      const result = await pauseTaskTimer(taskId, activeTimer?.id);
+      handlePauseFailure(result);
       return;
     }
 
@@ -114,7 +129,8 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     }
 
     // Defensive fallback: if global state points to another task but this card still has an active timer
-    await pauseTaskTimer(taskId, activeTimer?.id);
+    const result = await pauseTaskTimer(taskId, activeTimer?.id);
+    handlePauseFailure(result);
   };
 
   const handleResume = () => {
