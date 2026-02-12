@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
+import simboloOras from '@/assets/simbolo-oras.svg';
 
 interface ExpandedTimerModalProps {
   open: boolean;
@@ -39,10 +40,6 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }, []);
 
-  const linkedTask = timerState.taskId ? data.tasks.find((task) => task.id === timerState.taskId) : null;
-  const linkedProject = linkedTask ? data.projects.find((project) => project.id === linkedTask.project_id) : null;
-  const linkedClient = linkedProject ? data.clients.find((client) => client.id === linkedProject.client_id) : null;
-
   const upcomingTasks = useMemo(() => {
     return [...data.tasks]
       .filter((task) => task.status !== 'completed' && task.status !== 'done')
@@ -64,7 +61,6 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
         return {
           id: task.id,
           name: task.name,
-          dueDate: task.due_date,
           projectName: project?.name,
           clientName: client?.company || client?.name,
         };
@@ -73,109 +69,111 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-6xl h-[90vh] p-0 overflow-hidden">
+      <DialogContent className="!w-screen !max-w-none !h-screen rounded-none border-0 bg-[#F4F7FB] p-0 text-[#64748b] [&>button]:hidden">
         <DialogTitle className="sr-only">Timer expandido</DialogTitle>
-        <div className="h-full flex flex-col bg-background">
-          <div className="flex justify-end p-4">
-            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-              <X className="h-5 w-5" />
+
+        <div className="relative flex h-full w-full flex-col px-5 pb-6 pt-6 md:px-8">
+          <div className="mb-3 flex justify-end">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full text-[#64748b] hover:bg-transparent hover:text-[#475569]"
+              onClick={() => onOpenChange(false)}
+              aria-label="Fechar modal"
+            >
+              <X className="h-7 w-7 stroke-[1.8]" />
             </Button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4 gap-6 transition-all duration-300">
-            <div
-              className={`w-full max-w-2xl flex flex-col items-center gap-4 transition-all duration-300 ${
-                isRunning ? 'scale-100' : 'scale-95'
-              }`}
-            >
-              {!hasActiveTimer ? (
-                <Button
-                  onClick={() => startGlobalTimer()}
-                  className="rounded-full w-[33vw] max-w-[360px] min-w-[220px] aspect-square text-2xl"
-                >
-                  <Play className="h-14 w-14" />
-                </Button>
-              ) : (
-                <>
-                  <div className="rounded-full border border-primary/40 w-[66vw] max-w-[640px] min-w-[260px] aspect-square flex items-center justify-center">
-                    <span className={`text-5xl md:text-7xl font-mono font-bold tabular-nums ${isRunning ? 'animate-pulse' : ''}`}>
+          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
+            <p className="mb-8 text-center text-xl font-semibold leading-tight text-[#64748b] md:text-2xl">
+              Inicie o timer para começar
+              <br />
+              um novo registro
+            </p>
+
+            <div className="mb-8 flex min-h-[320px] items-center justify-center">
+              <div className="relative flex items-center justify-center">
+                <img
+                  src={simboloOras}
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute h-[300px] w-[300px] animate-[spin_24s_linear_infinite] opacity-35"
+                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
+                />
+
+                {!hasActiveTimer ? (
+                  <Button
+                    onClick={() => startGlobalTimer()}
+                    className="relative z-10 h-[220px] w-[220px] rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
+                  >
+                    <Play className="h-16 w-16 stroke-[2.4]" />
+                  </Button>
+                ) : (
+                  <div className="relative z-10 flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
+                    <span className={`text-3xl font-semibold tabular-nums ${isRunning ? 'animate-pulse' : ''}`}>
                       {formatTime(timerState.elapsedSeconds)}
                     </span>
                   </div>
-
-                  <div className="flex items-center justify-center gap-4 w-full">
-                    {isPaused ? (
-                      <Button onClick={() => resumeGlobalTimer()} className="w-1/4 min-w-[130px] gap-2">
-                        <Play className="h-4 w-4" />
-                        Retomar
-                      </Button>
-                    ) : (
-                      <Button onClick={() => pauseGlobalTimer()} variant="outline" className="w-1/4 min-w-[130px] gap-2">
-                        <Pause className="h-4 w-4" />
-                        Pausar
-                      </Button>
-                    )}
-                    <Button onClick={() => completeGlobalTimer()} variant="destructive" className="w-1/4 min-w-[130px] gap-2">
-                      <Square className="h-4 w-4" />
-                      Concluir
-                    </Button>
-                  </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
 
-            <div
-              className={`w-full max-w-2xl transition-all duration-300 ${
-                distractionFree ? 'opacity-0 max-h-0 overflow-hidden' : 'opacity-100 max-h-72'
-              }`}
-            >
-              <Separator className="mb-4" />
-              {hasActiveTimer ? (
-                timerState.taskId && linkedTask ? (
-                  <div className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2 text-center">
-                    <p className="font-medium text-foreground truncate">{linkedTask.name}</p>
-                    <p className="truncate">
-                      {linkedProject?.name} • {linkedClient?.company || linkedClient?.name}
-                    </p>
-                  </div>
+            {hasActiveTimer ? (
+              <div className="mb-6 flex items-center justify-center gap-3">
+                {isPaused ? (
+                  <Button onClick={() => resumeGlobalTimer()} className="gap-2 rounded-full">
+                    <Play className="h-4 w-4" />
+                    Retomar
+                  </Button>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center">Registro não vinculado a nenhuma tarefa</p>
-                )
-              ) : (
-                <p className="text-sm text-muted-foreground text-center">Inicie o timer para começar um novo registro.</p>
-              )}
-            </div>
-          </div>
+                  <Button onClick={() => pauseGlobalTimer()} variant="outline" className="gap-2 rounded-full bg-white">
+                    <Pause className="h-4 w-4" />
+                    Pausar
+                  </Button>
+                )}
+                <Button onClick={() => completeGlobalTimer()} variant="destructive" className="gap-2 rounded-full">
+                  <Square className="h-4 w-4" />
+                  Concluir
+                </Button>
+              </div>
+            ) : null}
 
-          <div className="border-t p-4 space-y-3 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="distraction-free" className="text-sm text-muted-foreground">
-                sem distrações
-              </Label>
-              <Switch id="distraction-free" checked={distractionFree} onCheckedChange={setDistractionFree} />
-            </div>
+            <div className="mt-auto">
+              <div className="mb-2 flex items-center justify-between">
+                <Label htmlFor="distraction-free" className="text-xl font-medium text-[#64748b]">
+                  Sem distrações
+                </Label>
+                <Switch id="distraction-free" checked={distractionFree} onCheckedChange={setDistractionFree} />
+              </div>
 
-            <div
-              className={`transition-all duration-300 ${
-                distractionFree ? 'max-h-0 opacity-0 overflow-hidden' : 'max-h-[32vh] opacity-100'
-              }`}
-            >
-              <ScrollArea className="max-h-[32vh] pr-3">
-                <div className="space-y-2">
-                  {upcomingTasks.length > 0 ? (
-                    upcomingTasks.map((task) => (
-                      <Card key={task.id} className="border bg-transparent shadow-none px-3 py-2">
-                        <p className="text-sm font-medium truncate">{task.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {task.projectName || 'Sem projeto'} • {task.clientName || 'Sem cliente'}
-                        </p>
-                      </Card>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nenhuma tarefa pendente no momento.</p>
-                  )}
-                </div>
-              </ScrollArea>
+              <Separator className="mb-3 bg-[#dce4ee]" />
+
+              <div className={`${distractionFree ? 'hidden' : 'block'}`}>
+                <h3 className="mb-3 text-xl font-semibold text-[#64748b]">Próximas atividades</h3>
+                <ScrollArea className="max-h-[32vh] pr-2">
+                  <div className="space-y-3 pb-2">
+                    {upcomingTasks.length > 0 ? (
+                      upcomingTasks.map((task) => (
+                        <Card
+                          key={task.id}
+                          className="flex items-center justify-between rounded-2xl border border-[#d6dee8] bg-transparent px-4 py-3 shadow-none"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-lg font-semibold leading-tight text-[#0f172a]">{task.name}</p>
+                            <p className="truncate text-base font-medium text-[#64748b]">
+                              {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
+                            </p>
+                          </div>
+                          <Play className="h-6 w-6 shrink-0 text-[#64748b]" />
+                        </Card>
+                      ))
+                    ) : (
+                      <p className="text-xl text-[#64748b]">Nenhuma tarefa pendente no momento.</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
           </div>
         </div>
