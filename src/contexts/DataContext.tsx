@@ -113,7 +113,7 @@ export const getTimerOperationErrorMessage = (error?: TimerOperationError): stri
   }
 
   if (error.type === 'not_found_or_conflict') {
-    return 'Este timer não foi encontrado ou já foi alterado por outra operação. Atualize a página e tente novamente.';
+    return 'Falha ao retornar o timer atualizado (conflito/registro não visível). Verifique se a migration de RLS foi aplicada no ambiente e atualize a página.';
   }
 
   if (error.message) {
@@ -276,9 +276,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? 'not_found_or_conflict'
         : 'network';
 
+    const isPgrst116 = code === 'pgrst116';
+
     const friendlyMessageByType: Record<TimerErrorType, string> = {
       permission_denied: 'Você não tem permissão para alterar este timer.',
-      not_found_or_conflict: 'O timer não foi encontrado ou já foi alterado por outra operação.',
+      not_found_or_conflict: isPgrst116
+        ? 'Nenhuma linha retornada após update (.single()). Isso pode indicar RLS ainda bloqueando visibilidade do registro (ou migration não aplicada no ambiente).'
+        : 'O timer não foi encontrado ou já foi alterado por outra operação.',
       network: 'Não foi possível comunicar com o servidor. Tente novamente em instantes.',
     };
 
