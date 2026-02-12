@@ -21,7 +21,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const [distractionFree, setDistractionFree] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
   const [highContrast, setHighContrast] = useState(false);
-  const { data, startTaskTimer, completeTask } = useData();
+  const { data, startTaskTimer, completeTask, pauseTaskTimer } = useData();
   const {
     timerState,
     startGlobalTimer,
@@ -90,7 +90,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handleStartTaskTimer = useCallback(
     async (taskId: string) => {
-      if (hasActiveTimer && timerState.taskId !== taskId) {
+      if (hasActiveTimer && !timerState.isPaused && timerState.taskId !== taskId) {
         toast.error('Já existe um registro em andamento. Finalize o timer atual antes de iniciar outro.');
         return;
       }
@@ -104,7 +104,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
       setProcessingTaskId(null);
     },
-    [hasActiveTimer, timerState.taskId, startTaskTimer, syncWithTaskTimer],
+    [hasActiveTimer, timerState.taskId, timerState.isPaused, startTaskTimer, syncWithTaskTimer],
   );
 
   const handleCompleteTask = useCallback(
@@ -115,6 +115,16 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     },
     [completeTask],
   );
+
+
+  const handlePauseTimer = useCallback(async () => {
+    if (timerState.taskId) {
+      await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+      return;
+    }
+
+    pauseGlobalTimer();
+  }, [timerState.taskId, pauseTaskTimer, pauseGlobalTimer]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -218,7 +228,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               ) : (
                 <Button
                   type="button"
-                  onClick={() => pauseGlobalTimer()}
+                  onClick={handlePauseTimer}
                   variant="outline"
                   className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'border-white bg-black text-white hover:bg-white/10' : 'bg-white'}`}
                   aria-label="Pausar timer"

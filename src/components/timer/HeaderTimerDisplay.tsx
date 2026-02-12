@@ -26,7 +26,7 @@ export const HeaderTimerDisplay: React.FC = () => {
     setShowCompleteDialog,
   } = useGlobalTimer();
 
-  const { data } = useData();
+  const { data, pauseTaskTimer } = useData();
   const [linkedInfo, setLinkedInfo] = useState<LinkedInfo | null>(null);
 
   // Fetch linked task info when timer has a taskId
@@ -54,11 +54,13 @@ export const HeaderTimerDisplay: React.FC = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleMainAction = () => {
+  const handleMainAction = async () => {
     if (!hasActiveTimer) {
       startGlobalTimer();
     } else if (timerState.isPaused) {
       resumeGlobalTimer();
+    } else if (timerState.taskId) {
+      await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
     } else {
       pauseGlobalTimer();
     }
