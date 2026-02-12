@@ -142,7 +142,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
             <div className="mt-auto">
               <div className="mb-2 flex items-center justify-between">
-                <Label htmlFor="distraction-free" className="text-xl font-medium text-[#64748b]">
+                <Label htmlFor="distraction-free" className="text-sm font-medium text-[#64748b]">
                   Sem distrações
                 </Label>
                 <Switch id="distraction-free" checked={distractionFree} onCheckedChange={setDistractionFree} />
