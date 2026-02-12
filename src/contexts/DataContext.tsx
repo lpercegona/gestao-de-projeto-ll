@@ -79,50 +79,6 @@ interface TaskTimer {
   created_at: string;
 }
 
-export type TimerErrorType = 'permission_denied' | 'not_found_or_conflict' | 'network';
-
-export interface TimerOperationError {
-  type: TimerErrorType;
-  message: string;
-  rawMessage?: string;
-  code?: string;
-  details?: string;
-  hint?: string;
-  context: {
-    taskId: string;
-    timerId?: string;
-    userId?: string;
-    action: 'pause' | 'resume';
-  };
-}
-
-interface TimerOperationResult {
-  success: boolean;
-  timer: TaskTimer | null;
-  error?: TimerOperationError;
-}
-
-
-export const getTimerOperationErrorMessage = (error?: TimerOperationError): string => {
-  if (!error) {
-    return 'Erro de rede ao pausar/retomar timer. Tente novamente em instantes.';
-  }
-
-  if (error.type === 'permission_denied') {
-    return 'Permissão negada para pausar/retomar este timer.';
-  }
-
-  if (error.type === 'not_found_or_conflict') {
-    return 'Falha ao retornar o timer atualizado (conflito/registro não visível). Verifique se a migration de RLS foi aplicada no ambiente e atualize a página.';
-  }
-
-  if (error.message) {
-    return error.message;
-  }
-
-  return 'Erro de rede ao pausar/retomar timer. Tente novamente em instantes.';
-};
-
 interface UserProjectAccess {
   id: string;
   user_id: string;
@@ -196,8 +152,8 @@ interface DataContextType {
   revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
   // Task Timer
   startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
-  pauseTaskTimer: (taskId: string, timerId?: string) => Promise<TimerOperationResult>;
-  resumeTaskTimer: (taskId: string) => Promise<TimerOperationResult>;
+  pauseTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
+  resumeTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
   stopTaskTimer: (taskId: string, description?: string, entryType?: 'task' | 'meeting') => Promise<{ hours: number } | null>;
   cancelTaskTimer: (taskId: string) => Promise<boolean>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
@@ -232,76 +188,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
 
-  const buildTimerOperationError = useCallback((
-    action: 'pause' | 'resume',
-    taskId: string,
-    timerId: string | undefined,
-    rawError: any,
-  ): TimerOperationError => {
-    const code = String(rawError?.code || '').toLowerCase();
-    const message = String(rawError?.message || '').toLowerCase();
-    const details = String(rawError?.details || '').toLowerCase();
-    const hint = String(rawError?.hint || '').toLowerCase();
-    const combinedText = `${message} ${details} ${hint}`;
-
-    const isPermissionDenied = [
-      '42501',
-      '401',
-      '403',
-    ].includes(code) || [
-      'permission denied',
-      'insufficient privilege',
-      'not authorized',
-      'unauthorized',
-      'forbidden',
-      'violates row-level security policy',
-      'row-level security',
-      'rls',
-    ].some((term) => combinedText.includes(term));
-
-    const isNotFoundOrConflict = [
-      'pgrst116',
-      '406',
-    ].includes(code) || [
-      'json object requested, multiple (or no) rows returned',
-      'results contain 0 rows',
-      'no rows returned',
-      'row not found',
-      'record not found',
-    ].some((term) => combinedText.includes(term));
-
-    const type: TimerErrorType = isPermissionDenied
-      ? 'permission_denied'
-      : isNotFoundOrConflict
-        ? 'not_found_or_conflict'
-        : 'network';
-
-    const isPgrst116 = code === 'pgrst116';
-
-    const friendlyMessageByType: Record<TimerErrorType, string> = {
-      permission_denied: 'Você não tem permissão para alterar este timer.',
-      not_found_or_conflict: isPgrst116
-        ? 'Nenhuma linha retornada após update (.single()). Isso pode indicar RLS ainda bloqueando visibilidade do registro (ou migration não aplicada no ambiente).'
-        : 'O timer não foi encontrado ou já foi alterado por outra operação.',
-      network: 'Não foi possível comunicar com o servidor. Tente novamente em instantes.',
-    };
-
-    return {
-      type,
-      message: friendlyMessageByType[type],
-      rawMessage: rawError?.message,
-      code: rawError?.code,
-      details: rawError?.details,
-      hint: rawError?.hint,
-      context: {
-        taskId,
-        timerId,
-        userId: user?.id,
-        action,
-      },
-    };
-  }, [user?.id]);
-
   const refreshData = useCallback(async (showLoading = true) => {
     if (!user) {
       setData(emptyData);
@@ -325,7 +211,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('project_columns').select('*').order('created_at', { ascending: true }),
         supabase.from('user_project_access').select('*'),
         supabase.from('profiles').select('user_id, full_name'),
-        supabase.from('task_timers').select('*').eq('user_id', user.id),
+        supabase.from('task_timers').select('*'),
         supabase.from('kanban_stages').select('*').order('order_position', { ascending: true }),
       ]);
 
@@ -384,16 +270,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           event: '*',
           schema: 'public',
           table: 'task_timers',
-          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           setData(prev => {
             if (payload.eventType === 'DELETE') {
-              const deletedTimer = payload.old as Partial<TaskTimer>;
-              if (deletedTimer.user_id && deletedTimer.user_id !== user.id) {
-                return prev;
-              }
-
               const deletedId = payload.old.id as string;
               return {
                 ...prev,
@@ -402,21 +282,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             const nextTimer = payload.new as TaskTimer;
-            if (nextTimer.user_id !== user.id) {
-              return prev;
-            }
-
-            const currentTimer = prev.taskTimers.find(timer => timer.id === nextTimer.id);
-            const mergedTimer: TaskTimer =
-              currentTimer && !nextTimer.task_id && currentTimer.task_id
-                ? { ...nextTimer, task_id: currentTimer.task_id }
-                : nextTimer;
-
             const withoutCurrent = prev.taskTimers.filter(timer => timer.id !== nextTimer.id);
 
             return {
               ...prev,
-              taskTimers: [...withoutCurrent, mergedTimer],
+              taskTimers: [...withoutCurrent, nextTimer],
             };
           });
         }
@@ -827,22 +697,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const startTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
     if (!user) return null;
 
-    const hasAnotherRunningTimer = data.taskTimers.some(
-      (timer) => timer.user_id === user.id && timer.task_id !== taskId && !timer.paused_at,
-    );
-    if (hasAnotherRunningTimer) {
-      console.warn('Timer start blocked: user already has a running timer.');
+    const hasAnotherActiveTimer = data.taskTimers.some((timer) => timer.user_id === user.id && timer.task_id !== taskId);
+    if (hasAnotherActiveTimer) {
+      console.warn('Timer start blocked: user already has an active timer running.');
       return null;
     }
 
-    const existingTaskTimer = getMostRelevantTaskTimer(taskId);
+    const existingTaskTimer = data.taskTimers.find((timer) => timer.task_id === taskId && timer.user_id === user.id);
     if (existingTaskTimer) {
-      if (!existingTaskTimer.paused_at) {
-        return existingTaskTimer;
-      }
-
-      const resumedTimerResult = await resumeTaskTimer(taskId);
-      return resumedTimerResult.timer || existingTaskTimer;
+      return existingTaskTimer;
     }
 
     // First update task status to in_progress if it's pending
@@ -851,12 +714,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await updateTask(taskId, { status: 'in_progress' });
     }
 
-    // Linked task timers should behave like quick timers in backend (task_id = null).
-    // The link to the task is kept only in frontend state until completion.
     const { data: timer, error } = await supabase
       .from('task_timers')
       .insert({
-        task_id: null,
+        task_id: taskId,
         user_id: user.id,
       } as any)
       .select()
@@ -867,73 +728,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
-    const linkedTimer = { ...(timer as TaskTimer), task_id: taskId } as TaskTimer;
-
     // Update local state immediately
     setData(prev => ({
       ...prev,
-      taskTimers: [...prev.taskTimers.filter(t => t.id !== linkedTimer.id), linkedTimer],
+      taskTimers: [...prev.taskTimers, timer as TaskTimer],
     }));
-    return linkedTimer;
+    return timer as TaskTimer;
   };
 
-
-  const getMostRelevantTaskTimer = (taskId: string): TaskTimer | null => {
-    if (!user) return null;
-
-    const taskTimers = data.taskTimers.filter(t => t.task_id === taskId && t.user_id === user.id);
-    if (taskTimers.length > 0) {
-      const runningTimer = taskTimers.find(t => !t.paused_at);
-      if (runningTimer) return runningTimer;
-
-      return taskTimers.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0] || null;
-    }
-
-    // Fallback for linked-task flow backed by quick timer records (task_id = null in DB).
-    const userTimers = data.taskTimers.filter(t => t.user_id === user.id);
-    const runningFallback = userTimers.find(t => !t.paused_at);
-    if (runningFallback) return runningFallback;
-
-    return userTimers.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0] || null;
-  };
-
-  const getRunningTaskTimer = (taskId: string, timerId?: string): TaskTimer | null => {
-    if (!user) return null;
-
-    if (timerId) {
-      const timerById = data.taskTimers.find((timer) => timer.id === timerId && timer.user_id === user.id);
-      if (timerById && timerById.task_id === taskId && !timerById.paused_at) {
-        return timerById;
-      }
-    }
-
-    const runningTimers = data.taskTimers
-      .filter((timer) => timer.user_id === user.id && !timer.paused_at && (timer.task_id === taskId || timer.task_id === null))
-      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
-
-    return runningTimers[0] || null;
-  };
-
-  const pauseTaskTimer = async (taskId: string, timerId?: string): Promise<TimerOperationResult> => {
-    if (!user) {
-      return {
-        success: false,
-        timer: null,
-        error: {
-          type: 'network',
-          message: 'Sessão inválida para pausar o timer. Faça login novamente.',
-          context: { taskId, timerId, action: 'pause' },
-        },
-      };
-    }
-
-    const timer = getRunningTaskTimer(taskId, timerId);
-    if (!timer) {
-      return {
-        success: true,
-        timer: getMostRelevantTaskTimer(taskId),
-      };
-    }
+  const pauseTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer || timer.paused_at) return timer || null;
 
     const elapsedSeconds = Math.floor(
       (Date.now() - new Date(timer.started_at).getTime()) / 1000
@@ -950,21 +755,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (error) {
-      const structuredError = buildTimerOperationError('pause', taskId, timer.id, error);
-      console.error('Error pausing timer:', {
-        ...structuredError,
-        context: {
-          taskId: structuredError.context.taskId,
-          timerId: structuredError.context.timerId,
-          userId: structuredError.context.userId,
-          action: structuredError.context.action,
-        },
-      });
-      return {
-        success: false,
-        timer: null,
-        error: structuredError,
-      };
+      console.error('Error pausing timer:', error);
+      return null;
     }
 
     setData(prev => ({
@@ -972,32 +764,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       taskTimers: prev.taskTimers.map(t => t.id === timer.id ? updatedTimer as TaskTimer : t),
     }));
 
-    return {
-      success: true,
-      timer: updatedTimer as TaskTimer,
-    };
+    return updatedTimer as TaskTimer;
   };
 
-  const resumeTaskTimer = async (taskId: string): Promise<TimerOperationResult> => {
-    if (!user) {
-      return {
-        success: false,
-        timer: null,
-        error: {
-          type: 'network',
-          message: 'Sessão inválida para retomar o timer. Faça login novamente.',
-          context: { taskId, action: 'resume' },
-        },
-      };
-    }
-
-    const timer = getMostRelevantTaskTimer(taskId);
-    if (!timer || !timer.paused_at) {
-      return {
-        success: true,
-        timer: timer || null,
-      };
-    }
+  const resumeTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
+    if (!timer || !timer.paused_at) return timer || null;
 
     const { data: updatedTimer, error } = await supabase
       .from('task_timers')
@@ -1010,21 +782,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (error) {
-      const structuredError = buildTimerOperationError('resume', taskId, timer.id, error);
-      console.error('Error resuming timer:', {
-        ...structuredError,
-        context: {
-          taskId: structuredError.context.taskId,
-          timerId: structuredError.context.timerId,
-          userId: structuredError.context.userId,
-          action: structuredError.context.action,
-        },
-      });
-      return {
-        success: false,
-        timer: null,
-        error: structuredError,
-      };
+      console.error('Error resuming timer:', error);
+      return null;
     }
 
     setData(prev => ({
@@ -1032,16 +791,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       taskTimers: prev.taskTimers.map(t => t.id === timer.id ? updatedTimer as TaskTimer : t),
     }));
 
-    return {
-      success: true,
-      timer: updatedTimer as TaskTimer,
-    };
+    return updatedTimer as TaskTimer;
   };
 
   const stopTaskTimer = async (taskId: string, description?: string, entryType: 'task' | 'meeting' = 'task'): Promise<{ hours: number } | null> => {
     if (!user) return null;
 
-    const timer = getMostRelevantTaskTimer(taskId);
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
     if (!timer) return null;
 
     // Calculate elapsed time
@@ -1087,7 +843,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const cancelTaskTimer = async (taskId: string): Promise<boolean> => {
     if (!user) return false;
 
-    const timer = getMostRelevantTaskTimer(taskId);
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
     if (!timer) return false;
 
     // Delete the timer without creating a time entry
@@ -1110,14 +866,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const getActiveTimer = (taskId: string): TaskTimer | null => {
-    if (!user) return null;
-
-    return getMostRelevantTaskTimer(taskId);
+    return data.taskTimers.find(t => t.task_id === taskId) || null;
   };
 
   const completeTask = async (taskId: string): Promise<boolean> => {
     // If there's an active timer, stop it first
-    const timer = getMostRelevantTaskTimer(taskId);
+    const timer = data.taskTimers.find(t => t.task_id === taskId);
     if (timer) {
       await stopTaskTimer(taskId);
     }

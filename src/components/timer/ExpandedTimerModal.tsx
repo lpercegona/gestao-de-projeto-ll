@@ -7,9 +7,8 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
+import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { useAuth } from '@/contexts/AuthContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
 import { toast } from 'sonner';
 
@@ -22,8 +21,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const [distractionFree, setDistractionFree] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
   const [highContrast, setHighContrast] = useState(false);
-  const { data, startTaskTimer, completeTask, pauseTaskTimer } = useData();
-  const { user } = useAuth();
+  const { data, startTaskTimer, completeTask } = useData();
   const {
     timerState,
     startGlobalTimer,
@@ -92,7 +90,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handleStartTaskTimer = useCallback(
     async (taskId: string) => {
-      if (hasActiveTimer && !timerState.isPaused && timerState.taskId !== taskId) {
+      if (hasActiveTimer && timerState.taskId !== taskId) {
         toast.error('Já existe um registro em andamento. Finalize o timer atual antes de iniciar outro.');
         return;
       }
@@ -106,7 +104,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
       setProcessingTaskId(null);
     },
-    [hasActiveTimer, timerState.taskId, timerState.isPaused, startTaskTimer, syncWithTaskTimer],
+    [hasActiveTimer, timerState.taskId, startTaskTimer, syncWithTaskTimer],
   );
 
   const handleCompleteTask = useCallback(
@@ -117,25 +115,6 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     },
     [completeTask],
   );
-
-
-  const handlePauseTimer = useCallback(async () => {
-    if (timerState.taskId) {
-      const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
-      if (!result.success) {
-        console.error('ExpandedTimerModal.handlePauseTimer failed', {
-          taskId: timerState.taskId,
-          timerId: timerState.dbTimerId,
-          userId: user?.id,
-          error: result.error,
-        });
-        toast.error(getTimerOperationErrorMessage(result.error));
-      }
-      return;
-    }
-
-    pauseGlobalTimer();
-  }, [timerState.taskId, timerState.dbTimerId, pauseTaskTimer, pauseGlobalTimer, user?.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,13 +179,13 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
                 <Button
                   onClick={() => startGlobalTimer()}
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white [&_svg]:h-[clamp(40px,16vw,90px)] [&_svg]:w-[clamp(40px,16vw,90px)] ${
+                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
                     hasActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
                   }`}
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="stroke-[2.4]" />
+                  <Play className="h-[clamp(40px,16vw,90px)] w-[clamp(40px,16vw,90px)] stroke-[2.4]" />
                 </Button>
 
                 <div
@@ -239,7 +218,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               ) : (
                 <Button
                   type="button"
-                  onClick={handlePauseTimer}
+                  onClick={() => pauseGlobalTimer()}
                   variant="outline"
                   className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'border-white bg-black text-white hover:bg-white/10' : 'bg-white'}`}
                   aria-label="Pausar timer"

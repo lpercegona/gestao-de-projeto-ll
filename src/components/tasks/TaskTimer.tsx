@@ -4,8 +4,6 @@ import { Play, Pause, Square, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
 import { toast } from 'sonner';
 
@@ -43,8 +41,6 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     resumeGlobalTimer, 
     completeGlobalTimer,
   } = useGlobalTimer();
-  const { pauseTaskTimer } = useData();
-  const { user } = useAuth();
 
   // Calculate initial elapsed time and update every second
   useEffect(() => {
@@ -89,7 +85,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   const handleStart = async () => {
     // Check if there's already an active global timer (either standalone or from another task)
-    if (hasActiveTimer && !timerState.isPaused && timerState.taskId !== taskId) {
+    if (hasActiveTimer && timerState.taskId !== taskId) {
       toast.error('Timer em andamento: Já existe um cronômetro ativo. Finalize-o antes de iniciar outro.');
       return;
     }
@@ -102,35 +98,8 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
     }
   };
 
-  const handlePause = async () => {
-    const handlePauseFailure = (result: Awaited<ReturnType<typeof pauseTaskTimer>>) => {
-      if (!result.success) {
-        console.error('TaskTimer.handlePause failed', {
-          taskId,
-          timerId: activeTimer?.id,
-          userId: user?.id,
-          error: result.error,
-        });
-        toast.error(getTimerOperationErrorMessage(result.error));
-      }
-    };
-
-    // Prioritize pausing the timer linked to this task card
-    if (activeTimer || timerState.taskId === taskId) {
-      const result = await pauseTaskTimer(taskId, activeTimer?.id);
-      handlePauseFailure(result);
-      return;
-    }
-
-    // Quick timer (not linked to a task)
-    if (!timerState.taskId) {
-      pauseGlobalTimer();
-      return;
-    }
-
-    // Defensive fallback: if global state points to another task but this card still has an active timer
-    const result = await pauseTaskTimer(taskId, activeTimer?.id);
-    handlePauseFailure(result);
+  const handlePause = () => {
+    pauseGlobalTimer();
   };
 
   const handleResume = () => {
@@ -153,21 +122,18 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   const isTimerActive = !!activeTimer;
   const isThisTaskTimer = timerState.taskId === taskId;
-  const isRunningFromGlobalLinkedTask = isThisTaskTimer && timerState.isRunning && !timerState.isPaused;
   const isPaused = !!activeTimer?.paused_at || (isThisTaskTimer && timerState.isPaused);
-  const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isRunningFromGlobalLinkedTask && !isPaused;
-  const showTimerControls = isTimerActive || isRunningFromGlobalLinkedTask || isPaused;
-  const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isRunningFromGlobalLinkedTask && !isPaused;
+  const showPlayButton = taskStatus !== 'completed' && !isTimerActive && !isPaused;
+  const showTimerControls = isTimerActive || isPaused;
+  const showCompleteButton = taskStatus === 'in_progress' && !isTimerActive && !isPaused;
 
   // Check if another timer is running (disable play if so)
   const anotherTimerRunning = hasActiveTimer && timerState.taskId !== taskId && !isTimerActive;
 
-  // Get display time - prefer global linked timer when running without DB task linkage
-  const displayTime = isRunningFromGlobalLinkedTask
-    ? timerState.elapsedSeconds
-    : isPaused
-      ? (activeTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
-      : elapsedSeconds;
+  // Get display time - use global timer elapsed if paused, otherwise local elapsed
+  const displayTime = isPaused
+    ? (activeTimer?.paused_elapsed_seconds ?? timerState.elapsedSeconds)
+    : elapsedSeconds;
 
   return (
     <div className="flex items-center gap-1 sm:gap-2">
