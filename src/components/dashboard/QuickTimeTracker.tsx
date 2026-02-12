@@ -1,12 +1,14 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Square, Clock } from 'lucide-react';
+import { Play, Pause, Square, Clock, Expand } from 'lucide-react';
 import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
+import { ExpandedTimerModal } from '@/components/timer/ExpandedTimerModal';
 
 export const QuickTimeTracker: React.FC = () => {
+  const [expandedTimerOpen, setExpandedTimerOpen] = useState(false);
   const { data } = useData();
   const { 
     timerState, 
@@ -55,10 +57,21 @@ export const QuickTimeTracker: React.FC = () => {
     <>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Registro Rápido
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Registro Rápido
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setExpandedTimerOpen(true)}
+              title="Expandir timer"
+            >
+              <Expand className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center gap-3">
@@ -114,6 +127,8 @@ export const QuickTimeTracker: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <ExpandedTimerModal open={expandedTimerOpen} onOpenChange={setExpandedTimerOpen} />
 
       <GlobalTimerCompleteDialog 
         open={showCompleteDialog} 
