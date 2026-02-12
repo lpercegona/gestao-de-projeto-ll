@@ -98,7 +98,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   src={simboloOras}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute h-[300px] w-[300px] animate-[spin_24s_linear_infinite] opacity-35"
+                  className="pointer-events-none absolute h-[400px] w-[400px] animate-[spin_24s_linear_infinite] opacity-35"
                   style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
                 />
 
@@ -107,7 +107,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                     onClick={() => startGlobalTimer()}
                     className="relative z-10 h-[220px] w-[220px] rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
                   >
-                    <Play className="h-16 w-16 stroke-[2.4]" />
+                    <Play className="h-64 w-64 stroke-[2.4]" />
                   </Button>
                 ) : (
                   <div className="relative z-10 flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
