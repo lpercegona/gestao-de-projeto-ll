@@ -106,12 +106,12 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 {!hasActiveTimer ? (
                   <Button
                     onClick={() => startGlobalTimer()}
-                    className="relative z-10 h-[220px] w-[220px] rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
+                    className="relative z-10 h-[120px] w-[120px] rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
                   >
                     <Play className="h-64 w-64 stroke-[2.4]" /> Texto
                   </Button>
                 ) : (
-                  <div className="relative z-10 flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
+                  <div className="relative z-10 flex h-[120px] w-[120px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
                     <span className={`text-3xl font-semibold tabular-nums ${isRunning ? 'animate-pulse' : ''}`}>
                       {formatTime(timerState.elapsedSeconds)}
                     </span>
