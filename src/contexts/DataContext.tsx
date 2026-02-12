@@ -79,7 +79,7 @@ interface TaskTimer {
   created_at: string;
 }
 
-export type TimerErrorType = 'permission_denied' | 'network';
+export type TimerErrorType = 'permission_denied' | 'not_found_or_conflict' | 'network';
 
 export interface TimerOperationError {
   type: TimerErrorType;
@@ -110,6 +110,14 @@ export const getTimerOperationErrorMessage = (error?: TimerOperationError): stri
 
   if (error.type === 'permission_denied') {
     return 'Permissão negada para pausar/retomar este timer.';
+  }
+
+  if (error.type === 'not_found_or_conflict') {
+    return 'Este timer não foi encontrado ou já foi alterado por outra operação. Atualize a página e tente novamente.';
+  }
+
+  if (error.message) {
+    return error.message;
   }
 
   return 'Erro de rede ao pausar/retomar timer. Tente novamente em instantes.';
@@ -230,13 +238,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     timerId: string | undefined,
     rawError: any,
   ): TimerOperationError => {
-    const isPermissionDenied = rawError?.code === '42501';
+    const code = String(rawError?.code || '').toLowerCase();
+    const message = String(rawError?.message || '').toLowerCase();
+    const details = String(rawError?.details || '').toLowerCase();
+    const hint = String(rawError?.hint || '').toLowerCase();
+    const combinedText = `${message} ${details} ${hint}`;
+
+    const isPermissionDenied = [
+      '42501',
+      '401',
+      '403',
+    ].includes(code) || [
+      'permission denied',
+      'insufficient privilege',
+      'not authorized',
+      'unauthorized',
+      'forbidden',
+      'violates row-level security policy',
+      'row-level security',
+      'rls',
+    ].some((term) => combinedText.includes(term));
+
+    const isNotFoundOrConflict = [
+      'pgrst116',
+      '406',
+    ].includes(code) || [
+      'json object requested, multiple (or no) rows returned',
+      'results contain 0 rows',
+      'no rows returned',
+      'row not found',
+      'record not found',
+    ].some((term) => combinedText.includes(term));
+
+    const type: TimerErrorType = isPermissionDenied
+      ? 'permission_denied'
+      : isNotFoundOrConflict
+        ? 'not_found_or_conflict'
+        : 'network';
+
+    const friendlyMessageByType: Record<TimerErrorType, string> = {
+      permission_denied: 'Você não tem permissão para alterar este timer.',
+      not_found_or_conflict: 'O timer não foi encontrado ou já foi alterado por outra operação.',
+      network: 'Não foi possível comunicar com o servidor. Tente novamente em instantes.',
+    };
 
     return {
-      type: isPermissionDenied ? 'permission_denied' : 'network',
-      message: isPermissionDenied
-        ? 'Você não tem permissão para alterar este timer.'
-        : 'Não foi possível comunicar com o servidor. Tente novamente em instantes.',
+      type,
+      message: friendlyMessageByType[type],
       rawMessage: rawError?.message,
       code: rawError?.code,
       details: rawError?.details,
@@ -882,7 +930,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) {
       const structuredError = buildTimerOperationError('pause', taskId, timer.id, error);
-      console.error('Error pausing timer:', structuredError);
+      console.error('Error pausing timer:', {
+        ...structuredError,
+        context: {
+          taskId: structuredError.context.taskId,
+          timerId: structuredError.context.timerId,
+          userId: structuredError.context.userId,
+          action: structuredError.context.action,
+        },
+      });
       return {
         success: false,
         timer: null,
@@ -934,7 +990,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) {
       const structuredError = buildTimerOperationError('resume', taskId, timer.id, error);
-      console.error('Error resuming timer:', structuredError);
+      console.error('Error resuming timer:', {
+        ...structuredError,
+        context: {
+          taskId: structuredError.context.taskId,
+          timerId: structuredError.context.timerId,
+          userId: structuredError.context.userId,
+          action: structuredError.context.action,
+        },
+      });
       return {
         success: false,
         timer: null,
