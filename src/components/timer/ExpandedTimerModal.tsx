@@ -319,11 +319,13 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               />
 
               <div
-                className={`overflow-hidden transition-all duration-500 ${
-                  distractionFree ? 'pointer-events-none max-h-0 translate-y-12 opacity-0' : 'max-h-[420px] translate-y-0 opacity-100'
-                }`}
-              >
-                <h3 className={`mb-3 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#64748b]'}`}>Próximas atividades</h3>
+  className={`overflow-y-auto scrollbar-none transition-all duration-500 ${
+    distractionFree
+      ? 'pointer-events-none max-h-0 translate-y-12 opacity-0'
+      : 'max-h-[420px] translate-y-0 opacity-100'
+  }`}
+>
+                <h3 className={`mb-3 text-xs font-semibold ${highContrast ? 'text-white' : 'text-[#64748b]'}`}>Próximas atividades</h3>
                 <ScrollArea className="h-[28vh] min-h-[180px] max-h-[320px]">
                   <div className="space-y-2 pb-2 pr-2">
                     {upcomingTasks.length > 0 ? (
