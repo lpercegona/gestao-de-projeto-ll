@@ -111,7 +111,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   </Button>
                 ) : (
                   <div className="relative z-10 flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
-                    <span className={`text-3xl font-semibold tabular-nums ${isRunning ? 'animate-pulse' : ''}`}>
+                    <span className={`text-3xl tabular-nums ${isRunning ? 'animate-pulse' : ''}`}>
                       {formatTime(timerState.elapsedSeconds)}
                     </span>
                   </div>
