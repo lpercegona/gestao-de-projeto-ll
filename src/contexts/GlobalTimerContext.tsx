@@ -222,8 +222,11 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const pauseGlobalTimer = useCallback(async () => {
     if (!timerState.isRunning || timerState.isPaused) return;
 
-    if (timerState.taskId) {
-      void pauseTaskTimer(timerState.taskId);
+    const activeUserTimer = data.taskTimers.find((timer) => timer.user_id === user?.id) || null;
+    const effectiveTaskId = timerState.taskId || activeUserTimer?.task_id || null;
+
+    if (effectiveTaskId) {
+      await pauseTaskTimer(effectiveTaskId);
       return;
     }
 
@@ -238,7 +241,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setTimerState(newState);
     persistState(newState);
 
-    const fallbackTimerId = data.taskTimers.find((timer) => timer.user_id === user?.id && !timer.task_id)?.id || null;
+    const fallbackTimerId = activeUserTimer?.id || null;
     const timerIdToPause = timerState.dbTimerId || fallbackTimerId;
 
     if (timerIdToPause) {
