@@ -189,7 +189,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                             className="flex items-center justify-between rounded-2xl border border-[#d6dee8] bg-transparent px-4 py-3 shadow-none"
                           >
                             <div className="min-w-0">
-                              <p className="truncate text-base font-semibold leading-tight text-[#0f172a] md:text-lg">{task.name}</p>
+                              <p className="truncate text-sm font-semibold leading-tight text-[#0f172a] md:text-lg">{task.name}</p>
                               <p className="truncate text-sm font-medium text-[#64748b] md:text-base">
                                 {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
                               </p>
@@ -200,7 +200,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                 type="button"
                                 size="icon"
                                 variant={isCurrentTaskTimer ? 'default' : 'ghost'}
-                                className="h-9 w-9 rounded-full"
+                                className="h-7 w-7 rounded-full"
                                 onClick={() => handleStartTaskTimer(task.id)}
                                 disabled={isLoading}
                                 aria-label={`Iniciar registro da tarefa ${task.name}`}
@@ -213,7 +213,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                 type="button"
                                 size="icon"
                                 variant="ghost"
-                                className="h-9 w-9 rounded-full text-emerald-600 hover:text-emerald-700"
+                                className="h-7 w-7 rounded-full text-emerald-600 hover:text-emerald-700"
                                 onClick={() => handleCompleteTask(task.id)}
                                 disabled={isLoading || task.status === 'completed' || task.status === 'done'}
                                 aria-label={`Concluir tarefa ${task.name}`}
