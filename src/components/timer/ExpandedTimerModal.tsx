@@ -271,12 +271,12 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               }`}
             >
               {currentTaskInfo ? (
-                <>
+                <div className="mx-auto w-full max-w-[66.666vw]">
                   <p className={`line-clamp-2 text-sm font-semibold ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
                   <p className={`truncate text-xs font-medium ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
                     Projeto: {currentTaskInfo.projectName} • Cliente: {currentTaskInfo.clientName}
                   </p>
-                </>
+                </div>
               ) : null}
             </div>
 
