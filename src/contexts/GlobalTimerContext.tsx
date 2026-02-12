@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const TIMER_STORAGE_KEY = 'oras-global-timer';
 
@@ -10,7 +11,8 @@ interface GlobalTimerState {
   elapsedSeconds: number;
   startTime: number | null;
   pausedElapsed: number;
-  taskId: string | null; // If linked to a task
+  taskId: string | null;
+  dbTimerId: string | null; // ID of the task_timers record
 }
 
 interface PersistedTimerState {
@@ -19,6 +21,7 @@ interface PersistedTimerState {
   startTime: number | null;
   pausedElapsed: number;
   taskId: string | null;
+  dbTimerId: string | null;
 }
 
 interface GlobalTimerContextType {
@@ -46,6 +49,7 @@ const initialState: GlobalTimerState = {
   startTime: null,
   pausedElapsed: 0,
   taskId: null,
+  dbTimerId: null,
 };
 
 // Load persisted state from localStorage
@@ -56,7 +60,6 @@ const loadPersistedState = (): GlobalTimerState => {
     
     const parsed: PersistedTimerState = JSON.parse(stored);
     
-    // If running, calculate elapsed time since start
     if (parsed.isRunning && parsed.startTime) {
       const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000) + parsed.pausedElapsed;
       return {
@@ -66,18 +69,19 @@ const loadPersistedState = (): GlobalTimerState => {
         startTime: parsed.startTime,
         pausedElapsed: parsed.pausedElapsed,
         taskId: parsed.taskId,
+        dbTimerId: parsed.dbTimerId || null,
       };
     }
     
-    // If paused, restore paused state
     if (parsed.isPaused) {
       return {
-        isRunning: true, // Still considered "active"
+        isRunning: true,
         isPaused: true,
         elapsedSeconds: parsed.pausedElapsed,
         startTime: null,
         pausedElapsed: parsed.pausedElapsed,
         taskId: parsed.taskId,
+        dbTimerId: parsed.dbTimerId || null,
       };
     }
     
@@ -87,7 +91,6 @@ const loadPersistedState = (): GlobalTimerState => {
   }
 };
 
-// Persist state to localStorage
 const persistState = (state: GlobalTimerState) => {
   const toPersist: PersistedTimerState = {
     isRunning: state.isRunning && !state.isPaused,
@@ -95,11 +98,11 @@ const persistState = (state: GlobalTimerState) => {
     startTime: state.startTime,
     pausedElapsed: state.pausedElapsed,
     taskId: state.taskId,
+    dbTimerId: state.dbTimerId,
   };
   localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(toPersist));
 };
 
-// Clear persisted state
 const clearPersistedState = () => {
   localStorage.removeItem(TIMER_STORAGE_KEY);
 };
@@ -111,11 +114,10 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [wasPausedBeforeComplete, setWasPausedBeforeComplete] = useState(false);
 
-  // Sync with any active task timer from the database
+  // Sync with any active task timer from the database (including unlinked quick timers)
   useEffect(() => {
     if (!user || !data.taskTimers) return;
 
-    // Find any active timer for the current user
     const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id);
 
     if (activeTaskTimer) {
@@ -133,11 +135,12 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         startTime,
         pausedElapsed,
         taskId: activeTaskTimer.task_id,
+        dbTimerId: activeTaskTimer.id,
       };
 
       setTimerState(prev => {
         if (
-          prev.taskId === newState.taskId &&
+          prev.dbTimerId === newState.dbTimerId &&
           prev.isPaused === newState.isPaused &&
           prev.startTime === newState.startTime &&
           prev.pausedElapsed === newState.pausedElapsed
@@ -150,12 +153,12 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         persistState(newState);
         return newState;
       });
-    } else if (timerState.taskId) {
-      // Task timer was stopped externally, reset if it was linked to a task
+    } else if (timerState.dbTimerId || timerState.taskId) {
+      // Timer was stopped externally (from another device), reset
       setTimerState(initialState);
       clearPersistedState();
     }
-  }, [user, data.taskTimers, timerState.taskId]);
+  }, [user, data.taskTimers]);
 
   // Update elapsed seconds every second when running
   useEffect(() => {
@@ -172,23 +175,51 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return () => clearInterval(interval);
   }, [timerState.isRunning, timerState.isPaused, timerState.startTime, timerState.pausedElapsed]);
 
-  const startGlobalTimer = useCallback(() => {
-    // Don't allow starting if already running
-    if (timerState.isRunning) return;
+  // Start quick timer — insert into DB with task_id = null
+  const startGlobalTimer = useCallback(async () => {
+    if (timerState.isRunning || !user) return;
 
-    const newState: GlobalTimerState = {
+    const now = new Date();
+    const nowMs = now.getTime();
+
+    // Optimistic local update
+    const optimisticState: GlobalTimerState = {
       isRunning: true,
       isPaused: false,
       elapsedSeconds: 0,
-      startTime: Date.now(),
+      startTime: nowMs,
       pausedElapsed: 0,
       taskId: null,
+      dbTimerId: null,
     };
-    setTimerState(newState);
-    persistState(newState);
-  }, [timerState.isRunning]);
+    setTimerState(optimisticState);
+    persistState(optimisticState);
 
-  const pauseGlobalTimer = useCallback(() => {
+    // Insert into DB
+    const { data: timer, error } = await supabase
+      .from('task_timers')
+      .insert({
+        user_id: user.id,
+        started_at: now.toISOString(),
+      } as any)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error starting quick timer:', error);
+      return;
+    }
+
+    // Update with real DB ID
+    setTimerState(prev => {
+      const updated = { ...prev, dbTimerId: timer.id };
+      persistState(updated);
+      return updated;
+    });
+  }, [timerState.isRunning, user]);
+
+  // Pause timer
+  const pauseGlobalTimer = useCallback(async () => {
     if (!timerState.isRunning || timerState.isPaused) return;
 
     if (timerState.taskId) {
@@ -196,17 +227,30 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return;
     }
 
+    // Quick timer — update DB
+    const elapsedSeconds = timerState.elapsedSeconds;
     const newState: GlobalTimerState = {
       ...timerState,
       isPaused: true,
-      pausedElapsed: timerState.elapsedSeconds,
+      pausedElapsed: elapsedSeconds,
       startTime: null,
     };
     setTimerState(newState);
     persistState(newState);
+
+    if (timerState.dbTimerId) {
+      await supabase
+        .from('task_timers')
+        .update({
+          paused_at: new Date().toISOString(),
+          paused_elapsed_seconds: elapsedSeconds,
+        } as any)
+        .eq('id', timerState.dbTimerId);
+    }
   }, [timerState, pauseTaskTimer]);
 
-  const resumeGlobalTimer = useCallback(() => {
+  // Resume timer
+  const resumeGlobalTimer = useCallback(async () => {
     if (!timerState.isPaused) return;
 
     if (timerState.taskId) {
@@ -214,17 +258,28 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return;
     }
 
+    // Quick timer — update DB
+    const now = new Date();
     const newState: GlobalTimerState = {
       ...timerState,
       isPaused: false,
-      startTime: Date.now(),
+      startTime: now.getTime(),
     };
     setTimerState(newState);
     persistState(newState);
+
+    if (timerState.dbTimerId) {
+      await supabase
+        .from('task_timers')
+        .update({
+          started_at: now.toISOString(),
+          paused_at: null,
+        } as any)
+        .eq('id', timerState.dbTimerId);
+    }
   }, [timerState, resumeTaskTimer]);
 
-  const completeGlobalTimer = useCallback(() => {
-    // Store if timer was paused before showing dialog
+  const completeGlobalTimer = useCallback(async () => {
     setWasPausedBeforeComplete(timerState.isPaused);
     
     // Auto-pause timer when showing complete dialog
@@ -232,48 +287,78 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (timerState.taskId) {
         void pauseTaskTimer(timerState.taskId);
       } else {
+        const elapsedSeconds = timerState.elapsedSeconds;
         const newState: GlobalTimerState = {
           ...timerState,
           isPaused: true,
-          pausedElapsed: timerState.elapsedSeconds,
+          pausedElapsed: elapsedSeconds,
           startTime: null,
         };
         setTimerState(newState);
         persistState(newState);
+
+        if (timerState.dbTimerId) {
+          await supabase
+            .from('task_timers')
+            .update({
+              paused_at: new Date().toISOString(),
+              paused_elapsed_seconds: elapsedSeconds,
+            } as any)
+            .eq('id', timerState.dbTimerId);
+        }
       }
     }
     
     setShowCompleteDialog(true);
   }, [timerState, pauseTaskTimer]);
 
-  const cancelCompleteDialog = useCallback(() => {
+  const cancelCompleteDialog = useCallback(async () => {
     setShowCompleteDialog(false);
     
-    // Resume timer only if it wasn't paused before opening dialog
     if (!wasPausedBeforeComplete && timerState.isPaused) {
       if (timerState.taskId) {
         void resumeTaskTimer(timerState.taskId);
       } else {
+        const now = new Date();
         const newState: GlobalTimerState = {
           ...timerState,
           isPaused: false,
-          startTime: Date.now(),
+          startTime: now.getTime(),
         };
         setTimerState(newState);
         persistState(newState);
+
+        if (timerState.dbTimerId) {
+          await supabase
+            .from('task_timers')
+            .update({
+              started_at: now.toISOString(),
+              paused_at: null,
+            } as any)
+            .eq('id', timerState.dbTimerId);
+        }
       }
     }
   }, [wasPausedBeforeComplete, timerState, resumeTaskTimer]);
 
-  const resetTimer = useCallback(() => {
+  const resetTimer = useCallback(async () => {
+    const dbTimerId = timerState.dbTimerId;
+    
     setTimerState(initialState);
     setShowCompleteDialog(false);
     clearPersistedState();
-  }, []);
+
+    // Delete from DB if it was a quick timer
+    if (dbTimerId && !timerState.taskId) {
+      await supabase
+        .from('task_timers')
+        .delete()
+        .eq('id', dbTimerId);
+    }
+  }, [timerState.dbTimerId, timerState.taskId]);
 
   const getElapsedHours = useCallback(() => {
     const hours = timerState.elapsedSeconds / 3600;
-    // Round to nearest 0.25 hours
     return Math.max(0.25, Math.round(hours * 4) / 4);
   }, [timerState.elapsedSeconds]);
 
@@ -296,6 +381,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       startTime,
       pausedElapsed: pausedElapsedSeconds,
       taskId,
+      dbTimerId: null,
     };
     setTimerState(newState);
     persistState(newState);
