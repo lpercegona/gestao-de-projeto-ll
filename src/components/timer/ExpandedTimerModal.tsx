@@ -123,7 +123,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               <div className="mb-6 flex items-center justify-center gap-3">
                 {isPaused ? (
                   <Button onClick={() => resumeGlobalTimer()} className="gap-2 rounded-full">
-                    <Play className="h-4 w-4" />
+                    <Play className="h-64 w-64" />
                     Retomar
                   </Button>
                 ) : (
