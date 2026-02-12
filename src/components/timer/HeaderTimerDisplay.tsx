@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
+import { createTimerOperationId, getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from './GlobalTimerCompleteDialog';
 import { MarqueeText } from './MarqueeText';
 import { toast } from 'sonner';
@@ -61,11 +61,14 @@ export const HeaderTimerDisplay: React.FC = () => {
     if (!hasActiveTimer) {
       startGlobalTimer();
     } else if (timerState.isPaused) {
-      resumeGlobalTimer();
+      const operationId = createTimerOperationId();
+      resumeGlobalTimer(operationId);
     } else if (timerState.taskId) {
-      const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+      const operationId = createTimerOperationId();
+      const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined, operationId);
       if (!result.success) {
-        console.error('HeaderTimerDisplay.handleMainAction failed', {
+        console.error('[timer-pause] HeaderTimerDisplay.handleMainAction failed', {
+          operationId: result.operationId,
           taskId: timerState.taskId,
           timerId: timerState.dbTimerId,
           userId: user?.id,
@@ -74,7 +77,8 @@ export const HeaderTimerDisplay: React.FC = () => {
         toast.error(getTimerOperationErrorMessage(result.error));
       }
     } else {
-      pauseGlobalTimer();
+      const operationId = createTimerOperationId();
+      pauseGlobalTimer(operationId);
     }
   };
 

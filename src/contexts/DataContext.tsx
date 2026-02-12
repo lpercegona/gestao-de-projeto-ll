@@ -3,6 +3,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
+/**
+ * Timer operation logs:
+ * - `[timer-pause]` and `[timer-resume]` always include `operationId`.
+ * - In permission incidents (`error.type === 'permission_denied'` / Postgres code `42501`),
+ *   use `operationId` to correlate the UI handler log with DataContext and backend traces.
+ * - `taskId`, `timerId` and `userId` provide the execution context for auditing.
+ */
+
+const createTimerOperationId = (): string => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).slice(2, 8);
+  return `${timestamp}-${random}`;
+};
+
+export { createTimerOperationId };
+
 interface Client {
   id: string;
   name: string;
@@ -89,6 +105,7 @@ export interface TimerOperationError {
   details?: string;
   hint?: string;
   context: {
+    operationId: string;
     taskId: string;
     timerId?: string;
     userId?: string;
@@ -99,6 +116,7 @@ export interface TimerOperationError {
 interface TimerOperationResult {
   success: boolean;
   timer: TaskTimer | null;
+  operationId: string;
   error?: TimerOperationError;
 }
 
@@ -188,8 +206,8 @@ interface DataContextType {
   revokeProjectAccess: (userId: string, projectId: string) => Promise<boolean>;
   // Task Timer
   startTaskTimer: (taskId: string) => Promise<TaskTimer | null>;
-  pauseTaskTimer: (taskId: string, timerId?: string) => Promise<TimerOperationResult>;
-  resumeTaskTimer: (taskId: string) => Promise<TimerOperationResult>;
+  pauseTaskTimer: (taskId: string, timerId?: string, operationId?: string) => Promise<TimerOperationResult>;
+  resumeTaskTimer: (taskId: string, operationId?: string) => Promise<TimerOperationResult>;
   stopTaskTimer: (taskId: string, description?: string, entryType?: 'task' | 'meeting') => Promise<{ hours: number } | null>;
   cancelTaskTimer: (taskId: string) => Promise<boolean>;
   getActiveTimer: (taskId: string) => TaskTimer | null;
@@ -226,6 +244,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const buildTimerOperationError = useCallback((
     action: 'pause' | 'resume',
+    operationId: string,
     taskId: string,
     timerId: string | undefined,
     rawError: any,
@@ -242,6 +261,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       details: rawError?.details,
       hint: rawError?.hint,
       context: {
+        operationId,
         taskId,
         timerId,
         userId: user?.id,
@@ -845,15 +865,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return runningTimers[0] || null;
   };
 
-  const pauseTaskTimer = async (taskId: string, timerId?: string): Promise<TimerOperationResult> => {
+  const pauseTaskTimer = async (taskId: string, timerId?: string, operationId?: string): Promise<TimerOperationResult> => {
+    const effectiveOperationId = operationId || createTimerOperationId();
+
     if (!user) {
       return {
         success: false,
         timer: null,
+        operationId: effectiveOperationId,
         error: {
           type: 'network',
           message: 'Sessão inválida para pausar o timer. Faça login novamente.',
-          context: { taskId, timerId, action: 'pause' },
+          context: { operationId: effectiveOperationId, taskId, timerId, action: 'pause' },
         },
       };
     }
@@ -863,6 +886,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: true,
         timer: getMostRelevantTaskTimer(taskId),
+        operationId: effectiveOperationId,
       };
     }
 
@@ -881,11 +905,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (error) {
-      const structuredError = buildTimerOperationError('pause', taskId, timer.id, error);
-      console.error('Error pausing timer:', structuredError);
+      const structuredError = buildTimerOperationError('pause', effectiveOperationId, taskId, timer.id, error);
+      console.error('[timer-pause] Error pausing timer', {
+        operationId: effectiveOperationId,
+        error: structuredError,
+      });
       return {
         success: false,
         timer: null,
+        operationId: effectiveOperationId,
         error: structuredError,
       };
     }
@@ -898,18 +926,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {
       success: true,
       timer: updatedTimer as TaskTimer,
+      operationId: effectiveOperationId,
     };
   };
 
-  const resumeTaskTimer = async (taskId: string): Promise<TimerOperationResult> => {
+  const resumeTaskTimer = async (taskId: string, operationId?: string): Promise<TimerOperationResult> => {
+    const effectiveOperationId = operationId || createTimerOperationId();
+
     if (!user) {
       return {
         success: false,
         timer: null,
+        operationId: effectiveOperationId,
         error: {
           type: 'network',
           message: 'Sessão inválida para retomar o timer. Faça login novamente.',
-          context: { taskId, action: 'resume' },
+          context: { operationId: effectiveOperationId, taskId, action: 'resume' },
         },
       };
     }
@@ -919,6 +951,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: true,
         timer: timer || null,
+        operationId: effectiveOperationId,
       };
     }
 
@@ -933,11 +966,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (error) {
-      const structuredError = buildTimerOperationError('resume', taskId, timer.id, error);
-      console.error('Error resuming timer:', structuredError);
+      const structuredError = buildTimerOperationError('resume', effectiveOperationId, taskId, timer.id, error);
+      console.error('[timer-resume] Error resuming timer', {
+        operationId: effectiveOperationId,
+        error: structuredError,
+      });
       return {
         success: false,
         timer: null,
+        operationId: effectiveOperationId,
         error: structuredError,
       };
     }
@@ -950,6 +987,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {
       success: true,
       timer: updatedTimer as TaskTimer,
+      operationId: effectiveOperationId,
     };
   };
 

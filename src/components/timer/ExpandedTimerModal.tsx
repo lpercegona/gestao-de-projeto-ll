@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
+import { createTimerOperationId, getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
@@ -121,9 +121,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handlePauseTimer = useCallback(async () => {
     if (timerState.taskId) {
-      const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+      const operationId = createTimerOperationId();
+      const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined, operationId);
       if (!result.success) {
-        console.error('ExpandedTimerModal.handlePauseTimer failed', {
+        console.error('[timer-pause] ExpandedTimerModal.handlePauseTimer failed', {
+          operationId: result.operationId,
           taskId: timerState.taskId,
           timerId: timerState.dbTimerId,
           userId: user?.id,
@@ -134,7 +136,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
       return;
     }
 
-    pauseGlobalTimer();
+    const operationId = createTimerOperationId();
+    pauseGlobalTimer(operationId);
   }, [timerState.taskId, timerState.dbTimerId, pauseTaskTimer, pauseGlobalTimer, user?.id]);
 
   return (
@@ -229,7 +232,10 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               {isPaused ? (
                 <Button
                   type="button"
-                  onClick={() => resumeGlobalTimer()}
+                  onClick={() => {
+                    const operationId = createTimerOperationId();
+                    resumeGlobalTimer(operationId);
+                  }}
                   className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'bg-white text-black hover:bg-gray-200' : ''}`}
                   aria-label="Retomar timer"
                   title="Retomar timer"

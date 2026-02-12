@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
+import { createTimerOperationId, getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -28,8 +28,8 @@ interface PersistedTimerState {
 interface GlobalTimerContextType {
   timerState: GlobalTimerState;
   startGlobalTimer: () => void;
-  pauseGlobalTimer: () => void;
-  resumeGlobalTimer: () => void;
+  pauseGlobalTimer: (operationId?: string) => void;
+  resumeGlobalTimer: (operationId?: string) => void;
   completeGlobalTimer: () => void;
   cancelCompleteDialog: () => void;
   hasActiveTimer: boolean;
@@ -224,7 +224,8 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [timerState.isRunning, user]);
 
   // Pause timer
-  const pauseGlobalTimer = useCallback(async () => {
+  const pauseGlobalTimer = useCallback(async (operationId?: string) => {
+    const effectiveOperationId = operationId || createTimerOperationId();
     if (!timerState.isRunning || timerState.isPaused) return;
 
     const userTimers = data.taskTimers.filter((timer) => timer.user_id === user?.id);
@@ -236,9 +237,14 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const effectiveTaskId = timerState.taskId || activeUserTimer?.task_id || null;
 
     if (effectiveTaskId) {
-      const result = await pauseTaskTimer(effectiveTaskId, timerState.dbTimerId || activeUserTimer?.id || undefined);
+      const result = await pauseTaskTimer(
+        effectiveTaskId,
+        timerState.dbTimerId || activeUserTimer?.id || undefined,
+        effectiveOperationId,
+      );
       if (!result.success) {
-        console.error('GlobalTimerContext.pauseGlobalTimer failed', {
+        console.error('[timer-pause] GlobalTimerContext.pauseGlobalTimer failed', {
+          operationId: result.operationId,
           taskId: effectiveTaskId,
           timerId: timerState.dbTimerId || activeUserTimer?.id,
           userId: user?.id,
@@ -283,13 +289,15 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [timerState, pauseTaskTimer, data.taskTimers, user?.id]);
 
   // Resume timer
-  const resumeGlobalTimer = useCallback(async () => {
+  const resumeGlobalTimer = useCallback(async (operationId?: string) => {
+    const effectiveOperationId = operationId || createTimerOperationId();
     if (!timerState.isPaused) return;
 
     if (timerState.taskId) {
-      const result = await resumeTaskTimer(timerState.taskId);
+      const result = await resumeTaskTimer(timerState.taskId, effectiveOperationId);
       if (!result.success) {
-        console.error('GlobalTimerContext.resumeGlobalTimer failed', {
+        console.error('[timer-resume] GlobalTimerContext.resumeGlobalTimer failed', {
+          operationId: result.operationId,
           taskId: timerState.taskId,
           timerId: timerState.dbTimerId,
           userId: user?.id,
@@ -327,9 +335,11 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // Auto-pause timer when showing complete dialog
     if (!timerState.isPaused && timerState.isRunning) {
       if (timerState.taskId) {
-        const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined);
+        const operationId = createTimerOperationId();
+        const result = await pauseTaskTimer(timerState.taskId, timerState.dbTimerId || undefined, operationId);
         if (!result.success) {
-          console.error('GlobalTimerContext.completeGlobalTimer auto-pause failed', {
+          console.error('[timer-pause] GlobalTimerContext.completeGlobalTimer auto-pause failed', {
+            operationId: result.operationId,
             taskId: timerState.taskId,
             timerId: timerState.dbTimerId,
             userId: user?.id,
@@ -368,9 +378,11 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     if (!wasPausedBeforeComplete && timerState.isPaused) {
       if (timerState.taskId) {
-        const result = await resumeTaskTimer(timerState.taskId);
+        const operationId = createTimerOperationId();
+        const result = await resumeTaskTimer(timerState.taskId, operationId);
         if (!result.success) {
-          console.error('GlobalTimerContext.cancelCompleteDialog resume failed', {
+          console.error('[timer-resume] GlobalTimerContext.cancelCompleteDialog resume failed', {
+            operationId: result.operationId,
             taskId: timerState.taskId,
             timerId: timerState.dbTimerId,
             userId: user?.id,

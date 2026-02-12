@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
+import { createTimerOperationId, getTimerOperationErrorMessage, useData } from '@/contexts/DataContext';
 import { GlobalTimerCompleteDialog } from '@/components/timer/GlobalTimerCompleteDialog';
 import { toast } from 'sonner';
 
@@ -105,7 +105,8 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
   const handlePause = async () => {
     const handlePauseFailure = (result: Awaited<ReturnType<typeof pauseTaskTimer>>) => {
       if (!result.success) {
-        console.error('TaskTimer.handlePause failed', {
+        console.error('[timer-pause] TaskTimer.handlePause failed', {
+          operationId: result.operationId,
           taskId,
           timerId: activeTimer?.id,
           userId: user?.id,
@@ -117,24 +118,28 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
     // Prioritize pausing the timer linked to this task card
     if (activeTimer || timerState.taskId === taskId) {
-      const result = await pauseTaskTimer(taskId, activeTimer?.id);
+      const operationId = createTimerOperationId();
+      const result = await pauseTaskTimer(taskId, activeTimer?.id, operationId);
       handlePauseFailure(result);
       return;
     }
 
     // Quick timer (not linked to a task)
     if (!timerState.taskId) {
-      pauseGlobalTimer();
+      const operationId = createTimerOperationId();
+      pauseGlobalTimer(operationId);
       return;
     }
 
     // Defensive fallback: if global state points to another task but this card still has an active timer
-    const result = await pauseTaskTimer(taskId, activeTimer?.id);
+    const operationId = createTimerOperationId();
+    const result = await pauseTaskTimer(taskId, activeTimer?.id, operationId);
     handlePauseFailure(result);
   };
 
   const handleResume = () => {
-    resumeGlobalTimer();
+    const operationId = createTimerOperationId();
+    resumeGlobalTimer(operationId);
   };
 
   const handleStop = () => {
