@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const TIMER_STORAGE_KEY = 'oras-global-timer';
+const PENDING_TASK_LINK_STORAGE_KEY = 'oras-global-pending-task-link';
 
 interface GlobalTimerState {
   isRunning: boolean;
