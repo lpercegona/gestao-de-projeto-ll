@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import simboloOras from '@/assets/fundo-timer.webp';
+import fundoTimer from '@/assets/fundo-timer.webp';
 
 interface ExpandedTimerModalProps {
   open: boolean;
@@ -95,7 +95,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             <div className="mb-8 flex min-h-[320px] items-center justify-center">
               <div className="relative flex items-center justify-center h-[400px] w-[400px]">
                 <img
-                  src={simboloOras}
+                  src={fundoTimer}
                   alt=""
                   aria-hidden="true"
                   className="pointer-events-none absolute  animate-[spin_24s_linear_infinite] opacity-35"
