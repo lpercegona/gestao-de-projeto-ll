@@ -230,7 +230,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="h-[clamp(36px,14vw,90px)] w-[clamp(36px,14vw,90px)] stroke-[1.5]" />
+                  <Play className="stroke-[1.5]" />
                 </Button>
 
                 <div
