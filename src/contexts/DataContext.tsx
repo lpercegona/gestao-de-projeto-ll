@@ -707,15 +707,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const startTaskTimer = async (taskId: string): Promise<TaskTimer | null> => {
     if (!user) return null;
 
-    const hasAnotherActiveTimer = data.taskTimers.some((timer) => timer.user_id === user.id && timer.task_id !== taskId);
-    if (hasAnotherActiveTimer) {
-      console.warn('Timer start blocked: user already has an active timer running.');
+    const hasAnotherRunningTimer = data.taskTimers.some(
+      (timer) => timer.user_id === user.id && timer.task_id !== taskId && !timer.paused_at,
+    );
+    if (hasAnotherRunningTimer) {
+      console.warn('Timer start blocked: user already has a running timer.');
       return null;
     }
 
-    const existingTaskTimer = data.taskTimers.find((timer) => timer.task_id === taskId && timer.user_id === user.id);
+    const existingTaskTimer = getMostRelevantTaskTimer(taskId);
     if (existingTaskTimer) {
-      return existingTaskTimer;
+      if (!existingTaskTimer.paused_at) {
+        return existingTaskTimer;
+      }
+
+      const resumedTimer = await resumeTaskTimer(taskId);
+      return resumedTimer || existingTaskTimer;
     }
 
     // First update task status to in_progress if it's pending

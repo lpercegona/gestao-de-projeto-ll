@@ -87,7 +87,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
 
   const handleStart = async () => {
     // Check if there's already an active global timer (either standalone or from another task)
-    if (hasActiveTimer && timerState.taskId !== taskId) {
+    if (hasActiveTimer && !timerState.isPaused && timerState.taskId !== taskId) {
       toast.error('Timer em andamento: Já existe um cronômetro ativo. Finalize-o antes de iniciar outro.');
       return;
     }

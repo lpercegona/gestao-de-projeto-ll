@@ -90,7 +90,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handleStartTaskTimer = useCallback(
     async (taskId: string) => {
-      if (hasActiveTimer && timerState.taskId !== taskId) {
+      if (hasActiveTimer && !timerState.isPaused && timerState.taskId !== taskId) {
         toast.error('Já existe um registro em andamento. Finalize o timer atual antes de iniciar outro.');
         return;
       }
@@ -104,7 +104,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
       setProcessingTaskId(null);
     },
-    [hasActiveTimer, timerState.taskId, startTaskTimer, syncWithTaskTimer],
+    [hasActiveTimer, timerState.taskId, timerState.isPaused, startTaskTimer, syncWithTaskTimer],
   );
 
   const handleCompleteTask = useCallback(
