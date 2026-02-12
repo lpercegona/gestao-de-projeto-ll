@@ -54,7 +54,7 @@ export const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { setPendingTaskLink, startGlobalTimer } = useGlobalTimer();
+  const { setTaskBinding, startGlobalTimer } = useGlobalTimer();
   const { 
     data,
     loading,
@@ -308,11 +308,14 @@ export const ProjectDetail: React.FC = () => {
             const activeTimer = getCurrentUserActiveTimer(task.id);
 
             const handleStartTimer = async () => {
-              setPendingTaskLink({
+              setTaskBinding({
                 taskId: task.id,
-                taskName: task.name,
-                projectName: project.name,
-                clientName: client.company || client.name,
+                snapshot: {
+                  taskTitle: task.name,
+                  taskDescription: task.description,
+                  projectName: project.name,
+                  clientName: client.company || client.name,
+                },
               });
               await startGlobalTimer();
               toast.success('Timer iniciado!');

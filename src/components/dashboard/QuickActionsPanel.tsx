@@ -26,7 +26,7 @@ export const QuickActionsPanel: React.FC = () => {
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
-    pendingTaskLink,
+    taskBinding,
     showCompleteDialog,
     setShowCompleteDialog,
   } = useGlobalTimer();
@@ -44,7 +44,7 @@ export const QuickActionsPanel: React.FC = () => {
   const isPaused = timerState.isPaused;
 
   // Get linked task info
-  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const originTaskId = taskBinding?.taskId || timerState.taskId;
   const linkedTask = originTaskId ? data.tasks.find((t) => t.id === originTaskId) : null;
   const linkedProject = linkedTask ? data.projects.find((p) => p.id === linkedTask.project_id) : null;
   const linkedClient = linkedProject ? data.clients.find((c) => c.id === linkedProject.client_id) : null;

@@ -119,7 +119,7 @@ export const Projects: React.FC = () => {
     saveKanbanStages,
   } = useData();
   const { user, isAdminOrMaster, isCollaborator } = useAuth();
-  const { resetTimer, startGlobalTimer, setPendingTaskLink } = useGlobalTimer();
+  const { resetTimer, startGlobalTimer, setTaskBinding } = useGlobalTimer();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // View state
@@ -1049,11 +1049,14 @@ export const Projects: React.FC = () => {
     const client = project ? data.clients.find((item) => item.id === project.client_id) : null;
 
     if (task && project) {
-      setPendingTaskLink({
+      setTaskBinding({
         taskId: task.id,
-        taskName: task.name,
-        projectName: project.name,
-        clientName: client?.company || client?.name || 'Cliente',
+        snapshot: {
+          taskTitle: task.name,
+          taskDescription: task.description,
+          projectName: project.name,
+          clientName: client?.company || client?.name || 'Cliente',
+        },
       });
     }
 

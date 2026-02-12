@@ -129,9 +129,9 @@ export const HeaderTimerDisplay: React.FC = () => {
 
 // Component that shows task info with slide animation
 export const HeaderTimerTaskInfo: React.FC = () => {
-  const { timerState, hasActiveTimer, pendingTaskLink } = useGlobalTimer();
+  const { timerState, hasActiveTimer, taskBinding } = useGlobalTimer();
   const { data } = useData();
-  const originTaskId = pendingTaskLink?.taskId || timerState.taskId;
+  const originTaskId = taskBinding?.taskId || timerState.taskId;
 
   const linkedInfo = useMemo(() => {
     if (!originTaskId) return null;
