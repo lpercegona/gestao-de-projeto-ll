@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pause, Square, X, Check, Contrast } from 'lucide-react';
+import { Play, Pause, Square, X, Check, Contrast } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -12,22 +12,6 @@ import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
 import { toast } from 'sonner';
 import { getWysiwygPlainText } from '@/lib/wysiwyg';
-
-
-const RoundedPlayIcon = ({ className }: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.0}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
-  </svg>
-);
 
 interface ExpandedTimerModalProps {
   open: boolean;
@@ -206,7 +190,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               onClick={() => onOpenChange(false)}
               aria-label="Fechar modal"
             >
-              <X className="h-9 w-9 stroke-[1.0]" />
+              <X className="stroke-[1.8]" />
             </Button>
           </div>
 
@@ -245,7 +229,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <RoundedPlayIcon className="stroke-[1.3]" />
+                  <Play className="stroke-[1.0]" />
                 </Button>
 
                 <div
@@ -273,7 +257,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Retomar timer"
                   title="Retomar timer"
                 >
-                  <RoundedPlayIcon className="h-4 w-4" />
+                  <Play className="h-4 w-4" />
                 </Button>
               ) : (
                 <Button
