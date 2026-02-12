@@ -86,7 +86,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
           </div>
 
           <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-            <p className="mb-8 text-center text-xl font-semibold leading-tight text-[#64748b] md:text-2xl">
+            <p className="mb-8 text-center text-md font-semibold leading-tight text-[#64748b] md:text-2xl">
               Inicie o timer para começar
               <br />
               um novo registro
@@ -107,7 +107,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                     onClick={() => startGlobalTimer()}
                     className="relative z-10 h-[220px] w-[220px] rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-transform duration-300 hover:scale-[1.02] hover:bg-white"
                   >
-                    <Play className="h-16 w-16 stroke-[2.4]" />
+                    <Play className="h-32 w-32 stroke-[2.4]" />
                   </Button>
                 ) : (
                   <div className="relative z-10 flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b]">
@@ -150,7 +150,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               <Separator className="mb-3 bg-[#dce4ee]" />
 
               <div className={`${distractionFree ? 'hidden' : 'block'}`}>
-                <h3 className="mb-3 text-xl font-semibold text-[#64748b]">Próximas atividades</h3>
+                <h3 className="mb-3 text-sm font-semibold text-[#64748b]">Próximas atividades</h3>
                 <ScrollArea className="max-h-[32vh] pr-2">
                   <div className="space-y-3 pb-2">
                     {upcomingTasks.length > 0 ? (
