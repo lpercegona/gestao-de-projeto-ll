@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
+import { toast } from 'sonner';
 
 interface ExpandedTimerModalProps {
   open: boolean;
@@ -33,6 +34,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const isRunning = timerState.isRunning && !timerState.isPaused;
   const isPaused = timerState.isPaused;
+  const canStartNewTaskTimer = !hasActiveTimer;
 
   const formatTime = useCallback((totalSeconds: number): string => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -88,6 +90,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const handleStartTaskTimer = useCallback(
     async (taskId: string) => {
+      if (hasActiveTimer && timerState.taskId !== taskId) {
+        toast.error('Já existe um registro em andamento. Finalize o timer atual antes de iniciar outro.');
+        return;
+      }
+
       setProcessingTaskId(taskId);
       const startedTimer = await startTaskTimer(taskId);
 
@@ -97,7 +104,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
       setProcessingTaskId(null);
     },
-    [startTaskTimer, syncWithTaskTimer],
+    [hasActiveTimer, timerState.taskId, startTaskTimer, syncWithTaskTimer],
   );
 
   const handleCompleteTask = useCallback(
@@ -171,12 +178,40 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 />
 
                 <Button
-                  onClick={() => startGlobalTimer()}
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
-                    hasActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
-                  }`}
+                  onClick={() => {
+                    if (!hasActiveTimer) {
+                      startGlobalTimer();
+                      return;
+                    }
+
+                    if (isPaused) {
+                      resumeGlobalTimer();
+                      return;
+                    }
+
+                    pauseGlobalTimer();
+                  }}
+                  className="absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white"
+                  aria-label={
+                    !hasActiveTimer
+                      ? 'Iniciar timer'
+                      : isPaused
+                        ? 'Retomar timer'
+                        : 'Pausar timer'
+                  }
+                  title={
+                    !hasActiveTimer
+                      ? 'Iniciar timer'
+                      : isPaused
+                        ? 'Retomar timer'
+                        : 'Pausar timer'
+                  }
                 >
-                  <Play className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
+                  {!hasActiveTimer || isPaused ? (
+                    <Play className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
+                  ) : (
+                    <Pause className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
+                  )}
                 </Button>
 
                 <div
@@ -298,33 +333,35 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                               </p>
                             </div>
 
-                            <div className="ml-1 flex shrink-0 items-center gap-1">
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant={isCurrentTaskTimer ? 'default' : 'ghost'}
-                                className={`h-9 w-9 rounded-full ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
-                                onClick={() => handleStartTaskTimer(task.id)}
-                                disabled={isLoading}
-                                aria-label={`Iniciar registro da tarefa ${task.name}`}
-                                title="Iniciar registro para esta tarefa"
-                              >
-                                <Play className="h-4 w-4" />
-                              </Button>
+                            {(!isRunning || isCurrentTaskTimer) && (
+                              <div className="ml-1 flex shrink-0 items-center gap-1">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant={isCurrentTaskTimer ? 'default' : 'ghost'}
+                                  className={`h-9 w-9 rounded-full ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
+                                  onClick={() => handleStartTaskTimer(task.id)}
+                                  disabled={isLoading || (!isCurrentTaskTimer && !canStartNewTaskTimer)}
+                                  aria-label={`Iniciar registro da tarefa ${task.name}`}
+                                  title="Iniciar registro para esta tarefa"
+                                >
+                                  <Play className="h-4 w-4" />
+                                </Button>
 
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                className={`h-9 w-9 rounded-full ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
-                                onClick={() => handleCompleteTask(task.id)}
-                                disabled={isLoading || task.status === 'completed' || task.status === 'done'}
-                                aria-label={`Concluir tarefa ${task.name}`}
-                                title="Concluir tarefa"
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                            </div>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className={`h-9 w-9 rounded-full ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
+                                  onClick={() => handleCompleteTask(task.id)}
+                                  disabled={isLoading || task.status === 'completed' || task.status === 'done'}
+                                  aria-label={`Concluir tarefa ${task.name}`}
+                                  title="Concluir tarefa"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
                           </Card>
                         );
                       })
