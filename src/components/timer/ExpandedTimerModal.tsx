@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/contexts/DataContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import simboloOras from '@/assets/simbolo-oras.svg';
+import simboloOras from '@/assets/svg-fundo-play.svg';
 
 interface ExpandedTimerModalProps {
   open: boolean;
