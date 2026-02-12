@@ -58,12 +58,3 @@ export interface AppData {
   timeEntries: TimeEntry[];
   projectColumns: ProjectColumn[];
 }
-
-export interface TaskTimerBinding {
-  taskId: string;
-  taskTitleSnapshot: string;
-  taskDescriptionSnapshot: string;
-  projectNameSnapshot: string;
-  clientNameSnapshot: string;
-  boundAt: number;
-}
