@@ -13,6 +13,17 @@ export default {
   		}
   	},
   	extend: {
+      
+  keyframes: {
+    pulseScale: {
+      '0%,100%': { transform: 'scale(1)' },
+      '50%': { transform: 'scale(1.08)' },
+    },
+  },
+  animation: {
+    'pulse-scale': 'pulseScale 0.5s ease-in-out infinite',
+  },
+
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
