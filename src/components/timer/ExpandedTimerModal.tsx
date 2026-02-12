@@ -116,6 +116,23 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     [completeTask],
   );
 
+  const handleTaskPlayAction = useCallback(
+    async (taskId: string, isCurrentTaskTimer: boolean) => {
+      if (isCurrentTaskTimer && hasActiveTimer) {
+        if (isPaused) {
+          resumeGlobalTimer();
+          return;
+        }
+
+        pauseGlobalTimer();
+        return;
+      }
+
+      await handleStartTaskTimer(taskId);
+    },
+    [hasActiveTimer, isPaused, resumeGlobalTimer, pauseGlobalTimer, handleStartTaskTimer],
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -178,14 +195,40 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 />
 
                 <Button
-                  onClick={() => startGlobalTimer()}
-                  className={`absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white ${
-                    hasActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
-                  }`}
-                  aria-label="Iniciar timer rápido"
-                  title="Iniciar timer rápido"
+                  onClick={() => {
+                    if (!hasActiveTimer) {
+                      startGlobalTimer();
+                      return;
+                    }
+
+                    if (isPaused) {
+                      resumeGlobalTimer();
+                      return;
+                    }
+
+                    pauseGlobalTimer();
+                  }}
+                  className="absolute z-10 flex h-[min(46vw,220px)] w-[min(46vw,220px)] items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] hover:bg-white"
+                  aria-label={
+                    !hasActiveTimer
+                      ? 'Iniciar timer'
+                      : isPaused
+                        ? 'Retomar timer'
+                        : 'Pausar timer'
+                  }
+                  title={
+                    !hasActiveTimer
+                      ? 'Iniciar timer'
+                      : isPaused
+                        ? 'Retomar timer'
+                        : 'Pausar timer'
+                  }
                 >
-                  <Play className="h-[clamp(40px,16vw,90px)] w-[clamp(40px,16vw,90px)] stroke-[2.4]" />
+                  {!hasActiveTimer || isPaused ? (
+                    <Play className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
+                  ) : (
+                    <Pause className="h-[min(38vw,184px)] w-[min(38vw,184px)] stroke-[2.4]" />
+                  )}
                 </Button>
 
                 <div
@@ -314,12 +357,28 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                   size="icon"
                                   variant={isCurrentTaskTimer ? 'default' : 'ghost'}
                                   className={`h-9 w-9 rounded-full ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
-                                  onClick={() => handleStartTaskTimer(task.id)}
+                                  onClick={() => handleTaskPlayAction(task.id, isCurrentTaskTimer)}
                                   disabled={isLoading || (!isCurrentTaskTimer && !canStartNewTaskTimer)}
-                                  aria-label={`Iniciar registro da tarefa ${task.name}`}
-                                  title="Iniciar registro para esta tarefa"
+                                  aria-label={
+                                    isCurrentTaskTimer && hasActiveTimer
+                                      ? isPaused
+                                        ? `Retomar registro da tarefa ${task.name}`
+                                        : `Pausar registro da tarefa ${task.name}`
+                                      : `Iniciar registro da tarefa ${task.name}`
+                                  }
+                                  title={
+                                    isCurrentTaskTimer && hasActiveTimer
+                                      ? isPaused
+                                        ? 'Retomar registro desta tarefa'
+                                        : 'Pausar registro desta tarefa'
+                                      : 'Iniciar registro para esta tarefa'
+                                  }
                                 >
-                                  <Play className="h-4 w-4" />
+                                  {isCurrentTaskTimer && hasActiveTimer && !isPaused ? (
+                                    <Pause className="h-4 w-4" />
+                                  ) : (
+                                    <Play className="h-4 w-4" />
+                                  )}
                                 </Button>
 
                                 <Button
