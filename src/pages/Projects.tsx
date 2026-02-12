@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
@@ -129,6 +129,12 @@ export const Projects: React.FC = () => {
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
   const [showOnlyRequests, setShowOnlyRequests] = useState(false);
+
+  const getCurrentUserActiveTimer = useCallback((taskId: string) => {
+    const timer = getActiveTimer(taskId);
+    if (!timer || !user) return null;
+    return timer.user_id === user.id ? timer : null;
+  }, [getActiveTimer, user]);
 
   const projectStatusOptions = useMemo(() => ([
     { value: 'active', label: 'Ativo' },
@@ -1187,7 +1193,7 @@ export const Projects: React.FC = () => {
           getProjectHours={getProjectHours}
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
-          getActiveTimer={getActiveTimer}
+          getActiveTimer={getCurrentUserActiveTimer}
           getClientColumns={getClientColumns}
           onEditProject={handleOpenDialog}
           onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
@@ -1231,7 +1237,7 @@ export const Projects: React.FC = () => {
           getProjectHours={getProjectHours}
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
-          getActiveTimer={getActiveTimer}
+          getActiveTimer={getCurrentUserActiveTimer}
           onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
           onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
           onRegisterTime={handleOpenTimeDialog}
