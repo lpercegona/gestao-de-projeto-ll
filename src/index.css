@@ -151,6 +151,11 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  .lucide {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 }
 
 /* Marquee animation for sliding text with infinite loop and 3s pause */
