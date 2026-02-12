@@ -33,6 +33,25 @@ interface PersistedTimerState {
   pendingTaskLink?: PendingTaskLink | null;
 }
 
+interface TaskTimerSyncRow {
+  id: string;
+  task_id: string | null;
+  user_id: string;
+  started_at: string;
+  paused_at: string | null;
+  paused_elapsed_seconds: number;
+  task_name_snapshot?: string | null;
+  task_description_snapshot?: string | null;
+  project_name_snapshot?: string | null;
+  client_name_snapshot?: string | null;
+}
+
+interface TaskBindingResolution {
+  taskId: string | null;
+  pendingTaskLink: PendingTaskLink | null;
+  shouldWarnMissingTask: boolean;
+}
+
 interface GlobalTimerContextType {
   timerState: GlobalTimerState;
   pendingTaskLink: PendingTaskLink | null;
@@ -187,17 +206,117 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [wasPausedBeforeComplete, setWasPausedBeforeComplete] = useState(false);
 
+  const resolveTaskBinding = useCallback((
+    activeTaskTimer: TaskTimerSyncRow,
+    tasks: typeof data.tasks,
+    persistedState: PersistedTimerState | null,
+  ): TaskBindingResolution => {
+    // Quick timer (task_id = null): never populate binding metadata
+    if (!activeTaskTimer.task_id) {
+      return {
+        taskId: null,
+        pendingTaskLink: null,
+        shouldWarnMissingTask: false,
+      };
+    }
+
+    const task = tasks.find((item) => item.id === activeTaskTimer.task_id);
+    if (task) {
+      const project = data.projects.find((item) => item.id === task.project_id);
+      const client = project ? data.clients.find((item) => item.id === project.client_id) : null;
+
+      return {
+        taskId: task.id,
+        pendingTaskLink: {
+          taskId: task.id,
+          taskName: task.name,
+          projectName: project?.name || 'Sem projeto',
+          clientName: client?.company || client?.name || 'Sem cliente',
+        },
+        shouldWarnMissingTask: false,
+      };
+    }
+
+    const hasSnapshot = !!(
+      activeTaskTimer.task_name_snapshot ||
+      activeTaskTimer.task_description_snapshot ||
+      activeTaskTimer.project_name_snapshot ||
+      activeTaskTimer.client_name_snapshot
+    );
+
+    if (hasSnapshot) {
+      return {
+        taskId: null,
+        pendingTaskLink: {
+          taskId: activeTaskTimer.task_id,
+          taskName: activeTaskTimer.task_name_snapshot || 'Tarefa indisponível',
+          projectName: activeTaskTimer.project_name_snapshot || activeTaskTimer.task_description_snapshot || 'Sem projeto',
+          clientName: activeTaskTimer.client_name_snapshot || 'Sem cliente',
+        },
+        shouldWarnMissingTask: true,
+      };
+    }
+
+    const fallbackLink = persistedState?.pendingTaskLink;
+    if (fallbackLink?.taskName) {
+      return {
+        taskId: null,
+        pendingTaskLink: {
+          taskId: fallbackLink.taskId || activeTaskTimer.task_id,
+          taskName: fallbackLink.taskName,
+          projectName: fallbackLink.projectName || 'Sem projeto',
+          clientName: fallbackLink.clientName || 'Sem cliente',
+        },
+        shouldWarnMissingTask: true,
+      };
+    }
+
+    return {
+      taskId: null,
+      pendingTaskLink: {
+        taskId: activeTaskTimer.task_id,
+        taskName: 'Tarefa indisponível',
+        projectName: 'Sem projeto',
+        clientName: 'Sem cliente',
+      },
+      shouldWarnMissingTask: true,
+    };
+  }, [data.tasks, data.projects, data.clients]);
+
   // Sync with any active task timer from the database (including unlinked quick timers)
   useEffect(() => {
     if (!user || !data.taskTimers) return;
 
-    const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id);
+    const activeTaskTimer = data.taskTimers.find(t => t.user_id === user.id) as TaskTimerSyncRow | undefined;
 
     if (activeTaskTimer) {
-      if (activeTaskTimer.task_id) {
-        setPendingTaskLinkState(null);
-        persistPendingTaskLink(null);
+      let persistedState: PersistedTimerState | null = null;
+      try {
+        const stored = localStorage.getItem(TIMER_STORAGE_KEY);
+        persistedState = stored ? (JSON.parse(stored) as PersistedTimerState) : null;
+      } catch {
+        persistedState = null;
       }
+
+      const resolvedBinding = resolveTaskBinding(activeTaskTimer, data.tasks, persistedState);
+
+      if (resolvedBinding.shouldWarnMissingTask) {
+        console.warn('[GlobalTimerContext] Timer ativo aponta para tarefa indisponível no catálogo; usando snapshots/fallback local reconciliado.', {
+          timerId: activeTaskTimer.id,
+          taskId: activeTaskTimer.task_id,
+          hasDbSnapshot: Boolean(
+            activeTaskTimer.task_name_snapshot ||
+            activeTaskTimer.task_description_snapshot ||
+            activeTaskTimer.project_name_snapshot ||
+            activeTaskTimer.client_name_snapshot,
+          ),
+          usedPersistedFallback: Boolean(persistedState?.pendingTaskLink),
+        });
+      }
+
+      setPendingTaskLinkState(resolvedBinding.pendingTaskLink);
+      persistPendingTaskLink(resolvedBinding.pendingTaskLink);
+
       const isPaused = !!activeTaskTimer.paused_at;
       const startTime = isPaused ? null : new Date(activeTaskTimer.started_at).getTime();
       const pausedElapsed = activeTaskTimer.paused_elapsed_seconds || 0;
@@ -211,7 +330,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         elapsedSeconds,
         startTime,
         pausedElapsed,
-        taskId: activeTaskTimer.task_id,
+        taskId: resolvedBinding.taskId,
         dbTimerId: activeTaskTimer.id,
       };
 
