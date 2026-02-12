@@ -177,7 +177,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               <div className={`${distractionFree ? 'hidden' : 'block'}`}>
                 <h3 className="mb-3 text-sm font-semibold text-[#64748b]">Próximas atividades</h3>
                 <ScrollArea className="h-[28vh] min-h-[180px] max-h-[320px]">
-                  <div className="space-y-3 pb-2">
+                  <div className="space-y-2 pb-2 pr-2">
                     {upcomingTasks.length > 0 ? (
                       upcomingTasks.map((task) => {
                         const isCurrentTaskTimer = timerState.taskId === task.id;
@@ -186,21 +186,32 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                         return (
                           <Card
                             key={task.id}
-                            className="flex items-center justify-between rounded-2xl border border-[#d6dee8] bg-transparent px-4 py-3 shadow-none"
+                            className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-2xl border border-[#d6dee8] bg-transparent px-3 py-2.5 shadow-none"
                           >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold leading-tight text-[#0f172a] md:text-lg">{task.name}</p>
-                              <p className="truncate text-sm font-medium text-[#64748b] md:text-base">
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className="text-sm font-semibold leading-tight text-[#0f172a]"
+                                style={{
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {task.name}
+                              </p>
+                              <p className="truncate text-[0.5rem] font-medium uppercase tracking-wide text-[#64748b]">
                                 {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
                               </p>
                             </div>
 
-                            <div className="ml-3 flex shrink-0 items-center gap-1">
+                            <div className="ml-1 flex shrink-0 items-center gap-1">
                               <Button
                                 type="button"
                                 size="icon"
                                 variant={isCurrentTaskTimer ? 'default' : 'ghost'}
-                                className="h-7 w-7 rounded-full"
+                                className="h-9 w-9 rounded-full"
                                 onClick={() => handleStartTaskTimer(task.id)}
                                 disabled={isLoading}
                                 aria-label={`Iniciar registro da tarefa ${task.name}`}
@@ -213,7 +224,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                 type="button"
                                 size="icon"
                                 variant="ghost"
-                                className="h-7 w-7 rounded-full text-emerald-600 hover:text-emerald-700"
+                                className="h-9 w-9 rounded-full text-emerald-600 hover:text-emerald-700"
                                 onClick={() => handleCompleteTask(task.id)}
                                 disabled={isLoading || task.status === 'completed' || task.status === 'done'}
                                 aria-label={`Concluir tarefa ${task.name}`}
