@@ -93,15 +93,14 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             </p>
 
             <div className="mb-8 flex min-h-[320px] items-center justify-center">
-              <div className="relative flex items-center justify-center">
+              <div className="relative flex items-center justify-center h-[400px] w-[400px]">
                 <img
                   src={simboloOras}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute h-[400px] w-[400px] animate-[spin_24s_linear_infinite] opacity-35"
+                  className="pointer-events-none absolute  animate-[spin_24s_linear_infinite] opacity-35"
                   style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.45))' }}
                 />
-
 
                 {!hasActiveTimer ? (
                   <Button
