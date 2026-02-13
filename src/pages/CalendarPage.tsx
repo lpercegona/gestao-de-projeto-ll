@@ -142,11 +142,11 @@ export const CalendarPage: React.FC = () => {
   const getStatusColor = (status: CalendarItem['status']) => {
     switch (status) {
       case 'overdue':
-        return 'bg-destructive text-destructive-foreground';
+        return 'bg-[hsl(var(--primary)/1)] text-primary-foreground';
       case 'near':
-        return 'bg-amber-500 text-white';
+        return 'bg-[hsl(var(--primary)/0.8)] text-primary-foreground';
       default:
-        return 'bg-primary text-primary-foreground';
+        return 'bg-[hsl(var(--primary)/0.65)] text-primary-foreground';
     }
   };
 
@@ -227,9 +227,9 @@ export const CalendarPage: React.FC = () => {
                               key={i}
                               className={cn(
                                 "w-1.5 h-1.5 rounded-full",
-                                item.status === 'overdue' ? "bg-destructive" :
-                                item.status === 'near' ? "bg-amber-500" : 
-                                isSelected ? "bg-primary-foreground" : "bg-primary"
+                                item.status === 'overdue' ? "bg-[hsl(var(--primary)/1)]" :
+                                item.status === 'near' ? "bg-[hsl(var(--primary)/0.8)]" : 
+                                isSelected ? "bg-primary-foreground" : "bg-[hsl(var(--primary)/0.65)]"
                               )}
                             />
                           ))}
@@ -273,29 +273,28 @@ export const CalendarPage: React.FC = () => {
                   <div
                     key={`${item.type}-${item.id}`}
                     className={cn(
-                      "p-3 rounded-lg border transition-colors",
+                      "flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
                       !isClient && "cursor-pointer hover:bg-accent/50"
                     )}
                     onClick={() => !isClient && handleNavigate(item)}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={cn("p-2 rounded-md", getStatusColor(item.status))}>
+                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+                      <div className={cn("p-1.5 rounded", getStatusColor(item.status))}>
                         {item.type === 'project' ? (
-                          <FolderKanban className="h-4 w-4" />
+                          <FolderKanban className="h-3.5 w-3.5" />
                         ) : (
-                          <ListTodo className="h-4 w-4" />
+                          <ListTodo className="h-3.5 w-3.5" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
-                        {item.projectName && (
-                          <p className="text-xs text-muted-foreground truncate">{item.projectName}</p>
-                        )}
-                        {item.clientName && (
-                          <p className="text-xs text-muted-foreground truncate">{item.clientName}</p>
-                        )}
+                        <p className="text-xs text-muted-foreground truncate">
+                          {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
+                        </p>
                       </div>
-                      <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="shrink-0">
+                    </div>
+                    <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-end sm:shrink-0">
+                      <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-xs">
                         {item.type === 'project' ? 'Projeto' : 'Tarefa'}
                       </Badge>
                     </div>
