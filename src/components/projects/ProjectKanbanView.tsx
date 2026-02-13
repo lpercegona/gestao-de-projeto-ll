@@ -308,7 +308,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                     {/* Add task button at bottom of each column */}
                     {projects.length > 0 && (
                       <Button
-                        variant="ouline"
+                        variant="outline"
                         size="sm"
                         className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground"
                         onClick={() => {
