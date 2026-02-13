@@ -8,6 +8,15 @@ import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
 import { Layers3, Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface ProposalItem {
   id: string;
@@ -26,6 +35,17 @@ interface ProposalRow {
   items: ProposalItem[];
 }
 
+interface ServiceRow {
+  proposalId: string;
+  proposalTitle: string;
+  recipientName: string;
+  service: string;
+  description: string;
+  hours: number;
+  pricePerHour: number;
+  total: number;
+}
+
 type ServicesTab = 'services' | 'proposals' | 'contracts';
 
 const tabByPath: Record<string, ServicesTab> = {
@@ -41,6 +61,14 @@ export const Services: React.FC = () => {
   const [proposals, setProposals] = useState<ProposalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [createItemOpen, setCreateItemOpen] = useState(false);
+  const [manualItems, setManualItems] = useState<ServiceRow[]>([]);
+  const [newItem, setNewItem] = useState({
+    service: '',
+    description: '',
+    hours: 0,
+    pricePerHour: 0,
+  });
 
   const activeTab = tabByPath[location.pathname] || 'services';
 
@@ -72,7 +100,7 @@ export const Services: React.FC = () => {
   }, []);
 
   const serviceRows = useMemo(() => {
-    return proposals.flatMap((proposal) =>
+    const proposalItems = proposals.flatMap((proposal) =>
       proposal.items
         .filter((item) => item.service?.trim() || item.description?.trim())
         .map((item) => ({
@@ -86,7 +114,9 @@ export const Services: React.FC = () => {
           total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
         })),
     );
-  }, [proposals]);
+
+    return [...manualItems, ...proposalItems];
+  }, [manualItems, proposals]);
 
   const filteredRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -105,7 +135,30 @@ export const Services: React.FC = () => {
   };
 
   const handleAddItem = () => {
-    navigate('/proposals');
+    setCreateItemOpen(true);
+  };
+
+  const resetNewItem = () => {
+    setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0 });
+  };
+
+  const handleSaveItem = () => {
+    if (!newItem.service.trim()) return;
+
+    const item: ServiceRow = {
+      proposalId: crypto.randomUUID(),
+      proposalTitle: 'Item adicionado manualmente',
+      recipientName: 'N/A',
+      service: newItem.service.trim(),
+      description: newItem.description.trim() || 'Sem descrição',
+      hours: Number(newItem.hours || 0),
+      pricePerHour: Number(newItem.pricePerHour || 0),
+      total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
+    };
+
+    setManualItems((prev) => [item, ...prev]);
+    setCreateItemOpen(false);
+    resetNewItem();
   };
 
   return (
@@ -184,6 +237,67 @@ export const Services: React.FC = () => {
           <Contracts />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={createItemOpen} onOpenChange={setCreateItemOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar item de serviço</DialogTitle>
+            <DialogDescription>
+              Preencha os dados para incluir um novo item na listagem de serviços.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Serviço/Produto</Label>
+              <Input
+                value={newItem.service}
+                onChange={(e) => setNewItem((prev) => ({ ...prev, service: e.target.value }))}
+                placeholder="Ex: Consultoria mensal"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Input
+                value={newItem.description}
+                onChange={(e) => setNewItem((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Descrição resumida"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Horas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={newItem.hours || ''}
+                  onChange={(e) => setNewItem((prev) => ({ ...prev, hours: Number(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Preço/Hora (R$)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={newItem.pricePerHour || ''}
+                  onChange={(e) => setNewItem((prev) => ({ ...prev, pricePerHour: Number(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCreateItemOpen(false); resetNewItem(); }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveItem} disabled={!newItem.service.trim()}>
+              Adicionar item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
