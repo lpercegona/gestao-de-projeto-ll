@@ -10,8 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-type RequestStatus = "pending" | "approved" | "rejected" | string;
-type RequestType = "project" | "new_task";
+type RequestStatus = "pending" | "approved" | "rejected" | "analyzing" | string;
+type RequestType = "project" | "new_task" | "edit_task" | "edit_project" | "edit_request";
 
 interface RequestClient {
   name: string;
@@ -43,6 +43,7 @@ interface EditRequestRow {
   status: string;
   created_at: string;
   client_id: string;
+  entity_type: string;
   proposed_data: Record<string, unknown> | null;
   clients: RequestClient | null;
 }
@@ -56,7 +57,7 @@ export const SolicitacoesPanel: React.FC = () => {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const [projectRequestsResult, taskRequestsResult] = await Promise.all([
+        const [projectRequestsResult, editRequestsResult] = await Promise.all([
           supabase
             .from("project_requests")
             .select(
@@ -83,6 +84,7 @@ export const SolicitacoesPanel: React.FC = () => {
               status,
               created_at,
               client_id,
+              entity_type,
               proposed_data,
               clients (
                 name,
@@ -90,16 +92,14 @@ export const SolicitacoesPanel: React.FC = () => {
               )
             `,
             )
-            .eq("entity_type", "project")
             .order("created_at", { ascending: false })
-            .limit(10),
+            .limit(30),
         ]);
 
         if (projectRequestsResult.error) throw projectRequestsResult.error;
-        if (taskRequestsResult.error) throw taskRequestsResult.error;
+        if (editRequestsResult.error) throw editRequestsResult.error;
 
         const projectRequests: DashboardRequest[] = ((projectRequestsResult.data || []) as ProjectRequestRow[])
-          .filter((req) => !req.converted_project_id)
           .map((req) => ({
             id: req.id,
             title: req.title,
@@ -110,22 +110,52 @@ export const SolicitacoesPanel: React.FC = () => {
             client: req.clients || undefined,
           }));
 
-        const taskRequests: DashboardRequest[] = ((taskRequestsResult.data || []) as EditRequestRow[])
-          .filter((req) => req.proposed_data?.request_type === "new_task")
+        const editRequests: DashboardRequest[] = ((editRequestsResult.data || []) as EditRequestRow[])
           .map((req) => {
-            const taskName = typeof req.proposed_data?.task_name === "string" ? req.proposed_data.task_name : "Nova tarefa";
+            const requestType =
+              typeof req.proposed_data?.request_type === "string"
+                ? req.proposed_data.request_type
+                : req.entity_type === "project"
+                  ? "edit_project"
+                  : req.entity_type === "task"
+                    ? "edit_task"
+                    : "edit_request";
+
+            const resolvedType: RequestType =
+              requestType === "new_task" || requestType === "edit_task" || requestType === "edit_project"
+                ? requestType
+                : req.entity_type === "project"
+                  ? "edit_project"
+                  : req.entity_type === "task"
+                    ? "edit_task"
+                    : "edit_request";
+
+            const defaultTitleMap: Record<RequestType, string> = {
+              project: "Solicitação de projeto",
+              new_task: "Solicitação de nova tarefa",
+              edit_task: "Solicitação de edição de tarefa",
+              edit_project: "Solicitação de edição de projeto",
+              edit_request: "Solicitação de edição",
+            };
+
+            const title =
+              (typeof req.proposed_data?.task_name === "string" && req.proposed_data.task_name) ||
+              (typeof req.proposed_data?.name === "string" && req.proposed_data.name) ||
+              (typeof req.proposed_data?.title === "string" && req.proposed_data.title) ||
+              defaultTitleMap[resolvedType];
+
             return {
               id: req.id,
-              title: taskName,
+              title,
               status: req.status,
               created_at: req.created_at,
               client_id: req.client_id,
-              type: "new_task" as const,
+              type: resolvedType,
               client: req.clients || undefined,
             };
           });
 
-        const merged = [...projectRequests, ...taskRequests]
+        const merged = [...projectRequests, ...editRequests]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5);
 
@@ -173,6 +203,36 @@ export const SolicitacoesPanel: React.FC = () => {
     }
   };
 
+  const getTypeBadge = (type: RequestType) => {
+    if (type === "new_task") {
+      return (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+          <ListTodo className="h-2.5 w-2.5 mr-1" />
+          Nova tarefa
+        </Badge>
+      );
+    }
+
+    if (type === "edit_task") {
+      return <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">Edição tarefa</Badge>;
+    }
+
+    if (type === "edit_project") {
+      return <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">Edição projeto</Badge>;
+    }
+
+    if (type === "edit_request") {
+      return <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">Edição solicitação</Badge>;
+    }
+
+    return (
+      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+        <FileText className="h-2.5 w-2.5 mr-1" />
+        Projeto
+      </Badge>
+    );
+  };
+
   const pendingCount = requests.filter((r) => r.status === "pending").length;
 
   return (
@@ -213,17 +273,7 @@ export const SolicitacoesPanel: React.FC = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm truncate">{req.title}</p>
-                        {req.type === "new_task" ? (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                            <ListTodo className="h-2.5 w-2.5 mr-1" />
-                            Nova tarefa
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                            <FileText className="h-2.5 w-2.5 mr-1" />
-                            Projeto
-                          </Badge>
-                        )}
+                        {getTypeBadge(req.type)}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {req.client?.company || req.client?.name || "Cliente"} •{" "}

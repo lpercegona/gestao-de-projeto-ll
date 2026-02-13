@@ -57,7 +57,7 @@ interface ClientDashboardRequest {
   title: string;
   status: string;
   created_at: string;
-  type: "project" | "new_task";
+  type: "project" | "new_task" | "edit_task" | "edit_project";
 }
 
 export const Dashboard: React.FC = () => {
@@ -140,10 +140,13 @@ export const Dashboard: React.FC = () => {
           }
 
           if (taskRequestsResult.data) {
-            const newTaskRequests = (taskRequestsResult.data as ClientTaskRequest[]).filter(
-              (request) => request.proposed_data?.request_type === "new_task",
-            );
-            setTaskRequests(newTaskRequests);
+            const relevantEditRequests = (taskRequestsResult.data as ClientTaskRequest[]).filter((request) => {
+              const requestType =
+                typeof request.proposed_data?.request_type === "string" ? request.proposed_data.request_type : "edit_project";
+
+              return requestType === "new_task" || requestType === "edit_task" || requestType === "edit_project";
+            });
+            setTaskRequests(relevantEditRequests);
           }
         }
       } catch (err) {
@@ -254,7 +257,7 @@ export const Dashboard: React.FC = () => {
 
   const recentRequests: ClientDashboardRequest[] = [
     ...projectRequests
-      .filter((request) => request.status === "pending")
+      .filter((request) => request.status === "pending" || request.status === "analyzing")
       .map((request) => ({
         id: request.id,
         title: request.title,
@@ -263,14 +266,29 @@ export const Dashboard: React.FC = () => {
         type: "project" as const,
       })),
     ...taskRequests
-      .filter((request) => request.status === "pending")
-      .map((request) => ({
-        id: request.id,
-        title: typeof request.proposed_data?.task_name === "string" ? request.proposed_data.task_name : "Nova tarefa",
-        status: request.status,
-        created_at: request.created_at,
-        type: "new_task" as const,
-      })),
+      .filter((request) => request.status === "pending" || request.status === "analyzing")
+      .map((request) => {
+        const requestType =
+          typeof request.proposed_data?.request_type === "string" ? request.proposed_data.request_type : "edit_project";
+
+        const resolvedType =
+          requestType === "new_task" || requestType === "edit_task" || requestType === "edit_project"
+            ? requestType
+            : "edit_project";
+
+        const title =
+          (typeof request.proposed_data?.task_name === "string" && request.proposed_data.task_name) ||
+          (typeof request.proposed_data?.name === "string" && request.proposed_data.name) ||
+          "Solicitação de edição";
+
+        return {
+          id: request.id,
+          title,
+          status: request.status,
+          created_at: request.created_at,
+          type: resolvedType as "new_task" | "edit_task" | "edit_project",
+        };
+      }),
   ]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
@@ -420,7 +438,7 @@ export const Dashboard: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <p className="font-medium truncate text-sm">{request.title}</p>
                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                                  {request.type === "new_task" ? "Nova tarefa" : "Projeto"}
+                                  {request.type === "new_task" ? "Nova tarefa" : request.type === "edit_task" ? "Edição tarefa" : request.type === "edit_project" ? "Edição projeto" : "Projeto"}
                                 </Badge>
                               </div>
                               <p className="text-xs text-muted-foreground truncate">
