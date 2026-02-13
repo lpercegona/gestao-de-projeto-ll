@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Play, Pause, Square, X, Check, Contrast } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const [distractionFree, setDistractionFree] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
   const [highContrast, setHighContrast] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [modalReady, setModalReady] = useState(false);
   const { data, completeTask } = useData();
   const {
     timerState,
@@ -38,6 +40,16 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const isPaused = timerState.isPaused;
   const canStartNewTaskTimer = !buActiveTimer;
   const [shouldAnimateIntroText, setShouldAnimateIntroText] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      const raf = requestAnimationFrame(() => setModalReady(true));
+      return () => { cancelAnimationFrame(raf); };
+    } else {
+      setModalReady(false);
+      setImageLoaded(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -167,11 +179,21 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
         className={`!inset-0 !h-screen !max-h-none !w-screen !max-w-none !translate-x-0 !translate-y-0 !overflow-hidden rounded-none border-0 p-0 [&>button]:hidden ${
           highContrast ? 'bg-black text-white' : 'bg-[#F4F7FB] text-[#64748b]'
         }`}
+        style={{
+          animation: open ? 'modal-scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' : undefined,
+        }}
       >
         <DialogTitle className="sr-only">Timer expandido</DialogTitle>
 
         <div className="relative flex h-full w-full min-h-0 flex-col px-5 pb-5 pt-4 md:px-8 md:pb-6 md:pt-6">
-          <div className="mb-2 flex items-center justify-between md:mb-3">
+          <div
+            className="mb-2 flex items-center justify-between md:mb-3"
+            style={{
+              opacity: modalReady ? 1 : 0,
+              transform: modalReady ? 'translateY(0)' : 'translateY(-12px)',
+              transition: 'opacity 0.4s ease-out 0.15s, transform 0.4s ease-out 0.15s',
+            }}
+          >
             <Button
               variant="outline"
               size="icon"
@@ -201,6 +223,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   ? 'pointer-events-none -translate-y-8 opacity-0 max-h-0 mb-0'
                   : 'translate-y-0 opacity-100 max-h-24 mb-5 md:mb-8'
               }`}
+              style={{
+                opacity: modalReady && !shouldAnimateIntroText ? 1 : shouldAnimateIntroText ? 0 : 0,
+                transform: modalReady && !shouldAnimateIntroText ? 'translateY(0) scale(1)' : shouldAnimateIntroText ? 'translateY(-32px)' : 'translateY(16px) scale(0.95)',
+                transition: 'opacity 0.5s ease-out 0.2s, transform 0.5s ease-out 0.2s, max-height 0.5s ease-out, margin 0.5s ease-out',
+              }}
             >
               Inicie o timer para começar
               <br />
@@ -211,19 +238,30 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               className={`flex items-center justify-center transition-all duration-500 ${
                 distractionFree ? 'mb-3 min-h-[160px] -translate-y-3 md:mb-4 md:min-h-[240px] md:-translate-y-5' : 'mb-5 min-h-[200px] translate-y-0 md:mb-8 md:min-h-[320px]'
               }`}
+              style={{
+                opacity: modalReady ? 1 : 0,
+                transform: modalReady ? undefined : 'scale(0.85)',
+                transition: 'opacity 0.6s ease-out 0.25s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s',
+              }}
             >
               <div className="relative flex aspect-square w-full max-w-[400px] items-center justify-center" style={{ width: "min(400px, calc(100vw - 4rem))" }}>
                 <img
                   src={fundoTimer}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none absolute h-full w-full animate-pulse-scale animate-[spin_24s_linear_infinite] opacity-75"
-                  style={{ animationDirection: 'reverse', filter: 'drop-shadow(0 0 32px rgba(16,185,129,0.35))' }}
+                  onLoad={() => setImageLoaded(true)}
+                  className="pointer-events-none absolute h-full w-full animate-[spin_24s_linear_infinite]"
+                  style={{
+                    animationDirection: 'reverse',
+                    filter: 'drop-shadow(0 0 32px rgba(16,185,129,0.35))',
+                    opacity: imageLoaded ? 0.75 : 0,
+                    transition: 'opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
                 />
 
                 <Button
                   onClick={() => startGlobalTimer()}
-                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] items-center justify-center rounded-full border border-white/40 text-[#64748b] shadow-none transition-all duration-300 hover:scale-[1.02] [&_svg]:h-[clamp(40px,16vw,90px)] [&_svg]:w-[clamp(40px,16vw,90px)]  ${
+                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] items-center justify-center rounded-full border border-white/40 text-white shadow-none transition-all duration-300 hover:scale-[1.02] [&_svg]:h-[clamp(40px,16vw,90px)] [&_svg]:w-[clamp(40px,16vw,90px)]  ${
                     buActiveTimer ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'
                   }`}
                   style={{
@@ -254,6 +292,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               className={`relative z-20 mb-4 flex items-center justify-center gap-2 transition-all duration-300 md:mb-6 ${
                 buActiveTimer ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-3 opacity-0'
               }`}
+              style={{
+                opacity: modalReady && buActiveTimer ? 1 : 0,
+                transform: modalReady && buActiveTimer ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.9)',
+                transition: 'opacity 0.4s ease-out 0.35s, transform 0.4s ease-out 0.35s',
+              }}
             >
               {isPaused ? (
                 <Button
@@ -304,7 +347,14 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               ) : null}
             </div>
 
-            <div className="relative z-10 mt-auto min-h-0">
+            <div
+              className="relative z-10 mt-auto min-h-0"
+              style={{
+                opacity: modalReady ? 1 : 0,
+                transform: modalReady ? 'translateY(0)' : 'translateY(20px)',
+                transition: 'opacity 0.5s ease-out 0.4s, transform 0.5s ease-out 0.4s',
+              }}
+            >
               <div className="mb-2 flex items-center justify-end gap-2 transition-all duration-300">
                 <Label
                   htmlFor="distraction-free"
@@ -334,7 +384,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 <ScrollArea className="h-[28vh] min-h-[180px] max-h-[320px]">
                   <div className="space-y-2 pb-2 pr-2">
                     {upcomingTasks.length > 0 ? (
-                      upcomingTasks.map((task) => {
+                      upcomingTasks.map((task, index) => {
                         const isCurrentTaskTimer = (taskBinding?.taskId || timerState.taskId) === task.id;
                         const isLoading = processingTaskId === task.id;
 
@@ -342,6 +392,11 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                           <Card
                             key={task.id}
                             className={`flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-2xl border px-3 py-2.5 shadow-none ${highContrast ? 'border-white bg-black' : 'border-[#d6dee8] bg-transparent'}`}
+                            style={{
+                              opacity: modalReady ? 1 : 0,
+                              transform: modalReady ? 'translateY(0)' : 'translateY(12px)',
+                              transition: `opacity 0.35s ease-out ${0.45 + index * 0.04}s, transform 0.35s ease-out ${0.45 + index * 0.04}s`,
+                            }}
                           >
                             <div className="min-w-0 flex-1">
                               <p
