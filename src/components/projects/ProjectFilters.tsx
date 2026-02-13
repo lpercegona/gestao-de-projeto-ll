@@ -162,7 +162,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={clearFilters}
-                    className="h-auto px-2 py-1 text-xs text-muted-foreground"
+                    className="h-auto px-2 py-1 text-[0.6] text-muted-foreground"
                   >
                     Limpar filtros
                   </Button>
