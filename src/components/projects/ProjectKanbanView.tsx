@@ -214,7 +214,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
     <div className="space-y-4">
       {/* Kanban board */}
       <ScrollArea className="w-full">
-        <div className="flex gap-4 pb-4 min-w-max">
+        <div className="flex gap-4 min-w-max">
           {stages.map((stage) => {
             const stageTasks = tasksByStage[stage.name] || [];
 
@@ -252,7 +252,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                   </CardHeader>
                   <CardContent className="p-2 min-h-[200px] max-h-[60vh] overflow-y-auto">
                     {stageTasks.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-muted-foreground">Arraste tarefas aqui</div>
+                      <div className="text-center py-8 text-sm text-muted-foreground">Adicione novas tarefas</div>
                     ) : (
                       <div className="space-y-2">
                         {stageTasks.map((task) => {
