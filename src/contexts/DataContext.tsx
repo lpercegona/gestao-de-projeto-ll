@@ -209,7 +209,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Admins and master_admins get full client data from the clients table
       const clientsQuery = isCollaborator && !isAdminOrMaster
         ? supabase.from('clients_limited' as any).select('*').order('created_at', { ascending: false })
-        : supabase.from('clients').select('id, name, email, contracted_hours, user_id, owner_id, created_by, created_at, pipeline_status, company, phone, source, notes, converted_at, contract_type, contract_start_date, contract_end_date, contract_months, updated_at, password_set, logo_url, identity_guidelines, identity_attachments').order('created_at', { ascending: false });
+        : supabase.from('clients').select('*').order('created_at', { ascending: false });
       const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes] = await Promise.all([
         clientsQuery,
         supabase.from('projects').select('*').order('created_at', { ascending: false }),
