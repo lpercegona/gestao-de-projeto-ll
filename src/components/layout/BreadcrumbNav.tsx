@@ -19,6 +19,7 @@ const routeLabels: Record<string, string> = {
   '/edit-requests': 'Edições',
   '/proposals': 'Propostas',
   '/contracts': 'Contratos',
+  '/services': 'Serviços',
   '/reports': 'Relatórios',
   '/users': 'Usuários',
   '/preferences': 'Configurações',

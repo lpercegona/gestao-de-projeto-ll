@@ -26,10 +26,9 @@ import { Preferences } from "@/pages/Preferences";
 import { ResetPassword } from "@/pages/ResetPassword";
 import { Landing } from "@/pages/Landing";
 import { FirstAccess } from "@/pages/FirstAccess";
-import { Proposals } from "@/pages/Proposals";
 import { PublicProposal } from "@/pages/PublicProposal";
-import { Contracts } from "@/pages/Contracts";
 import { PublicContract } from "@/pages/PublicContract";
+import { Services } from "@/pages/Services";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { DatabaseQueries } from "@/pages/DatabaseQueries";
 import { StyleClasses } from "@/pages/StyleClasses";
@@ -143,6 +142,23 @@ const App = () => (
               <Route path="/users" element={
                 <ProtectedRoute requiredRole="admin">
                   <Users />
+                </ProtectedRoute>
+              } />
+
+              {/* Serviços, propostas e contratos - admin only */}
+              <Route path="/services" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Services />
+                </ProtectedRoute>
+              } />
+              <Route path="/proposals" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Services />
+                </ProtectedRoute>
+              } />
+              <Route path="/contracts" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Services />
                 </ProtectedRoute>
               } />
               
