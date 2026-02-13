@@ -5,12 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProjectRequestForm } from "@/components/client/ProjectRequestForm";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { toast } from "sonner";
-import { FileText, ListTodo, Loader2, Plus } from "lucide-react";
+import { FileText, ListTodo, Loader2 } from "lucide-react";
 
 interface CreatedProjectRequest {
   id: string;
@@ -108,7 +108,6 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
         throw new Error("Cliente não encontrado");
       }
 
-      // Insert new project request
       const { data: createdRequest, error } = await supabase
         .from("project_requests")
         .insert({
@@ -136,7 +135,6 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
   const handleOpenTaskDialog = async () => {
     try {
       await loadClientProjects();
-      setQuickModalOpen(false);
       setTaskDialogOpen(true);
     } catch (error) {
       console.error("Error loading projects:", error);
@@ -201,58 +199,27 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end mt-2">
             {pendingCount > 0 && (
               <Badge variant="secondary" className="text-xs shrink-0">
                 {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
               </Badge>
             )}
           </div>
-          <Button onClick={() => setQuickModalOpen(true)} className="gap-2 w-full mt-2">
-            <Plus className="w-4 h-4" />
-            Nova Solicitação
-          </Button>
+
+          <div className="grid gap-2 mt-3 sm:grid-cols-2">
+            <Button onClick={() => setIsFormOpen(true)} className="gap-2 w-full">
+              <FileText className="w-4 h-4" />
+              Novo Projeto
+            </Button>
+            <Button onClick={handleOpenTaskDialog} className="gap-2 w-full" variant="outline">
+              <ListTodo className="w-4 h-4" />
+              Nova Tarefa
+            </Button>
+          </div>
         </CardContent>
       </Card>
-
-      <Dialog open={quickModalOpen} onOpenChange={setQuickModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Solicitação Rápida</DialogTitle>
-            <DialogDescription>
-              Escolha se você quer solicitar um novo projeto ou abrir uma tarefa para um projeto já existente.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-2 md:grid-cols-2">
-            <button
-              type="button"
-              className="rounded-lg border border-border p-4 text-left transition-colors hover:bg-muted"
-              onClick={() => {
-                setQuickModalOpen(false);
-                setIsFormOpen(true);
-              }}
-            >
-              <div className="mb-3 inline-flex rounded-md bg-primary/10 p-2 text-primary">
-                <FileText className="h-5 w-5" />
-              </div>
-              <p className="font-medium">Solicitar novo projeto</p>
-              <p className="text-sm text-muted-foreground">Abra uma solicitação completa para um novo projeto ou serviço.</p>
-            </button>
-
-            <button
-              type="button"
-              className="rounded-lg border border-border p-4 text-left transition-colors hover:bg-muted"
-              onClick={handleOpenTaskDialog}
-            >
-              <div className="mb-3 inline-flex rounded-md bg-primary/10 p-2 text-primary">
-                <ListTodo className="h-5 w-5" />
-              </div>
-              <p className="font-medium">Solicitar nova tarefa</p>
-              <p className="text-sm text-muted-foreground">Escolha um projeto existente e solicite uma nova tarefa.</p>
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
