@@ -416,13 +416,13 @@ export const ProfileEditTab: React.FC = () => {
               <CardDescription>Clique em um campo para editar inline, sem abrir modal.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Empresa</p>
                   {editingField === 'company' ? (
                     <Input autoFocus value={companyDraft.company} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, company: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('company')} className="text-base font-medium text-left hover:underline">{companyDraft.company || '-'}</button>
+                    <button type="button" onClick={() => setEditingField('company')} className="text-sm font-medium text-left hover:underline">{companyDraft.company || '-'}</button>
                   )}
                 </div>
                 <div>
@@ -430,7 +430,7 @@ export const ProfileEditTab: React.FC = () => {
                   {editingField === 'name' ? (
                     <Input autoFocus value={companyDraft.name} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, name: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('name')} className="text-base font-medium text-left hover:underline">{companyDraft.name || '-'}</button>
+                    <button type="button" onClick={() => setEditingField('name')} className="text-sm font-medium text-left hover:underline">{companyDraft.name || '-'}</button>
                   )}
                 </div>
                 <div>
@@ -438,7 +438,7 @@ export const ProfileEditTab: React.FC = () => {
                   {editingField === 'email' ? (
                     <Input autoFocus type="email" value={companyDraft.email} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, email: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('email')} className="text-base font-medium text-left hover:underline">{companyDraft.email || '-'}</button>
+                    <button type="button" onClick={() => setEditingField('email')} className="text-sm font-medium text-left hover:underline">{companyDraft.email || '-'}</button>
                   )}
                 </div>
                 <div>
@@ -446,7 +446,7 @@ export const ProfileEditTab: React.FC = () => {
                   {editingField === 'phone' ? (
                     <Input autoFocus value={companyDraft.phone} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, phone: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('phone')} className="text-base font-medium text-left hover:underline">{companyDraft.phone || '-'}</button>
+                    <button type="button" onClick={() => setEditingField('phone')} className="text-sm font-medium text-left hover:underline">{companyDraft.phone || '-'}</button>
                   )}
                 </div>
               </div>
@@ -464,22 +464,22 @@ export const ProfileEditTab: React.FC = () => {
               <CardTitle className="flex items-center gap-2"><CalendarClock className="w-5 h-5" />Informações de Contrato</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Tipo de contrato</p>
-                  <p className="text-base font-medium">{companyDraft.contract_type === 'monthly' ? 'Mensal' : 'Único'}</p>
+                  <p className="text-sm font-medium">{companyDraft.contract_type === 'monthly' ? 'Mensal' : 'Único'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horas contratadas</p>
-                  <p className="text-base font-medium">{formatHours(companyDraft.contracted_hours || 0)}</p>
+                  <p className="text-sm font-medium">{formatHours(companyDraft.contracted_hours || 0)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Início</p>
-                  <p className="text-base font-medium">{companyDraft.contract_start_date ? format(parseISO(companyDraft.contract_start_date), 'dd/MM/yyyy') : 'Não definido'}</p>
+                  <p className="text-sm font-medium">{companyDraft.contract_start_date ? format(parseISO(companyDraft.contract_start_date), 'dd/MM/yyyy') : 'Não definido'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Término</p>
-                  <p className="text-base font-medium">{companyDraft.contract_end_date ? format(parseISO(companyDraft.contract_end_date), 'dd/MM/yyyy') : 'Não definido'}</p>
+                  <p className="text-sm font-medium">{companyDraft.contract_end_date ? format(parseISO(companyDraft.contract_end_date), 'dd/MM/yyyy') : 'Não definido'}</p>
                 </div>
               </div>
 
