@@ -197,12 +197,11 @@ export const ProfileEditTab: React.FC = () => {
       const nextAttachments = [newAttachment, ...identityAttachments];
       setIdentityAttachments(nextAttachments);
 
-      const { error: updateError } = await supabase
-        .from('clients')
-        .update({
-          identity_attachments: nextAttachments,
-        })
-        .eq('id', client.id);
+      const { error: updateError } = await supabase.rpc('update_client_identity_settings', {
+        p_client_id: client.id,
+        p_identity_guidelines: identityGuidelines,
+        p_identity_attachments: nextAttachments,
+      });
 
       if (updateError) throw updateError;
 
@@ -224,13 +223,11 @@ export const ProfileEditTab: React.FC = () => {
 
     setSavingIdentity(true);
     try {
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          identity_guidelines: identityGuidelines,
-          identity_attachments: identityAttachments,
-        })
-        .eq('id', client.id);
+      const { error } = await supabase.rpc('update_client_identity_settings', {
+        p_client_id: client.id,
+        p_identity_guidelines: identityGuidelines,
+        p_identity_attachments: identityAttachments,
+      });
 
       if (error) throw error;
       toast.success('Definições de identidade atualizadas com sucesso!');
