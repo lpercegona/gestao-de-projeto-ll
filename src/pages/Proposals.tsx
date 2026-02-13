@@ -153,7 +153,6 @@ export const Proposals: React.FC = () => {
   const [templateFormData, setTemplateFormData] = useState({
     name: '',
     description: '',
-    items: [emptyItem()] as ProposalItem[],
   });
   
   const [saving, setSaving] = useState(false);
@@ -262,7 +261,7 @@ export const Proposals: React.FC = () => {
       const templateData = {
         name: templateFormData.name,
         description: templateFormData.description || null,
-        items: templateFormData.items as unknown as any,
+        items: [],
       };
 
       if (editingTemplate) {
@@ -415,46 +414,25 @@ export const Proposals: React.FC = () => {
   };
 
   // Item management
-  const addItem = (isTemplate: boolean = false) => {
-    if (isTemplate) {
-      setTemplateFormData(prev => ({
-        ...prev,
-        items: [...prev.items, emptyItem()],
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        items: [...prev.items, emptyItem()],
-      }));
-    }
+  const addItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, emptyItem()],
+    }));
   };
 
-  const removeItem = (itemId: string, isTemplate: boolean = false) => {
-    if (isTemplate) {
-      setTemplateFormData(prev => ({
-        ...prev,
-        items: prev.items.filter(i => i.id !== itemId),
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        items: prev.items.filter(i => i.id !== itemId),
-      }));
-    }
+  const removeItem = (itemId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter(i => i.id !== itemId),
+    }));
   };
 
-  const updateItem = (itemId: string, field: keyof ProposalItem, value: string | number, isTemplate: boolean = false) => {
-    if (isTemplate) {
-      setTemplateFormData(prev => ({
-        ...prev,
-        items: prev.items.map(i => i.id === itemId ? { ...i, [field]: value } : i),
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        items: prev.items.map(i => i.id === itemId ? { ...i, [field]: value } : i),
-      }));
-    }
+  const updateItem = (itemId: string, field: keyof ProposalItem, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.map(i => i.id === itemId ? { ...i, [field]: value } : i),
+    }));
   };
 
   // Reset forms
@@ -477,7 +455,6 @@ export const Proposals: React.FC = () => {
     setTemplateFormData({
       name: '',
       description: '',
-      items: [emptyItem()],
     });
   };
 
@@ -503,7 +480,6 @@ export const Proposals: React.FC = () => {
     setTemplateFormData({
       name: template.name,
       description: template.description || '',
-      items: template.items.length > 0 ? template.items : [emptyItem()],
     });
     setTemplateDialogOpen(true);
   };
@@ -834,11 +810,6 @@ export const Proposals: React.FC = () => {
                       <CardDescription>{template.description}</CardDescription>
                     )}
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {template.items.length} {template.items.length === 1 ? 'item' : 'itens'}
-                    </p>
-                  </CardContent>
                 </Card>
               ))}
             </div>
@@ -1098,75 +1069,6 @@ export const Proposals: React.FC = () => {
               />
             </div>
 
-            {/* Items */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Itens do Template</Label>
-                <Button type="button" variant="outline" size="sm" onClick={() => addItem(true)}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Adicionar
-                </Button>
-              </div>
-
-              {templateFormData.items.map((item, index) => (
-                <Card key={item.id}>
-                  <CardContent className="pt-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">Item {index + 1}</span>
-                      {templateFormData.items.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(item.id, true)}
-                          className="text-destructive h-6 w-6 p-0"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Serviço</Label>
-                        <Input
-                          value={item.service}
-                          onChange={(e) => updateItem(item.id, 'service', e.target.value, true)}
-                          placeholder="Nome do serviço"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Descrição</Label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, 'description', e.target.value, true)}
-                          placeholder="Breve descrição"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Horas</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={item.hours || ''}
-                          onChange={(e) => updateItem(item.id, 'hours', Number(e.target.value), true)}
-                          placeholder="0"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Preço/Hora (R$)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={item.pricePerHour || ''}
-                          onChange={(e) => updateItem(item.id, 'pricePerHour', Number(e.target.value), true)}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">

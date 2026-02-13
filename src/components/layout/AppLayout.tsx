@@ -17,6 +17,7 @@ import {
   PanelLeft,
   Calendar,
   Database,
+  Layers3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -181,6 +182,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       label: "Calendário",
     },
     {
+      path: "/services",
+      icon: Layers3,
+      label: "Serviços",
+    },
+    {
       path: "/database-queries",
       icon: Database,
       label: "Strings",
@@ -209,6 +215,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       path: "/calendar",
       icon: Calendar,
       label: "Calendário",
+    },
+    {
+      path: "/services",
+      icon: Layers3,
+      label: "Serviços",
     },
   ];
 
