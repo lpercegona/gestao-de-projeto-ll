@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
-import { Layers3, Search } from 'lucide-react';
+import { LayerPlus, Search } from 'lucide-react';
 
 interface ProposalItem {
   id: string;
