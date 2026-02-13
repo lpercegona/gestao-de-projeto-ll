@@ -29,6 +29,7 @@ interface QuickRequestCardProps {
 
 export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount = 0, onRequestCreated }) => {
   const { user } = useAuth();
+  const [quickModalOpen, setQuickModalOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
