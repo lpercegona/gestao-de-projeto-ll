@@ -230,7 +230,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                     <div className="flex items-center justify-between column-2">
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
                         {stage.name}
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="outline" className="text-xs">
                           {stageTasks.length}
                         </Badge>
                       </CardTitle>
@@ -238,12 +238,12 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                       {isAdminOrMaster && (
                         <div className="flex justify-end">
                           <Button
-                            variant="edit"
+                            variant="ghost"
                             size="icon"
                             onClick={onManageStages}
                             className="inline-flex justify-center items-center gap-2"
                           >
-                            <Settings className="w-4 h-4" />
+                            <Settings className="w-3.5 h-3.5" />
                             <span className="hidden">Gerenciar Etapas</span>
                           </Button>
                         </div>
