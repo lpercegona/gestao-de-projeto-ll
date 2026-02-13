@@ -15,6 +15,14 @@ export const Preferences: React.FC = () => {
   const showUserManagement = isMasterAdmin || isAdmin;
   const showPlatformCustomization = isMasterAdmin || isAdmin;
 
+  if (!showUserManagement && !showPlatformCustomization) {
+    return (
+      <div className="space-y-6">
+        <ProfileEditTab />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader 
