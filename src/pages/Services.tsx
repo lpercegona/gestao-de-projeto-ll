@@ -78,7 +78,6 @@ export const Services: React.FC = () => {
           proposalId: proposal.id,
           proposalTitle: proposal.title,
           recipientName: proposal.recipient_name,
-          status: proposal.status,
           service: item.service || 'Sem título',
           description: item.description || 'Sem descrição',
           hours: Number(item.hours || 0),
@@ -126,7 +125,7 @@ export const Services: React.FC = () => {
             </Card>
           </div>
 
-          <div className="relative max-w-md">
+          <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchTerm}
@@ -148,7 +147,9 @@ export const Services: React.FC = () => {
                     <div key={`${row.proposalId}-${row.service}-${index}`} className="rounded-lg border p-4">
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                         <h3 className="font-semibold">{row.service}</h3>
-                        <span className="text-sm text-muted-foreground">{row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
                       </div>
                       <p className="text-sm text-muted-foreground">{row.description}</p>
                       <div className="mt-2 text-xs text-muted-foreground">
