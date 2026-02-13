@@ -1425,6 +1425,20 @@ export type Database = {
         }
         Returns: void
       }
+      update_client_company_settings: {
+        Args: {
+          p_client_id: string
+          p_company: string | null
+          p_contract_end_date: string | null
+          p_contract_start_date: string | null
+          p_contract_type: string
+          p_contracted_hours: number
+          p_email: string
+          p_name: string
+          p_phone: string | null
+        }
+        Returns: void
+      }
       sign_contract: {
         Args: {
           p_address?: string

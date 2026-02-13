@@ -32,27 +32,48 @@ interface IdentityAttachment {
   created_at: string;
 }
 
+interface CompanyDraft {
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  contract_type: 'one_time' | 'monthly';
+  contracted_hours: number;
+  contract_start_date: string;
+  contract_end_date: string;
+}
+
 export const ProfileEditTab: React.FC = () => {
   const { user, isClient } = useAuth();
   const { data } = useData();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
 
-  // Profile data
   const [fullName, setFullName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Company identity data (client)
   const [identityGuidelines, setIdentityGuidelines] = useState('');
   const [identityAttachments, setIdentityAttachments] = useState<IdentityAttachment[]>([]);
   const [savingIdentity, setSavingIdentity] = useState(false);
   const [uploadingIdentityFile, setUploadingIdentityFile] = useState(false);
   const identityFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Password data
+  const [companyDraft, setCompanyDraft] = useState<CompanyDraft>({
+    name: '',
+    company: '',
+    email: '',
+    phone: '',
+    contract_type: 'one_time',
+    contracted_hours: 0,
+    contract_start_date: '',
+    contract_end_date: '',
+  });
+  const [editingField, setEditingField] = useState<keyof CompanyDraft | null>(null);
+  const [savingCompany, setSavingCompany] = useState(false);
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
@@ -91,8 +112,57 @@ export const ProfileEditTab: React.FC = () => {
     if (!client) return;
 
     setIdentityGuidelines((client as { identity_guidelines?: string | null }).identity_guidelines || '');
-    setIdentityAttachments(((client as { identity_attachments?: IdentityAttachment[] | null }).identity_attachments || []));
+    setIdentityAttachments((client as { identity_attachments?: IdentityAttachment[] | null }).identity_attachments || []);
+    setCompanyDraft({
+      name: client.name || '',
+      company: client.company || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      contract_type: client.contract_type === 'monthly' ? 'monthly' : 'one_time',
+      contracted_hours: Number(client.contracted_hours || 0),
+      contract_start_date: client.contract_start_date || '',
+      contract_end_date: client.contract_end_date || '',
+    });
   }, [client]);
+
+  const companyDirty = !!client && (
+    companyDraft.name !== (client.name || '') ||
+    companyDraft.company !== (client.company || '') ||
+    companyDraft.email !== (client.email || '') ||
+    companyDraft.phone !== (client.phone || '') ||
+    companyDraft.contract_type !== (client.contract_type === 'monthly' ? 'monthly' : 'one_time') ||
+    companyDraft.contracted_hours !== Number(client.contracted_hours || 0) ||
+    companyDraft.contract_start_date !== (client.contract_start_date || '') ||
+    companyDraft.contract_end_date !== (client.contract_end_date || '')
+  );
+
+  const handleSaveCompany = async () => {
+    if (!client) return;
+
+    setSavingCompany(true);
+    try {
+      const { error } = await supabase.rpc('update_client_company_settings', {
+        p_client_id: client.id,
+        p_name: companyDraft.name,
+        p_company: companyDraft.company || null,
+        p_email: companyDraft.email,
+        p_phone: companyDraft.phone || null,
+        p_contract_type: companyDraft.contract_type,
+        p_contracted_hours: Number(companyDraft.contracted_hours || 0),
+        p_contract_start_date: companyDraft.contract_start_date || null,
+        p_contract_end_date: companyDraft.contract_end_date || null,
+      });
+
+      if (error) throw error;
+      setEditingField(null);
+      toast.success('Informações da empresa atualizadas com sucesso!');
+    } catch (err) {
+      const error = err as Error;
+      toast.error(error.message || 'Erro ao salvar informações da empresa');
+    } finally {
+      setSavingCompany(false);
+    }
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,16 +183,10 @@ export const ProfileEditTab: React.FC = () => {
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/avatar.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
 
       const { error: updateError } = await supabase
@@ -140,9 +204,7 @@ export const ProfileEditTab: React.FC = () => {
       toast.error('Erro ao fazer upload da foto: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setUploadingAvatar(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -152,16 +214,9 @@ export const ProfileEditTab: React.FC = () => {
 
     setSavingProfile(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: fullName.trim() })
-        .eq('user_id', user.id);
-
-      if (error) {
-        toast.error('Erro ao salvar perfil: ' + error.message);
-      } else {
-        toast.success('Perfil atualizado com sucesso!');
-      }
+      const { error } = await supabase.from('profiles').update({ full_name: fullName.trim() }).eq('user_id', user.id);
+      if (error) toast.error('Erro ao salvar perfil: ' + error.message);
+      else toast.success('Perfil atualizado com sucesso!');
     } catch {
       toast.error('Erro ao salvar perfil.');
     } finally {
@@ -184,17 +239,9 @@ export const ProfileEditTab: React.FC = () => {
 
       if (uploadError) throw uploadError;
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('client-identity-files').getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from('client-identity-files').getPublicUrl(filePath);
 
-      const newAttachment: IdentityAttachment = {
-        name: file.name,
-        url: publicUrl,
-        created_at: new Date().toISOString(),
-      };
-
-      const nextAttachments = [newAttachment, ...identityAttachments];
+      const nextAttachments = [{ name: file.name, url: publicUrl, created_at: new Date().toISOString() }, ...identityAttachments];
       setIdentityAttachments(nextAttachments);
 
       const { error: updateError } = await supabase.rpc('update_client_identity_settings', {
@@ -204,7 +251,6 @@ export const ProfileEditTab: React.FC = () => {
       });
 
       if (updateError) throw updateError;
-
       toast.success('Anexo enviado com sucesso!');
     } catch (err) {
       const error = err as Error;
@@ -212,9 +258,7 @@ export const ProfileEditTab: React.FC = () => {
       toast.error(error.message || 'Erro ao enviar anexo');
     } finally {
       setUploadingIdentityFile(false);
-      if (identityFileInputRef.current) {
-        identityFileInputRef.current.value = '';
-      }
+      if (identityFileInputRef.current) identityFileInputRef.current.value = '';
     }
   };
 
@@ -228,7 +272,6 @@ export const ProfileEditTab: React.FC = () => {
         p_identity_guidelines: identityGuidelines,
         p_identity_attachments: identityAttachments,
       });
-
       if (error) throw error;
       toast.success('Definições de identidade atualizadas com sucesso!');
     } catch (err) {
@@ -254,13 +297,9 @@ export const ProfileEditTab: React.FC = () => {
 
     setSavingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) {
-        toast.error('Erro ao alterar senha: ' + error.message);
-      } else {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) toast.error('Erro ao alterar senha: ' + error.message);
+      else {
         toast.success('Senha alterada com sucesso!');
         setNewPassword('');
         setConfirmPassword('');
@@ -275,14 +314,10 @@ export const ProfileEditTab: React.FC = () => {
   const getUserInitials = () => {
     if (fullName) {
       const names = fullName.split(' ');
-      if (names.length >= 2) {
-        return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-      }
+      if (names.length >= 2) return (names[0][0] + names[names.length - 1][0]).toUpperCase();
       return fullName.substring(0, 2).toUpperCase();
     }
-    if (user?.email) {
-      return user.email.charAt(0).toUpperCase();
-    }
+    if (user?.email) return user.email.charAt(0).toUpperCase();
     return 'U';
   };
 
@@ -297,29 +332,17 @@ export const ProfileEditTab: React.FC = () => {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
       <TabsList className={`grid w-full ${isClient ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        <TabsTrigger value="profile" className="flex items-center gap-1.5">
-          <User className="w-4 h-4" />
-          <span>Perfil</span>
-        </TabsTrigger>
-        <TabsTrigger value="security" className="flex items-center gap-1.5">
-          <Lock className="w-4 h-4" />
-          <span>Segurança</span>
-        </TabsTrigger>
+        <TabsTrigger value="profile" className="flex items-center gap-1.5"><User className="w-4 h-4" /><span>Perfil</span></TabsTrigger>
+        <TabsTrigger value="security" className="flex items-center gap-1.5"><Lock className="w-4 h-4" /><span>Segurança</span></TabsTrigger>
         {isClient && (
-          <TabsTrigger value="company" className="flex items-center gap-1.5">
-            <Building2 className="w-4 h-4" />
-            <span>Empresa</span>
-          </TabsTrigger>
+          <TabsTrigger value="company" className="flex items-center gap-1.5"><Building2 className="w-4 h-4" /><span>Empresa</span></TabsTrigger>
         )}
       </TabsList>
 
       <TabsContent value="profile">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Informações Pessoais
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2"><User className="w-5 h-5" />Informações Pessoais</CardTitle>
             <CardDescription>Atualize suas informações de perfil</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -327,9 +350,7 @@ export const ProfileEditTab: React.FC = () => {
               <div className="relative group">
                 <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                   <AvatarImage src={avatarUrl || undefined} alt="Avatar" />
-                  <AvatarFallback className="text-xl sm:text-2xl bg-primary/10 text-primary">
-                    {getUserInitials()}
-                  </AvatarFallback>
+                  <AvatarFallback className="text-xl sm:text-2xl bg-primary/10 text-primary">{getUserInitials()}</AvatarFallback>
                 </Avatar>
                 <button
                   type="button"
@@ -337,39 +358,13 @@ export const ProfileEditTab: React.FC = () => {
                   disabled={uploadingAvatar}
                   className="absolute inset-0 flex items-center justify-center rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
                 >
-                  {uploadingAvatar ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-foreground" />
-                  ) : (
-                    <Camera className="h-6 w-6 text-foreground" />
-                  )}
+                  {uploadingAvatar ? <Loader2 className="h-6 w-6 animate-spin text-foreground" /> : <Camera className="h-6 w-6 text-foreground" />}
                 </button>
               </div>
               <div className="text-center sm:text-left space-y-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingAvatar}
-                >
-                  {uploadingAvatar ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Alterar foto
-                    </>
-                  )}
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingAvatar}>
+                  {uploadingAvatar ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</>) : (<><Upload className="w-4 h-4 mr-2" />Alterar foto</>)}
                 </Button>
                 <p className="text-xs text-muted-foreground">JPG, PNG ou GIF. Máximo 2MB.</p>
               </div>
@@ -378,33 +373,15 @@ export const ProfileEditTab: React.FC = () => {
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Nome Completo</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Seu nome completo"
-                  disabled={savingProfile}
-                />
+                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome completo" disabled={savingProfile} />
               </div>
-
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input value={user?.email || ''} disabled className="bg-muted" />
                 <p className="text-xs text-muted-foreground">O email não pode ser alterado</p>
               </div>
-
               <Button type="submit" disabled={savingProfile}>
-                {savingProfile ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Salvar Alterações
-                  </>
-                )}
+                {savingProfile ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : (<><Save className="w-4 h-4 mr-2" />Salvar Alterações</>)}
               </Button>
             </form>
           </CardContent>
@@ -414,54 +391,21 @@ export const ProfileEditTab: React.FC = () => {
       <TabsContent value="security">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5" />
-              Segurança
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2"><Lock className="w-5 h-5" />Segurança</CardTitle>
             <CardDescription>Altere sua senha de acesso</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="newPassword">Nova Senha</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  disabled={savingPassword}
-                  minLength={6}
-                  required
-                />
+                <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" disabled={savingPassword} minLength={6} required />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repita a nova senha"
-                  disabled={savingPassword}
-                  minLength={6}
-                  required
-                />
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" disabled={savingPassword} minLength={6} required />
               </div>
-
               <Button type="submit" disabled={savingPassword}>
-                {savingPassword ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Alterando...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4 mr-2" />
-                    Alterar Senha
-                  </>
-                )}
+                {savingPassword ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Alterando...</>) : (<><Lock className="w-4 h-4 mr-2" />Alterar Senha</>)}
               </Button>
             </form>
           </CardContent>
@@ -472,113 +416,135 @@ export const ProfileEditTab: React.FC = () => {
         <TabsContent value="company" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                Informações da Empresa
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><Building2 className="w-5 h-5" />Informações da Empresa</CardTitle>
+              <CardDescription>Clique em um campo para editar inline, sem abrir modal.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Empresa</p>
-                  <p className="text-base font-medium">{client?.company || client?.name || '-'}</p>
+                  {editingField === 'company' ? (
+                    <Input autoFocus value={companyDraft.company} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, company: e.target.value }))} onBlur={() => setEditingField(null)} />
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('company')} className="text-base font-medium text-left hover:underline">{companyDraft.company || '-'}</button>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Contato</p>
-                  <p className="text-base font-medium">{client?.name || '-'}</p>
+                  {editingField === 'name' ? (
+                    <Input autoFocus value={companyDraft.name} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, name: e.target.value }))} onBlur={() => setEditingField(null)} />
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('name')} className="text-base font-medium text-left hover:underline">{companyDraft.name || '-'}</button>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="text-base font-medium">{client?.email || '-'}</p>
+                  {editingField === 'email' ? (
+                    <Input autoFocus type="email" value={companyDraft.email} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, email: e.target.value }))} onBlur={() => setEditingField(null)} />
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('email')} className="text-base font-medium text-left hover:underline">{companyDraft.email || '-'}</button>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Telefone</p>
-                  <p className="text-base font-medium">{client?.phone || '-'}</p>
+                  {editingField === 'phone' ? (
+                    <Input autoFocus value={companyDraft.phone} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, phone: e.target.value }))} onBlur={() => setEditingField(null)} />
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('phone')} className="text-base font-medium text-left hover:underline">{companyDraft.phone || '-'}</button>
+                  )}
                 </div>
               </div>
+
+              {companyDirty && (
+                <Button type="button" onClick={handleSaveCompany} disabled={savingCompany}>
+                  {savingCompany ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : (<><Save className="w-4 h-4 mr-2" />Salvar informações da empresa</>)}
+                </Button>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarClock className="w-5 h-5" />
-                Informações de Contrato
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><CalendarClock className="w-5 h-5" />Informações de Contrato</CardTitle>
+              <CardDescription>Clique em um campo para edição inline.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Tipo de contrato</p>
-                  <p className="text-base font-medium">{client?.contract_type === 'monthly' ? 'Mensal' : 'Único'}</p>
+                  {editingField === 'contract_type' ? (
+                    <select
+                      autoFocus
+                      className="h-10 rounded-md border bg-background px-3 text-sm"
+                      value={companyDraft.contract_type}
+                      onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contract_type: e.target.value as 'one_time' | 'monthly' }))}
+                      onBlur={() => setEditingField(null)}
+                    >
+                      <option value="one_time">Único</option>
+                      <option value="monthly">Mensal</option>
+                    </select>
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('contract_type')} className="text-base font-medium text-left hover:underline">{companyDraft.contract_type === 'monthly' ? 'Mensal' : 'Único'}</button>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horas contratadas</p>
-                  <p className="text-base font-medium">{formatHours(client?.contracted_hours || 0)}</p>
+                  {editingField === 'contracted_hours' ? (
+                    <Input
+                      autoFocus
+                      type="number"
+                      min={0}
+                      value={companyDraft.contracted_hours}
+                      onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contracted_hours: Number(e.target.value || 0) }))}
+                      onBlur={() => setEditingField(null)}
+                    />
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('contracted_hours')} className="text-base font-medium text-left hover:underline">{formatHours(companyDraft.contracted_hours || 0)}</button>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Início</p>
-                  <p className="text-base font-medium">
-                    {client?.contract_start_date ? format(parseISO(client.contract_start_date), 'dd/MM/yyyy') : 'Não definido'}
-                  </p>
+                  {editingField === 'contract_start_date' ? (
+                    <Input autoFocus type="date" value={companyDraft.contract_start_date} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contract_start_date: e.target.value }))} onBlur={() => setEditingField(null)} />
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('contract_start_date')} className="text-base font-medium text-left hover:underline">{companyDraft.contract_start_date ? format(parseISO(companyDraft.contract_start_date), 'dd/MM/yyyy') : 'Não definido'}</button>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Término</p>
-                  <p className="text-base font-medium">
-                    {client?.contract_end_date ? format(parseISO(client.contract_end_date), 'dd/MM/yyyy') : 'Não definido'}
-                  </p>
+                  {editingField === 'contract_end_date' ? (
+                    <Input autoFocus type="date" value={companyDraft.contract_end_date} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contract_end_date: e.target.value }))} onBlur={() => setEditingField(null)} />
+                  ) : (
+                    <button type="button" onClick={() => setEditingField('contract_end_date')} className="text-base font-medium text-left hover:underline">{companyDraft.contract_end_date ? format(parseISO(companyDraft.contract_end_date), 'dd/MM/yyyy') : 'Não definido'}</button>
+                  )}
                 </div>
               </div>
+
+              {companyDirty && (
+                <Button type="button" onClick={handleSaveCompany} disabled={savingCompany}>
+                  {savingCompany ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : (<><Save className="w-4 h-4 mr-2" />Salvar contrato</>)}
+                </Button>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Definições de Identidade
-              </CardTitle>
-              <CardDescription>
-                Descreva diretrizes de identidade da empresa e anexe materiais necessários.
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2"><FileText className="w-5 h-5" />Definições de Identidade</CardTitle>
+              <CardDescription>Descreva diretrizes de identidade da empresa e anexe materiais necessários.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Diretrizes de identidade</Label>
-                <WysiwygEditor
-                  value={identityGuidelines}
-                  onChange={setIdentityGuidelines}
-                  placeholder="Ex.: tom de voz, diretrizes visuais, referências de marca, restrições e orientações gerais."
-                  minHeight="140px"
-                />
+                <WysiwygEditor value={identityGuidelines} onChange={setIdentityGuidelines} placeholder="Ex.: tom de voz, diretrizes visuais, referências de marca, restrições e orientações gerais." minHeight="140px" />
               </div>
 
               <div className="space-y-2">
                 <Label>Anexos</Label>
                 <div className="flex items-center gap-2">
-                  <input
-                    ref={identityFileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleIdentityUpload}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => identityFileInputRef.current?.click()}
-                    disabled={uploadingIdentityFile}
-                  >
-                    {uploadingIdentityFile ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Enviando anexo...
-                      </>
-                    ) : (
-                      <>
-                        <Paperclip className="w-4 h-4 mr-2" />
-                        Adicionar anexo
-                      </>
-                    )}
+                  <input ref={identityFileInputRef} type="file" className="hidden" onChange={handleIdentityUpload} />
+                  <Button type="button" variant="outline" onClick={() => identityFileInputRef.current?.click()} disabled={uploadingIdentityFile}>
+                    {uploadingIdentityFile ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando anexo...</>) : (<><Paperclip className="w-4 h-4 mr-2" />Adicionar anexo</>)}
                   </Button>
                 </div>
 
@@ -587,18 +553,10 @@ export const ProfileEditTab: React.FC = () => {
                 ) : (
                   <div className="space-y-2">
                     {identityAttachments.map((attachment) => (
-                      <a
-                        key={`${attachment.url}-${attachment.created_at}`}
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/40 transition-colors"
-                      >
+                      <a key={`${attachment.url}-${attachment.created_at}`} href={attachment.url} target="_blank" rel="noreferrer" className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/40 transition-colors">
                         <div>
                           <p className="text-sm font-medium text-foreground">{attachment.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(parseISO(attachment.created_at), 'dd/MM/yyyy HH:mm')}
-                          </p>
+                          <p className="text-xs text-muted-foreground">{format(parseISO(attachment.created_at), 'dd/MM/yyyy HH:mm')}</p>
                         </div>
                         <Download className="w-4 h-4 text-muted-foreground" />
                       </a>
@@ -608,17 +566,7 @@ export const ProfileEditTab: React.FC = () => {
               </div>
 
               <Button type="button" onClick={handleSaveIdentity} disabled={savingIdentity}>
-                {savingIdentity ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Salvar definições da empresa
-                  </>
-                )}
+                {savingIdentity ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : (<><Save className="w-4 h-4 mr-2" />Salvar definições da empresa</>)}
               </Button>
             </CardContent>
           </Card>
