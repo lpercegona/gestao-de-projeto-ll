@@ -93,8 +93,8 @@ export const QuickActionsPanel: React.FC = () => {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-              <Plus className="h-4 w-4" />
+            <CardTitle className="font-medium flex items-center gap-2 text-muted-foreground">
+              
               Ações Rápidas
             </CardTitle>
             <Button
@@ -104,7 +104,7 @@ export const QuickActionsPanel: React.FC = () => {
               onClick={() => setExpandedTimerOpen(true)}
               title="Expandir timer"
             >
-              <Expand className="h-4 w-4" />
+              <Expand className="h-3.5 w-3.5" />
             </Button>
           </div>
         </CardHeader>
