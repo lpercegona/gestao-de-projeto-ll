@@ -129,11 +129,7 @@ export const ProfileEditTab: React.FC = () => {
     companyDraft.name !== (client.name || '') ||
     companyDraft.company !== (client.company || '') ||
     companyDraft.email !== (client.email || '') ||
-    companyDraft.phone !== (client.phone || '') ||
-    companyDraft.contract_type !== (client.contract_type === 'monthly' ? 'monthly' : 'one_time') ||
-    companyDraft.contracted_hours !== Number(client.contracted_hours || 0) ||
-    companyDraft.contract_start_date !== (client.contract_start_date || '') ||
-    companyDraft.contract_end_date !== (client.contract_end_date || '')
+    companyDraft.phone !== (client.phone || '')
   );
 
   const handleSaveCompany = async () => {
@@ -466,65 +462,30 @@ export const ProfileEditTab: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><CalendarClock className="w-5 h-5" />Informações de Contrato</CardTitle>
-              <CardDescription>Clique em um campo para edição inline.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Tipo de contrato</p>
-                  {editingField === 'contract_type' ? (
-                    <select
-                      autoFocus
-                      className="h-10 rounded-md border bg-background px-3 text-sm"
-                      value={companyDraft.contract_type}
-                      onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contract_type: e.target.value as 'one_time' | 'monthly' }))}
-                      onBlur={() => setEditingField(null)}
-                    >
-                      <option value="one_time">Único</option>
-                      <option value="monthly">Mensal</option>
-                    </select>
-                  ) : (
-                    <button type="button" onClick={() => setEditingField('contract_type')} className="text-base font-medium text-left hover:underline">{companyDraft.contract_type === 'monthly' ? 'Mensal' : 'Único'}</button>
-                  )}
+                  <p className="text-base font-medium">{companyDraft.contract_type === 'monthly' ? 'Mensal' : 'Único'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horas contratadas</p>
-                  {editingField === 'contracted_hours' ? (
-                    <Input
-                      autoFocus
-                      type="number"
-                      min={0}
-                      value={companyDraft.contracted_hours}
-                      onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contracted_hours: Number(e.target.value || 0) }))}
-                      onBlur={() => setEditingField(null)}
-                    />
-                  ) : (
-                    <button type="button" onClick={() => setEditingField('contracted_hours')} className="text-base font-medium text-left hover:underline">{formatHours(companyDraft.contracted_hours || 0)}</button>
-                  )}
+                  <p className="text-base font-medium">{formatHours(companyDraft.contracted_hours || 0)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Início</p>
-                  {editingField === 'contract_start_date' ? (
-                    <Input autoFocus type="date" value={companyDraft.contract_start_date} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contract_start_date: e.target.value }))} onBlur={() => setEditingField(null)} />
-                  ) : (
-                    <button type="button" onClick={() => setEditingField('contract_start_date')} className="text-base font-medium text-left hover:underline">{companyDraft.contract_start_date ? format(parseISO(companyDraft.contract_start_date), 'dd/MM/yyyy') : 'Não definido'}</button>
-                  )}
+                  <p className="text-base font-medium">{companyDraft.contract_start_date ? format(parseISO(companyDraft.contract_start_date), 'dd/MM/yyyy') : 'Não definido'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Término</p>
-                  {editingField === 'contract_end_date' ? (
-                    <Input autoFocus type="date" value={companyDraft.contract_end_date} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, contract_end_date: e.target.value }))} onBlur={() => setEditingField(null)} />
-                  ) : (
-                    <button type="button" onClick={() => setEditingField('contract_end_date')} className="text-base font-medium text-left hover:underline">{companyDraft.contract_end_date ? format(parseISO(companyDraft.contract_end_date), 'dd/MM/yyyy') : 'Não definido'}</button>
-                  )}
+                  <p className="text-base font-medium">{companyDraft.contract_end_date ? format(parseISO(companyDraft.contract_end_date), 'dd/MM/yyyy') : 'Não definido'}</p>
                 </div>
               </div>
 
-              {companyDirty && (
-                <Button type="button" onClick={handleSaveCompany} disabled={savingCompany}>
-                  {savingCompany ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : (<><Save className="w-4 h-4 mr-2" />Salvar contrato</>)}
-                </Button>
-              )}
+              <Button type="button" variant="outline">
+                {companyDraft.contract_type === 'monthly' ? 'Contratar mais horas' : 'Contratar novo serviço'}
+              </Button>
             </CardContent>
           </Card>
 
