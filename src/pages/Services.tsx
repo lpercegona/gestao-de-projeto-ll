@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
-import { Layers3, Search } from 'lucide-react';
+import { Layers3, Search, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ProposalItem {
   id: string;
@@ -103,6 +104,10 @@ export const Services: React.FC = () => {
     navigate(`/${tab}`);
   };
 
+  const handleAddItem = () => {
+    navigate('/proposals');
+  };
+
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -125,14 +130,21 @@ export const Services: React.FC = () => {
             </Card>
           </div>
 
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por serviço/produto, proposta ou destinatário"
-              className="pl-9"
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por serviço/produto, proposta ou destinatário"
+                className="pl-9"
+              />
+            </div>
+
+            <Button onClick={handleAddItem}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar item
+            </Button>
           </div>
 
           <Card>
