@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { FileText, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle, ListTodo } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,57 +10,156 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface ProjectRequest {
+type RequestStatus = "pending" | "approved" | "rejected" | "analyzing" | string;
+type RequestType = "project" | "new_task" | "edit_task" | "edit_project" | "edit_request";
+
+interface RequestClient {
+  name: string;
+  company: string | null;
+}
+
+interface DashboardRequest {
+  id: string;
+  title: string;
+  status: RequestStatus;
+  created_at: string;
+  client_id: string;
+  type: RequestType;
+  client?: RequestClient;
+}
+
+interface ProjectRequestRow {
   id: string;
   title: string;
   status: string;
   created_at: string;
   client_id: string;
-  converted_project_id?: string | null;
-  client?: {
-    name: string;
-    company: string | null;
-  };
+  converted_project_id: string | null;
+  clients: RequestClient | null;
+}
+
+interface EditRequestRow {
+  id: string;
+  status: string;
+  created_at: string;
+  client_id: string;
+  entity_type: string;
+  proposed_data: Record<string, unknown> | null;
+  clients: RequestClient | null;
 }
 
 export const SolicitacoesPanel: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
-  const [requests, setRequests] = useState<ProjectRequest[]>([]);
+  const [requests, setRequests] = useState<DashboardRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const { data, error } = await supabase
-          .from("project_requests")
-          .select(
-            `
-            id,
-            title,
-            status,
-            created_at,
-            client_id,
-            converted_project_id,
-            clients (
-              name,
-              company
+        const [projectRequestsResult, editRequestsResult] = await Promise.all([
+          supabase
+            .from("project_requests")
+            .select(
+              `
+              id,
+              title,
+              status,
+              created_at,
+              client_id,
+              converted_project_id,
+              clients (
+                name,
+                company
+              )
+            `,
             )
-          `,
-          )
-          .order("created_at", { ascending: false })
-          .limit(5);
+            .order("created_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("edit_requests")
+            .select(
+              `
+              id,
+              status,
+              created_at,
+              client_id,
+              entity_type,
+              proposed_data,
+              clients (
+                name,
+                company
+              )
+            `,
+            )
+            .order("created_at", { ascending: false })
+            .limit(30),
+        ]);
 
-        if (error) throw error;
+        if (projectRequestsResult.error) throw projectRequestsResult.error;
+        if (editRequestsResult.error) throw editRequestsResult.error;
 
-        setRequests(
-          (data || [])
-            .filter((req: any) => !req.converted_project_id)
-            .map((req: any) => ({
-            ...req,
-              client: req.clients,
-            })),
-        );
+        const projectRequests: DashboardRequest[] = ((projectRequestsResult.data || []) as ProjectRequestRow[])
+          .map((req) => ({
+            id: req.id,
+            title: req.title,
+            status: req.status,
+            created_at: req.created_at,
+            client_id: req.client_id,
+            type: "project",
+            client: req.clients || undefined,
+          }));
+
+        const editRequests: DashboardRequest[] = ((editRequestsResult.data || []) as EditRequestRow[])
+          .map((req) => {
+            const requestType =
+              typeof req.proposed_data?.request_type === "string"
+                ? req.proposed_data.request_type
+                : req.entity_type === "project"
+                  ? "edit_project"
+                  : req.entity_type === "task"
+                    ? "edit_task"
+                    : "edit_request";
+
+            const resolvedType: RequestType =
+              requestType === "new_task" || requestType === "edit_task" || requestType === "edit_project"
+                ? requestType
+                : req.entity_type === "project"
+                  ? "edit_project"
+                  : req.entity_type === "task"
+                    ? "edit_task"
+                    : "edit_request";
+
+            const defaultTitleMap: Record<RequestType, string> = {
+              project: "Solicitação de projeto",
+              new_task: "Solicitação de nova tarefa",
+              edit_task: "Solicitação de edição de tarefa",
+              edit_project: "Solicitação de edição de projeto",
+              edit_request: "Solicitação de edição",
+            };
+
+            const title =
+              (typeof req.proposed_data?.task_name === "string" && req.proposed_data.task_name) ||
+              (typeof req.proposed_data?.name === "string" && req.proposed_data.name) ||
+              (typeof req.proposed_data?.title === "string" && req.proposed_data.title) ||
+              defaultTitleMap[resolvedType];
+
+            return {
+              id: req.id,
+              title,
+              status: req.status,
+              created_at: req.created_at,
+              client_id: req.client_id,
+              type: resolvedType,
+              client: req.clients || undefined,
+            };
+          });
+
+        const merged = [...projectRequests, ...editRequests]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5);
+
+        setRequests(merged);
       } catch (error) {
         console.error("Error fetching requests:", error);
       } finally {
@@ -104,6 +203,36 @@ export const SolicitacoesPanel: React.FC = () => {
     }
   };
 
+  const getTypeBadge = (type: RequestType) => {
+    if (type === "new_task") {
+      return (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+          <ListTodo className="h-2.5 w-2.5 mr-1" />
+          Nova tarefa
+        </Badge>
+      );
+    }
+
+    if (type === "edit_task") {
+      return <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">Edição tarefa</Badge>;
+    }
+
+    if (type === "edit_project") {
+      return <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">Edição projeto</Badge>;
+    }
+
+    if (type === "edit_request") {
+      return <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">Edição solicitação</Badge>;
+    }
+
+    return (
+      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+        <FileText className="h-2.5 w-2.5 mr-1" />
+        Projeto
+      </Badge>
+    );
+  };
+
   const pendingCount = requests.filter((r) => r.status === "pending").length;
 
   return (
@@ -137,12 +266,15 @@ export const SolicitacoesPanel: React.FC = () => {
               <div className="space-y-3">
                 {requests.map((req) => (
                   <div
-                    key={req.id}
+                    key={`${req.type}-${req.id}`}
                     className="flex flex-col sm:flex-row sm:items-start justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 rounded px-2 gap-2 min-w-0"
                     onClick={() => navigate("/projects?filter=requests")}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">{req.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{req.title}</p>
+                        {getTypeBadge(req.type)}
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {req.client?.company || req.client?.name || "Cliente"} •{" "}
                         {format(parseISO(req.created_at), "dd/MM", { locale: ptBR })}
