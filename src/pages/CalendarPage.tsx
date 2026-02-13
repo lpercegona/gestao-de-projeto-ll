@@ -273,35 +273,30 @@ export const CalendarPage: React.FC = () => {
                   <div
                     key={`${item.type}-${item.id}`}
                     className={cn(
-                      "w-full max-w-full overflow-hidden p-3 rounded-lg border transition-colors",
+                      "flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
                       !isClient && "cursor-pointer hover:bg-accent/50"
                     )}
                     onClick={() => !isClient && handleNavigate(item)}
                   >
-                    <div className="flex w-full max-w-full flex-col gap-2 overflow-hidden sm:flex-row sm:items-start sm:gap-3">
-                      <div className="flex min-w-0 w-full flex-1 items-start gap-3 overflow-hidden">
-                        <div className={cn("shrink-0 p-2 rounded-md", getStatusColor(item.status))}>
-                          {item.type === 'project' ? (
-                            <FolderKanban className="h-4 w-4" />
-                          ) : (
-                            <ListTodo className="h-4 w-4" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0 max-w-full overflow-hidden">
-                          <p className="max-w-full font-medium text-sm break-words [overflow-wrap:anywhere] sm:truncate">{item.name}</p>
-                          {item.projectName && (
-                            <p className="max-w-full text-xs text-muted-foreground break-words [overflow-wrap:anywhere] sm:truncate">{item.projectName}</p>
-                          )}
-                          {item.clientName && (
-                            <p className="max-w-full text-xs text-muted-foreground break-words [overflow-wrap:anywhere] sm:truncate">{item.clientName}</p>
-                          )}
-                        </div>
+                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+                      <div className={cn("p-1.5 rounded", getStatusColor(item.status))}>
+                        {item.type === 'project' ? (
+                          <FolderKanban className="h-3.5 w-3.5" />
+                        ) : (
+                          <ListTodo className="h-3.5 w-3.5" />
+                        )}
                       </div>
-                      <div className="w-full max-w-full overflow-hidden sm:w-auto sm:shrink-0">
-                        <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="max-w-full truncate">
-                          {item.type === 'project' ? 'Projeto' : 'Tarefa'}
-                        </Badge>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{item.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
+                        </p>
                       </div>
+                    </div>
+                    <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-end sm:shrink-0">
+                      <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-xs">
+                        {item.type === 'project' ? 'Projeto' : 'Tarefa'}
+                      </Badge>
                     </div>
                   </div>
                 ))}
