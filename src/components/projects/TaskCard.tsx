@@ -208,7 +208,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
           {showStatus && (
             <span 
-              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              className="text-[10px] px-2 py-0.5 rounded-full font-medium"
               style={{
                 backgroundColor: stageInfo.color ? `${stageInfo.color}20` : 'hsl(var(--muted))',
                 color: stageInfo.color || 'hsl(var(--muted-foreground))',
