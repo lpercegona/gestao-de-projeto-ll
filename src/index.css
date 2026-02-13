@@ -155,6 +155,7 @@ All colors MUST be HSL.
   .lucide {
     stroke-linecap: round;
     stroke-linejoin: round;
+    stroke-width: 1.5;
   }
 }
 
