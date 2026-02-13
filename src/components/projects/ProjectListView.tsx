@@ -218,7 +218,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
       {projects.map((project) => {
         const client = clients.find((c) => c.id === project.client_id);
         const projectTasks = tasks.filter((t) => t.project_id === project.id);
