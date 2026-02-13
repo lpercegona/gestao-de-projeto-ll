@@ -252,12 +252,12 @@ export const CalendarPage: React.FC = () => {
               </CardTitle>
               {isClient && (
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="primary"
+                  size="icon"
                   onClick={() => setShowRequestForm(true)}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Solicitar Projeto
+      
                 </Button>
               )}
             </div>
