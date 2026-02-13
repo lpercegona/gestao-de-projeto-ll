@@ -115,6 +115,8 @@ export type Database = {
           created_by: string | null
           email: string
           id: string
+          identity_attachments: Json
+          identity_guidelines: string | null
           logo_url: string | null
           name: string
           notes: string | null
@@ -139,6 +141,8 @@ export type Database = {
           created_by?: string | null
           email: string
           id?: string
+          identity_attachments?: Json
+          identity_guidelines?: string | null
           logo_url?: string | null
           name: string
           notes?: string | null
@@ -163,6 +167,8 @@ export type Database = {
           created_by?: string | null
           email?: string
           id?: string
+          identity_attachments?: Json
+          identity_guidelines?: string | null
           logo_url?: string | null
           name?: string
           notes?: string | null
