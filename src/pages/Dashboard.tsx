@@ -44,10 +44,27 @@ interface ProjectRequest {
   created_at: string;
 }
 
+interface ClientTaskRequest {
+  id: string;
+  client_id: string;
+  status: string;
+  created_at: string;
+  proposed_data: Record<string, unknown> | null;
+}
+
+interface ClientDashboardRequest {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  type: "project" | "new_task" | "edit_task" | "edit_project";
+}
+
 export const Dashboard: React.FC = () => {
   const { user, isClient } = useAuth();
   const { data, loading, getClientHours, getClientMonthlyHours, getClientPreviousMonthOverflow } = useData();
   const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([]);
+  const [taskRequests, setTaskRequests] = useState<ClientTaskRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [clientInfo, setClientInfo] = useState<{
     id: string;
@@ -103,15 +120,33 @@ export const Dashboard: React.FC = () => {
             });
           }
 
-          // Get project requests
-          const { data: requestsData } = await supabase
-            .from("project_requests")
-            .select("id, client_id, title, briefing, status, admin_notes, created_at")
-            .eq("client_id", resolvedClientId)
-            .order("created_at", { ascending: false });
+          // Get project requests and task requests
+          const [projectRequestsResult, taskRequestsResult] = await Promise.all([
+            supabase
+              .from("project_requests")
+              .select("id, client_id, title, briefing, status, admin_notes, created_at")
+              .eq("client_id", resolvedClientId)
+              .order("created_at", { ascending: false }),
+            supabase
+              .from("edit_requests")
+              .select("id, client_id, status, created_at, proposed_data")
+              .eq("client_id", resolvedClientId)
+              .eq("entity_type", "project")
+              .order("created_at", { ascending: false }),
+          ]);
 
-          if (requestsData) {
-            setProjectRequests(requestsData);
+          if (projectRequestsResult.data) {
+            setProjectRequests(projectRequestsResult.data);
+          }
+
+          if (taskRequestsResult.data) {
+            const relevantEditRequests = (taskRequestsResult.data as ClientTaskRequest[]).filter((request) => {
+              const requestType =
+                typeof request.proposed_data?.request_type === "string" ? request.proposed_data.request_type : "edit_project";
+
+              return requestType === "new_task" || requestType === "edit_task" || requestType === "edit_project";
+            });
+            setTaskRequests(relevantEditRequests);
           }
         }
       } catch (err) {
@@ -182,6 +217,8 @@ export const Dashboard: React.FC = () => {
   // Request statistics for clients
   const pendingRequests = projectRequests.filter((r) => r.status === "pending");
   const analyzingRequests = projectRequests.filter((r) => r.status === "analyzing");
+  const pendingTaskRequests = taskRequests.filter((r) => r.status === "pending");
+  const analyzingTaskRequests = taskRequests.filter((r) => r.status === "analyzing");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -218,8 +255,42 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const recentRequests = projectRequests
-    .filter((request) => request.status === "pending")
+  const recentRequests: ClientDashboardRequest[] = [
+    ...projectRequests
+      .filter((request) => request.status === "pending" || request.status === "analyzing")
+      .map((request) => ({
+        id: request.id,
+        title: request.title,
+        status: request.status,
+        created_at: request.created_at,
+        type: "project" as const,
+      })),
+    ...taskRequests
+      .filter((request) => request.status === "pending" || request.status === "analyzing")
+      .map((request) => {
+        const requestType =
+          typeof request.proposed_data?.request_type === "string" ? request.proposed_data.request_type : "edit_project";
+
+        const resolvedType =
+          requestType === "new_task" || requestType === "edit_task" || requestType === "edit_project"
+            ? requestType
+            : "edit_project";
+
+        const title =
+          (typeof request.proposed_data?.task_name === "string" && request.proposed_data.task_name) ||
+          (typeof request.proposed_data?.name === "string" && request.proposed_data.name) ||
+          "Solicitação de edição";
+
+        return {
+          id: request.id,
+          title,
+          status: request.status,
+          created_at: request.created_at,
+          type: resolvedType as "new_task" | "edit_task" | "edit_project",
+        };
+      }),
+  ]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
 
   const handleRequestCreated = (request: ProjectRequest) => {
@@ -240,7 +311,7 @@ export const Dashboard: React.FC = () => {
     const stats = [
       { label: "Projetos Ativos", value: activeProjects.length, icon: FolderKanban },
       { label: "Tarefas Pendentes", value: pendingTasks.length, icon: CheckSquare },
-      { label: "Solicitações Pendentes", value: pendingRequests.length + analyzingRequests.length, icon: FileText },
+      { label: "Solicitações Pendentes", value: pendingRequests.length + analyzingRequests.length + pendingTaskRequests.length + analyzingTaskRequests.length, icon: FileText },
       {
         label: clientStats?.isMonthly ? "Disponível este Mês" : "Horas Utilizadas",
         value: clientStats?.isMonthly
@@ -364,7 +435,12 @@ export const Dashboard: React.FC = () => {
                             className="flex flex-wrap sm:flex-nowrap items-center justify-between p-3 rounded-lg border border-border gap-3 min-w-0"
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm">{request.title}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium truncate text-sm">{request.title}</p>
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                                  {request.type === "new_task" ? "Nova tarefa" : request.type === "edit_task" ? "Edição tarefa" : request.type === "edit_project" ? "Edição projeto" : "Projeto"}
+                                </Badge>
+                              </div>
                               <p className="text-xs text-muted-foreground truncate">
                                 {format(new Date(request.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                               </p>
@@ -448,7 +524,7 @@ export const Dashboard: React.FC = () => {
           {/* Right Column - Actions & Calendar */}
           <div className="space-y-6 order-first lg:order-last min-w-0">
             <div className="min-w-0 w-full">
-              <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length} onRequestCreated={handleRequestCreated} />
+              <QuickRequestCard pendingCount={pendingRequests.length + analyzingRequests.length + pendingTaskRequests.length + analyzingTaskRequests.length} onRequestCreated={handleRequestCreated} />
             </div>
             <div className="min-w-0 w-full">
               <DashboardCalendar />
