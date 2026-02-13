@@ -115,6 +115,8 @@ export type Database = {
           created_by: string | null
           email: string
           id: string
+          identity_attachments: Json
+          identity_guidelines: string | null
           logo_url: string | null
           name: string
           notes: string | null
@@ -139,6 +141,8 @@ export type Database = {
           created_by?: string | null
           email: string
           id?: string
+          identity_attachments?: Json
+          identity_guidelines?: string | null
           logo_url?: string | null
           name: string
           notes?: string | null
@@ -163,6 +167,8 @@ export type Database = {
           created_by?: string | null
           email?: string
           id?: string
+          identity_attachments?: Json
+          identity_guidelines?: string | null
           logo_url?: string | null
           name?: string
           notes?: string | null
@@ -1410,6 +1416,14 @@ export type Database = {
       setup_client_account: {
         Args: { p_client_id: string; p_email: string; p_user_id: string }
         Returns: boolean
+      }
+      update_client_identity_settings: {
+        Args: {
+          p_client_id: string
+          p_identity_attachments: Json
+          p_identity_guidelines: string
+        }
+        Returns: void
       }
       sign_contract: {
         Args: {
