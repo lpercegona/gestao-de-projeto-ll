@@ -273,7 +273,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   aria-label="Iniciar timer rápido"
                   title="Iniciar timer rápido"
                 >
-                  <Play className="stroke-[1.0] drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]" />
+                  <svg xmlns="http://www.w3.org/2000/svg" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play-icon lucide-play stroke-[1.0] drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]" style={{ width: 'clamp(40px,16vw,90px)', height: 'clamp(40px,16vw,90px)' }} stroke="currentColor" fill="none" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
                 </Button>
 
                 <div
