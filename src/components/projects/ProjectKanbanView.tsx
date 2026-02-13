@@ -225,7 +225,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage.name)}
               >
-                <Card className={`h-full ${getStageColor(stage.color)}`}>
+                <Card className={`flex flex-col h-full ${getStageColor(stage.color)}`}>
                   <CardHeader className="py-3 px-4">
                     <div className="flex items-center justify-between column-2">
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -250,7 +250,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent className="p-2 min-h-[200px] max-h-[60vh] overflow-y-auto">
+                  <CardContent className="flex flex-col flex-1p-2 min-h-[200px] max-h-[60vh] overflow-y-auto">
                     {stageTasks.length === 0 ? (
                       <div className="text-center py-8 text-sm text-muted-foreground">Adicione novas tarefas</div>
                     ) : (
@@ -310,7 +310,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground"
+                        className="w-full mt-auto text-xs text-muted-foreground hover:text-foreground"
                         onClick={() => {
                           const firstProject = projects[0];
                           if (firstProject) {
