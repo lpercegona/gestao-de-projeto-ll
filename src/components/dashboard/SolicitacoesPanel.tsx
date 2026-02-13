@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { FileText, ChevronDown, Clock, CheckCircle, XCircle, AlertCircle, ListTodo } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,57 +10,126 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface ProjectRequest {
+type RequestStatus = "pending" | "approved" | "rejected" | string;
+type RequestType = "project" | "new_task";
+
+interface RequestClient {
+  name: string;
+  company: string | null;
+}
+
+interface DashboardRequest {
+  id: string;
+  title: string;
+  status: RequestStatus;
+  created_at: string;
+  client_id: string;
+  type: RequestType;
+  client?: RequestClient;
+}
+
+interface ProjectRequestRow {
   id: string;
   title: string;
   status: string;
   created_at: string;
   client_id: string;
-  converted_project_id?: string | null;
-  client?: {
-    name: string;
-    company: string | null;
-  };
+  converted_project_id: string | null;
+  clients: RequestClient | null;
+}
+
+interface EditRequestRow {
+  id: string;
+  status: string;
+  created_at: string;
+  client_id: string;
+  proposed_data: Record<string, unknown> | null;
+  clients: RequestClient | null;
 }
 
 export const SolicitacoesPanel: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
-  const [requests, setRequests] = useState<ProjectRequest[]>([]);
+  const [requests, setRequests] = useState<DashboardRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const { data, error } = await supabase
-          .from("project_requests")
-          .select(
-            `
-            id,
-            title,
-            status,
-            created_at,
-            client_id,
-            converted_project_id,
-            clients (
-              name,
-              company
+        const [projectRequestsResult, taskRequestsResult] = await Promise.all([
+          supabase
+            .from("project_requests")
+            .select(
+              `
+              id,
+              title,
+              status,
+              created_at,
+              client_id,
+              converted_project_id,
+              clients (
+                name,
+                company
+              )
+            `,
             )
-          `,
-          )
-          .order("created_at", { ascending: false })
-          .limit(5);
+            .order("created_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("edit_requests")
+            .select(
+              `
+              id,
+              status,
+              created_at,
+              client_id,
+              proposed_data,
+              clients (
+                name,
+                company
+              )
+            `,
+            )
+            .eq("entity_type", "project")
+            .order("created_at", { ascending: false })
+            .limit(10),
+        ]);
 
-        if (error) throw error;
+        if (projectRequestsResult.error) throw projectRequestsResult.error;
+        if (taskRequestsResult.error) throw taskRequestsResult.error;
 
-        setRequests(
-          (data || [])
-            .filter((req: any) => !req.converted_project_id)
-            .map((req: any) => ({
-            ...req,
-              client: req.clients,
-            })),
-        );
+        const projectRequests: DashboardRequest[] = ((projectRequestsResult.data || []) as ProjectRequestRow[])
+          .filter((req) => !req.converted_project_id)
+          .map((req) => ({
+            id: req.id,
+            title: req.title,
+            status: req.status,
+            created_at: req.created_at,
+            client_id: req.client_id,
+            type: "project",
+            client: req.clients || undefined,
+          }));
+
+        const taskRequests: DashboardRequest[] = ((taskRequestsResult.data || []) as EditRequestRow[])
+          .filter((req) => req.proposed_data?.request_type === "new_task")
+          .map((req) => {
+            const taskName = typeof req.proposed_data?.task_name === "string" ? req.proposed_data.task_name : "Nova tarefa";
+            return {
+              id: req.id,
+              title: taskName,
+              status: req.status,
+              created_at: req.created_at,
+              client_id: req.client_id,
+              type: "new_task" as const,
+              client: req.clients || undefined,
+            };
+          });
+
+        const merged = [...projectRequests, ...taskRequests]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5);
+
+        setRequests(merged);
       } catch (error) {
         console.error("Error fetching requests:", error);
       } finally {
@@ -137,12 +206,25 @@ export const SolicitacoesPanel: React.FC = () => {
               <div className="space-y-3">
                 {requests.map((req) => (
                   <div
-                    key={req.id}
+                    key={`${req.type}-${req.id}`}
                     className="flex flex-col sm:flex-row sm:items-start justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 rounded px-2 gap-2 min-w-0"
                     onClick={() => navigate("/projects?filter=requests")}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">{req.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{req.title}</p>
+                        {req.type === "new_task" ? (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                            <ListTodo className="h-2.5 w-2.5 mr-1" />
+                            Nova tarefa
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                            <FileText className="h-2.5 w-2.5 mr-1" />
+                            Projeto
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {req.client?.company || req.client?.name || "Cliente"} •{" "}
                         {format(parseISO(req.created_at), "dd/MM", { locale: ptBR })}
