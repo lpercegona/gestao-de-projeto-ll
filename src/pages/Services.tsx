@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
-import { Boxes, Search, PackageSearch } from 'lucide-react';
+import { LayerPlus, Search } from 'lucide-react';
 
 interface ProposalItem {
   id: string;
@@ -121,34 +121,13 @@ export const Services: React.FC = () => {
 
         <TabsContent value="services" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Card>
+            <Card className="md:col-span-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Itens cadastrados</CardTitle>
               </CardHeader>
               <CardContent className="flex items-center gap-2">
-                <Boxes className="h-4 w-4 text-muted-foreground" />
+                <Layers3 className="h-4 w-4 text-muted-foreground" />
                 <span className="text-2xl font-semibold">{serviceRows.length}</span>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Propostas com itens</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-2">
-                <PackageSearch className="h-4 w-4 text-muted-foreground" />
-                <span className="text-2xl font-semibold">{new Set(serviceRows.map((row) => row.proposalId)).size}</span>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Valor total listado</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <span className="text-2xl font-semibold">
-                  {serviceRows
-                    .reduce((acc, item) => acc + item.total, 0)
-                    .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </span>
               </CardContent>
             </Card>
           </div>
