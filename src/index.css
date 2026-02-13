@@ -208,3 +208,14 @@ All colors MUST be HSL.
 .dialog-scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes modal-scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
