@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -13,15 +12,13 @@ import {
   Save, 
   Lock, 
   User, 
-  Shield, 
-  UserCog, 
   Camera, 
   Upload 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const ProfileEditTab: React.FC = () => {
-  const { user, userRole, isMasterAdmin, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
   
@@ -172,32 +169,6 @@ export const ProfileEditTab: React.FC = () => {
     }
   };
 
-  const getRoleLabel = () => {
-    switch (userRole) {
-      case 'master_admin':
-        return 'Master Admin';
-      case 'admin':
-        return 'Administrador';
-      case 'collaborator':
-        return 'Colaborador';
-      case 'client':
-        return 'Cliente';
-      default:
-        return 'Usuário';
-    }
-  };
-
-  const getRoleBadgeVariant = () => {
-    switch (userRole) {
-      case 'master_admin':
-        return 'default' as const;
-      case 'admin':
-        return 'secondary' as const;
-      default:
-        return 'outline' as const;
-    }
-  };
-
   const getUserInitials = () => {
     if (fullName) {
       const names = fullName.split(' ');
@@ -225,11 +196,11 @@ export const ProfileEditTab: React.FC = () => {
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="profile" className="flex items-center gap-1.5">
           <User className="w-4 h-4" />
-          <span className="hidden sm:inline">Perfil</span>
+          <span>Perfil</span>
         </TabsTrigger>
         <TabsTrigger value="security" className="flex items-center gap-1.5">
           <Lock className="w-4 h-4" />
-          <span className="hidden sm:inline">Segurança</span>
+          <span>Segurança</span>
         </TabsTrigger>
       </TabsList>
 
@@ -326,17 +297,7 @@ export const ProfileEditTab: React.FC = () => {
                 </p>
               </div>
               
-              <div className="space-y-2">
-                <Label>Função</Label>
-                <div>
-                  <Badge variant={getRoleBadgeVariant()} className="text-sm">
-                    {isMasterAdmin && <Shield className="w-3 h-3 mr-1" />}
-                    {isAdmin && !isMasterAdmin && <UserCog className="w-3 h-3 mr-1" />}
-                    {getRoleLabel()}
-                  </Badge>
-                </div>
-              </div>
-              
+
               <Button type="submit" disabled={savingProfile}>
                 {savingProfile ? (
                   <>
