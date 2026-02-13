@@ -422,7 +422,14 @@ export const ProfileEditTab: React.FC = () => {
                   {editingField === 'company' ? (
                     <Input autoFocus value={companyDraft.company} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, company: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('company')} className="text-sm font-medium text-left hover:underline">{companyDraft.company || '-'}</button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingField('company')}
+                      className="w-full truncate text-sm font-medium text-left hover:underline"
+                      title={companyDraft.company || '-'}
+                    >
+                      {companyDraft.company || '-'}
+                    </button>
                   )}
                 </div>
                 <div>
@@ -430,7 +437,14 @@ export const ProfileEditTab: React.FC = () => {
                   {editingField === 'name' ? (
                     <Input autoFocus value={companyDraft.name} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, name: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('name')} className="text-sm font-medium text-left hover:underline">{companyDraft.name || '-'}</button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingField('name')}
+                      className="w-full truncate text-sm font-medium text-left hover:underline"
+                      title={companyDraft.name || '-'}
+                    >
+                      {companyDraft.name || '-'}
+                    </button>
                   )}
                 </div>
                 <div>
@@ -438,7 +452,14 @@ export const ProfileEditTab: React.FC = () => {
                   {editingField === 'email' ? (
                     <Input autoFocus type="email" value={companyDraft.email} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, email: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('email')} className="text-sm font-medium text-left hover:underline">{companyDraft.email || '-'}</button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingField('email')}
+                      className="w-full truncate text-sm font-medium text-left hover:underline"
+                      title={companyDraft.email || '-'}
+                    >
+                      {companyDraft.email || '-'}
+                    </button>
                   )}
                 </div>
                 <div>
@@ -446,7 +467,14 @@ export const ProfileEditTab: React.FC = () => {
                   {editingField === 'phone' ? (
                     <Input autoFocus value={companyDraft.phone} onChange={(e) => setCompanyDraft((prev) => ({ ...prev, phone: e.target.value }))} onBlur={() => setEditingField(null)} />
                   ) : (
-                    <button type="button" onClick={() => setEditingField('phone')} className="text-sm font-medium text-left hover:underline">{companyDraft.phone || '-'}</button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingField('phone')}
+                      className="w-full truncate text-sm font-medium text-left hover:underline"
+                      title={companyDraft.phone || '-'}
+                    >
+                      {companyDraft.phone || '-'}
+                    </button>
                   )}
                 </div>
               </div>
