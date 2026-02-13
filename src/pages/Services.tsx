@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
-import { LayerPlus, Search } from 'lucide-react';
+import { Layers3, Search } from 'lucide-react';
 
 interface ProposalItem {
   id: string;
@@ -107,11 +106,6 @@ export const Services: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Serviços"
-        description="Visualize serviços e produtos cadastrados nas propostas e acesse propostas/contratos em abas dedicadas."
-      />
-
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="services">Serviços</TabsTrigger>
