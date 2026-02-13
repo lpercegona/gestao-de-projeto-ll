@@ -273,31 +273,35 @@ export const CalendarPage: React.FC = () => {
                   <div
                     key={`${item.type}-${item.id}`}
                     className={cn(
-                      "p-3 rounded-lg border transition-colors",
+                      "w-full max-w-full overflow-hidden p-3 rounded-lg border transition-colors",
                       !isClient && "cursor-pointer hover:bg-accent/50"
                     )}
                     onClick={() => !isClient && handleNavigate(item)}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={cn("p-2 rounded-md", getStatusColor(item.status))}>
-                        {item.type === 'project' ? (
-                          <FolderKanban className="h-4 w-4" />
-                        ) : (
-                          <ListTodo className="h-4 w-4" />
-                        )}
+                    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <div className={cn("shrink-0 p-2 rounded-md", getStatusColor(item.status))}>
+                          {item.type === 'project' ? (
+                            <FolderKanban className="h-4 w-4" />
+                          ) : (
+                            <ListTodo className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm break-words sm:truncate">{item.name}</p>
+                          {item.projectName && (
+                            <p className="text-xs text-muted-foreground break-words sm:truncate">{item.projectName}</p>
+                          )}
+                          {item.clientName && (
+                            <p className="text-xs text-muted-foreground break-words sm:truncate">{item.clientName}</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.name}</p>
-                        {item.projectName && (
-                          <p className="text-xs text-muted-foreground truncate">{item.projectName}</p>
-                        )}
-                        {item.clientName && (
-                          <p className="text-xs text-muted-foreground truncate">{item.clientName}</p>
-                        )}
+                      <div className="w-full sm:w-auto sm:shrink-0">
+                        <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="max-w-full">
+                          {item.type === 'project' ? 'Projeto' : 'Tarefa'}
+                        </Badge>
                       </div>
-                      <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="shrink-0">
-                        {item.type === 'project' ? 'Projeto' : 'Tarefa'}
-                      </Badge>
                     </div>
                   </div>
                 ))}
