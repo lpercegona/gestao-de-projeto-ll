@@ -142,11 +142,11 @@ export const CalendarPage: React.FC = () => {
   const getStatusColor = (status: CalendarItem['status']) => {
     switch (status) {
       case 'overdue':
-        return 'bg-destructive text-destructive-foreground';
+        return 'bg-[hsl(var(--primary)/1)] text-primary-foreground';
       case 'near':
-        return 'bg-amber-500 text-white';
+        return 'bg-[hsl(var(--primary)/0.8)] text-primary-foreground';
       default:
-        return 'bg-primary text-primary-foreground';
+        return 'bg-[hsl(var(--primary)/0.65)] text-primary-foreground';
     }
   };
 
@@ -227,9 +227,9 @@ export const CalendarPage: React.FC = () => {
                               key={i}
                               className={cn(
                                 "w-1.5 h-1.5 rounded-full",
-                                item.status === 'overdue' ? "bg-destructive" :
-                                item.status === 'near' ? "bg-amber-500" : 
-                                isSelected ? "bg-primary-foreground" : "bg-primary"
+                                item.status === 'overdue' ? "bg-[hsl(var(--primary)/1)]" :
+                                item.status === 'near' ? "bg-[hsl(var(--primary)/0.8)]" : 
+                                isSelected ? "bg-primary-foreground" : "bg-[hsl(var(--primary)/0.65)]"
                               )}
                             />
                           ))}
