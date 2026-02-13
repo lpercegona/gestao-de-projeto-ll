@@ -90,7 +90,7 @@ export const QuickActionsPanel: React.FC = () => {
 
   return (
     <>
-      <Card className="p-1">
+      <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
