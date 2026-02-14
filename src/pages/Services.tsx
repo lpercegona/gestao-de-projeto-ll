@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
-import { Layers3, Search, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Layers3, Search, Plus, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,6 +18,12 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ProposalItem {
   id: string;
@@ -25,6 +31,8 @@ interface ProposalItem {
   description: string;
   hours: number;
   pricePerHour: number;
+  imageUrl?: string;
+  image?: string;
 }
 
 interface ProposalRow {
@@ -47,6 +55,7 @@ interface ServiceRow {
   hours: number;
   pricePerHour: number;
   total: number;
+  imageUrl?: string;
 }
 
 const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
@@ -74,6 +83,7 @@ export const Services: React.FC = () => {
     description: '',
     hours: 0,
     pricePerHour: 0,
+    imageUrl: '',
   });
 
   const activeTab = tabByPath[location.pathname] || 'services';
@@ -138,6 +148,7 @@ export const Services: React.FC = () => {
           hours: Number(item.hours || 0),
           pricePerHour: Number(item.pricePerHour || 0),
           total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
+          imageUrl: item.imageUrl || item.image,
         })),
     );
 
@@ -167,7 +178,7 @@ export const Services: React.FC = () => {
   };
 
   const resetNewItem = () => {
-    setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0 });
+    setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0, imageUrl: '' });
   };
 
   const handleSaveItem = () => {
@@ -184,6 +195,7 @@ export const Services: React.FC = () => {
       hours: Number(newItem.hours || 0),
       pricePerHour: Number(newItem.pricePerHour || 0),
       total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
+      imageUrl: newItem.imageUrl || undefined,
     };
 
     if (editingItemId) {
@@ -199,6 +211,24 @@ export const Services: React.FC = () => {
     resetNewItem();
   };
 
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem válido.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      setNewItem((prev) => ({ ...prev, imageUrl: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleEditItem = (item: ServiceRow) => {
     if (item.source !== 'manual') {
       toast.info('Itens vinculados às propostas devem ser alterados na aba de propostas.');
@@ -210,6 +240,7 @@ export const Services: React.FC = () => {
       description: item.description === 'Sem descrição' ? '' : item.description,
       hours: item.hours,
       pricePerHour: item.pricePerHour,
+      imageUrl: item.imageUrl || '',
     });
     setEditingItemId(item.id);
     setCreateItemOpen(true);
@@ -274,24 +305,55 @@ export const Services: React.FC = () => {
                 <div className="space-y-3">
                   {filteredRows.map((row) => (
                     <div key={row.id} className="rounded-lg border p-4">
-                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <h3 className="font-semibold">{row.service}</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                          </span>
-                          <Button variant="ghost" size="icon" onClick={() => handleEditItem(row)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(row)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="md:col-span-1">
+                          {row.imageUrl ? (
+                            <img
+                              src={row.imageUrl}
+                              alt={`Imagem de ${row.service}`}
+                              className="aspect-square h-full max-h-[174px] w-full rounded-md border object-cover"
+                            />
+                          ) : (
+                            <div className="flex aspect-square h-full max-h-[174px] w-full items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
+                              Sem imagem
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{row.description}</p>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">Proposta:</span> {row.proposalTitle} • {row.recipientName} • {row.hours}h ×{' '}
-                        {row.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+
+                        <div className="space-y-2 md:col-span-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <h3 className="font-semibold">{row.service}</h3>
+                              <span className="text-sm text-muted-foreground">
+                                {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </span>
+                            </div>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditItem(row)}>
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => handleDeleteItem(row)}
+                                >
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          <p className="text-sm text-muted-foreground">{row.description}</p>
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">Quantidade de horas:</span> {row.hours}h
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -313,7 +375,7 @@ export const Services: React.FC = () => {
       <Dialog open={createItemOpen} onOpenChange={setCreateItemOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar item de serviço</DialogTitle>
+            <DialogTitle>{editingItemId ? 'Editar item de serviço' : 'Adicionar item de serviço'}</DialogTitle>
             <DialogDescription>
               Preencha os dados para incluir um novo item na listagem de serviços.
             </DialogDescription>
@@ -357,6 +419,19 @@ export const Services: React.FC = () => {
                   onChange={(e) => setNewItem((prev) => ({ ...prev, pricePerHour: Number(e.target.value) || 0 }))}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Imagem do item</Label>
+              <Input type="file" accept="image/*" onChange={handleImageChange} />
+              {newItem.imageUrl ? (
+                <div className="space-y-2">
+                  <img src={newItem.imageUrl} alt="Pré-visualização da imagem do item" className="h-24 w-24 rounded-md border object-cover" />
+                  <Button variant="outline" size="sm" onClick={() => setNewItem((prev) => ({ ...prev, imageUrl: '' }))}>
+                    Remover imagem
+                  </Button>
+                </div>
+              ) : null}
             </div>
           </div>
 
