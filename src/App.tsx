@@ -132,11 +132,6 @@ const App = () => (
                   <CalendarPage />
                 </ProtectedRoute>
               } />
-              <Route path="/calendar" element={
-                <ProtectedRoute requiredRole="client">
-                  <CalendarPage />
-                </ProtectedRoute>
-              } />
               
               {/* Users - admin only */}
               <Route path="/users" element={

@@ -33,6 +33,7 @@ import {
 import { format, parseISO, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import DOMPurify from 'dompurify';
 import LogoOras from '@/assets/logo-oras.svg';
 import { formatHours } from '@/lib/formatHours';
 
@@ -68,7 +69,6 @@ interface ProposalData {
   status: string;
   valid_until: string | null;
   created_at: string;
-  share_static_html?: string | null;
 }
 
 const parseNumericValue = (value: unknown): number => {
@@ -112,7 +112,6 @@ interface Comment {
   author_name: string | null;
   content: string;
   created_at: string;
-  share_static_html?: string | null;
 }
 
 export const PublicProposal: React.FC = () => {
@@ -176,7 +175,6 @@ export const PublicProposal: React.FC = () => {
   };
 
   const renderedTemplateContent = proposal ? renderTemplateContent(proposal) : '';
-  const hasStaticShareHtml = Boolean(proposal?.share_static_html?.trim());
 
   useEffect(() => {
     setAccessValidated(false);
@@ -193,7 +191,7 @@ export const PublicProposal: React.FC = () => {
     }
 
     try {
-      // Fetch proposal
+      // First fetch without email to check if proposal exists (for access form)
       const { data: proposalData, error: proposalError } = await supabase
         .rpc('get_proposal_by_token', { p_token: token });
 
@@ -294,27 +292,45 @@ export const PublicProposal: React.FC = () => {
 
   const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
-  const handleAccessValidation = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAccessValidation = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!proposal) return;
+    if (!token) return;
 
     const typedEmail = normalizeEmail(accessEmail);
-    const expectedEmail = normalizeEmail(proposal.recipient_email || '');
 
     if (!typedEmail) {
       setAccessError('Informe o email para acessar a proposta.');
       return;
     }
 
-    if (typedEmail !== expectedEmail) {
-      setAccessValidated(false);
-      setAccessError('Email inválido para este link de proposta.');
-      return;
-    }
+    try {
+      // Server-side email validation
+      const { data: validatedData, error: validationError } = await supabase
+        .rpc('get_proposal_by_token', { p_token: token, p_email: typedEmail });
 
-    setAccessError(null);
-    setAccessValidated(true);
+      if (validationError) throw validationError;
+
+      if (!validatedData || validatedData.length === 0) {
+        setAccessValidated(false);
+        setAccessError('Email inválido para este link de proposta.');
+        return;
+      }
+
+      const rawProposal = validatedData[0];
+      setProposal({
+        ...rawProposal,
+        total_hours: parseNumericValue(rawProposal.total_hours),
+        total_value: parseNumericValue(rawProposal.total_value),
+        items: normalizeProposalItems(rawProposal.items),
+      });
+
+      setAccessError(null);
+      setAccessValidated(true);
+    } catch (err) {
+      console.error('Error validating access:', err);
+      setAccessError('Erro ao validar acesso. Tente novamente.');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -427,17 +443,7 @@ export const PublicProposal: React.FC = () => {
           </Card>
         )}
 
-        {hasStaticShareHtml ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div
-                className="prose prose-sm max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: proposal.share_static_html || '' }}
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          <>
+        <>
             {/* Proposal Header */}
             <Card>
               <CardHeader>
@@ -446,7 +452,7 @@ export const PublicProposal: React.FC = () => {
                   <CardDescription className="text-base mt-2">
                     <div
                       className="prose prose-sm max-w-none dark:prose-invert"
-                      dangerouslySetInnerHTML={{ __html: proposal.description }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(proposal.description) }}
                     />
                   </CardDescription>
                 )}
@@ -496,7 +502,7 @@ export const PublicProposal: React.FC = () => {
                 <CardContent className="pt-6">
                   <div
                     className="prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: renderedTemplateContent }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderedTemplateContent) }}
                   />
                 </CardContent>
               </Card>
@@ -554,7 +560,7 @@ export const PublicProposal: React.FC = () => {
               </CardContent>
             </Card>
           </>
-        )}
+
 
         {/* Comments */}
         {comments.length > 0 && (
