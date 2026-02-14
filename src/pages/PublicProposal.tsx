@@ -70,6 +70,10 @@ interface ProposalData {
   created_at: string;
 }
 
+interface ProposalTemplateRpcResult {
+  template_content: string | null;
+}
+
 const parseNumericValue = (value: unknown): number => {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : 0;
@@ -152,9 +156,9 @@ export const PublicProposal: React.FC = () => {
     return `<ul>${listItems}</ul>`;
   };
 
-  const renderProposalContent = (data: ProposalData) => {
+  const renderTemplateContent = (data: ProposalData) => {
     if (!data.template_content?.trim()) {
-      return data.description || '';
+      return '';
     }
 
     return data.template_content
@@ -172,6 +176,8 @@ export const PublicProposal: React.FC = () => {
       .replace(/\{\{descricao_proposta\}\}/g, data.description || '')
       .replace(/\{\{listagem_servicos\}\}/g, buildServicesList(data.items));
   };
+
+  const renderedTemplateContent = proposal ? renderTemplateContent(proposal) : '';
 
   useEffect(() => {
     setAccessValidated(false);
@@ -201,8 +207,21 @@ export const PublicProposal: React.FC = () => {
       }
 
       const rawProposal = proposalData[0];
+
+      let templateContent = rawProposal.template_content ?? null;
+
+      if (!templateContent && token) {
+        const { data: templateData, error: templateError } = await supabase
+          .rpc('get_proposal_template_content_by_token', { p_token: token });
+
+        if (!templateError && Array.isArray(templateData) && templateData.length > 0) {
+          templateContent = (templateData[0] as ProposalTemplateRpcResult).template_content || null;
+        }
+      }
+
       setProposal({
         ...rawProposal,
+        template_content: templateContent,
         total_hours: parseNumericValue(rawProposal.total_hours),
         total_value: parseNumericValue(rawProposal.total_value),
         items: normalizeProposalItems(rawProposal.items),
@@ -426,11 +445,11 @@ export const PublicProposal: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">{proposal.title}</CardTitle>
-            {renderProposalContent(proposal) && (
+            {proposal.description && (
               <CardDescription className="text-base mt-2">
                 <div
                   className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: renderProposalContent(proposal) }}
+                  dangerouslySetInnerHTML={{ __html: proposal.description }}
                 />
               </CardDescription>
             )}
@@ -474,6 +493,17 @@ export const PublicProposal: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {renderedTemplateContent && (
+          <Card>
+            <CardContent className="pt-6">
+              <div
+                className="prose prose-sm max-w-none dark:prose-invert"
+                dangerouslySetInnerHTML={{ __html: renderedTemplateContent }}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Items */}
         <Card>
