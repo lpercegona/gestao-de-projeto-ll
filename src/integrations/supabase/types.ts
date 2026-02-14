@@ -115,8 +115,6 @@ export type Database = {
           created_by: string | null
           email: string
           id: string
-          identity_attachments: Json
-          identity_guidelines: string | null
           logo_url: string | null
           name: string
           notes: string | null
@@ -141,8 +139,6 @@ export type Database = {
           created_by?: string | null
           email: string
           id?: string
-          identity_attachments?: Json
-          identity_guidelines?: string | null
           logo_url?: string | null
           name: string
           notes?: string | null
@@ -167,8 +163,6 @@ export type Database = {
           created_by?: string | null
           email?: string
           id?: string
-          identity_attachments?: Json
-          identity_guidelines?: string | null
           logo_url?: string | null
           name?: string
           notes?: string | null
@@ -418,7 +412,22 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_edit_requests_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_edit_requests_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kanban_stages: {
         Row: {
@@ -610,6 +619,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_project_requests_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_project_requests_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_requests_client_id_fkey"
             columns: ["client_id"]
@@ -1301,19 +1324,17 @@ export type Database = {
         Args: { p_token: string }
         Returns: {
           created_at: string
-          description: string | null
+          description: string
           items: Json
           proposal_id: string
-          recipient_company: string | null
+          recipient_company: string
           recipient_email: string
           recipient_name: string
           status: string
-          template_content: string | null
-          template_id: string | null
           title: string
           total_hours: number
           total_value: number
-          valid_until: string | null
+          valid_until: string
         }[]
       }
       get_proposal_comments_by_token: {
@@ -1418,28 +1439,6 @@ export type Database = {
       setup_client_account: {
         Args: { p_client_id: string; p_email: string; p_user_id: string }
         Returns: boolean
-      }
-      update_client_identity_settings: {
-        Args: {
-          p_client_id: string
-          p_identity_attachments: Json
-          p_identity_guidelines: string
-        }
-        Returns: void
-      }
-      update_client_company_settings: {
-        Args: {
-          p_client_id: string
-          p_company: string | null
-          p_contract_end_date: string | null
-          p_contract_start_date: string | null
-          p_contract_type: string
-          p_contracted_hours: number
-          p_email: string
-          p_name: string
-          p_phone: string | null
-        }
-        Returns: void
       }
       sign_contract: {
         Args: {

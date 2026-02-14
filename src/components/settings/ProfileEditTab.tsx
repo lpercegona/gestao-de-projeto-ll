@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -137,7 +138,7 @@ export const ProfileEditTab: React.FC = () => {
 
     setSavingCompany(true);
     try {
-      const { error } = await supabase.rpc('update_client_company_settings', {
+      const { error } = await supabase.rpc('update_client_company_settings' as any, {
         p_client_id: client.id,
         p_name: companyDraft.name,
         p_company: companyDraft.company || null,
@@ -240,10 +241,10 @@ export const ProfileEditTab: React.FC = () => {
       const nextAttachments = [{ name: file.name, url: publicUrl, created_at: new Date().toISOString() }, ...identityAttachments];
       setIdentityAttachments(nextAttachments);
 
-      const { error: updateError } = await supabase.rpc('update_client_identity_settings', {
+      const { error: updateError } = await supabase.rpc('update_client_identity_settings' as any, {
         p_client_id: client.id,
         p_identity_guidelines: identityGuidelines,
-        p_identity_attachments: nextAttachments,
+        p_identity_attachments: nextAttachments as unknown as Json,
       });
 
       if (updateError) throw updateError;
@@ -263,10 +264,10 @@ export const ProfileEditTab: React.FC = () => {
 
     setSavingIdentity(true);
     try {
-      const { error } = await supabase.rpc('update_client_identity_settings', {
+      const { error } = await supabase.rpc('update_client_identity_settings' as any, {
         p_client_id: client.id,
         p_identity_guidelines: identityGuidelines,
-        p_identity_attachments: identityAttachments,
+        p_identity_attachments: identityAttachments as unknown as Json,
       });
       if (error) throw error;
       toast.success('Definições de identidade atualizadas com sucesso!');

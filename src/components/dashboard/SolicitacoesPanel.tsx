@@ -68,7 +68,7 @@ export const SolicitacoesPanel: React.FC = () => {
               created_at,
               client_id,
               converted_project_id,
-              clients (
+              clients!project_requests_client_id_fkey (
                 name,
                 company
               )
@@ -86,7 +86,7 @@ export const SolicitacoesPanel: React.FC = () => {
               client_id,
               entity_type,
               proposed_data,
-              clients (
+              clients!fk_edit_requests_client (
                 name,
                 company
               )
@@ -99,7 +99,7 @@ export const SolicitacoesPanel: React.FC = () => {
         if (projectRequestsResult.error) throw projectRequestsResult.error;
         if (editRequestsResult.error) throw editRequestsResult.error;
 
-        const projectRequests: DashboardRequest[] = ((projectRequestsResult.data || []) as ProjectRequestRow[])
+        const projectRequests: DashboardRequest[] = ((projectRequestsResult.data || []) as unknown as ProjectRequestRow[])
           .map((req) => ({
             id: req.id,
             title: req.title,
@@ -110,7 +110,7 @@ export const SolicitacoesPanel: React.FC = () => {
             client: req.clients || undefined,
           }));
 
-        const editRequests: DashboardRequest[] = ((editRequestsResult.data || []) as EditRequestRow[])
+        const editRequests: DashboardRequest[] = ((editRequestsResult.data || []) as unknown as EditRequestRow[])
           .map((req) => {
             const requestType =
               typeof req.proposed_data?.request_type === "string"
