@@ -119,6 +119,48 @@ interface ProposalTemplate {
 
 const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
 
+const parseNumericValue = (value: unknown): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value
+      .trim()
+      .replace(/\s/g, '')
+      .replace(/R\$/gi, '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+};
+
+const formatHours = (hours: number): string => {
+  const normalizedHours = Number.isFinite(hours) ? hours : 0;
+  return `${normalizedHours.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}h`;
+};
+
+const calculateTotals = (items: ProposalItem[]) => {
+  const totalHours = items.reduce((sum, item) => sum + parseNumericValue(item.hours), 0);
+  const totalValue = items.reduce((sum, item) => sum + (parseNumericValue(item.hours) * parseNumericValue(item.pricePerHour)), 0);
+  return { totalHours, totalValue };
+};
+
+const getProposalTotals = (proposal: Proposal) => {
+  if (proposal.items.length > 0) {
+    return calculateTotals(proposal.items);
+  }
+
+  return {
+    totalHours: parseNumericValue(proposal.total_hours),
+    totalValue: parseNumericValue(proposal.total_value),
+  };
+};
+
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -202,7 +244,13 @@ export const Proposals: React.FC = () => {
       if (proposalsRes.data) {
         setProposals(proposalsRes.data.map(p => ({
           ...p,
-          items: (p.items as unknown as ProposalItem[]) || [],
+          total_hours: parseNumericValue(p.total_hours),
+          total_value: parseNumericValue(p.total_value),
+          items: ((p.items as unknown as ProposalItem[]) || []).map((item) => ({
+            ...item,
+            hours: parseNumericValue(item.hours),
+            pricePerHour: parseNumericValue(item.pricePerHour),
+          })),
         })));
       }
       if (templatesRes.data) {
@@ -217,13 +265,6 @@ export const Proposals: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Calculate totals
-  const calculateTotals = (items: ProposalItem[]) => {
-    const totalHours = items.reduce((sum, item) => sum + Number(item.hours || 0), 0);
-    const totalValue = items.reduce((sum, item) => sum + (Number(item.hours || 0) * Number(item.pricePerHour || 0)), 0);
-    return { totalHours, totalValue };
   };
 
   const buildProposalLink = (shareToken: string) => `${window.location.origin}/proposal/${shareToken}`;
@@ -457,8 +498,8 @@ export const Proposals: React.FC = () => {
           id: item.catalogItemId || item.id || `${proposal.id}-${index}`,
           service: item.service || 'Sem título',
           description: item.description || 'Sem descrição',
-          hours: Number(item.hours || 0),
-          pricePerHour: Number(item.pricePerHour || 0),
+          hours: parseNumericValue(item.hours),
+          pricePerHour: parseNumericValue(item.pricePerHour),
         })),
     );
 
@@ -466,8 +507,8 @@ export const Proposals: React.FC = () => {
       id: item.id || `manual-${index}`,
       service: item.service || 'Sem título',
       description: item.description || 'Sem descrição',
-      hours: Number(item.hours || 0),
-      pricePerHour: Number(item.pricePerHour || 0),
+      hours: parseNumericValue(item.hours),
+      pricePerHour: parseNumericValue(item.pricePerHour),
     }));
 
     const catalogMap = new Map<string, ServiceCatalogItem>();
@@ -550,7 +591,13 @@ export const Proposals: React.FC = () => {
       description: proposal.description || '',
       validUntil: proposal.valid_until || '',
       clientId: proposal.client_id || '',
-      items: proposal.items.length > 0 ? proposal.items : [],
+      items: proposal.items.length > 0
+        ? proposal.items.map((item) => ({
+            ...item,
+            hours: parseNumericValue(item.hours),
+            pricePerHour: parseNumericValue(item.pricePerHour),
+          }))
+        : [],
     });
     setSelectedCatalogItemId('');
     setProposalDialogOpen(true);
@@ -619,11 +666,23 @@ export const Proposals: React.FC = () => {
 
   // Stats
   const stats = useMemo(() => {
+    const totals = proposals.reduce(
+      (acc, proposal) => {
+        const proposalTotals = getProposalTotals(proposal);
+        return {
+          totalHours: acc.totalHours + proposalTotals.totalHours,
+          totalValue: acc.totalValue + proposalTotals.totalValue,
+        };
+      },
+      { totalHours: 0, totalValue: 0 },
+    );
+
     return {
       total: proposals.length,
       pending: proposals.filter(p => ['draft', 'sent', 'viewed'].includes(p.status)).length,
       accepted: proposals.filter(p => p.status === 'accepted').length,
-      totalValue: proposals.filter(p => p.status === 'accepted').reduce((sum, p) => sum + Number(p.total_value), 0),
+      totalHours: totals.totalHours,
+      totalValue: totals.totalValue,
     };
   }, [proposals]);
 
@@ -642,7 +701,7 @@ export const Proposals: React.FC = () => {
       <div className={`space-y-6 transition-transform duration-300 ease-out ${templateEditorOpen ? '-translate-x-full' : 'translate-x-0'}`}>
 
       {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -673,8 +732,17 @@ export const Proposals: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm">Horas Totais</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">{formatHours(stats.totalHours)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <DollarSign className="w-4 h-4" />
-              <span className="text-sm">Valor Aceito</span>
+              <span className="text-sm">Valor Total</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
               {stats.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -738,7 +806,10 @@ export const Proposals: React.FC = () => {
             </Card>
           ) : (
             <div className="space-y-3">
-              {filteredProposals.map((proposal) => (
+              {filteredProposals.map((proposal) => {
+                const proposalTotals = getProposalTotals(proposal);
+
+                return (
                 <Card key={proposal.id} className="group">
                   <CardContent className="py-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -761,11 +832,11 @@ export const Proposals: React.FC = () => {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {proposal.total_hours}h
+                            {formatHours(proposalTotals.totalHours)}
                           </span>
                           <span className="flex items-center gap-1">
                             <DollarSign className="w-3 h-3" />
-                            {proposal.total_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {proposalTotals.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -856,7 +927,7 @@ export const Proposals: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )})}
             </div>
           )}
         </TabsContent>
