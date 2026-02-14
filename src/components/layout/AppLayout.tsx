@@ -412,7 +412,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <Button
                 variant="outline"
                 className={cn(
-                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[#e2e8f0] bg-white p-0 text-[#64748b] shadow-sm transition-opacity duration-200 lg:flex",
+                "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-border bg-background p-0 text-muted-foreground shadow-sm transition-opacity duration-200 lg:flex",
                   isHovering ? "opacity-100" : "opacity-0",
                 )}
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -433,10 +433,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors",
                       isActive
-                        ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                        : "hover:bg-white/70 hover:text-[#334155]",
+                        ? "border border-border bg-card text-foreground"
+                        : "hover:bg-muted hover:text-foreground",
                       isCollapsed && "lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto",
                     )}
                   >
@@ -474,7 +474,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               >
                 <Avatar className={cn("flex-shrink-0", isCollapsed ? "h-8 w-8" : "h-9 w-9")}>
                   <AvatarImage src={userAvatar || undefined} alt="Avatar" />
-                  <AvatarFallback className="bg-white text-[#0f172a] text-sm border border-[#e2e8f0]">
+                  <AvatarFallback className="bg-card text-foreground text-sm border border-border">
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
@@ -497,10 +497,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to="/preferences"
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-[#64748b] transition-colors",
+                    "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-muted-foreground transition-colors",
                       location.pathname === "/preferences"
-                        ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                        : "hover:bg-white/70 hover:text-[#334155]",
+                        ? "border border-border bg-card text-foreground"
+                        : "hover:bg-muted hover:text-foreground",
                     )}
                   >
                     <Settings className="w-3.5 h-3.5" />
@@ -511,10 +511,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   to="/preferences"
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors",
+                    "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors",
                     location.pathname === "/preferences"
-                      ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                      : "hover:bg-white/70 hover:text-[#334155]",
+                      ? "border border-border bg-card text-foreground"
+                      : "hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <Settings className="w-3.5 h-3.5" />
@@ -526,10 +526,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 to="/preferences"
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors",
                   location.pathname === "/preferences"
-                    ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                    : "hover:bg-white/70 hover:text-[#334155]",
+                    ? "border border-border bg-card text-foreground"
+                    : "hover:bg-muted hover:text-foreground",
                 )}
               >
                 <Settings className="w-3.5 h-3.5" />
@@ -544,7 +544,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="mx-auto h-8 w-8 text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
+                    className="mx-auto h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
                     onClick={handleSignOut}
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -553,7 +553,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <TooltipContent side="right">Sair</TooltipContent>
                 <Button
                   variant="ghost"
-                  className="lg:hidden w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
+                  className="lg:hidden w-full justify-start text-muted-foreground hover:bg-muted hover:text-foreground"
                   onClick={handleSignOut}
                 >
                   <LogOut className="w-3.5 h-3.5 mr-2" />
@@ -563,7 +563,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             ) : (
               <Button
                 variant="ghost"
-                className="w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
+                className="w-full justify-start text-muted-foreground hover:bg-muted hover:text-foreground"
                 onClick={handleSignOut}
               >
                 <LogOut className="w-3.5 h-3.5 mr-2" />
@@ -572,7 +572,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             )}
 
             {/* Version */}
-            <div className={cn("px-3 py-2 text-xs text-[#94a3b8]", isCollapsed && "lg:hidden")}>Versão 1.0</div>
+            <div className={cn("px-3 py-2 text-xs text-muted-foreground", isCollapsed && "lg:hidden")}>Versão 1.0</div>
           </div>
         </aside>
 
@@ -595,7 +595,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
           <div className="flex-1 overflow-auto lg:pt-[58px]">
-            <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-white px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+            <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-card px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
               {children}
             </div>
           </div>
