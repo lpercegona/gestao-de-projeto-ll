@@ -110,6 +110,7 @@ interface Proposal {
   valid_until: string | null;
   created_at: string;
   client_id: string | null;
+  share_static_html?: string | null;
 }
 
 interface ProposalTemplate {
@@ -195,6 +196,58 @@ const renderTemplateContent = (templateContent: string, proposal: Proposal) => {
 };
 
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+const buildProposalShareStaticHtml = (proposal: Proposal, templateContent: string | null) => {
+  const totals = getProposalTotals(proposal);
+  const renderedTemplate = templateContent ? renderTemplateContent(templateContent, proposal) : '';
+
+  const rows = proposal.items.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.service || '-')}</td>
+      <td style="text-align:right">${formatHours(item.hours)}</td>
+      <td style="text-align:right">${Number(item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td style="text-align:right">${(item.hours * item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+    </tr>`).join('');
+
+  return `
+    <section style="font-family: Inter, Arial, sans-serif; color:#111827; line-height:1.5">
+      <h1 style="margin:0 0 8px; font-size:28px">${escapeHtml(proposal.title)}</h1>
+      <p style="display:inline-block; border:1px solid #d1d5db; border-radius:9999px; padding:2px 10px; font-size:12px; margin:0 0 16px">${escapeHtml(proposal.status || 'draft')}</p>
+      <p style="margin:0">${escapeHtml(proposal.recipient_name)} (${escapeHtml(proposal.recipient_email)})</p>
+      ${proposal.recipient_company ? `<p style="margin:4px 0 0">Empresa: ${escapeHtml(proposal.recipient_company)}</p>` : ''}
+      ${proposal.valid_until ? `<p style="margin:4px 0 0">Válida até ${format(parseISO(proposal.valid_until), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>` : ''}
+
+      ${renderedTemplate ? `<div style="margin-top:20px"><h3 style="margin:0 0 8px">Modelo de proposta</h3><div>${renderedTemplate}</div></div>` : ''}
+
+      ${proposal.description ? `<div style="margin-top:20px"><h3 style="margin:0 0 8px">Descrição</h3><div>${proposal.description}</div></div>` : ''}
+
+      <div style="margin-top:20px">
+        <h3 style="margin:0 0 8px">Itens da proposta</h3>
+        <table style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb">
+          <thead>
+            <tr>
+              <th style="text-align:left; border-bottom:1px solid #e5e7eb; padding:8px">Item</th>
+              <th style="text-align:right; border-bottom:1px solid #e5e7eb; padding:8px">Horas</th>
+              <th style="text-align:right; border-bottom:1px solid #e5e7eb; padding:8px">Valor/Hora</th>
+              <th style="text-align:right; border-bottom:1px solid #e5e7eb; padding:8px">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:16px; text-align:right; font-weight:600">Total: ${Number(totals.totalValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+    </section>
+  `;
+};
+
 interface SupabaseLikeError {
   code?: string;
   message?: string;
@@ -215,6 +268,35 @@ const serializeSupabaseError = (error: unknown): SupabaseLikeError => {
   };
 };
 
+const isMissingShareStaticHtmlColumnError = (error: unknown): boolean => {
+  const normalizedError = serializeSupabaseError(error);
+
+  if (!normalizedError.code && !normalizedError.message && !normalizedError.details && !normalizedError.hint) {
+    return false;
+  }
+
+  const message = [normalizedError.message, normalizedError.details, normalizedError.hint]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  const hasShareStaticHtmlReference = message.includes('share_static_html');
+  const hasMissingColumnSignal =
+    message.includes('column') ||
+    message.includes('schema cache') ||
+    message.includes('not found') ||
+    message.includes('does not exist');
+
+  if (normalizedError.code === '42703') {
+    return hasShareStaticHtmlReference || message.length === 0;
+  }
+
+  if (normalizedError.code === 'PGRST204') {
+    return hasShareStaticHtmlReference;
+  }
+
+  return hasShareStaticHtmlReference && hasMissingColumnSignal;
+};
 
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
@@ -469,10 +551,38 @@ export const Proposals: React.FC = () => {
   // Send proposal
   const handleSendProposal = async (proposal: Proposal) => {
     try {
+      const templateContent = proposal.template_id
+        ? templates.find((template) => template.id === proposal.template_id)?.description || null
+        : null;
+
+      const shareStaticHtml = buildProposalShareStaticHtml(
+        { ...proposal, status: 'sent' },
+        templateContent,
+      );
+
       const { error } = await supabase
         .from('proposals')
-        .update({ status: 'sent' })
+        .update({ status: 'sent', share_static_html: shareStaticHtml })
         .eq('id', proposal.id);
+
+      if (isMissingShareStaticHtmlColumnError(error)) {
+        // Fallback for environments where migration with share_static_html is not applied yet.
+        console.warn('Proposal send fallback: share_static_html unavailable, retrying with status-only update.', {
+          proposalId: proposal.id,
+          ...serializeSupabaseError(error),
+        });
+
+        const { error: fallbackError } = await supabase
+          .from('proposals')
+          .update({ status: 'sent' })
+          .eq('id', proposal.id);
+
+        if (fallbackError) throw fallbackError;
+        toast.success('Proposta enviada!');
+        toast.warning('Compartilhamento estático indisponível até atualizar o banco de dados.');
+        fetchData();
+        return;
+      }
 
       if (error) throw error;
       
