@@ -58,14 +58,14 @@ export const UniversalSearchBar: React.FC = () => {
         className="relative h-10 w-10
     sm:w-full max-w-[2.75rem] sm:max-w-sm lg:max-w-2xl
     justify-center sm:justify-start
-    rounded-full border border-[#e2e8f0] bg-white
-    px-3 sm:px-4 text-[#64748b]
-    shadow-none hover:bg-white hover:text-[#64748b]"
+    rounded-full border border-border bg-background
+    px-3 sm:px-4 text-muted-foreground
+    shadow-none hover:bg-background hover:text-muted-foreground"
       >
         <Search className="h-4 w-4 sm:mr-1" />
 
         <span className="hidden sm:inline-flex">Em qual projeto trabalhará hoje?</span>
-        <kbd className="pointer-events-none absolute right-3 top-1/2 hidden h-5 -translate-y-1/2 select-none items-center gap-1 rounded border border-[#e2e8f0] bg-white px-1.5 font-mono text-[10px] font-medium text-[#64748b] opacity-100 sm:flex">
+        <kbd className="pointer-events-none absolute right-3 top-1/2 hidden h-5 -translate-y-1/2 select-none items-center gap-1 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>

@@ -67,9 +67,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
 
   const applyTheme = (settings: ThemeSettings) => {
-    document.documentElement.style.setProperty('--primary', settings.primaryColor);
-    document.documentElement.style.setProperty('--secondary', settings.secondaryColor);
-    document.documentElement.style.setProperty('--accent', settings.accentColor);
+    const root = document.documentElement;
+    root.style.setProperty('--primary', settings.primaryColor);
+    root.style.setProperty('--secondary', settings.secondaryColor);
+    root.style.setProperty('--accent', settings.accentColor);
+    
+    // Derive primary-foreground: parse lightness from HSL to decide white or black text
+    const parts = settings.primaryColor.split(/\s+/);
+    const lightness = parseFloat(parts[2] || '50');
+    const primaryForeground = lightness > 55 ? '222.2 47.4% 11.2%' : '210 40% 98%';
+    root.style.setProperty('--primary-foreground', primaryForeground);
+    
+    // Derive ring from primary
+    root.style.setProperty('--ring', settings.primaryColor);
+    
+    // Derive sidebar tokens from primary
+    root.style.setProperty('--sidebar-primary', settings.primaryColor);
+    root.style.setProperty('--sidebar-primary-foreground', primaryForeground);
     
     // Load Google Font dynamically
     loadGoogleFont(settings.fontFamily);
@@ -84,7 +98,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fontStack = `"${settings.fontFamily}", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
     }
     
-    document.documentElement.style.setProperty('--font-sans', fontStack);
+    root.style.setProperty('--font-sans', fontStack);
     document.body.style.fontFamily = fontStack;
   };
 
