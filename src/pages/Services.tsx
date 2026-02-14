@@ -24,6 +24,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+type BillingType = 'unique' | 'monthly';
 
 interface ProposalItem {
   id: string;
@@ -33,6 +42,7 @@ interface ProposalItem {
   pricePerHour: number;
   imageUrl?: string;
   image?: string;
+  billingType?: BillingType;
 }
 
 interface ProposalRow {
@@ -56,6 +66,7 @@ interface ServiceRow {
   pricePerHour: number;
   total: number;
   imageUrl?: string;
+  billingType: BillingType;
 }
 
 const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
@@ -84,6 +95,7 @@ export const Services: React.FC = () => {
     hours: 0,
     pricePerHour: 0,
     imageUrl: '',
+    billingType: 'unique' as BillingType,
   });
 
   const activeTab = tabByPath[location.pathname] || 'services';
@@ -149,6 +161,7 @@ export const Services: React.FC = () => {
           pricePerHour: Number(item.pricePerHour || 0),
           total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
           imageUrl: item.imageUrl || item.image,
+          billingType: item.billingType || 'unique',
         })),
     );
 
@@ -178,7 +191,7 @@ export const Services: React.FC = () => {
   };
 
   const resetNewItem = () => {
-    setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0, imageUrl: '' });
+    setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0, imageUrl: '', billingType: 'unique' });
   };
 
   const handleSaveItem = () => {
@@ -196,6 +209,7 @@ export const Services: React.FC = () => {
       pricePerHour: Number(newItem.pricePerHour || 0),
       total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
       imageUrl: newItem.imageUrl || undefined,
+      billingType: newItem.billingType,
     };
 
     if (editingItemId) {
@@ -241,6 +255,7 @@ export const Services: React.FC = () => {
       hours: item.hours,
       pricePerHour: item.pricePerHour,
       imageUrl: item.imageUrl || '',
+      billingType: item.billingType || 'unique',
     });
     setEditingItemId(item.id);
     setCreateItemOpen(true);
@@ -322,7 +337,12 @@ export const Services: React.FC = () => {
                         <div className="space-y-2 md:col-span-2">
                           <div className="flex items-start justify-between gap-2">
                             <div className="space-y-1">
-                              <h3 className="font-semibold">{row.service}</h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold">{row.service}</h3>
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                  {row.billingType === 'monthly' ? 'Mensal' : 'Único'}
+                                </span>
+                              </div>
                               <span className="text-sm text-muted-foreground">
                                 {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                               </span>
@@ -417,6 +437,22 @@ export const Services: React.FC = () => {
                   onChange={(e) => setNewItem((prev) => ({ ...prev, pricePerHour: Number(e.target.value) || 0 }))}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de cobrança</Label>
+              <Select
+                value={newItem.billingType}
+                onValueChange={(value) => setNewItem((prev) => ({ ...prev, billingType: value as BillingType }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unique">Único</SelectItem>
+                  <SelectItem value="monthly">Mensal</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
