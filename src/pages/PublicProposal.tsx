@@ -70,6 +70,10 @@ interface ProposalData {
   created_at: string;
 }
 
+interface ProposalTemplateRpcResult {
+  template_content: string | null;
+}
+
 const parseNumericValue = (value: unknown): number => {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : 0;
@@ -203,8 +207,21 @@ export const PublicProposal: React.FC = () => {
       }
 
       const rawProposal = proposalData[0];
+
+      let templateContent = rawProposal.template_content ?? null;
+
+      if (!templateContent && token) {
+        const { data: templateData, error: templateError } = await supabase
+          .rpc('get_proposal_template_content_by_token', { p_token: token });
+
+        if (!templateError && Array.isArray(templateData) && templateData.length > 0) {
+          templateContent = (templateData[0] as ProposalTemplateRpcResult).template_content || null;
+        }
+      }
+
       setProposal({
         ...rawProposal,
+        template_content: templateContent,
         total_hours: parseNumericValue(rawProposal.total_hours),
         total_value: parseNumericValue(rawProposal.total_value),
         items: normalizeProposalItems(rawProposal.items),
