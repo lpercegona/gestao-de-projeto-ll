@@ -46,6 +46,8 @@ interface ProposalItem {
 
 interface ProposalData {
   proposal_id: string;
+  template_id: string | null;
+  template_content: string | null;
   title: string;
   description: string | null;
   recipient_name: string;
@@ -85,6 +87,42 @@ export const PublicProposal: React.FC = () => {
   // Comment dialog
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
+
+  const buildServicesList = (items: ProposalItem[]) => {
+    const validItems = items.filter((item) => item.service?.trim());
+
+    if (validItems.length === 0) return '';
+
+    const listItems = validItems
+      .map(
+        (item) =>
+          `<li>${item.service}${item.description ? `: ${item.description}` : ''}</li>`,
+      )
+      .join('');
+
+    return `<ul>${listItems}</ul>`;
+  };
+
+  const renderProposalContent = (data: ProposalData) => {
+    if (!data.template_content?.trim()) {
+      return data.description || '';
+    }
+
+    return data.template_content
+      .replace(/\{\{nome_cliente\}\}/g, data.recipient_name || '')
+      .replace(/\{\{email_cliente\}\}/g, data.recipient_email || '')
+      .replace(/\{\{empresa_cliente\}\}/g, data.recipient_company || '')
+      .replace(/\{\{data_envio\}\}/g, format(parseISO(data.created_at), 'dd/MM/yyyy'))
+      .replace(
+        /\{\{valor_total\}\}/g,
+        Number(data.total_value).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }),
+      )
+      .replace(/\{\{descricao_proposta\}\}/g, data.description || '')
+      .replace(/\{\{listagem_servicos\}\}/g, buildServicesList(data.items));
+  };
 
   useEffect(() => {
     fetchProposal();
@@ -267,9 +305,12 @@ export const PublicProposal: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">{proposal.title}</CardTitle>
-            {proposal.description && (
+            {renderProposalContent(proposal) && (
               <CardDescription className="text-base mt-2">
-                {proposal.description}
+                <div
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: renderProposalContent(proposal) }}
+                />
               </CardDescription>
             )}
           </CardHeader>
