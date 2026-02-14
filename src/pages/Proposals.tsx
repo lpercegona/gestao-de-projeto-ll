@@ -81,6 +81,15 @@ interface ProposalItem {
   description: string;
   hours: number;
   pricePerHour: number;
+  catalogItemId?: string;
+}
+
+interface ServiceCatalogItem {
+  id: string;
+  service: string;
+  description: string;
+  hours: number;
+  pricePerHour: number;
 }
 
 interface Proposal {
@@ -108,13 +117,7 @@ interface ProposalTemplate {
   items: ProposalItem[];
 }
 
-const emptyItem = (): ProposalItem => ({
-  id: crypto.randomUUID(),
-  service: '',
-  description: '',
-  hours: 0,
-  pricePerHour: 0,
-});
+const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
 
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
@@ -154,8 +157,10 @@ export const Proposals: React.FC = () => {
     description: '',
     validUntil: '',
     clientId: '',
-    items: [emptyItem()] as ProposalItem[],
+    items: [] as ProposalItem[],
   });
+  const [manualServiceItems, setManualServiceItems] = useState<ServiceCatalogItem[]>([]);
+  const [selectedCatalogItemId, setSelectedCatalogItemId] = useState<string>('');
   
   // Template form
   const [templateFormData, setTemplateFormData] = useState({
@@ -169,6 +174,19 @@ export const Proposals: React.FC = () => {
   // Fetch data
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const storedItems = localStorage.getItem(MANUAL_ITEMS_STORAGE_KEY);
+
+    if (!storedItems) return;
+
+    try {
+      const parsedItems = JSON.parse(storedItems) as ServiceCatalogItem[];
+      setManualServiceItems(Array.isArray(parsedItems) ? parsedItems : []);
+    } catch (error) {
+      console.error('Erro ao carregar itens manuais de serviço:', error);
+    }
   }, []);
 
   const fetchData = async () => {
@@ -459,25 +477,67 @@ export const Proposals: React.FC = () => {
     toast.success('Template aplicado!');
   };
 
-  // Item management
-  const addItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, emptyItem()],
+  const serviceCatalogItems = useMemo(() => {
+    const proposalItems = proposals.flatMap((proposal) =>
+      proposal.items
+        .filter((item) => item.service?.trim() || item.description?.trim())
+        .map((item, index) => ({
+          id: item.catalogItemId || item.id || `${proposal.id}-${index}`,
+          service: item.service || 'Sem título',
+          description: item.description || 'Sem descrição',
+          hours: Number(item.hours || 0),
+          pricePerHour: Number(item.pricePerHour || 0),
+        })),
+    );
+
+    const manualItems = manualServiceItems.map((item, index) => ({
+      id: item.id || `manual-${index}`,
+      service: item.service || 'Sem título',
+      description: item.description || 'Sem descrição',
+      hours: Number(item.hours || 0),
+      pricePerHour: Number(item.pricePerHour || 0),
     }));
+
+    const catalogMap = new Map<string, ServiceCatalogItem>();
+    [...manualItems, ...proposalItems].forEach((item) => {
+      const key = `${item.service}|${item.description}|${item.hours}|${item.pricePerHour}`;
+      if (!catalogMap.has(key)) {
+        catalogMap.set(key, item);
+      }
+    });
+
+    return Array.from(catalogMap.values());
+  }, [manualServiceItems, proposals]);
+
+  // Item management
+  const addCatalogItemToProposal = () => {
+    if (!selectedCatalogItemId) return;
+
+    const selectedItem = serviceCatalogItems.find((item) => item.id === selectedCatalogItemId);
+    if (!selectedItem) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id: crypto.randomUUID(),
+          service: selectedItem.service,
+          description: selectedItem.description,
+          hours: selectedItem.hours,
+          pricePerHour: selectedItem.pricePerHour,
+          catalogItemId: selectedItem.id,
+        },
+      ],
+    }));
+
+    setSelectedCatalogItemId('');
   };
 
   const removeItem = (itemId: string) => {
     setFormData(prev => ({
       ...prev,
       items: prev.items.filter(i => i.id !== itemId),
-    }));
-  };
-
-  const updateItem = (itemId: string, field: keyof ProposalItem, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.map(i => i.id === itemId ? { ...i, [field]: value } : i),
     }));
   };
 
@@ -492,8 +552,9 @@ export const Proposals: React.FC = () => {
       description: '',
       validUntil: '',
       clientId: '',
-      items: [emptyItem()],
+      items: [],
     });
+    setSelectedCatalogItemId('');
   };
 
   const resetTemplateForm = () => {
@@ -515,8 +576,9 @@ export const Proposals: React.FC = () => {
       description: proposal.description || '',
       validUntil: proposal.valid_until || '',
       clientId: proposal.client_id || '',
-      items: proposal.items.length > 0 ? proposal.items : [emptyItem()],
+      items: proposal.items.length > 0 ? proposal.items : [],
     });
+    setSelectedCatalogItemId('');
     setProposalDialogOpen(true);
   };
 
@@ -1000,11 +1062,37 @@ export const Proposals: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>Itens da Proposta</Label>
-                <Button type="button" variant="outline" size="sm" onClick={() => addItem()}>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Select value={selectedCatalogItemId} onValueChange={setSelectedCatalogItemId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um item da lista de serviços" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceCatalogItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.service} — {item.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addCatalogItemToProposal}
+                  disabled={!selectedCatalogItemId || serviceCatalogItems.length === 0}
+                >
                   <Plus className="w-4 h-4 mr-1" />
-                  Adicionar
+                  Adicionar item
                 </Button>
               </div>
+
+              {serviceCatalogItems.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum item de serviço disponível. Cadastre itens na página de serviços para selecioná-los aqui.
+                </p>
+              )}
 
               {formData.items.map((item, index) => (
                 <Card key={item.id}>
@@ -1026,39 +1114,21 @@ export const Proposals: React.FC = () => {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Serviço</Label>
-                        <Input
-                          value={item.service}
-                          onChange={(e) => updateItem(item.id, 'service', e.target.value)}
-                          placeholder="Nome do serviço"
-                        />
+                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">{item.service}</p>
                       </div>
                       <div className="space-y-2">
                         <Label>Descrição</Label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                          placeholder="Breve descrição"
-                        />
+                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">{item.description}</p>
                       </div>
                       <div className="space-y-2">
                         <Label>Horas</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={item.hours || ''}
-                          onChange={(e) => updateItem(item.id, 'hours', Number(e.target.value))}
-                          placeholder="0"
-                        />
+                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">{item.hours}</p>
                       </div>
                       <div className="space-y-2">
                         <Label>Preço/Hora (R$)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={item.pricePerHour || ''}
-                          onChange={(e) => updateItem(item.id, 'pricePerHour', Number(e.target.value))}
-                          placeholder="0"
-                        />
+                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">
+                          {item.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right text-sm text-muted-foreground">
