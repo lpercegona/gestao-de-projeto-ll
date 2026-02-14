@@ -1066,22 +1066,10 @@ export const Proposals: React.FC = () => {
           <div className="h-full flex flex-col">
             <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <div className="max-w-5xl mx-auto px-4 py-3 sm:px-6">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center">
                   <Button variant="ghost" onClick={closeTemplateEditor}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Voltar
-                  </Button>
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">
-                      {editingTemplate ? 'Editar Template de Proposta' : 'Novo Template de Proposta'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Monte um modelo completo com conteúdo rico e campos dinâmicos.
-                    </p>
-                  </div>
-                  <Button onClick={handleSaveTemplate} disabled={saving}>
-                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {editingTemplate ? 'Salvar' : 'Criar Template'}
                   </Button>
                 </div>
               </div>
@@ -1129,6 +1117,13 @@ export const Proposals: React.FC = () => {
                       </div>
                     </PopoverContent>
                   </Popover>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button onClick={handleSaveTemplate} disabled={saving}>
+                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {editingTemplate ? 'Salvar' : 'Criar Template'}
+                  </Button>
                 </div>
               </div>
             </div>
