@@ -304,8 +304,7 @@ export const Services: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {filteredRows.map((row) => (
-                    <div key={row.id} className="rounded-lg border p-4">
-                      <div className="grid gap-4 md:grid-cols-3">
+                    <div key={row.id} className="grid gap-4 md:grid-cols-3">
                         <div className="md:col-span-1">
                           {row.imageUrl ? (
                             <img
@@ -354,7 +353,6 @@ export const Services: React.FC = () => {
                             <span className="font-medium text-foreground">Quantidade de horas:</span> {row.hours}h
                           </div>
                         </div>
-                      </div>
                     </div>
                   ))}
                 </div>
