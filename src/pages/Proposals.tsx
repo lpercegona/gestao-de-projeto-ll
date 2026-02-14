@@ -75,6 +75,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface ProposalItem {
   id: string;
@@ -162,6 +163,37 @@ const getProposalTotals = (proposal: Proposal) => {
   };
 };
 
+const buildTemplateServicesList = (items: ProposalItem[]) => {
+  const validItems = items.filter((item) => item.service?.trim());
+
+  if (validItems.length === 0) return '';
+
+  const listItems = validItems
+    .map((item) => `<li>${item.service}${item.description ? `: ${item.description}` : ''}</li>`)
+    .join('');
+
+  return `<ul>${listItems}</ul>`;
+};
+
+const renderTemplateContent = (templateContent: string, proposal: Proposal) => {
+  const totals = getProposalTotals(proposal);
+
+  return templateContent
+    .replace(/\{\{nome_cliente\}\}/g, proposal.recipient_name || '')
+    .replace(/\{\{email_cliente\}\}/g, proposal.recipient_email || '')
+    .replace(/\{\{empresa_cliente\}\}/g, proposal.recipient_company || '')
+    .replace(/\{\{data_envio\}\}/g, format(parseISO(proposal.created_at), 'dd/MM/yyyy'))
+    .replace(
+      /\{\{valor_total\}\}/g,
+      Number(totals.totalValue).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }),
+    )
+    .replace(/\{\{descricao_proposta\}\}/g, proposal.description || '')
+    .replace(/\{\{listagem_servicos\}\}/g, buildTemplateServicesList(proposal.items));
+};
+
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -185,6 +217,7 @@ export const Proposals: React.FC = () => {
   const [editingProposal, setEditingProposal] = useState<Proposal | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<ProposalTemplate | null>(null);
   const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
+  const [previewingProposal, setPreviewingProposal] = useState<Proposal | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
   const [viewingCommentsFor, setViewingCommentsFor] = useState<Proposal | null>(null);
   const [proposalToConvert, setProposalToConvert] = useState<Proposal | null>(null);
@@ -414,7 +447,7 @@ export const Proposals: React.FC = () => {
         .eq('id', proposal.id);
       if (error) throw error;
       
-      toast.success('Proposta enviada!');
+      toast.success('Proposta enviada e página de compartilhamento liberada!');
       fetchData();
     } catch (error) {
       console.error('Error sending proposal:', error);
@@ -687,6 +720,17 @@ export const Proposals: React.FC = () => {
     };
   }, [proposals]);
 
+
+  const previewTemplate = useMemo(() => {
+    if (!previewingProposal?.template_id) return null;
+    return templates.find((template) => template.id === previewingProposal.template_id) || null;
+  }, [previewingProposal, templates]);
+
+  const previewRenderedTemplateContent = useMemo(() => {
+    if (!previewingProposal || !previewTemplate?.description) return '';
+    return renderTemplateContent(previewTemplate.description, previewingProposal);
+  }, [previewTemplate, previewingProposal]);
+
   const { totalHours: formTotalHours, totalValue: formTotalValue } = calculateTotals(formData.items);
 
   if (loading) {
@@ -843,15 +887,22 @@ export const Proposals: React.FC = () => {
                         <p className="text-xs text-muted-foreground">
                           Criada em {format(parseISO(proposal.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </p>
-                        <a
-                          href={buildProposalLink(proposal.share_token)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                        >
-                          <LinkIcon className="w-3 h-3" />
-                          {buildProposalLink(proposal.share_token)}
-                        </a>
+                        {proposal.status === 'draft' ? (
+                          <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <LinkIcon className="w-3 h-3" />
+                            A página de compartilhamento será criada após o envio.
+                          </p>
+                        ) : (
+                          <a
+                            href={buildProposalLink(proposal.share_token)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <LinkIcon className="w-3 h-3" />
+                            {buildProposalLink(proposal.share_token)}
+                          </a>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -895,9 +946,16 @@ export const Proposals: React.FC = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => window.open(`/proposal/${proposal.share_token}`, '_blank')}>
+                            <DropdownMenuItem onClick={() => {
+                              if (proposal.status === 'draft') {
+                                setPreviewingProposal(proposal);
+                                return;
+                              }
+
+                              window.open(`/proposal/${proposal.share_token}`, '_blank');
+                            }}>
                               <Eye className="w-4 h-4 mr-2" />
-                              Visualizar
+                              {proposal.status === 'draft' ? 'Visualizar interno' : 'Visualizar compartilhamento'}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEditProposal(proposal)}>
                               <Pencil className="w-4 h-4 mr-2" />
@@ -1223,6 +1281,95 @@ export const Proposals: React.FC = () => {
               {editingProposal ? 'Salvar' : 'Criar Proposta'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewingProposal} onOpenChange={(open) => !open && setPreviewingProposal(null)}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto dialog-scrollbar-hide">
+          <DialogHeader>
+            <DialogTitle>Visualização completa da proposta</DialogTitle>
+            <DialogDescription>
+              Esta visualização é interna. O compartilhamento externo é liberado somente após o envio.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewingProposal && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{previewingProposal.title}</h3>
+                  <Badge variant="outline">Rascunho</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {previewingProposal.recipient_name} ({previewingProposal.recipient_email})
+                </p>
+                {previewingProposal.recipient_company && (
+                  <p className="text-sm text-muted-foreground">Empresa: {previewingProposal.recipient_company}</p>
+                )}
+                {previewingProposal.valid_until && (
+                  <p className="text-sm text-muted-foreground">
+                    Válida até {format(parseISO(previewingProposal.valid_until), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                )}
+              </div>
+
+              {previewTemplate && (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Modelo de proposta</h4>
+                  <p className="text-sm text-muted-foreground">Template vinculado: {previewTemplate.name}</p>
+                  {previewRenderedTemplateContent ? (
+                    <div
+                      className="text-sm text-muted-foreground rounded-md border bg-muted/20 p-3 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: previewRenderedTemplateContent }}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">O modelo vinculado não possui conteúdo.</p>
+                  )}
+                </div>
+              )}
+
+              {previewingProposal.description && (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Descrição</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{previewingProposal.description}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <h4 className="font-medium">Itens da proposta</h4>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="w-28 text-right">Horas</TableHead>
+                        <TableHead className="w-40 text-right">Valor/Hora</TableHead>
+                        <TableHead className="w-40 text-right">Subtotal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {previewingProposal.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.service}</TableCell>
+                          <TableCell className="text-right">{formatHours(item.hours)}</TableCell>
+                          <TableCell className="text-right">
+                            {item.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {(item.hours * item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              <div className="flex justify-end text-sm font-medium">
+                Total: {getProposalTotals(previewingProposal).totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
