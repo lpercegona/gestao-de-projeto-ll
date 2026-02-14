@@ -115,6 +115,8 @@ export type Database = {
           created_by: string | null
           email: string
           id: string
+          identity_attachments: Json | null
+          identity_guidelines: string | null
           logo_url: string | null
           name: string
           notes: string | null
@@ -139,6 +141,8 @@ export type Database = {
           created_by?: string | null
           email: string
           id?: string
+          identity_attachments?: Json | null
+          identity_guidelines?: string | null
           logo_url?: string | null
           name: string
           notes?: string | null
@@ -163,6 +167,8 @@ export type Database = {
           created_by?: string | null
           email?: string
           id?: string
+          identity_attachments?: Json | null
+          identity_guidelines?: string | null
           logo_url?: string | null
           name?: string
           notes?: string | null
@@ -828,7 +834,6 @@ export type Database = {
           recipient_company: string | null
           recipient_email: string
           recipient_name: string
-          share_static_html: string | null
           share_token: string
           status: string
           template_id: string | null
@@ -849,7 +854,6 @@ export type Database = {
           recipient_company?: string | null
           recipient_email: string
           recipient_name: string
-          share_static_html?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
@@ -870,7 +874,6 @@ export type Database = {
           recipient_company?: string | null
           recipient_email?: string
           recipient_name?: string
-          share_static_html?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
@@ -954,24 +957,42 @@ export type Database = {
       }
       task_timers: {
         Row: {
+          client_name_snapshot: string | null
           created_at: string
           id: string
+          paused_at: string | null
+          paused_elapsed_seconds: number
+          project_name_snapshot: string | null
           started_at: string
+          task_description_snapshot: string | null
           task_id: string | null
+          task_title_snapshot: string | null
           user_id: string
         }
         Insert: {
+          client_name_snapshot?: string | null
           created_at?: string
           id?: string
+          paused_at?: string | null
+          paused_elapsed_seconds?: number
+          project_name_snapshot?: string | null
           started_at?: string
+          task_description_snapshot?: string | null
           task_id?: string | null
+          task_title_snapshot?: string | null
           user_id: string
         }
         Update: {
+          client_name_snapshot?: string | null
           created_at?: string
           id?: string
+          paused_at?: string | null
+          paused_elapsed_seconds?: number
+          project_name_snapshot?: string | null
           started_at?: string
+          task_description_snapshot?: string | null
           task_id?: string | null
+          task_title_snapshot?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1323,26 +1344,43 @@ export type Database = {
           total_value: number
         }[]
       }
-      get_proposal_by_token: {
-        Args: { p_token: string }
-        Returns: {
-          created_at: string
-          description: string
-          items: Json
-          proposal_id: string
-          recipient_company: string
-          recipient_email: string
-          recipient_name: string
-          share_static_html: string
-          status: string
-          template_content: string
-          template_id: string
-          title: string
-          total_hours: number
-          total_value: number
-          valid_until: string
-        }[]
-      }
+      get_proposal_by_token:
+        | {
+            Args: { p_token: string }
+            Returns: {
+              created_at: string
+              description: string
+              items: Json
+              proposal_id: string
+              recipient_company: string
+              recipient_email: string
+              recipient_name: string
+              status: string
+              template_content: string
+              title: string
+              total_hours: number
+              total_value: number
+              valid_until: string
+            }[]
+          }
+        | {
+            Args: { p_email?: string; p_token: string }
+            Returns: {
+              created_at: string
+              description: string
+              items: Json
+              proposal_id: string
+              recipient_company: string
+              recipient_email: string
+              recipient_name: string
+              status: string
+              template_content: string
+              title: string
+              total_hours: number
+              total_value: number
+              valid_until: string
+            }[]
+          }
       get_proposal_comments_by_token: {
         Args: { p_token: string }
         Returns: {
@@ -1455,6 +1493,28 @@ export type Database = {
           p_token: string
         }
         Returns: boolean
+      }
+      update_client_company_settings: {
+        Args: {
+          p_client_id: string
+          p_company?: string
+          p_contract_end_date?: string
+          p_contract_start_date?: string
+          p_contract_type?: string
+          p_contracted_hours?: number
+          p_email?: string
+          p_name: string
+          p_phone?: string
+        }
+        Returns: undefined
+      }
+      update_client_identity_settings: {
+        Args: {
+          p_client_id: string
+          p_identity_attachments?: Json
+          p_identity_guidelines?: string
+        }
+        Returns: undefined
       }
       verify_report_password: {
         Args: { p_password: string; p_token: string }
