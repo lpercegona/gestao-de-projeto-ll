@@ -36,6 +36,7 @@ type BillingType = 'unique' | 'monthly';
 
 interface ProposalItem {
   id: string;
+  catalogItemId?: string;
   service: string;
   description: string;
   hours: number;
@@ -56,10 +57,10 @@ interface ProposalRow {
 
 interface ServiceRow {
   id: string;
-  source: 'manual' | 'proposal';
-  proposalId: string;
-  proposalTitle: string;
-  recipientName: string;
+  source: 'manual' | 'proposal' | 'mixed';
+  proposalId?: string;
+  proposalTitle?: string;
+  recipientName?: string;
   service: string;
   description: string;
   hours: number;
@@ -146,26 +147,45 @@ export const Services: React.FC = () => {
   }, []);
 
   const serviceRows = useMemo(() => {
-    const proposalItems = proposals.flatMap((proposal) =>
+    const catalogMap = new Map<string, ServiceRow>();
+
+    manualItems.forEach((item) => {
+      catalogMap.set(item.id, { ...item, source: 'manual' });
+    });
+
+    proposals.forEach((proposal) => {
       proposal.items
         .filter((item) => item.service?.trim() || item.description?.trim())
-        .map((item, index) => ({
-          id: item.id || `${proposal.id}-${index}`,
-          source: 'proposal' as const,
-          proposalId: proposal.id,
-          proposalTitle: proposal.title,
-          recipientName: proposal.recipient_name,
-          service: item.service || 'Sem título',
-          description: item.description || 'Sem descrição',
-          hours: Number(item.hours || 0),
-          pricePerHour: Number(item.pricePerHour || 0),
-          total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
-          imageUrl: item.imageUrl || item.image,
-          billingType: item.billingType || 'unique',
-        })),
-    );
+        .forEach((item, index) => {
+          const catalogId = item.catalogItemId || item.id || `${proposal.id}-${index}`;
+          const existing = catalogMap.get(catalogId);
 
-    return [...manualItems, ...proposalItems];
+          if (existing) {
+            catalogMap.set(catalogId, {
+              ...existing,
+              source: existing.source === 'manual' ? 'mixed' : 'proposal',
+            });
+            return;
+          }
+
+          catalogMap.set(catalogId, {
+            id: catalogId,
+            source: 'proposal',
+            proposalId: proposal.id,
+            proposalTitle: proposal.title,
+            recipientName: proposal.recipient_name,
+            service: item.service || 'Sem título',
+            description: item.description || 'Sem descrição',
+            hours: Number(item.hours || 0),
+            pricePerHour: Number(item.pricePerHour || 0),
+            total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
+            imageUrl: item.imageUrl || item.image,
+            billingType: item.billingType || 'unique',
+          });
+        });
+    });
+
+    return Array.from(catalogMap.values());
   }, [manualItems, proposals]);
 
   const filteredRows = useMemo(() => {
@@ -194,7 +214,7 @@ export const Services: React.FC = () => {
     setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0, imageUrl: '', billingType: 'unique' });
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
     if (!newItem.service.trim()) return;
 
     const item: ServiceRow = {
@@ -213,8 +233,89 @@ export const Services: React.FC = () => {
     };
 
     if (editingItemId) {
-      setManualItems((prev) => prev.map((existingItem) => (existingItem.id === editingItemId ? item : existingItem)));
-      toast.success('Item atualizado com sucesso');
+      const hasManualItem = manualItems.some((existingItem) => existingItem.id === editingItemId);
+
+      if (hasManualItem) {
+        setManualItems((prev) => prev.map((existingItem) => (existingItem.id === editingItemId ? item : existingItem)));
+      } else {
+        setManualItems((prev) => [item, ...prev]);
+      }
+
+      const draftProposalsToUpdate = proposals.filter(
+        (proposal) =>
+          proposal.status === 'draft' &&
+          proposal.items.some((proposalItem) => (proposalItem.catalogItemId || proposalItem.id) === editingItemId),
+      );
+
+      try {
+        await Promise.all(
+          draftProposalsToUpdate.map(async (proposal) => {
+            const updatedItems = proposal.items.map((proposalItem) => {
+              const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
+              if (itemCatalogId !== editingItemId) return proposalItem;
+
+              return {
+                ...proposalItem,
+                catalogItemId: editingItemId,
+                service: item.service,
+                description: item.description,
+                hours: item.hours,
+                pricePerHour: item.pricePerHour,
+                imageUrl: item.imageUrl,
+                billingType: item.billingType,
+              };
+            });
+
+            const totalHours = updatedItems.reduce((sum, currentItem) => sum + Number(currentItem.hours || 0), 0);
+            const totalValue = updatedItems.reduce(
+              (sum, currentItem) => sum + Number(currentItem.hours || 0) * Number(currentItem.pricePerHour || 0),
+              0,
+            );
+
+            const { error } = await supabase
+              .from('proposals')
+              .update({
+                items: updatedItems,
+                total_hours: totalHours,
+                total_value: totalValue,
+              })
+              .eq('id', proposal.id)
+              .eq('status', 'draft');
+
+            if (error) throw error;
+          }),
+        );
+
+        setProposals((prev) =>
+          prev.map((proposal) => {
+            if (proposal.status !== 'draft') return proposal;
+
+            return {
+              ...proposal,
+              items: proposal.items.map((proposalItem) => {
+                const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
+                if (itemCatalogId !== editingItemId) return proposalItem;
+
+                return {
+                  ...proposalItem,
+                  catalogItemId: editingItemId,
+                  service: item.service,
+                  description: item.description,
+                  hours: item.hours,
+                  pricePerHour: item.pricePerHour,
+                  imageUrl: item.imageUrl,
+                  billingType: item.billingType,
+                };
+              }),
+            };
+          }),
+        );
+
+        toast.success('Item atualizado e sincronizado com propostas em rascunho');
+      } catch (error) {
+        console.error('Erro ao atualizar item nas propostas em rascunho:', error);
+        toast.error('Item atualizado localmente, mas houve erro ao sincronizar propostas em rascunho');
+      }
     } else {
       setManualItems((prev) => [item, ...prev]);
       toast.success('Item adicionado com sucesso');
@@ -244,11 +345,6 @@ export const Services: React.FC = () => {
   };
 
   const handleEditItem = (item: ServiceRow) => {
-    if (item.source !== 'manual') {
-      toast.info('Itens vinculados às propostas devem ser alterados na aba de propostas.');
-      return;
-    }
-
     setNewItem({
       service: item.service,
       description: item.description === 'Sem descrição' ? '' : item.description,
@@ -263,7 +359,7 @@ export const Services: React.FC = () => {
 
   const handleDeleteItem = (item: ServiceRow) => {
     if (item.source !== 'manual') {
-      toast.info('Itens vinculados às propostas devem ser removidos na aba de propostas.');
+      toast.info('A exclusão de itens vinculados a propostas ainda deve ser feita na proposta.');
       return;
     }
 
