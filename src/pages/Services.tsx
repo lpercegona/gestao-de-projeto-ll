@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
-import { Layers3, Search, Plus } from 'lucide-react';
+import { Layers3, Search, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface ProposalItem {
   id: string;
@@ -36,6 +37,8 @@ interface ProposalRow {
 }
 
 interface ServiceRow {
+  id: string;
+  source: 'manual' | 'proposal';
   proposalId: string;
   proposalTitle: string;
   recipientName: string;
@@ -45,6 +48,8 @@ interface ServiceRow {
   pricePerHour: number;
   total: number;
 }
+
+const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
 
 type ServicesTab = 'services' | 'proposals' | 'contracts';
 
@@ -63,6 +68,7 @@ export const Services: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [manualItems, setManualItems] = useState<ServiceRow[]>([]);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({
     service: '',
     description: '',
@@ -71,6 +77,24 @@ export const Services: React.FC = () => {
   });
 
   const activeTab = tabByPath[location.pathname] || 'services';
+
+  useEffect(() => {
+    const storedItems = localStorage.getItem(MANUAL_ITEMS_STORAGE_KEY);
+
+    if (!storedItems) return;
+
+    try {
+      const parsedItems = JSON.parse(storedItems) as ServiceRow[];
+      setManualItems(Array.isArray(parsedItems) ? parsedItems : []);
+    } catch (error) {
+      console.error('Erro ao carregar itens manuais de serviço:', error);
+      localStorage.removeItem(MANUAL_ITEMS_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(MANUAL_ITEMS_STORAGE_KEY, JSON.stringify(manualItems));
+  }, [manualItems]);
 
   useEffect(() => {
     const fetchProposals = async () => {
@@ -103,7 +127,9 @@ export const Services: React.FC = () => {
     const proposalItems = proposals.flatMap((proposal) =>
       proposal.items
         .filter((item) => item.service?.trim() || item.description?.trim())
-        .map((item) => ({
+        .map((item, index) => ({
+          id: item.id || `${proposal.id}-${index}`,
+          source: 'proposal' as const,
           proposalId: proposal.id,
           proposalTitle: proposal.title,
           recipientName: proposal.recipient_name,
@@ -135,6 +161,8 @@ export const Services: React.FC = () => {
   };
 
   const handleAddItem = () => {
+    setEditingItemId(null);
+    resetNewItem();
     setCreateItemOpen(true);
   };
 
@@ -146,7 +174,9 @@ export const Services: React.FC = () => {
     if (!newItem.service.trim()) return;
 
     const item: ServiceRow = {
-      proposalId: crypto.randomUUID(),
+      id: editingItemId || crypto.randomUUID(),
+      source: 'manual',
+      proposalId: 'manual',
       proposalTitle: 'Item adicionado manualmente',
       recipientName: 'N/A',
       service: newItem.service.trim(),
@@ -156,9 +186,43 @@ export const Services: React.FC = () => {
       total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
     };
 
-    setManualItems((prev) => [item, ...prev]);
+    if (editingItemId) {
+      setManualItems((prev) => prev.map((existingItem) => (existingItem.id === editingItemId ? item : existingItem)));
+      toast.success('Item atualizado com sucesso');
+    } else {
+      setManualItems((prev) => [item, ...prev]);
+      toast.success('Item adicionado com sucesso');
+    }
+
     setCreateItemOpen(false);
+    setEditingItemId(null);
     resetNewItem();
+  };
+
+  const handleEditItem = (item: ServiceRow) => {
+    if (item.source !== 'manual') {
+      toast.info('Itens vinculados às propostas devem ser alterados na aba de propostas.');
+      return;
+    }
+
+    setNewItem({
+      service: item.service,
+      description: item.description === 'Sem descrição' ? '' : item.description,
+      hours: item.hours,
+      pricePerHour: item.pricePerHour,
+    });
+    setEditingItemId(item.id);
+    setCreateItemOpen(true);
+  };
+
+  const handleDeleteItem = (item: ServiceRow) => {
+    if (item.source !== 'manual') {
+      toast.info('Itens vinculados às propostas devem ser removidos na aba de propostas.');
+      return;
+    }
+
+    setManualItems((prev) => prev.filter((existingItem) => existingItem.id !== item.id));
+    toast.success('Item removido com sucesso');
   };
 
   return (
@@ -208,13 +272,21 @@ export const Services: React.FC = () => {
                 <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p>
               ) : (
                 <div className="space-y-3">
-                  {filteredRows.map((row, index) => (
-                    <div key={`${row.proposalId}-${row.service}-${index}`} className="rounded-lg border p-4">
+                  {filteredRows.map((row) => (
+                    <div key={row.id} className="rounded-lg border p-4">
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                         <h3 className="font-semibold">{row.service}</h3>
-                        <span className="text-sm text-muted-foreground">
-                          {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </span>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditItem(row)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(row)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <p className="text-sm text-muted-foreground">{row.description}</p>
                       <div className="mt-2 text-xs text-muted-foreground">
@@ -293,7 +365,7 @@ export const Services: React.FC = () => {
               Cancelar
             </Button>
             <Button onClick={handleSaveItem} disabled={!newItem.service.trim()}>
-              Adicionar item
+              {editingItemId ? 'Salvar alterações' : 'Adicionar item'}
             </Button>
           </DialogFooter>
         </DialogContent>
