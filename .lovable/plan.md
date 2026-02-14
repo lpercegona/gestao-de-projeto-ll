@@ -1,57 +1,112 @@
 
 
-# Plano: Corrigir fluxo de criacao de proposta e link compartilhado
+# Revisao Completa: Erros e Vulnerabilidades de Seguranca
 
-## Resumo
+## Erros Funcionais Encontrados
 
-Dois problemas precisam ser resolvidos: um erro de build que impede a compilacao e a falta de conteudo de template na visualizacao publica de propostas.
+### 1. Coluna `share_static_html` nao existe no banco (CRITICO)
 
-## Problema 1 - Erro de build em Services.tsx
+O codigo em `Proposals.tsx` (linha 565) tenta gravar `share_static_html` na tabela `proposals`, mas essa coluna nao existe. O fallback `isMissingShareStaticHtmlColumnError` mascara o erro silenciosamente. Em `PublicProposal.tsx`, o campo `share_static_html` e referenciado mas nunca tera valor.
 
-Na pagina de servicos, ao atualizar itens de propostas em rascunho, o campo `items` recebe um array tipado como `ProposalItem[]`, que nao e compativel com o tipo `Json` esperado pelo banco de dados.
+**Correcao:** Remover toda referencia a `share_static_html` do codigo (Proposals.tsx e PublicProposal.tsx). A renderizacao publica ja funciona via `template_content` retornado pela RPC. Alternativamente, criar a coluna se o recurso for desejado.
 
-### Correcao
+### 2. Tabela `task_timers` - colunas ausentes (CRITICO)
 
-Adicionar `import type { Json } from '@/integrations/supabase/types'` e aplicar cast `as unknown as Json` na linha 278 de `Services.tsx`.
+O codigo espera colunas `paused_at`, `paused_elapsed_seconds`, `task_title_snapshot`, `task_description_snapshot`, `project_name_snapshot`, `client_name_snapshot`, mas a tabela so possui `id`, `task_id`, `user_id`, `started_at`, `created_at`. Isso faz com que pausar/retomar timers falhe e snapshots nunca sejam salvos.
 
-## Problema 2 - Template nao aparece no link publico
-
-Atualmente, a funcao RPC `get_proposal_by_token` retorna apenas os campos da tabela `proposals`, sem fazer JOIN com `proposal_templates`. Isso significa que o campo `template_content` nunca chega ao frontend na pagina publica, e o conteudo do template (com variaveis dinamicas como `{{nome_cliente}}`, `{{valor_total}}`, etc.) nunca e renderizado.
-
-O sistema possui um mecanismo de fallback (`share_static_html`) que gera um HTML estatico no momento do envio, mas isso depende de uma coluna que pode nao existir no banco. Alem disso, o HTML estatico nao permite interacao dinamica nem atualizacoes posteriores.
-
-### Correcao
-
-Atualizar a funcao RPC `get_proposal_by_token` para:
-- Fazer LEFT JOIN com `proposal_templates` usando o campo `template_id` da proposta
-- Retornar o campo `template_content` (vindo de `proposal_templates.description`) na resposta
-
-Isso permitira que a pagina publica renderize o template com as variaveis preenchidas dinamicamente.
-
-## Secao Tecnica
-
-### Arquivo: src/pages/Services.tsx
-
-- Adicionar import de `Json` do supabase types
-- Linha 278: alterar `items: updatedItems` para `items: updatedItems as unknown as Json`
-
-### Migracao SQL: Atualizar RPC get_proposal_by_token
-
+**Correcao:** Criar migracao SQL adicionando as colunas faltantes:
 ```text
-CREATE OR REPLACE FUNCTION public.get_proposal_by_token(p_token text)
-  RETURNS TABLE(
-    proposal_id uuid, title text, description text,
-    recipient_name text, recipient_email text, recipient_company text,
-    items jsonb, total_hours numeric, total_value numeric,
-    status text, valid_until date, created_at timestamptz,
-    template_content text
-  )
-  -- Adiciona LEFT JOIN com proposal_templates
-  -- Retorna pt.description AS template_content
-  -- Usa aliases explicitos (p.) para evitar ambiguidade
+ALTER TABLE task_timers
+  ADD COLUMN paused_at timestamptz,
+  ADD COLUMN paused_elapsed_seconds integer NOT NULL DEFAULT 0,
+  ADD COLUMN task_title_snapshot text,
+  ADD COLUMN task_description_snapshot text,
+  ADD COLUMN project_name_snapshot text,
+  ADD COLUMN client_name_snapshot text;
 ```
 
-### Arquivo: src/pages/PublicProposal.tsx
+### 3. RPCs inexistentes chamadas pelo codigo (CRITICO)
 
-Nenhuma alteracao necessaria - ja possui o campo `template_content` opcional na interface `ProposalData` e logica de renderizacao condicional.
+- `update_client_company_settings` - chamada em ProfileEditTab.tsx (linha 141)
+- `update_client_identity_settings` - chamada em ProfileEditTab.tsx (linhas 244, 267)
+
+Essas funcoes nao existem no banco, causando erro ao salvar configuracoes de empresa e identidade visual no perfil do cliente.
+
+**Correcao:** Criar as RPCs ou substituir por queries diretas com RLS adequada.
+
+### 4. Colunas `identity_guidelines` e `identity_attachments` ausentes na tabela `clients`
+
+O ProfileEditTab.tsx referencia esses campos, mas eles nao existem na tabela `clients`.
+
+**Correcao:** Adicionar as colunas na migracao ou remover a funcionalidade do frontend.
+
+### 5. Bucket de storage `client-identity-files` nao existe
+
+O ProfileEditTab.tsx faz upload para um bucket que nao foi criado. Buckets existentes: `avatars`, `client-logos`.
+
+**Correcao:** Criar o bucket ou remover a funcionalidade.
+
+### 6. Rota duplicada no App.tsx (MENOR)
+
+Linhas 130-139: a rota `/calendar` esta duplicada, ocupando espaco desnecessario.
+
+**Correcao:** Remover a rota duplicada (linhas 135-139).
+
+## Vulnerabilidades de Seguranca
+
+### 7. XSS em paginas publicas (CRITICO)
+
+Em `PublicProposal.tsx`:
+- Linha 435: `dangerouslySetInnerHTML={{ __html: proposal.share_static_html }}` - sem sanitizacao
+- Linha 449: `dangerouslySetInnerHTML={{ __html: proposal.description }}` - sem sanitizacao
+- Linha 499: `dangerouslySetInnerHTML={{ __html: renderedTemplateContent }}` - sem sanitizacao
+
+Conteudo vindo do banco (description, template_content) e inserido diretamente no DOM sem DOMPurify. Um admin malicioso ou comprometimento do banco permitiria injecao de scripts em paginas publicas acessadas por clientes.
+
+Em `PublicContract.tsx`:
+- Linha 329: `processContent(contract.content)` e renderizado sem sanitizacao (mas via texto, nao innerHTML - menor risco).
+
+**Correcao:** Importar DOMPurify e sanitizar todo HTML antes de usar `dangerouslySetInnerHTML` nas paginas publicas.
+
+### 8. Validacao de email do cliente e feita no frontend (MEDIO)
+
+Em `PublicProposal.tsx` (linha 310), a verificacao de acesso compara o email digitado com `proposal.recipient_email` localmente. Como os dados da proposta ja foram carregados ANTES da validacao (fetchProposal roda no useEffect), um usuario pode inspecionar o DOM/rede e ver todos os dados sem validar o email.
+
+**Correcao:** Mover a validacao para o backend - a RPC `get_proposal_by_token` deveria aceitar um parametro `p_email` e so retornar dados se o email corresponder.
+
+### 9. Rate limiting apenas no frontend (MEDIO)
+
+A funcao `checkRateLimit` em Login.tsx (linha 151) usa `localStorage`, que pode ser facilmente contornado limpando o storage ou usando outro navegador.
+
+**Correcao:** A RPC `check_client_email` ja implementa `pg_sleep` para mitigar timing attacks, o que e adequado server-side. O rate limit client-side e apenas uma camada adicional, nao critica.
+
+### 10. Leaked Password Protection desabilitada (MEDIO)
+
+A verificacao de seguranca indicou que a protecao contra senhas vazadas esta desabilitada.
+
+**Correcao:** Habilitar nas configuracoes de autenticacao.
+
+### 11. Senhas de report_shares potencialmente expostas (MENOR)
+
+Clientes com acesso podem ver a coluna `share_password` da tabela `report_shares`. Conforme verificado, as senhas sao hasheadas com bcrypt via `hash_report_password`, e a verificacao usa `verify_report_password` (SECURITY DEFINER). Porem, o hash em si e acessivel via SELECT.
+
+**Correcao:** Considerar restringir SELECT na coluna `share_password` usando uma view.
+
+## Secao Tecnica - Resumo de Arquivos a Modificar
+
+```text
+ERROS FUNCIONAIS:
+1. src/pages/Proposals.tsx - Remover share_static_html (linhas 113, 207-249, 271-299, 558-600)
+2. src/pages/PublicProposal.tsx - Remover share_static_html (linhas 71, 115, 179, 430-438)
+3. Migracao SQL - Adicionar colunas em task_timers (6 colunas)
+4. Migracao SQL - Adicionar colunas identity_guidelines/identity_attachments em clients
+5. Migracao SQL - Criar RPCs update_client_company_settings e update_client_identity_settings
+6. Migracao SQL ou config - Criar bucket client-identity-files
+7. src/App.tsx - Remover rota duplicada /calendar (linhas 135-139)
+
+SEGURANCA:
+8. src/pages/PublicProposal.tsx - Sanitizar HTML com DOMPurify
+9. Migrar validacao de email da proposta para o backend (RPC)
+10. Habilitar leaked password protection
+```
 
