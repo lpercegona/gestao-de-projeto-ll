@@ -206,6 +206,33 @@ export const Proposals: React.FC = () => {
     return { totalHours, totalValue };
   };
 
+  const buildServicesList = (items: ProposalItem[]) => {
+    const validItems = items.filter(item => item.service.trim());
+
+    if (validItems.length === 0) {
+      return '';
+    }
+
+    const listItems = validItems
+      .map(item => `<li>${item.service}${item.description ? `: ${item.description}` : ''}</li>`)
+      .join('');
+
+    return `<ul>${listItems}</ul>`;
+  };
+
+  const applyTemplateVariables = (templateContent: string, currentFormData: typeof formData) => {
+    const { totalValue } = calculateTotals(currentFormData.items);
+
+    return templateContent
+      .replace(/\{\{nome_cliente\}\}/g, currentFormData.recipientName || '')
+      .replace(/\{\{email_cliente\}\}/g, currentFormData.recipientEmail || '')
+      .replace(/\{\{empresa_cliente\}\}/g, currentFormData.recipientCompany || '')
+      .replace(/\{\{data_envio\}\}/g, format(new Date(), 'dd/MM/yyyy'))
+      .replace(/\{\{valor_total\}\}/g, totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
+      .replace(/\{\{descricao_proposta\}\}/g, currentFormData.description || '')
+      .replace(/\{\{listagem_servicos\}\}/g, buildServicesList(currentFormData.items));
+  };
+
   // Handle proposal save
   const handleSaveProposal = async () => {
     if (!formData.recipientName || !formData.recipientEmail || !formData.title) {
@@ -414,10 +441,21 @@ export const Proposals: React.FC = () => {
 
   // Apply template
   const handleApplyTemplate = (template: ProposalTemplate) => {
-    setFormData(prev => ({
-      ...prev,
-      items: template.items.map(item => ({ ...item, id: crypto.randomUUID() })),
-    }));
+    setFormData(prev => {
+      const templateItems = template.items.map(item => ({ ...item, id: crypto.randomUUID() }));
+      const items = templateItems.length > 0 ? templateItems : prev.items;
+
+      return {
+        ...prev,
+        items,
+        description: template.description
+          ? applyTemplateVariables(template.description, {
+              ...prev,
+              items,
+            })
+          : prev.description,
+      };
+    });
     toast.success('Template aplicado!');
   };
 
@@ -1113,6 +1151,7 @@ export const Proposals: React.FC = () => {
                           <li><code>{'{{empresa_cliente}}'}</code> - Empresa do cliente</li>
                           <li><code>{'{{data_envio}}'}</code> - Data de envio</li>
                           <li><code>{'{{valor_total}}'}</code> - Valor total da proposta</li>
+                          <li><code>{'{{descricao_proposta}}'}</code> - Texto preenchido no campo descrição da proposta</li>
                           <li><code>{'{{listagem_servicos}}'}</code> - Lista dos serviços selecionados na criação da proposta</li>
                         </ul>
                       </div>
