@@ -62,10 +62,18 @@ import {
   LayoutTemplate,
   FileSignature,
   User,
+  ArrowLeft,
+  Info,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface ProposalItem {
   id: string;
@@ -121,7 +129,7 @@ export const Proposals: React.FC = () => {
   
   // Dialog states
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
   const [viewCommentsDialogOpen, setViewCommentsDialogOpen] = useState(false);
@@ -152,7 +160,7 @@ export const Proposals: React.FC = () => {
   // Template form
   const [templateFormData, setTemplateFormData] = useState({
     name: '',
-    description: '',
+    content: '',
   });
   
   const [saving, setSaving] = useState(false);
@@ -260,7 +268,7 @@ export const Proposals: React.FC = () => {
     try {
       const templateData = {
         name: templateFormData.name,
-        description: templateFormData.description || null,
+        description: templateFormData.content || null,
         items: [],
       };
 
@@ -279,7 +287,7 @@ export const Proposals: React.FC = () => {
         toast.success('Template criado!');
       }
 
-      setTemplateDialogOpen(false);
+      setTemplateEditorOpen(false);
       resetTemplateForm();
       fetchData();
     } catch (error) {
@@ -454,7 +462,7 @@ export const Proposals: React.FC = () => {
     setEditingTemplate(null);
     setTemplateFormData({
       name: '',
-      description: '',
+      content: '',
     });
   };
 
@@ -479,9 +487,19 @@ export const Proposals: React.FC = () => {
     setEditingTemplate(template);
     setTemplateFormData({
       name: template.name,
-      description: template.description || '',
+      content: template.description || '',
     });
-    setTemplateDialogOpen(true);
+    setTemplateEditorOpen(true);
+  };
+
+  const closeTemplateEditor = () => {
+    setTemplateEditorOpen(false);
+    resetTemplateForm();
+  };
+
+  const getTemplatePreview = (content: string | null) => {
+    if (!content) return '';
+    return content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
 
   // Status badge
@@ -546,7 +564,8 @@ export const Proposals: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative overflow-hidden">
+      <div className={`space-y-6 transition-transform duration-300 ease-out ${templateEditorOpen ? '-translate-x-full' : 'translate-x-0'}`}>
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -762,7 +781,7 @@ export const Proposals: React.FC = () => {
         {/* Templates Tab */}
         <TabsContent value="templates" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => { resetTemplateForm(); setTemplateDialogOpen(true); }}>
+            <Button onClick={() => { resetTemplateForm(); setTemplateEditorOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Novo Template</span>
             </Button>
@@ -807,7 +826,7 @@ export const Proposals: React.FC = () => {
                   <CardHeader className="pb-2 pr-10">
                     <CardTitle className="text-lg">{template.name}</CardTitle>
                     {template.description && (
-                      <CardDescription>{template.description}</CardDescription>
+                      <CardDescription>{getTemplatePreview(template.description).slice(0, 120) || 'Template com conteúdo avançado'}</CardDescription>
                     )}
                   </CardHeader>
                 </Card>
@@ -816,6 +835,8 @@ export const Proposals: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      </div>
 
       {/* Proposal Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
@@ -1038,50 +1059,78 @@ export const Proposals: React.FC = () => {
       </Dialog>
 
       {/* Template Dialog */}
-      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingTemplate ? 'Editar Template' : 'Novo Template'}
-            </DialogTitle>
-            <DialogDescription>
-              Crie um modelo reutilizável para suas propostas
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label>Nome do Template *</Label>
-              <Input
-                value={templateFormData.name}
-                onChange={(e) => setTemplateFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Pacote Básico de Design"
-              />
+      <div className="fixed inset-0 z-50 pointer-events-none" aria-hidden={!templateEditorOpen}>
+        <div
+          className={`h-full w-full bg-background transition-transform duration-300 ease-out pointer-events-auto ${templateEditorOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        >
+          <div className="h-full flex flex-col">
+            <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="max-w-5xl mx-auto px-4 py-3 sm:px-6">
+                <div className="flex items-center">
+                  <Button variant="ghost" onClick={closeTemplateEditor}>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Voltar
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={templateFormData.description}
-                onChange={(e) => setTemplateFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Breve descrição do template..."
-                rows={2}
-              />
-            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 space-y-5">
+                <div className="space-y-2">
+                  <Label>Nome do Template *</Label>
+                  <Input
+                    value={templateFormData.name}
+                    onChange={(e) => setTemplateFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ex: Proposta de Desenvolvimento Mensal"
+                  />
+                </div>
 
+                <div className="space-y-2">
+                  <Label>Conteúdo do Template</Label>
+                  <WysiwygEditor
+                    value={templateFormData.content}
+                    onChange={(value) => setTemplateFormData(prev => ({ ...prev, content: value }))}
+                    minHeight="55vh"
+                    placeholder="Escreva o conteúdo da proposta, termos e próximos passos..."
+                  />
+                </div>
+
+                <div className="flex justify-start">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="gap-2">
+                        <Info className="w-4 h-4" />
+                        Consultar campos dinâmicos
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80" align="start">
+                      <div className="space-y-2 text-sm">
+                        <p className="font-medium">Campos disponíveis</p>
+                        <ul className="space-y-1 text-muted-foreground">
+                          <li><code>{'{{nome_cliente}}'}</code> - Nome do cliente</li>
+                          <li><code>{'{{email_cliente}}'}</code> - Email do cliente</li>
+                          <li><code>{'{{empresa_cliente}}'}</code> - Empresa do cliente</li>
+                          <li><code>{'{{data_envio}}'}</code> - Data de envio</li>
+                          <li><code>{'{{valor_total}}'}</code> - Valor total da proposta</li>
+                          <li><code>{'{{listagem_servicos}}'}</code> - Lista dos serviços selecionados na criação da proposta</li>
+                        </ul>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button onClick={handleSaveTemplate} disabled={saving}>
+                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {editingTemplate ? 'Salvar' : 'Criar Template'}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveTemplate} disabled={saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingTemplate ? 'Salvar' : 'Criar Template'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
 
       {/* Delete Proposal Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
