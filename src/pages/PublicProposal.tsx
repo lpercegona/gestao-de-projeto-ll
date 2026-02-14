@@ -44,6 +44,15 @@ interface ProposalItem {
   pricePerHour: number;
 }
 
+interface RawProposalItem {
+  id?: string;
+  service?: string | null;
+  description?: string | null;
+  hours?: number | string | null;
+  pricePerHour?: number | string | null;
+  price_per_hour?: number | string | null;
+}
+
 interface ProposalData {
   proposal_id: string;
   template_id: string | null;
@@ -60,6 +69,41 @@ interface ProposalData {
   valid_until: string | null;
   created_at: string;
 }
+
+const parseNumericValue = (value: unknown): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value
+      .trim()
+      .replace(/\s/g, '')
+      .replace(/R\$/gi, '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+};
+
+const normalizeProposalItems = (items: unknown): ProposalItem[] => {
+  if (!Array.isArray(items)) return [];
+
+  return items.map((rawItem, index) => {
+    const item = rawItem as RawProposalItem;
+    return {
+      id: item.id || `item-${index}`,
+      service: item.service || '',
+      description: item.description || '',
+      hours: parseNumericValue(item.hours),
+      pricePerHour: parseNumericValue(item.pricePerHour ?? item.price_per_hour),
+    };
+  });
+};
 
 interface Comment {
   comment_id: string;
@@ -87,6 +131,11 @@ export const PublicProposal: React.FC = () => {
   // Comment dialog
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
+
+  // Access validation
+  const [accessEmail, setAccessEmail] = useState('');
+  const [accessValidated, setAccessValidated] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   const buildServicesList = (items: ProposalItem[]) => {
     const validItems = items.filter((item) => item.service?.trim());
@@ -125,6 +174,9 @@ export const PublicProposal: React.FC = () => {
   };
 
   useEffect(() => {
+    setAccessValidated(false);
+    setAccessEmail('');
+    setAccessError(null);
     fetchProposal();
   }, [token]);
 
@@ -151,7 +203,9 @@ export const PublicProposal: React.FC = () => {
       const rawProposal = proposalData[0];
       setProposal({
         ...rawProposal,
-        items: (rawProposal.items as unknown as ProposalItem[]) || [],
+        total_hours: parseNumericValue(rawProposal.total_hours),
+        total_value: parseNumericValue(rawProposal.total_value),
+        items: normalizeProposalItems(rawProposal.items),
       });
 
       // Fetch comments
@@ -233,6 +287,31 @@ export const PublicProposal: React.FC = () => {
     setResponseDialogOpen(true);
   };
 
+  const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+  const handleAccessValidation = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!proposal) return;
+
+    const typedEmail = normalizeEmail(accessEmail);
+    const expectedEmail = normalizeEmail(proposal.recipient_email || '');
+
+    if (!typedEmail) {
+      setAccessError('Informe o email para acessar a proposta.');
+      return;
+    }
+
+    if (typedEmail !== expectedEmail) {
+      setAccessValidated(false);
+      setAccessError('Email inválido para este link de proposta.');
+      return;
+    }
+
+    setAccessError(null);
+    setAccessValidated(true);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
@@ -273,6 +352,48 @@ export const PublicProposal: React.FC = () => {
             <p className="text-muted-foreground">
               Verifique se o link está correto e tente novamente.
             </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!accessValidated) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="space-y-2 text-center">
+            <CardTitle>Validar acesso à proposta</CardTitle>
+            <CardDescription>
+              Para visualizar os detalhes, informe o email do destinatário desta proposta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAccessValidation} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="accessEmail">Email do cliente</Label>
+                <Input
+                  id="accessEmail"
+                  type="email"
+                  value={accessEmail}
+                  onChange={(event) => {
+                    setAccessEmail(event.target.value);
+                    if (accessError) setAccessError(null);
+                  }}
+                  placeholder="cliente@empresa.com"
+                  autoComplete="email"
+                  required
+                />
+              </div>
+
+              {accessError && (
+                <p className="text-sm text-destructive">{accessError}</p>
+              )}
+
+              <Button type="submit" className="w-full">
+                Acessar proposta
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
