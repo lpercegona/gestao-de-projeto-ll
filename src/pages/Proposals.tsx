@@ -508,6 +508,21 @@ export const Proposals: React.FC = () => {
         .from('proposals')
         .update({ status: 'sent', share_static_html: shareStaticHtml })
         .eq('id', proposal.id);
+
+      if (error?.code === '42703') {
+        // Fallback for environments where migration with share_static_html is not applied yet.
+        const { error: fallbackError } = await supabase
+          .from('proposals')
+          .update({ status: 'sent' })
+          .eq('id', proposal.id);
+
+        if (fallbackError) throw fallbackError;
+        toast.success('Proposta enviada!');
+        toast.warning('Compartilhamento estático indisponível até atualizar o banco de dados.');
+        fetchData();
+        return;
+      }
+
       if (error) throw error;
       
       toast.success('Proposta enviada e página de compartilhamento liberada!');
