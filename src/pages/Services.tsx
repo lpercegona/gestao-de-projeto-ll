@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import type { Json } from '@/integrations/supabase/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -275,7 +276,7 @@ export const Services: React.FC = () => {
             const { error } = await supabase
               .from('proposals')
               .update({
-                items: updatedItems,
+                items: updatedItems as unknown as Json,
                 total_hours: totalHours,
                 total_value: totalValue,
               })
