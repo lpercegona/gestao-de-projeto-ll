@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -64,6 +63,7 @@ import {
   User,
   ArrowLeft,
   Info,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -145,11 +145,13 @@ export const Proposals: React.FC = () => {
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
   const [viewingCommentsFor, setViewingCommentsFor] = useState<Proposal | null>(null);
   const [proposalToConvert, setProposalToConvert] = useState<Proposal | null>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  type ProposalComment = { id: string; author_name: string | null; content: string; created_at: string }
+  const [comments, setComments] = useState<ProposalComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   
   // Proposal form
   const [formData, setFormData] = useState({
+    templateId: '',
     recipientName: '',
     recipientEmail: '',
     recipientCompany: '',
@@ -224,32 +226,7 @@ export const Proposals: React.FC = () => {
     return { totalHours, totalValue };
   };
 
-  const buildServicesList = (items: ProposalItem[]) => {
-    const validItems = items.filter(item => item.service.trim());
-
-    if (validItems.length === 0) {
-      return '';
-    }
-
-    const listItems = validItems
-      .map(item => `<li>${item.service}${item.description ? `: ${item.description}` : ''}</li>`)
-      .join('');
-
-    return `<ul>${listItems}</ul>`;
-  };
-
-  const applyTemplateVariables = (templateContent: string, currentFormData: typeof formData) => {
-    const { totalValue } = calculateTotals(currentFormData.items);
-
-    return templateContent
-      .replace(/\{\{nome_cliente\}\}/g, currentFormData.recipientName || '')
-      .replace(/\{\{email_cliente\}\}/g, currentFormData.recipientEmail || '')
-      .replace(/\{\{empresa_cliente\}\}/g, currentFormData.recipientCompany || '')
-      .replace(/\{\{data_envio\}\}/g, format(new Date(), 'dd/MM/yyyy'))
-      .replace(/\{\{valor_total\}\}/g, totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
-      .replace(/\{\{descricao_proposta\}\}/g, currentFormData.description || '')
-      .replace(/\{\{listagem_servicos\}\}/g, buildServicesList(currentFormData.items));
-  };
+  const buildProposalLink = (shareToken: string) => `${window.location.origin}/proposal/${shareToken}`;
 
   // Handle proposal save
   const handleSaveProposal = async () => {
@@ -263,13 +240,14 @@ export const Proposals: React.FC = () => {
       const { totalHours, totalValue } = calculateTotals(formData.items);
       
       const proposalData = {
+        template_id: formData.templateId || null,
         recipient_name: formData.recipientName,
         recipient_email: formData.recipientEmail,
         recipient_company: formData.recipientCompany || null,
         title: formData.title,
         description: formData.description || null,
         valid_until: formData.validUntil || null,
-        items: formData.items as unknown as any,
+        items: formData.items as unknown as Record<string, unknown>[],
         total_hours: totalHours,
         total_value: totalValue,
         created_by: user?.id,
@@ -458,23 +436,17 @@ export const Proposals: React.FC = () => {
   };
 
   // Apply template
-  const handleApplyTemplate = (template: ProposalTemplate) => {
-    setFormData(prev => {
-      const templateItems = template.items.map(item => ({ ...item, id: crypto.randomUUID() }));
-      const items = templateItems.length > 0 ? templateItems : prev.items;
+  const handleApplyTemplate = (templateId: string) => {
+    const template = templates.find((item) => item.id === templateId);
 
-      return {
-        ...prev,
-        items,
-        description: template.description
-          ? applyTemplateVariables(template.description, {
-              ...prev,
-              items,
-            })
-          : prev.description,
-      };
-    });
-    toast.success('Template aplicado!');
+    setFormData((prev) => ({
+      ...prev,
+      templateId,
+    }));
+
+    if (template) {
+      toast.success(`Template "${template.name}" vinculado à proposta.`);
+    }
   };
 
   const serviceCatalogItems = useMemo(() => {
@@ -545,6 +517,7 @@ export const Proposals: React.FC = () => {
   const resetProposalForm = () => {
     setEditingProposal(null);
     setFormData({
+      templateId: '',
       recipientName: '',
       recipientEmail: '',
       recipientCompany: '',
@@ -572,6 +545,7 @@ export const Proposals: React.FC = () => {
       recipientName: proposal.recipient_name,
       recipientEmail: proposal.recipient_email,
       recipientCompany: proposal.recipient_company || '',
+      templateId: proposal.template_id || '',
       title: proposal.title,
       description: proposal.description || '',
       validUntil: proposal.valid_until || '',
@@ -797,6 +771,15 @@ export const Proposals: React.FC = () => {
                         <p className="text-xs text-muted-foreground">
                           Criada em {format(parseISO(proposal.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </p>
+                        <a
+                          href={buildProposalLink(proposal.share_token)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <LinkIcon className="w-3 h-3" />
+                          {buildProposalLink(proposal.share_token)}
+                        </a>
                       </div>
                       
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -1027,12 +1010,12 @@ export const Proposals: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
+              <Label>Descrição da Proposta (WYSIWYG)</Label>
+              <WysiwygEditor
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Descrição geral da proposta..."
-                rows={3}
+                onChange={(value) => setFormData((prev) => ({ ...prev, description: value }))}
+                placeholder="Escreva a descrição própria desta proposta..."
+                minHeight="180px"
               />
             </div>
 
@@ -1040,14 +1023,19 @@ export const Proposals: React.FC = () => {
             {templates.length > 0 && (
               <div className="space-y-2">
                 <Label>Aplicar Template</Label>
-                <Select onValueChange={(id) => {
-                  const template = templates.find(t => t.id === id);
-                  if (template) handleApplyTemplate(template);
+                <Select value={formData.templateId || 'none'} onValueChange={(id) => {
+                  if (id === 'none') {
+                    setFormData((prev) => ({ ...prev, templateId: '' }));
+                    return;
+                  }
+
+                  handleApplyTemplate(id);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um template..." />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name}

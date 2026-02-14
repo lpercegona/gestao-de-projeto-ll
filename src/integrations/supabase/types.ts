@@ -1301,17 +1301,19 @@ export type Database = {
         Args: { p_token: string }
         Returns: {
           created_at: string
-          description: string
+          description: string | null
           items: Json
           proposal_id: string
-          recipient_company: string
+          recipient_company: string | null
           recipient_email: string
           recipient_name: string
           status: string
+          template_content: string | null
+          template_id: string | null
           title: string
           total_hours: number
           total_value: number
-          valid_until: string
+          valid_until: string | null
         }[]
       }
       get_proposal_comments_by_token: {
