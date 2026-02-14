@@ -252,7 +252,7 @@ export const CalendarPage: React.FC = () => {
               </CardTitle>
               {isClient && (
                 <Button
-                  variant="primary"
+                  variant="default"
                   size="icon"
                   onClick={() => setShowRequestForm(true)}
                 >

@@ -348,7 +348,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       contract_start_date: (newClient as any).contract_start_date || null,
       contract_end_date: (newClient as any).contract_end_date || null,
       contract_months: (newClient as any).contract_months || 1,
-    } as Client;
+    } as unknown as Client;
 
     // Update local state immediately
     setData(prev => ({
@@ -377,7 +377,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       contract_start_date: (updated as any).contract_start_date || null,
       contract_end_date: (updated as any).contract_end_date || null,
       contract_months: (updated as any).contract_months || 1,
-    } as Client;
+    } as unknown as Client;
 
     // Update local state immediately
     setData(prev => ({

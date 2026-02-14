@@ -55,8 +55,8 @@ interface RawProposalItem {
 
 interface ProposalData {
   proposal_id: string;
-  template_id: string | null;
-  template_content: string | null;
+  template_id?: string | null;
+  template_content?: string | null;
   title: string;
   description: string | null;
   recipient_name: string;

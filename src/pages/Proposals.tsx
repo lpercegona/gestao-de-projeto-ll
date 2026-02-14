@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
@@ -288,7 +289,7 @@ export const Proposals: React.FC = () => {
         title: formData.title,
         description: formData.description || null,
         valid_until: formData.validUntil || null,
-        items: formData.items as unknown as Record<string, unknown>[],
+        items: formData.items as unknown as Json,
         total_hours: totalHours,
         total_value: totalValue,
         created_by: user?.id,
