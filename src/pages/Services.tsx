@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -275,7 +276,7 @@ export const Services: React.FC = () => {
             const { error } = await supabase
               .from('proposals')
               .update({
-                items: updatedItems,
+                items: updatedItems as unknown as Json,
                 total_hours: totalHours,
                 total_value: totalValue,
               })
