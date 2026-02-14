@@ -248,6 +248,47 @@ const buildProposalShareStaticHtml = (proposal: Proposal, templateContent: strin
   `;
 };
 
+interface SupabaseLikeError {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+}
+
+const serializeSupabaseError = (error: unknown): SupabaseLikeError => {
+  if (!error || typeof error !== 'object') return {};
+
+  const candidate = error as Record<string, unknown>;
+
+  return {
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    message: typeof candidate.message === 'string' ? candidate.message : undefined,
+    details: typeof candidate.details === 'string' ? candidate.details : undefined,
+    hint: typeof candidate.hint === 'string' ? candidate.hint : undefined,
+  };
+};
+
+const isMissingShareStaticHtmlColumnError = (error: unknown): boolean => {
+  const normalizedError = serializeSupabaseError(error);
+  const message = [normalizedError.message, normalizedError.details, normalizedError.hint]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (normalizedError.code === '42703' || normalizedError.code === 'PGRST204') {
+    return true;
+  }
+
+  const hasShareStaticHtmlReference = message.includes('share_static_html');
+  const hasMissingColumnSignal =
+    message.includes('column') ||
+    message.includes('schema cache') ||
+    message.includes('not found') ||
+    message.includes('does not exist');
+
+  return hasShareStaticHtmlReference && hasMissingColumnSignal;
+};
+
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -402,8 +443,14 @@ export const Proposals: React.FC = () => {
       resetProposalForm();
       fetchData();
     } catch (error) {
-      console.error('Error saving proposal:', error);
-      toast.error('Erro ao salvar proposta');
+      const normalizedError = serializeSupabaseError(error);
+      console.error('Error saving proposal:', {
+        proposalId: editingProposal?.id ?? null,
+        ...normalizedError,
+      });
+
+      const errorCodeSuffix = normalizedError.code ? ` (código: ${normalizedError.code})` : '';
+      toast.error(`Erro ao salvar proposta${errorCodeSuffix}`);
     } finally {
       setSaving(false);
     }
@@ -509,7 +556,7 @@ export const Proposals: React.FC = () => {
         .update({ status: 'sent', share_static_html: shareStaticHtml })
         .eq('id', proposal.id);
 
-      if (error?.code === '42703') {
+      if (isMissingShareStaticHtmlColumnError(error)) {
         // Fallback for environments where migration with share_static_html is not applied yet.
         const { error: fallbackError } = await supabase
           .from('proposals')
@@ -528,8 +575,14 @@ export const Proposals: React.FC = () => {
       toast.success('Proposta enviada e página de compartilhamento liberada!');
       fetchData();
     } catch (error) {
-      console.error('Error sending proposal:', error);
-      toast.error('Erro ao enviar proposta');
+      const normalizedError = serializeSupabaseError(error);
+      console.error('Error sending proposal:', {
+        proposalId: proposal.id,
+        ...normalizedError,
+      });
+
+      const errorCodeSuffix = normalizedError.code ? ` (código: ${normalizedError.code})` : '';
+      toast.error(`Erro ao enviar proposta${errorCodeSuffix}`);
     }
   };
 
