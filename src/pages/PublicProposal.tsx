@@ -137,43 +137,7 @@ export const PublicProposal: React.FC = () => {
   const [accessValidated, setAccessValidated] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
 
-  const buildServicesList = (items: ProposalItem[]) => {
-    const validItems = items.filter((item) => item.service?.trim());
-
-    if (validItems.length === 0) return '';
-
-    const listItems = validItems
-      .map(
-        (item) =>
-          `<li>${item.service}${item.description ? `: ${item.description}` : ''}</li>`,
-      )
-      .join('');
-
-    return `<ul>${listItems}</ul>`;
-  };
-
-  const renderTemplateContent = (data: ProposalData) => {
-    if (!data.template_content?.trim()) {
-      return '';
-    }
-
-    return data.template_content
-      .replace(/\{\{nome_cliente\}\}/g, data.recipient_name || '')
-      .replace(/\{\{email_cliente\}\}/g, data.recipient_email || '')
-      .replace(/\{\{empresa_cliente\}\}/g, data.recipient_company || '')
-      .replace(/\{\{data_envio\}\}/g, format(parseISO(data.created_at), 'dd/MM/yyyy'))
-      .replace(
-        /\{\{valor_total\}\}/g,
-        Number(data.total_value).toLocaleString('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
-        }),
-      )
-      .replace(/\{\{descricao_proposta\}\}/g, data.description || '')
-      .replace(/\{\{listagem_servicos\}\}/g, buildServicesList(data.items));
-  };
-
-  const renderedTemplateContent = proposal ? renderTemplateContent(proposal) : '';
+  const renderedTemplateContent = proposal?.template_content?.trim() || '';
 
   useEffect(() => {
     setAccessValidated(false);
