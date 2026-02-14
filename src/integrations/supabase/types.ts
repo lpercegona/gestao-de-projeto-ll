@@ -828,7 +828,6 @@ export type Database = {
           recipient_company: string | null
           recipient_email: string
           recipient_name: string
-          share_static_html: string | null
           share_token: string
           status: string
           template_id: string | null
@@ -849,7 +848,6 @@ export type Database = {
           recipient_company?: string | null
           recipient_email: string
           recipient_name: string
-          share_static_html?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
@@ -870,7 +868,6 @@ export type Database = {
           recipient_company?: string | null
           recipient_email?: string
           recipient_name?: string
-          share_static_html?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
@@ -1333,10 +1330,8 @@ export type Database = {
           recipient_company: string
           recipient_email: string
           recipient_name: string
-          share_static_html: string
           status: string
           template_content: string
-          template_id: string
           title: string
           total_hours: number
           total_value: number
