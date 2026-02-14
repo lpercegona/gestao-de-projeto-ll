@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
-import { Layers3, Search, Plus } from 'lucide-react';
+import { Layers3, Search, Plus, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +17,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ProposalItem {
   id: string;
@@ -24,6 +31,8 @@ interface ProposalItem {
   description: string;
   hours: number;
   pricePerHour: number;
+  imageUrl?: string;
+  image?: string;
 }
 
 interface ProposalRow {
@@ -36,6 +45,8 @@ interface ProposalRow {
 }
 
 interface ServiceRow {
+  id: string;
+  source: 'manual' | 'proposal';
   proposalId: string;
   proposalTitle: string;
   recipientName: string;
@@ -44,7 +55,10 @@ interface ServiceRow {
   hours: number;
   pricePerHour: number;
   total: number;
+  imageUrl?: string;
 }
+
+const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
 
 type ServicesTab = 'services' | 'proposals' | 'contracts';
 
@@ -63,14 +77,34 @@ export const Services: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [manualItems, setManualItems] = useState<ServiceRow[]>([]);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({
     service: '',
     description: '',
     hours: 0,
     pricePerHour: 0,
+    imageUrl: '',
   });
 
   const activeTab = tabByPath[location.pathname] || 'services';
+
+  useEffect(() => {
+    const storedItems = localStorage.getItem(MANUAL_ITEMS_STORAGE_KEY);
+
+    if (!storedItems) return;
+
+    try {
+      const parsedItems = JSON.parse(storedItems) as ServiceRow[];
+      setManualItems(Array.isArray(parsedItems) ? parsedItems : []);
+    } catch (error) {
+      console.error('Erro ao carregar itens manuais de serviço:', error);
+      localStorage.removeItem(MANUAL_ITEMS_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(MANUAL_ITEMS_STORAGE_KEY, JSON.stringify(manualItems));
+  }, [manualItems]);
 
   useEffect(() => {
     const fetchProposals = async () => {
@@ -103,7 +137,9 @@ export const Services: React.FC = () => {
     const proposalItems = proposals.flatMap((proposal) =>
       proposal.items
         .filter((item) => item.service?.trim() || item.description?.trim())
-        .map((item) => ({
+        .map((item, index) => ({
+          id: item.id || `${proposal.id}-${index}`,
+          source: 'proposal' as const,
           proposalId: proposal.id,
           proposalTitle: proposal.title,
           recipientName: proposal.recipient_name,
@@ -112,6 +148,7 @@ export const Services: React.FC = () => {
           hours: Number(item.hours || 0),
           pricePerHour: Number(item.pricePerHour || 0),
           total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
+          imageUrl: item.imageUrl || item.image,
         })),
     );
 
@@ -135,18 +172,22 @@ export const Services: React.FC = () => {
   };
 
   const handleAddItem = () => {
+    setEditingItemId(null);
+    resetNewItem();
     setCreateItemOpen(true);
   };
 
   const resetNewItem = () => {
-    setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0 });
+    setNewItem({ service: '', description: '', hours: 0, pricePerHour: 0, imageUrl: '' });
   };
 
   const handleSaveItem = () => {
     if (!newItem.service.trim()) return;
 
     const item: ServiceRow = {
-      proposalId: crypto.randomUUID(),
+      id: editingItemId || crypto.randomUUID(),
+      source: 'manual',
+      proposalId: 'manual',
       proposalTitle: 'Item adicionado manualmente',
       recipientName: 'N/A',
       service: newItem.service.trim(),
@@ -154,11 +195,65 @@ export const Services: React.FC = () => {
       hours: Number(newItem.hours || 0),
       pricePerHour: Number(newItem.pricePerHour || 0),
       total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
+      imageUrl: newItem.imageUrl || undefined,
     };
 
-    setManualItems((prev) => [item, ...prev]);
+    if (editingItemId) {
+      setManualItems((prev) => prev.map((existingItem) => (existingItem.id === editingItemId ? item : existingItem)));
+      toast.success('Item atualizado com sucesso');
+    } else {
+      setManualItems((prev) => [item, ...prev]);
+      toast.success('Item adicionado com sucesso');
+    }
+
     setCreateItemOpen(false);
+    setEditingItemId(null);
     resetNewItem();
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem válido.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      setNewItem((prev) => ({ ...prev, imageUrl: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditItem = (item: ServiceRow) => {
+    if (item.source !== 'manual') {
+      toast.info('Itens vinculados às propostas devem ser alterados na aba de propostas.');
+      return;
+    }
+
+    setNewItem({
+      service: item.service,
+      description: item.description === 'Sem descrição' ? '' : item.description,
+      hours: item.hours,
+      pricePerHour: item.pricePerHour,
+      imageUrl: item.imageUrl || '',
+    });
+    setEditingItemId(item.id);
+    setCreateItemOpen(true);
+  };
+
+  const handleDeleteItem = (item: ServiceRow) => {
+    if (item.source !== 'manual') {
+      toast.info('Itens vinculados às propostas devem ser removidos na aba de propostas.');
+      return;
+    }
+
+    setManualItems((prev) => prev.filter((existingItem) => existingItem.id !== item.id));
+    toast.success('Item removido com sucesso');
   };
 
   return (
@@ -208,18 +303,57 @@ export const Services: React.FC = () => {
                 <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p>
               ) : (
                 <div className="space-y-3">
-                  {filteredRows.map((row, index) => (
-                    <div key={`${row.proposalId}-${row.service}-${index}`} className="rounded-lg border p-4">
-                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <h3 className="font-semibold">{row.service}</h3>
-                        <span className="text-sm text-muted-foreground">
-                          {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{row.description}</p>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">Proposta:</span> {row.proposalTitle} • {row.recipientName} • {row.hours}h ×{' '}
-                        {row.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  {filteredRows.map((row) => (
+                    <div key={row.id} className="rounded-lg border p-4">
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="md:col-span-1">
+                          {row.imageUrl ? (
+                            <img
+                              src={row.imageUrl}
+                              alt={`Imagem de ${row.service}`}
+                              className="aspect-square h-full max-h-[174px] w-full rounded-md border object-cover"
+                            />
+                          ) : (
+                            <div className="flex aspect-square h-full max-h-[174px] w-full items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
+                              Sem imagem
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <h3 className="font-semibold">{row.service}</h3>
+                              <span className="text-sm text-muted-foreground">
+                                {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </span>
+                            </div>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditItem(row)}>
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => handleDeleteItem(row)}
+                                >
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          <p className="text-sm text-muted-foreground">{row.description}</p>
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">Quantidade de horas:</span> {row.hours}h
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -241,7 +375,7 @@ export const Services: React.FC = () => {
       <Dialog open={createItemOpen} onOpenChange={setCreateItemOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar item de serviço</DialogTitle>
+            <DialogTitle>{editingItemId ? 'Editar item de serviço' : 'Adicionar item de serviço'}</DialogTitle>
             <DialogDescription>
               Preencha os dados para incluir um novo item na listagem de serviços.
             </DialogDescription>
@@ -286,6 +420,19 @@ export const Services: React.FC = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Imagem do item</Label>
+              <Input type="file" accept="image/*" onChange={handleImageChange} />
+              {newItem.imageUrl ? (
+                <div className="space-y-2">
+                  <img src={newItem.imageUrl} alt="Pré-visualização da imagem do item" className="h-24 w-24 rounded-md border object-cover" />
+                  <Button variant="outline" size="sm" onClick={() => setNewItem((prev) => ({ ...prev, imageUrl: '' }))}>
+                    Remover imagem
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <DialogFooter>
@@ -293,7 +440,7 @@ export const Services: React.FC = () => {
               Cancelar
             </Button>
             <Button onClick={handleSaveItem} disabled={!newItem.service.trim()}>
-              Adicionar item
+              {editingItemId ? 'Salvar alterações' : 'Adicionar item'}
             </Button>
           </DialogFooter>
         </DialogContent>
