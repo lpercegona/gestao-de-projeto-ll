@@ -270,14 +270,15 @@ const serializeSupabaseError = (error: unknown): SupabaseLikeError => {
 
 const isMissingShareStaticHtmlColumnError = (error: unknown): boolean => {
   const normalizedError = serializeSupabaseError(error);
+
+  if (!normalizedError.code && !normalizedError.message && !normalizedError.details && !normalizedError.hint) {
+    return false;
+  }
+
   const message = [normalizedError.message, normalizedError.details, normalizedError.hint]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
-
-  if (normalizedError.code === '42703' || normalizedError.code === 'PGRST204') {
-    return true;
-  }
 
   const hasShareStaticHtmlReference = message.includes('share_static_html');
   const hasMissingColumnSignal =
@@ -285,6 +286,14 @@ const isMissingShareStaticHtmlColumnError = (error: unknown): boolean => {
     message.includes('schema cache') ||
     message.includes('not found') ||
     message.includes('does not exist');
+
+  if (normalizedError.code === '42703') {
+    return hasShareStaticHtmlReference || message.length === 0;
+  }
+
+  if (normalizedError.code === 'PGRST204') {
+    return hasShareStaticHtmlReference;
+  }
 
   return hasShareStaticHtmlReference && hasMissingColumnSignal;
 };
@@ -558,6 +567,11 @@ export const Proposals: React.FC = () => {
 
       if (isMissingShareStaticHtmlColumnError(error)) {
         // Fallback for environments where migration with share_static_html is not applied yet.
+        console.warn('Proposal send fallback: share_static_html unavailable, retrying with status-only update.', {
+          proposalId: proposal.id,
+          ...serializeSupabaseError(error),
+        });
+
         const { error: fallbackError } = await supabase
           .from('proposals')
           .update({ status: 'sent' })
