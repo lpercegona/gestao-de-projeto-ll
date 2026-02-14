@@ -68,6 +68,7 @@ interface ProposalData {
   status: string;
   valid_until: string | null;
   created_at: string;
+  share_static_html?: string | null;
 }
 
 const parseNumericValue = (value: unknown): number => {
@@ -111,6 +112,7 @@ interface Comment {
   author_name: string | null;
   content: string;
   created_at: string;
+  share_static_html?: string | null;
 }
 
 export const PublicProposal: React.FC = () => {
@@ -174,6 +176,7 @@ export const PublicProposal: React.FC = () => {
   };
 
   const renderedTemplateContent = proposal ? renderTemplateContent(proposal) : '';
+  const hasStaticShareHtml = Boolean(proposal?.share_static_html?.trim());
 
   useEffect(() => {
     setAccessValidated(false);
@@ -424,121 +427,134 @@ export const PublicProposal: React.FC = () => {
           </Card>
         )}
 
-        {/* Proposal Header */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">{proposal.title}</CardTitle>
-            {proposal.description && (
-              <CardDescription className="text-base mt-2">
-                <div
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: proposal.description }}
-                />
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Destinatário</p>
-                  <p className="font-medium">{proposal.recipient_name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{proposal.recipient_email}</p>
-                </div>
-              </div>
-              {proposal.recipient_company && (
-                <div className="flex items-center gap-3">
-                  <Building2 className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Empresa</p>
-                    <p className="font-medium">{proposal.recipient_company}</p>
-                  </div>
-                </div>
-              )}
-              {proposal.valid_until && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Válido até</p>
-                    <p className="font-medium">
-                      {format(parseISO(proposal.valid_until), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {renderedTemplateContent && (
+        {hasStaticShareHtml ? (
           <Card>
             <CardContent className="pt-6">
               <div
                 className="prose prose-sm max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: renderedTemplateContent }}
+                dangerouslySetInnerHTML={{ __html: proposal.share_static_html || '' }}
               />
             </CardContent>
           </Card>
-        )}
+        ) : (
+          <>
+            {/* Proposal Header */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">{proposal.title}</CardTitle>
+                {proposal.description && (
+                  <CardDescription className="text-base mt-2">
+                    <div
+                      className="prose prose-sm max-w-none dark:prose-invert"
+                      dangerouslySetInnerHTML={{ __html: proposal.description }}
+                    />
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-center gap-3">
+                    <User className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Destinatário</p>
+                      <p className="font-medium">{proposal.recipient_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{proposal.recipient_email}</p>
+                    </div>
+                  </div>
+                  {proposal.recipient_company && (
+                    <div className="flex items-center gap-3">
+                      <Building2 className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Empresa</p>
+                        <p className="font-medium">{proposal.recipient_company}</p>
+                      </div>
+                    </div>
+                  )}
+                  {proposal.valid_until && (
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Válido até</p>
+                        <p className="font-medium">
+                          {format(parseISO(proposal.valid_until), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Items */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Serviços Incluídos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {proposal.items.map((item, index) => (
-              <div key={item.id || index} className="p-4 bg-muted/50 rounded-lg">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                  <h4 className="font-semibold text-foreground">{item.service}</h4>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      {item.hours}h
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4 text-muted-foreground" />
-                      {Number(item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h
-                    </span>
+            {renderedTemplateContent && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div
+                    className="prose prose-sm max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: renderedTemplateContent }}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Items */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Serviços Incluídos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {proposal.items.map((item, index) => (
+                  <div key={item.id || index} className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <h4 className="font-semibold text-foreground">{item.service}</h4>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          {item.hours}h
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-4 h-4 text-muted-foreground" />
+                          {Number(item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h
+                        </span>
+                      </div>
+                    </div>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    )}
+                    <div className="mt-2 text-right">
+                      <span className="font-medium">
+                        Subtotal: {(item.hours * item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                <Separator />
+
+                {/* Totals */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-primary/5 rounded-lg">
+                  <div className="flex items-center gap-6">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total de Horas</p>
+                      <p className="text-xl font-bold text-foreground">{formatHours(proposal.total_hours)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Valor Total</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {Number(proposal.total_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
                   </div>
                 </div>
-                {item.description && (
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                )}
-                <div className="mt-2 text-right">
-                  <span className="font-medium">
-                    Subtotal: {(item.hours * item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            <Separator />
-
-            {/* Totals */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-primary/5 rounded-lg">
-              <div className="flex items-center gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Horas</p>
-                  <p className="text-xl font-bold text-foreground">{formatHours(proposal.total_hours)}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Valor Total</p>
-                <p className="text-2xl font-bold text-primary">
-                  {Number(proposal.total_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {/* Comments */}
         {comments.length > 0 && (
