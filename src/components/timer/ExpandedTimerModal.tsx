@@ -21,6 +21,7 @@ interface ExpandedTimerModalProps {
 export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, onOpenChange }) => {
   const [distractionFree, setDistractionFree] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
+  const [highContrast, setHighContrast] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [modalReady, setModalReady] = useState(false);
   const { data, completeTask } = useData();
@@ -172,16 +173,12 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
     [completeTask],
   );
 
-  // Toggle the global high-contrast class
-  const handleToggleHighContrast = useCallback(() => {
-    const isEnabled = document.documentElement.classList.toggle('high-contrast');
-    localStorage.setItem('high-contrast-enabled', String(isEnabled));
-  }, []);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="!inset-0 !h-screen !max-h-none !w-screen !max-w-none !translate-x-0 !translate-y-0 !overflow-hidden rounded-none border-0 p-0 [&>button]:hidden bg-muted text-muted-foreground"
+        className={`!inset-0 !h-screen !max-h-none !w-screen !max-w-none !translate-x-0 !translate-y-0 !overflow-hidden rounded-none border-0 p-0 [&>button]:hidden ${
+          highContrast ? 'bg-black text-white' : 'bg-[#F4F7FB] text-[#64748b]'
+        }`}
         style={{
           animation: open ? 'modal-scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' : undefined,
         }}
@@ -200,8 +197,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9 rounded-lg"
-              onClick={handleToggleHighContrast}
+              className={`h-9 w-9 rounded-lg ${highContrast ? 'border-white bg-black text-white hover:bg-white hover:text-black' : 'border-[#64748b] bg-white text-[#64748b] hover:bg-[#e2e8f0]'}`}
+              onClick={() => setHighContrast((value) => !value)}
               aria-label="Alternar alto contraste"
               title="Alternar alto contraste"
             >
@@ -211,7 +208,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full p-0 [&_svg]:h-9 [&_svg]:w-9"
+              className={`h-9 w-9 rounded-full p-0 [&_svg]:h-9 [&_svg]:w-9 ${highContrast ? 'text-white hover:bg-white/10 hover:text-white' : 'text-[#64748b] hover:bg-transparent hover:text-[#475569]'}`}
               onClick={() => onOpenChange(false)}
               aria-label="Fechar modal"
             >
@@ -221,7 +218,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
           <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col">
             <p
-              className={`overflow-hidden text-center text-sm font-semibold leading-tight transition-all duration-500 text-muted-foreground md:text-2xl ${
+              className={`overflow-hidden text-center text-sm font-semibold leading-tight transition-all duration-500 md:text-2xl ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
                 shouldAnimateIntroText
                   ? 'pointer-events-none -translate-y-8 opacity-0 max-h-0 mb-0'
                   : 'translate-y-0 opacity-100 max-h-24 mb-5 md:mb-8'
@@ -280,7 +277,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 </Button>
 
                 <div
-                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] flex-col items-center justify-center rounded-full border-2 border-border bg-background text-muted-foreground transition-all duration-300 ${
+                  className={`absolute z-10 flex h-[52%] w-[52%] max-h-[220px] max-w-[220px] flex-col items-center justify-center rounded-full border-2 border-[#e2e8f0] bg-white text-[#64748b] transition-all duration-300 ${
                     buActiveTimer ? 'scale-100 opacity-100' : 'pointer-events-none scale-110 opacity-0'
                   }`}
                 >
@@ -305,7 +302,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 <Button
                   type="button"
                   onClick={() => resumeGlobalTimer()}
-                  className="h-10 w-10 rounded-lg p-0"
+                  className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'bg-white text-black hover:bg-gray-200' : ''}`}
                   aria-label="Retomar timer"
                   title="Retomar timer"
                 >
@@ -316,7 +313,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                   type="button"
                   onClick={() => pauseGlobalTimer()}
                   variant="outline"
-                  className="h-10 w-10 rounded-lg p-0"
+                  className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'border-white bg-black text-white hover:bg-white/10' : 'bg-white'}`}
                   aria-label="Pausar timer"
                   title="Pausar timer"
                 >
@@ -327,7 +324,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                 type="button"
                 onClick={() => completeGlobalTimer()}
                 variant="destructive"
-                className="h-10 w-10 rounded-lg p-0"
+                className={`h-10 w-10 rounded-lg p-0 ${highContrast ? 'bg-white text-black hover:bg-gray-200' : ''}`}
                 aria-label="Concluir timer"
                 title="Concluir timer"
               >
@@ -342,8 +339,8 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
             >
               {currentTaskInfo ? (
                 <div className="mx-auto w-full max-w-[66.666vw]">
-                  <p className="text-sm font-semibold leading-snug break-words whitespace-normal text-foreground">{currentTaskInfo.taskName}</p>
-                  <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
+                  <p className={`text-sm font-semibold leading-snug break-words whitespace-normal ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}>{currentTaskInfo.taskName}</p>
+                  <p className={`text-xs font-medium break-words whitespace-normal ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
                     Projeto: {currentTaskInfo.projectName} • Cliente: {currentTaskInfo.clientName}
                   </p>
                 </div>
@@ -361,7 +358,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               <div className="mb-2 flex items-center justify-end gap-2 transition-all duration-300">
                 <Label
                   htmlFor="distraction-free"
-                  className={`text-xs font-medium transition-all duration-300 text-muted-foreground ${
+                  className={`text-xs font-medium transition-all duration-300 ${highContrast ? 'text-white' : 'text-[#64748b]'} ${
                     distractionFree ? 'pointer-events-none max-w-0 -translate-x-2 overflow-hidden opacity-0' : 'max-w-[160px] translate-x-0 opacity-100'
                   }`}
                 >
@@ -371,7 +368,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
               </div>
 
               <Separator
-                className={`mb-3 transition-all duration-500 bg-border ${
+                className={`mb-3 transition-all duration-500 ${highContrast ? 'bg-white/30' : 'bg-[#dce4ee]'} ${
                   distractionFree ? 'opacity-0' : 'opacity-100'
                 }`}
               />
@@ -383,7 +380,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
       : 'max-h-[420px] translate-y-0 opacity-100'
   }`}
 >
-                <h3 className="mb-3 text-xs font-semibold text-muted-foreground">Próximas atividades</h3>
+                <h3 className={`mb-3 text-xs font-semibold ${highContrast ? 'text-white' : 'text-[#64748b]'}`}>Próximas atividades</h3>
                 <ScrollArea className="h-[28vh] min-h-[180px] max-h-[320px]">
                   <div className="space-y-2 pb-2 pr-2">
                     {upcomingTasks.length > 0 ? (
@@ -394,7 +391,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                         return (
                           <Card
                             key={task.id}
-                            className={`flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-2xl border px-3 py-2.5 shadow-none border-border bg-transparent`}
+                            className={`flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-2xl border px-3 py-2.5 shadow-none ${highContrast ? 'border-white bg-black' : 'border-[#d6dee8] bg-transparent'}`}
                             style={{
                               opacity: modalReady ? 1 : 0,
                               transform: modalReady ? 'translateY(0)' : 'translateY(12px)',
@@ -403,7 +400,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                           >
                             <div className="min-w-0 flex-1">
                               <p
-                                className="text-sm font-semibold leading-tight text-foreground"
+                                className={`text-sm font-semibold leading-tight ${highContrast ? 'text-white' : 'text-[#0f172a]'}`}
                                 style={{
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
@@ -414,7 +411,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                               >
                                 {task.name}
                               </p>
-                              <p className="text-[0.6rem] font-medium uppercase tracking-wide break-words whitespace-normal text-muted-foreground">
+                              <p className={`text-[0.6rem] font-medium uppercase tracking-wide break-words whitespace-normal ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>
                                 {task.projectName || 'Sem projeto'} - {task.clientName || 'Sem cliente'}
                               </p>
                             </div>
@@ -425,7 +422,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                   type="button"
                                   size="icon"
                                   variant={isCurrentTaskTimer ? 'default' : 'ghost'}
-                                  className="h-7 w-7 rounded-full p-0 [&_svg]:h-3.5 [&_svg]:w-3.5"
+                                  className={`h-7 w-7 rounded-full p-0 [&_svg]:h-3.5 [&_svg]:w-3.5 ${highContrast && !isCurrentTaskTimer ? 'text-white hover:bg-white/10' : ''}`}
                                   onClick={() => handleStartTaskTimer(task.id)}
                                   disabled={isLoading || (!isCurrentTaskTimer && !canStartNewTaskTimer)}
                                   aria-label={`Iniciar registro da tarefa ${task.name}`}
@@ -438,7 +435,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                   type="button"
                                   size="icon"
                                   variant="ghost"
-                                  className="h-7 w-7 rounded-full p-0 [&_svg]:h-3.5 [&_svg]:w-3.5 text-emerald-600 hover:text-emerald-700"
+                                  className={`h-7 w-7 rounded-full p-0 [&_svg]:h-3.5 [&_svg]:w-3.5 ${highContrast ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-600 hover:text-emerald-700'}`}
                                   onClick={() => handleCompleteTask(task.id)}
                                   disabled={isLoading || task.status === 'completed' || task.status === 'done'}
                                   aria-label={`Concluir tarefa ${task.name}`}
@@ -452,7 +449,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                         );
                       })
                     ) : (
-                      <p className="text-base md:text-xl text-muted-foreground">Nenhuma tarefa pendente no momento.</p>
+                      <p className={`text-base md:text-xl ${highContrast ? 'text-gray-300' : 'text-[#64748b]'}`}>Nenhuma tarefa pendente no momento.</p>
                     )}
                   </div>
                 </ScrollArea>
