@@ -18,6 +18,7 @@ import {
   Calendar,
   Database,
   Layers3,
+  Contrast,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,13 +35,15 @@ import LogoOras from "@/assets/logo-oras.svg";
 const MobileHeader: React.FC<{
   setSidebarOpen: (open: boolean) => void;
   hideTimer?: boolean;
-}> = ({ setSidebarOpen, hideTimer = false }) => {
+  highContrastEnabled: boolean;
+  onToggleHighContrast: () => void;
+}> = ({ setSidebarOpen, hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
   const { hasActiveTimer } = useGlobalTimer();
 
   return (
-    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-[#f1f5f9] px-4 py-3 sm:px-6 lg:hidden">
+    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-background px-4 py-3 sm:px-6 lg:hidden">
       <button
-        className="flex-shrink-0 rounded-md p-2 text-[#64748b] hover:bg-white/70"
+        className="flex-shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         onClick={() => setSidebarOpen(true)}
       >
         <span className="sr-only">Abrir menu</span>
@@ -73,7 +76,20 @@ const MobileHeader: React.FC<{
         </div>
       </div>
 
-      <div className="flex flex-shrink-0 items-center gap-1 text-[#64748b]">
+      <div className="flex flex-shrink-0 items-center gap-1 text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            highContrastEnabled && "bg-accent text-accent-foreground",
+          )}
+          onClick={onToggleHighContrast}
+          aria-label={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
+          title={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
+        >
+          <Contrast className="h-4 w-4" />
+        </Button>
         {!hideTimer && <HeaderTimerDisplay />}
         <NotificationBell />
       </div>
@@ -84,10 +100,12 @@ const MobileHeader: React.FC<{
 // Desktop Header Component with breadcrumb, search and timer
 const DesktopHeader: React.FC<{
   hideTimer?: boolean;
-}> = ({ hideTimer = false }) => {
+  highContrastEnabled: boolean;
+  onToggleHighContrast: () => void;
+}> = ({ hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
   const { hasActiveTimer } = useGlobalTimer();
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[#f1f5f9] lg:flex">
+    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-background lg:flex">
       <div className="ml-12 flex w-full items-center justify-between px-6">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />
@@ -98,7 +116,27 @@ const DesktopHeader: React.FC<{
         </div>
 
         {/* Right: Timer + Notifications */}
-        <div className="flex items-center gap-3 text-[#64748b]">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  highContrastEnabled && "bg-accent text-accent-foreground",
+                )}
+                onClick={onToggleHighContrast}
+                aria-label={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
+              >
+                <Contrast className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
+            </TooltipContent>
+          </Tooltip>
+
           {/* Task info - slides in from left when timer active (only if timer not hidden) */}
           {!hideTimer && (
             <div
@@ -132,11 +170,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   });
   const [isHovering, setIsHovering] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [highContrastEnabled, setHighContrastEnabled] = useState(() => {
+    return localStorage.getItem("high-contrast-enabled") === "true";
+  });
 
   // Persist collapsed state
   useEffect(() => {
     localStorage.setItem("sidebar-collapsed", JSON.stringify(isCollapsed));
   }, [isCollapsed]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("high-contrast", highContrastEnabled);
+    localStorage.setItem("high-contrast-enabled", String(highContrastEnabled));
+  }, [highContrastEnabled]);
 
   // Fetch user avatar
   useEffect(() => {
@@ -309,7 +355,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="flex h-screen overflow-hidden bg-[#f1f5f9]">
+      <div className="flex h-screen overflow-hidden bg-background">
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
@@ -321,7 +367,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[#f1f5f9] transition-all duration-300 lg:static",
+            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-background transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
@@ -350,7 +396,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
             {/* Mobile close button */}
             <button
-              className="absolute right-2 top-2 rounded-md p-2 text-[#64748b] hover:bg-white/70 lg:hidden"
+              className="absolute right-2 top-2 rounded-md p-2 text-muted-foreground hover:bg-accent lg:hidden"
               onClick={() => setSidebarOpen(false)}
             >
               <span className="sr-only">Fechar menu</span>
@@ -533,10 +579,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Main Content - Scrollable */}
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Mobile header - hide timer for clients */}
-          <MobileHeader setSidebarOpen={setSidebarOpen} hideTimer={isClient} />
+          <MobileHeader
+            setSidebarOpen={setSidebarOpen}
+            hideTimer={isClient}
+            highContrastEnabled={highContrastEnabled}
+            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)}
+          />
 
           {/* Desktop header buttons - hide timer for clients */}
-          <DesktopHeader hideTimer={isClient} />
+          <DesktopHeader
+            hideTimer={isClient}
+            highContrastEnabled={highContrastEnabled}
+            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)}
+          />
 
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
           <div className="flex-1 overflow-auto lg:pt-[58px]">
