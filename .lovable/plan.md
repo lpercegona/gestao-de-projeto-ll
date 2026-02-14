@@ -1,66 +1,42 @@
 
-
-# Plano: Corrigir Compartilhamento de Propostas e Erros de Build
+# Plano: Corrigir erro de build e verificar timer
 
 ## Diagnostico
 
-A funcionalidade de compartilhamento de propostas esta configurada corretamente em termos de rota (`/proposal/:token`), RPCs (`get_proposal_by_token`, `respond_to_proposal`, `get_proposal_comments_by_token`) e logica de validacao de acesso por email. Porem, **o aplicativo inteiro nao compila** devido a multiplos erros de TypeScript espalhados pelo codigo, impedindo qualquer funcionalidade de funcionar.
+O timer nao funciona porque **o app inteiro nao compila** devido a um erro de build em `Services.tsx` (linha 278). O tipo `ProposalItem[]` nao e compativel com `Json` ao atualizar propostas no banco. Este e o mesmo padrao de erro ja corrigido em `Proposals.tsx` na rodada anterior, mas que nao foi aplicado em `Services.tsx`.
 
-## Problemas Identificados
+A logica do timer em si (pausar, retomar, descartar, prevencao de sobreposicao) esta correta:
+- Timers standalone (sem tarefa): pause/resume manipulam o banco diretamente via `task_timers`
+- Timers vinculados a tarefa: delegam para `pauseTaskTimer`/`resumeTaskTimer` do DataContext
+- Prevencao de sobreposicao: `startGlobalTimer` retorna se `timerState.isRunning`, e `TaskTimer` bloqueia inicio se `hasForeignActiveTimer`
+- Descarte: `handleDiscard` chama `cancelTaskTimer` (para task timers) + `resetTimer` (limpa DB e estado)
 
-### 1. Erros de build que impedem a compilacao (criticos)
+Ha tambem um warning de console (`forwardRef`) em `HeaderTimerDisplay` que nao impede o funcionamento mas deve ser corrigido.
 
-- **Proposals.tsx**: O tipo `Record<string, unknown>[]` dos itens nao e compativel com o tipo `Json` esperado pelo Supabase ao inserir/atualizar propostas.
-- **SolicitacoesPanel.tsx**: Query tenta fazer join entre `edit_requests` e `clients`, mas nao existe chave estrangeira (FK) entre essas tabelas.
-- **ProfileEditTab.tsx**: Tipo `IdentityAttachment[]` nao e compativel com `Json` ao chamar RPC.
-- **DataContext.tsx**: Tipo `identity_attachments` retornado como `Json` nao corresponde ao tipo esperado na interface `Client`.
-- **CalendarPage.tsx**: Variante `"primary"` nao existe no componente Button.
+## Correcoes
 
-### 2. Template content nao carregado na visualizacao publica (menor)
+### Passo 1 - Corrigir build error em Services.tsx (linha 278)
 
-A RPC `get_proposal_by_token` nao retorna `template_content`. O codigo trata isso graciosamente (fallback para `description`), entao nao causa erro, mas templates com variaveis como `{{nome_cliente}}` nunca sao renderizados na pagina publica.
+Adicionar cast `as unknown as Json` no campo `items` ao fazer `.update()` na tabela `proposals`, identico ao fix ja aplicado em `Proposals.tsx`.
 
-## Plano de Correcao
+```text
+Antes:  items: updatedItems,
+Depois: items: updatedItems as unknown as Json,
+```
 
-### Passo 1 - Criar FK entre edit_requests/project_requests e clients (migracao SQL)
+Adicionar o import de `Json` do arquivo de tipos do Supabase.
 
-Adicionar chaves estrangeiras de `edit_requests.client_id` e `project_requests.client_id` apontando para `clients.id`, permitindo que as queries com join funcionem.
+### Passo 2 - Corrigir warning forwardRef em HeaderTimerDisplay
 
-### Passo 2 - Corrigir tipos em Proposals.tsx
-
-Usar cast `as unknown as Json` no campo `items` ao inserir/atualizar propostas, resolvendo a incompatibilidade entre `Record<string, unknown>[]` e `Json`.
-
-### Passo 3 - Corrigir tipos em ProfileEditTab.tsx
-
-Aplicar cast adequado nos parametros `p_identity_attachments` ao chamar a RPC, convertendo `IdentityAttachment[]` para tipo compativel com `Json`.
-
-### Passo 4 - Corrigir tipo identity_attachments em DataContext.tsx e types/index.ts
-
-Atualizar a interface `Client` para aceitar o campo `identity_attachments` como retornado pelo banco, ou aplicar cast nos pontos de conversao.
-
-### Passo 5 - Corrigir variante do Button em CalendarPage.tsx
-
-Substituir `variant="primary"` por `variant="default"` (que usa a cor primaria do tema).
-
-### Passo 6 - (Opcional) Atualizar RPC para incluir template content
-
-Alterar a funcao `get_proposal_by_token` para fazer JOIN com `proposal_templates` e retornar o conteudo do template, permitindo que propostas com templates renderizem corretamente na pagina publica.
+O warning ocorre porque `Tooltip` do Radix tenta passar ref para componentes filhos function. A correcao e envolver os componentes dentro de `TooltipTrigger asChild` em elementos que aceitam ref (como `div` ou `span`), ou verificar se algum uso esta passando ref para um function component sem `forwardRef`.
 
 ## Secao Tecnica
 
 ```text
 Arquivos a modificar:
-  - src/pages/Proposals.tsx (linhas 291, 308 - cast items)
-  - src/components/dashboard/SolicitacoesPanel.tsx (linha 113 - cast ou refatorar query)
-  - src/components/settings/ProfileEditTab.tsx (linhas 246, 269 - cast attachments)
-  - src/contexts/DataContext.tsx (linhas 345, 374 - cast client)
-  - src/types/index.ts (adicionar identity_attachments ao Client)
-  - src/pages/CalendarPage.tsx (linha 255 - trocar variant)
+  - src/pages/Services.tsx (linha 278 - cast items, adicionar import Json)
+  - src/components/timer/HeaderTimerDisplay.tsx (ajuste menor no TooltipTrigger se necessario)
 
-Migracao SQL:
-  - ALTER TABLE edit_requests ADD CONSTRAINT fk_edit_requests_client
-      FOREIGN KEY (client_id) REFERENCES clients(id);
-  - ALTER TABLE project_requests ADD CONSTRAINT fk_project_requests_client
-      FOREIGN KEY (client_id) REFERENCES clients(id);
+Nenhuma migracao SQL necessaria.
+Nenhuma alteracao na logica do timer.
 ```
-
