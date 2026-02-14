@@ -1113,6 +1113,7 @@ export const Proposals: React.FC = () => {
                           <li><code>{'{{empresa_cliente}}'}</code> - Empresa do cliente</li>
                           <li><code>{'{{data_envio}}'}</code> - Data de envio</li>
                           <li><code>{'{{valor_total}}'}</code> - Valor total da proposta</li>
+                          <li><code>{'{{listagem_servicos}}'}</code> - Lista dos serviços selecionados na criação da proposta</li>
                         </ul>
                       </div>
                     </PopoverContent>
