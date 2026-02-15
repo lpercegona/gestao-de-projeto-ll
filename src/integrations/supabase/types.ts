@@ -1054,7 +1054,9 @@ export type Database = {
           accent_color: string
           created_at: string
           font_family: string
+          header_hue: number | null
           id: string
+          menu_hue: number | null
           primary_color: string
           secondary_color: string
           updated_at: string
@@ -1063,7 +1065,9 @@ export type Database = {
           accent_color?: string
           created_at?: string
           font_family?: string
+          header_hue?: number | null
           id?: string
+          menu_hue?: number | null
           primary_color?: string
           secondary_color?: string
           updated_at?: string
@@ -1072,7 +1076,9 @@ export type Database = {
           accent_color?: string
           created_at?: string
           font_family?: string
+          header_hue?: number | null
           id?: string
+          menu_hue?: number | null
           primary_color?: string
           secondary_color?: string
           updated_at?: string

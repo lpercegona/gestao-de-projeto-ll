@@ -5,6 +5,7 @@ interface ThemeSettings {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
+  headerHue: number;
   fontFamily: string;
 }
 
@@ -18,6 +19,7 @@ const defaultTheme: ThemeSettings = {
   primaryColor: '266 4% 20.8%',
   secondaryColor: '248 0.7% 96.8%',
   accentColor: '248 0.7% 96.8%',
+  headerHue: 210,
   fontFamily: 'Inter',
 };
 
@@ -70,6 +72,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.documentElement.style.setProperty('--primary', settings.primaryColor);
     document.documentElement.style.setProperty('--secondary', settings.secondaryColor);
     document.documentElement.style.setProperty('--accent', settings.accentColor);
+    document.documentElement.style.setProperty('--header-hue', String(settings.headerHue));
+    document.documentElement.style.setProperty('--menu-hue', String(settings.headerHue));
     
     // Load Google Font dynamically
     loadGoogleFont(settings.fontFamily);
@@ -100,6 +104,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           primaryColor: data.primary_color,
           secondaryColor: data.secondary_color,
           accentColor: data.accent_color,
+          headerHue: data.header_hue ?? defaultTheme.headerHue,
           fontFamily: data.font_family,
         };
         setTheme(newTheme);

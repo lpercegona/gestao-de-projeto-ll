@@ -123,6 +123,20 @@ All colors MUST be HSL.
 
     --sidebar: 222.2 84% 4.9%;
 
+    /* Header/Menu personalization (Hue dinâmico, Saturation/Lightness fixos) */
+    --header-hue: 210;
+    --menu-hue: var(--header-hue);
+    --header-background: var(--header-hue) 40% 95%;
+    --header-border: var(--header-hue) 40% 95%;
+    --menu-surface: var(--header-hue) 40% 95%;
+    --menu-surface-hover: var(--header-hue) 40% 95%;
+    --menu-border: var(--header-hue) 40% 95%;
+    --menu-foreground: var(--header-hue) 25% 27%;
+    --menu-foreground-hover: var(--header-hue) 30% 20%;
+    --menu-foreground-active: var(--header-hue) 47% 11%;
+    --menu-muted: var(--header-hue) 16% 46%;
+    --content-surface: 0 0% 100%;
+
     --shadow-2xs: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
     --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
@@ -153,6 +167,17 @@ All colors MUST be HSL.
     --border: 0 0% 100%;
     --input: 0 0% 100%;
     --ring: 60 100% 50%;
+
+    --header-background: 0 0% 0%;
+    --header-border: 0 0% 100%;
+    --menu-surface: 0 0% 0%;
+    --menu-surface-hover: 0 0% 12%;
+    --menu-border: 0 0% 100%;
+    --menu-foreground: 0 0% 100%;
+    --menu-foreground-hover: 60 100% 50%;
+    --menu-foreground-active: 60 100% 50%;
+    --menu-muted: 0 0% 85%;
+    --content-surface: 0 0% 0%;
   }
 
   .high-contrast body {

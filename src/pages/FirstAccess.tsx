@@ -14,7 +14,7 @@ type UsageType = "provider" | "client";
 
 export const FirstAccess: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loading, roleLoading, userRole, refreshRole } = useAuth();
+  const { user, loading, roleLoading, userRole, refreshRole, signOut } = useAuth();
 
   const [selectedType, setSelectedType] = useState<UsageType | null>(null);
   const [companyName, setCompanyName] = useState("");
@@ -82,9 +82,9 @@ export const FirstAccess: React.FC = () => {
   const cancelRegistration = async () => {
     setSubmitting(true);
 
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
+    try {
+      await signOut();
+    } catch {
       toast.error("Não foi possível cancelar o cadastro neste momento.");
       setSubmitting(false);
       return;
