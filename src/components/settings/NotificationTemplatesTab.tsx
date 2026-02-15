@@ -7,13 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, Save, Info } from 'lucide-react';
+import { Loader2, Save, Info, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EmailTemplate {
   id: string;
@@ -53,7 +54,7 @@ const TEMPLATE_META: Record<string, { label: string; fields: { key: string; desc
 };
 
 export const NotificationTemplatesTab: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isMasterAdmin } = useAuth();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -67,52 +68,60 @@ export const NotificationTemplatesTab: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      // 1. Fetch personal templates for this admin
-      const { data: personal, error: personalError } = await supabase
-        .from('email_templates')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('slug');
+      if (isMasterAdmin) {
+        // Master admin edits global templates directly
+        const { data, error } = await supabase
+          .from('email_templates')
+          .select('*')
+          .is('owner_id', null)
+          .order('slug');
 
-      if (personalError) throw personalError;
+        if (error) throw error;
+        setTemplates((data as EmailTemplate[]) || []);
+      } else {
+        // Regular admin: fetch personal templates
+        const { data: personal, error: personalError } = await supabase
+          .from('email_templates')
+          .select('*')
+          .eq('owner_id', user.id)
+          .order('slug');
 
-      if (personal && personal.length > 0) {
-        setTemplates(personal as EmailTemplate[]);
-        setLoading(false);
-        return;
+        if (personalError) throw personalError;
+
+        if (personal && personal.length > 0) {
+          setTemplates(personal as EmailTemplate[]);
+        } else {
+          // No personal templates — copy from global defaults
+          const { data: globals, error: globalsError } = await supabase
+            .from('email_templates')
+            .select('*')
+            .is('owner_id', null)
+            .order('slug');
+
+          if (globalsError) throw globalsError;
+
+          if (!globals || globals.length === 0) {
+            setTemplates([]);
+            setLoading(false);
+            return;
+          }
+
+          const copies = globals.map((g: any) => ({
+            slug: g.slug,
+            subject: g.subject,
+            body_html: g.body_html,
+            owner_id: user.id,
+          }));
+
+          const { data: inserted, error: insertError } = await supabase
+            .from('email_templates')
+            .insert(copies)
+            .select('*');
+
+          if (insertError) throw insertError;
+          setTemplates((inserted as EmailTemplate[]) || []);
+        }
       }
-
-      // 2. No personal templates — copy from global defaults
-      const { data: globals, error: globalsError } = await supabase
-        .from('email_templates')
-        .select('*')
-        .is('owner_id', null)
-        .order('slug');
-
-      if (globalsError) throw globalsError;
-
-      if (!globals || globals.length === 0) {
-        setTemplates([]);
-        setLoading(false);
-        return;
-      }
-
-      // 3. Create personal copies
-      const copies = globals.map((g: any) => ({
-        slug: g.slug,
-        subject: g.subject,
-        body_html: g.body_html,
-        owner_id: user.id,
-      }));
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('email_templates')
-        .insert(copies)
-        .select('*');
-
-      if (insertError) throw insertError;
-
-      setTemplates((inserted as EmailTemplate[]) || []);
     } catch (err) {
       console.error('Error fetching email templates:', err);
       toast.error('Erro ao carregar templates de email');
@@ -172,9 +181,20 @@ export const NotificationTemplatesTab: React.FC = () => {
       <div>
         <h3 className="text-lg font-semibold">Templates de Notificação por Email</h3>
         <p className="text-sm text-muted-foreground">
-          Configure o conteúdo dos emails enviados automaticamente pela plataforma. Suas alterações são individuais e não afetam outros administradores.
+          {isMasterAdmin
+            ? 'Você está editando os templates padrão. Alterações serão aplicadas apenas para novos administradores que se cadastrarem.'
+            : 'Configure o conteúdo dos emails enviados automaticamente pela plataforma. Suas alterações são individuais e não afetam outros administradores.'}
         </p>
       </div>
+
+      {isMasterAdmin && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Como Master Admin, você edita os templates globais. Essas alterações servem de modelo padrão para novos admins, mas não afetam admins que já personalizaram seus templates.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {templates.length > 0 && (
         <Card>
