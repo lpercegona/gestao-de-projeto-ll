@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Info } from 'lucide-react';
 
 interface EmailTemplate {
   id: string;
   slug: string;
   subject: string;
   body_html: string;
+  owner_id: string | null;
 }
 
 const TEMPLATE_META: Record<string, { label: string; fields: { key: string; desc: string }[] }> = {
@@ -52,25 +53,66 @@ const TEMPLATE_META: Record<string, { label: string; fields: { key: string; desc
 };
 
 export const NotificationTemplatesTab: React.FC = () => {
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [editedTemplates, setEditedTemplates] = useState<Record<string, Partial<EmailTemplate>>>({});
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    if (user) fetchTemplates();
+  }, [user]);
 
   const fetchTemplates = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('email_templates' as any)
+      // 1. Fetch personal templates for this admin
+      const { data: personal, error: personalError } = await supabase
+        .from('email_templates')
         .select('*')
+        .eq('owner_id', user.id)
         .order('slug');
 
-      if (error) throw error;
-      setTemplates((data as any) || []);
+      if (personalError) throw personalError;
+
+      if (personal && personal.length > 0) {
+        setTemplates(personal as EmailTemplate[]);
+        setLoading(false);
+        return;
+      }
+
+      // 2. No personal templates — copy from global defaults
+      const { data: globals, error: globalsError } = await supabase
+        .from('email_templates')
+        .select('*')
+        .is('owner_id', null)
+        .order('slug');
+
+      if (globalsError) throw globalsError;
+
+      if (!globals || globals.length === 0) {
+        setTemplates([]);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Create personal copies
+      const copies = globals.map((g: any) => ({
+        slug: g.slug,
+        subject: g.subject,
+        body_html: g.body_html,
+        owner_id: user.id,
+      }));
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('email_templates')
+        .insert(copies)
+        .select('*');
+
+      if (insertError) throw insertError;
+
+      setTemplates((inserted as EmailTemplate[]) || []);
     } catch (err) {
       console.error('Error fetching email templates:', err);
       toast.error('Erro ao carregar templates de email');
@@ -93,7 +135,7 @@ export const NotificationTemplatesTab: React.FC = () => {
     setSavingId(template.id);
     try {
       const { error } = await supabase
-        .from('email_templates' as any)
+        .from('email_templates')
         .update({
           subject: edits.subject ?? template.subject,
           body_html: edits.body_html ?? template.body_html,
@@ -130,7 +172,7 @@ export const NotificationTemplatesTab: React.FC = () => {
       <div>
         <h3 className="text-lg font-semibold">Templates de Notificação por Email</h3>
         <p className="text-sm text-muted-foreground">
-          Configure o conteúdo dos emails enviados automaticamente pela plataforma.
+          Configure o conteúdo dos emails enviados automaticamente pela plataforma. Suas alterações são individuais e não afetam outros administradores.
         </p>
       </div>
 
