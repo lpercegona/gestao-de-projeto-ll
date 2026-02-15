@@ -2,26 +2,29 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Palette, User } from 'lucide-react';
+import { Users, Palette, User, Bell } from 'lucide-react';
 import { UserManagementTab } from '@/components/settings/UserManagementTab';
 import { PlatformCustomizationTab } from '@/components/settings/PlatformCustomizationTab';
 import { ProfileEditTab } from '@/components/settings/ProfileEditTab';
+import { NotificationTemplatesTab } from '@/components/settings/NotificationTemplatesTab';
 
 export const Preferences: React.FC = () => {
   const { isMasterAdmin, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
 
-  // Determine which tabs are available based on role
   const showUserManagement = isMasterAdmin || isAdmin;
   const showPlatformCustomization = isMasterAdmin || isAdmin;
+  const showNotifications = isMasterAdmin || isAdmin;
 
-  if (!showUserManagement && !showPlatformCustomization) {
+  if (!showUserManagement && !showPlatformCustomization && !showNotifications) {
     return (
       <div className="space-y-6">
         <ProfileEditTab />
       </div>
     );
   }
+
+  const tabCount = 1 + (showPlatformCustomization ? 1 : 0) + (showUserManagement ? 1 : 0) + (showNotifications ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -31,7 +34,7 @@ export const Preferences: React.FC = () => {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className={`grid w-full ${showUserManagement && showPlatformCustomization ? 'grid-cols-3' : showUserManagement || showPlatformCustomization ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <TabsList className={`grid w-full grid-cols-${tabCount}`}>
           <TabsTrigger value="profile" className="flex items-center gap-1.5">
             <User className="w-4 h-4" />
             <span className="hidden sm:inline">Edição do Perfil</span>
@@ -51,24 +54,34 @@ export const Preferences: React.FC = () => {
               <span className="sm:hidden">Usuários</span>
             </TabsTrigger>
           )}
+          {showNotifications && (
+            <TabsTrigger value="notifications" className="flex items-center gap-1.5">
+              <Bell className="w-4 h-4" />
+              <span className="hidden sm:inline">Notificações</span>
+              <span className="sm:hidden">Emails</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        {/* Profile Edit Tab - All users */}
         <TabsContent value="profile">
           <ProfileEditTab />
         </TabsContent>
 
-        {/* Platform Customization Tab - Admin only */}
         {showPlatformCustomization && (
           <TabsContent value="platform">
             <PlatformCustomizationTab />
           </TabsContent>
         )}
 
-        {/* User Management Tab - Admin only */}
         {showUserManagement && (
           <TabsContent value="users">
             <UserManagementTab />
+          </TabsContent>
+        )}
+
+        {showNotifications && (
+          <TabsContent value="notifications">
+            <NotificationTemplatesTab />
           </TabsContent>
         )}
       </Tabs>

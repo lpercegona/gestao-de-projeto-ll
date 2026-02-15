@@ -76,6 +76,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TemplateSectionEditor, type TemplateSection } from '@/components/proposals/TemplateSectionEditor';
 
 interface ProposalItem {
   id: string;
@@ -118,6 +119,7 @@ interface ProposalTemplate {
   name: string;
   description: string | null;
   items: ProposalItem[];
+  sections?: TemplateSection[];
 }
 
 const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
@@ -348,6 +350,7 @@ export const Proposals: React.FC = () => {
   const [templateFormData, setTemplateFormData] = useState({
     name: '',
     content: '',
+    sections: [] as TemplateSection[],
   });
   
   const [saving, setSaving] = useState(false);
@@ -395,6 +398,7 @@ export const Proposals: React.FC = () => {
         setTemplates(templatesRes.data.map(t => ({
           ...t,
           items: (t.items as unknown as ProposalItem[]) || [],
+          sections: ((t as any).sections as TemplateSection[]) || [],
         })));
       }
     } catch (error) {
@@ -478,19 +482,20 @@ export const Proposals: React.FC = () => {
         name: templateFormData.name,
         description: templateFormData.content || null,
         items: [],
+        sections: templateFormData.sections as any,
       };
 
       if (editingTemplate) {
         const { error } = await supabase
           .from('proposal_templates')
-          .update(templateData)
+          .update(templateData as any)
           .eq('id', editingTemplate.id);
         if (error) throw error;
         toast.success('Template atualizado!');
       } else {
         const { error } = await supabase
           .from('proposal_templates')
-          .insert(templateData);
+          .insert(templateData as any);
         if (error) throw error;
         toast.success('Template criado!');
       }
@@ -755,6 +760,7 @@ export const Proposals: React.FC = () => {
     setTemplateFormData({
       name: '',
       content: '',
+      sections: [],
     });
   };
 
@@ -788,6 +794,7 @@ export const Proposals: React.FC = () => {
     setTemplateFormData({
       name: template.name,
       content: template.description || '',
+      sections: template.sections || [],
     });
     setTemplateEditorOpen(true);
   };
@@ -1547,12 +1554,10 @@ export const Proposals: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Conteúdo do Template</Label>
-                  <WysiwygEditor
-                    value={templateFormData.content}
-                    onChange={(value) => setTemplateFormData(prev => ({ ...prev, content: value }))}
-                    minHeight="55vh"
-                    placeholder="Escreva o conteúdo da proposta, termos e próximos passos..."
+                  <Label>Seções do Template</Label>
+                  <TemplateSectionEditor
+                    sections={templateFormData.sections}
+                    onChange={(sections) => setTemplateFormData(prev => ({ ...prev, sections }))}
                   />
                 </div>
 

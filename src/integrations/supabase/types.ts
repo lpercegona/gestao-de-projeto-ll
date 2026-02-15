@@ -435,6 +435,36 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          body_html: string
+          created_at: string
+          id: string
+          owner_id: string | null
+          slug: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body_html?: string
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          slug: string
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          slug?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kanban_stages: {
         Row: {
           color: string | null
@@ -800,6 +830,7 @@ export type Database = {
           items: Json
           name: string
           owner_id: string | null
+          sections: Json | null
           updated_at: string
         }
         Insert: {
@@ -809,6 +840,7 @@ export type Database = {
           items?: Json
           name: string
           owner_id?: string | null
+          sections?: Json | null
           updated_at?: string
         }
         Update: {
@@ -818,6 +850,7 @@ export type Database = {
           items?: Json
           name?: string
           owner_id?: string | null
+          sections?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -834,6 +867,7 @@ export type Database = {
           recipient_company: string | null
           recipient_email: string
           recipient_name: string
+          share_static_html: string | null
           share_token: string
           status: string
           template_id: string | null
@@ -854,6 +888,7 @@ export type Database = {
           recipient_company?: string | null
           recipient_email: string
           recipient_name: string
+          share_static_html?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
@@ -874,6 +909,7 @@ export type Database = {
           recipient_company?: string | null
           recipient_email?: string
           recipient_name?: string
+          share_static_html?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
@@ -1344,43 +1380,24 @@ export type Database = {
           total_value: number
         }[]
       }
-      get_proposal_by_token:
-        | {
-            Args: { p_token: string }
-            Returns: {
-              created_at: string
-              description: string
-              items: Json
-              proposal_id: string
-              recipient_company: string
-              recipient_email: string
-              recipient_name: string
-              status: string
-              template_content: string
-              title: string
-              total_hours: number
-              total_value: number
-              valid_until: string
-            }[]
-          }
-        | {
-            Args: { p_email?: string; p_token: string }
-            Returns: {
-              created_at: string
-              description: string
-              items: Json
-              proposal_id: string
-              recipient_company: string
-              recipient_email: string
-              recipient_name: string
-              status: string
-              template_content: string
-              title: string
-              total_hours: number
-              total_value: number
-              valid_until: string
-            }[]
-          }
+      get_proposal_by_token: {
+        Args: { p_email?: string; p_token: string }
+        Returns: {
+          created_at: string
+          description: string
+          items: Json
+          proposal_id: string
+          recipient_company: string
+          recipient_email: string
+          recipient_name: string
+          status: string
+          template_content: string
+          title: string
+          total_hours: number
+          total_value: number
+          valid_until: string
+        }[]
+      }
       get_proposal_comments_by_token: {
         Args: { p_token: string }
         Returns: {
