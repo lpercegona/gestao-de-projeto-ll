@@ -20,17 +20,16 @@ import {
   Loader2,
   Clock,
   DollarSign,
-  Calendar,
   CheckCircle,
   User,
   Building,
-  FileText,
   Download,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { formatHours } from '@/lib/formatHours';
+import { SignatureCanvas } from '@/components/contracts/SignatureCanvas';
 
 interface ServiceItem {
   id: string;
@@ -47,6 +46,10 @@ interface ContractData {
   contractor_name: string;
   contractor_email: string;
   contractor_company: string | null;
+  contractor_document: string | null;
+  contractor_address: string | null;
+  contractor_cnpj: string | null;
+  contractor_cpf_responsavel: string | null;
   services_summary: ServiceItem[];
   total_hours: number;
   total_value: number;
@@ -55,64 +58,73 @@ interface ContractData {
   payment_terms: string | null;
   status: string;
   created_at: string;
+  signer_name: string | null;
+  admin_signature_url: string | null;
+  client_signature_url: string | null;
+  witness_signature_url: string | null;
+  witness_name: string | null;
+  admin_signed_at: string | null;
+  client_signed_at: string | null;
+  witness_signed_at: string | null;
+  admin_company: string | null;
+  admin_cnpj: string | null;
+  admin_cpf: string | null;
+  admin_address: string | null;
 }
+
+type SignMode = 'client' | 'witness' | null;
 
 export const PublicContract: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [contract, setContract] = useState<ContractData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [signMode, setSignMode] = useState<SignMode>(null);
   const [signing, setSigning] = useState(false);
   
-  // Signature form
+  // Client signature form
   const [signerName, setSignerName] = useState('');
   const [signerDocument, setSignerDocument] = useState('');
   const [signerAddress, setSignerAddress] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  
+  // Witness form
+  const [witnessName, setWitnessName] = useState('');
+  const [witnessCpf, setWitnessCpf] = useState('');
 
   useEffect(() => {
-    if (token) {
-      fetchContract();
-    }
+    if (token) fetchContract();
   }, [token]);
 
   const fetchContract = async () => {
     setLoading(true);
     setError(null);
-    
     try {
-      // Validate token format
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(token || '')) {
         setError('Token de acesso inválido');
         return;
       }
 
-      const { data, error: rpcError } = await supabase
-        .rpc('get_contract_by_token', { p_token: token });
+      const { data, error: rpcError } = await supabase.rpc('get_contract_by_token', { p_token: token });
 
       if (rpcError) {
-        console.error('Error fetching contract:', rpcError);
         setError('Erro ao carregar contrato');
         return;
       }
-
       if (!data || data.length === 0) {
         setError('Contrato não encontrado');
         return;
       }
 
-      const contractData = data[0];
+      const d = data[0];
       setContract({
-        ...contractData,
-        services_summary: (contractData.services_summary as unknown as ServiceItem[]) || [],
-      });
-      
-      // Pre-fill signer name
-      setSignerName(contractData.contractor_name);
-    } catch (err) {
-      console.error('Error:', err);
+        ...d,
+        services_summary: (d.services_summary as unknown as ServiceItem[]) || [],
+      } as ContractData);
+      setSignerName(d.contractor_name);
+    } catch {
       setError('Erro ao carregar contrato');
     } finally {
       setLoading(false);
@@ -120,44 +132,65 @@ export const PublicContract: React.FC = () => {
   };
 
   const handleSign = async () => {
-    if (!signerName.trim()) {
-      toast.error('Digite seu nome completo');
+    if (!signMode || !signatureDataUrl) {
+      toast.error('Desenhe sua assinatura');
       return;
     }
-    if (!acceptedTerms) {
-      toast.error('Você precisa aceitar os termos do contrato');
-      return;
+
+    if (signMode === 'client') {
+      if (!signerName.trim()) { toast.error('Digite seu nome completo'); return; }
+      if (!acceptedTerms) { toast.error('Aceite os termos do contrato'); return; }
+    }
+    if (signMode === 'witness') {
+      if (!witnessName.trim()) { toast.error('Digite o nome da testemunha'); return; }
     }
 
     setSigning(true);
     try {
-      // Get client IP (basic approach)
+      // Get IP
       let clientIp = 'unknown';
       try {
         const ipRes = await fetch('https://api.ipify.org?format=json');
         const ipData = await ipRes.json();
         clientIp = ipData.ip;
-      } catch (e) {
-        console.log('Could not fetch IP');
-      }
+      } catch { /* ignore */ }
 
-      const { data, error } = await supabase
-        .rpc('sign_contract', {
-          p_token: token,
-          p_signer_name: signerName,
-          p_document: signerDocument || null,
-          p_address: signerAddress || null,
-          p_signer_ip: clientIp,
-        });
+      // Upload signature to storage
+      const prefix = signMode === 'witness' ? 'witness' : 'client';
+      const fileName = `${prefix}_${contract?.id}_${Date.now()}.png`;
+      const base64Data = signatureDataUrl.split(',')[1];
+      const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
-      if (error) throw error;
+      const { error: uploadError } = await supabase.storage
+        .from('contract-signatures')
+        .upload(fileName, binaryData, { contentType: 'image/png' });
 
-      if (data) {
-        toast.success('Contrato assinado com sucesso!');
-        setSignDialogOpen(false);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('contract-signatures')
+        .getPublicUrl(fileName);
+
+      const { data: result, error: signError } = await supabase.rpc('sign_contract', {
+        p_token: token,
+        p_signer_name: signMode === 'client' ? signerName : witnessName,
+        p_document: signMode === 'client' ? signerDocument || null : witnessCpf || null,
+        p_address: signMode === 'client' ? signerAddress || null : null,
+        p_signer_ip: clientIp,
+        p_signature_type: signMode,
+        p_signature_url: urlData.publicUrl,
+      });
+
+      if (signError) throw signError;
+
+      if (result) {
+        toast.success(signMode === 'client' ? 'Contrato assinado com sucesso!' : 'Testemunha registrada!');
+        setSignMode(null);
+        setSignatureDataUrl(null);
+        setAcceptedTerms(false);
         fetchContract();
       } else {
-        toast.error('Não foi possível assinar o contrato');
+        toast.error('Não foi possível registrar a assinatura');
       }
     } catch (err) {
       console.error('Error signing:', err);
@@ -167,41 +200,38 @@ export const PublicContract: React.FC = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="outline">Rascunho</Badge>;
-      case 'sent':
-        return <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">Aguardando Assinatura</Badge>;
-      case 'viewed':
-        return <Badge variant="secondary" className="bg-purple-500/20 text-purple-700 dark:text-purple-300">Visualizado</Badge>;
-      case 'signed':
-        return <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-300">Assinado</Badge>;
-      case 'expired':
-        return <Badge variant="destructive">Expirado</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const canSign = contract?.status === 'sent' || contract?.status === 'viewed';
-
-  // Replace variables in content
   const processContent = (content: string) => {
     if (!contract) return content;
-    
     return content
       .replace(/\{\{contractor_name\}\}/g, contract.contractor_name)
       .replace(/\{\{contractor_email\}\}/g, contract.contractor_email)
       .replace(/\{\{contractor_company\}\}/g, contract.contractor_company || '')
+      .replace(/\{\{contractor_cnpj\}\}/g, contract.contractor_cnpj || '')
+      .replace(/\{\{contractor_cpf\}\}/g, contract.contractor_cpf_responsavel || contract.contractor_document || '')
+      .replace(/\{\{contractor_address\}\}/g, contract.contractor_address || '')
+      .replace(/\{\{admin_company\}\}/g, contract.admin_company || '')
+      .replace(/\{\{admin_cnpj\}\}/g, contract.admin_cnpj || '')
+      .replace(/\{\{admin_cpf\}\}/g, contract.admin_cpf || '')
+      .replace(/\{\{admin_name\}\}/g, contract.signer_name || '')
+      .replace(/\{\{admin_address\}\}/g, contract.admin_address || '')
       .replace(/\{\{total_hours\}\}/g, String(contract.total_hours))
       .replace(/\{\{total_value\}\}/g, contract.total_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
       .replace(/\{\{start_date\}\}/g, contract.start_date ? format(parseISO(contract.start_date), 'dd/MM/yyyy') : '')
       .replace(/\{\{end_date\}\}/g, contract.end_date ? format(parseISO(contract.end_date), 'dd/MM/yyyy') : '');
+  };
+
+  const canClientSign = contract && (contract.status === 'sent' || contract.status === 'viewed') && !contract.client_signed_at;
+  const canWitnessSign = contract && !contract.witness_signed_at;
+  const isFullySigned = contract?.status === 'signed';
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'draft': return <Badge variant="outline">Rascunho</Badge>;
+      case 'sent': return <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">Aguardando Assinatura</Badge>;
+      case 'viewed': return <Badge variant="secondary" className="bg-purple-500/20 text-purple-700 dark:text-purple-300">Visualizado</Badge>;
+      case 'signed': return <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-300">Assinado</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
   if (loading) {
@@ -239,7 +269,6 @@ export const PublicContract: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container max-w-4xl mx-auto px-4 py-8">
         {/* Contract Header */}
         <Card className="mb-6">
@@ -247,18 +276,32 @@ export const PublicContract: React.FC = () => {
             <CardTitle className="text-2xl">{contract.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Contractor Info */}
+            {/* Parties Info */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <span>{contract.contractor_name}</span>
+              {/* Admin / Contratado */}
+              <div className="border rounded-lg p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Contratado</p>
+                {contract.admin_company && <p className="text-sm font-medium">{contract.admin_company}</p>}
+                {contract.admin_cnpj && <p className="text-xs text-muted-foreground">CNPJ: {contract.admin_cnpj}</p>}
+                {contract.admin_cpf && <p className="text-xs text-muted-foreground">CPF: {contract.admin_cpf}</p>}
+                {contract.admin_address && <p className="text-xs text-muted-foreground">{contract.admin_address}</p>}
               </div>
-              {contract.contractor_company && (
+              {/* Client / Contratante */}
+              <div className="border rounded-lg p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Contratante</p>
                 <div className="flex items-center gap-2 text-sm">
-                  <Building className="w-4 h-4 text-muted-foreground" />
-                  <span>{contract.contractor_company}</span>
+                  <User className="w-3 h-3 text-muted-foreground" />
+                  <span className="font-medium">{contract.contractor_name}</span>
                 </div>
-              )}
+                {contract.contractor_company && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Building className="w-3 h-3" />
+                    <span>{contract.contractor_company}</span>
+                  </div>
+                )}
+                {contract.contractor_cnpj && <p className="text-xs text-muted-foreground">CNPJ: {contract.contractor_cnpj}</p>}
+                {contract.contractor_address && <p className="text-xs text-muted-foreground">{contract.contractor_address}</p>}
+              </div>
             </div>
 
             {/* Dates and Values */}
@@ -289,7 +332,7 @@ export const PublicContract: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Services Summary */}
+        {/* Services */}
         {contract.services_summary.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
@@ -301,9 +344,7 @@ export const PublicContract: React.FC = () => {
                   <div key={item.id || index} className="flex justify-between items-start p-3 bg-muted rounded-lg">
                     <div>
                       <p className="font-medium">{item.service}</p>
-                      {item.description && (
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                      )}
+                      {item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
                       <p className="text-sm text-muted-foreground mt-1">
                         {formatHours(item.hours)} × {item.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </p>
@@ -344,15 +385,78 @@ export const PublicContract: React.FC = () => {
           </Card>
         )}
 
-        {/* Signature Status */}
-        {contract.status === 'signed' && (
+        {/* Signatures Section */}
+        {(contract.admin_signed_at || contract.client_signed_at || contract.witness_signed_at) && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Assinaturas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 sm:grid-cols-3">
+                {/* Admin signature */}
+                <div className="text-center space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Contratado</p>
+                  {contract.admin_signature_url ? (
+                    <img src={contract.admin_signature_url} alt="Assinatura do admin" className="mx-auto max-h-20 border rounded" />
+                  ) : (
+                    <div className="h-20 border rounded flex items-center justify-center text-muted-foreground text-xs">Pendente</div>
+                  )}
+                  {contract.admin_signed_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(parseISO(contract.admin_signed_at), "dd/MM/yyyy 'às' HH:mm")}
+                    </p>
+                  )}
+                </div>
+
+                {/* Client signature */}
+                <div className="text-center space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Contratante</p>
+                  {contract.client_signature_url ? (
+                    <img src={contract.client_signature_url} alt="Assinatura do cliente" className="mx-auto max-h-20 border rounded" />
+                  ) : (
+                    <div className="h-20 border rounded flex items-center justify-center text-muted-foreground text-xs">Pendente</div>
+                  )}
+                  {contract.client_signed_at && (
+                    <>
+                      <p className="text-xs font-medium">{contract.signer_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(parseISO(contract.client_signed_at), "dd/MM/yyyy 'às' HH:mm")}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Witness signature */}
+                <div className="text-center space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Testemunha</p>
+                  {contract.witness_signature_url ? (
+                    <img src={contract.witness_signature_url} alt="Assinatura da testemunha" className="mx-auto max-h-20 border rounded" />
+                  ) : (
+                    <div className="h-20 border rounded flex items-center justify-center text-muted-foreground text-xs">Opcional</div>
+                  )}
+                  {contract.witness_signed_at && (
+                    <>
+                      <p className="text-xs font-medium">{contract.witness_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(parseISO(contract.witness_signed_at), "dd/MM/yyyy 'às' HH:mm")}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Signed Status */}
+        {isFullySigned && (
           <Card className="mb-6 border-green-500/50 bg-green-500/10">
             <CardContent className="py-6">
               <div className="flex items-center gap-3 text-green-700 dark:text-green-300">
                 <CheckCircle className="w-6 h-6" />
                 <div>
                   <p className="font-semibold">Contrato Assinado</p>
-                  <p className="text-sm">Este contrato foi assinado digitalmente.</p>
+                  <p className="text-sm">Este contrato foi assinado digitalmente por ambas as partes.</p>
                 </div>
               </div>
             </CardContent>
@@ -361,14 +465,22 @@ export const PublicContract: React.FC = () => {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center print:hidden">
-          <Button variant="outline" onClick={handlePrint}>
-            <Download className="w-4 h-4 mr-2" />
-            Baixar PDF
-          </Button>
-          {canSign && (
-            <Button onClick={() => setSignDialogOpen(true)}>
+          {isFullySigned && (
+            <Button variant="outline" onClick={() => window.print()}>
+              <Download className="w-4 h-4 mr-2" />
+              Exportar PDF
+            </Button>
+          )}
+          {canClientSign && (
+            <Button onClick={() => setSignMode('client')}>
               <FileSignature className="w-4 h-4 mr-2" />
               Assinar Contrato
+            </Button>
+          )}
+          {canWitnessSign && !isFullySigned && (
+            <Button variant="outline" onClick={() => setSignMode('witness')}>
+              <FileSignature className="w-4 h-4 mr-2" />
+              Assinar como Testemunha
             </Button>
           )}
         </div>
@@ -380,60 +492,76 @@ export const PublicContract: React.FC = () => {
       </footer>
 
       {/* Sign Dialog */}
-      <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
+      <Dialog open={signMode !== null} onOpenChange={(open) => !open && setSignMode(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Assinar Contrato</DialogTitle>
+            <DialogTitle>
+              {signMode === 'client' ? 'Assinar Contrato' : 'Assinar como Testemunha'}
+            </DialogTitle>
             <DialogDescription>
-              Preencha seus dados para assinar digitalmente este contrato.
+              {signMode === 'client'
+                ? 'Preencha seus dados e desenhe sua assinatura.'
+                : 'Preencha os dados da testemunha e desenhe a assinatura.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome Completo *</Label>
-              <Input
-                value={signerName}
-                onChange={(e) => setSignerName(e.target.value)}
-                placeholder="Seu nome completo"
-              />
-            </div>
+            {signMode === 'client' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Nome Completo *</Label>
+                  <Input value={signerName} onChange={(e) => setSignerName(e.target.value)} placeholder="Seu nome completo" />
+                </div>
+                <div className="space-y-2">
+                  <Label>CPF/CNPJ</Label>
+                  <Input value={signerDocument} onChange={(e) => setSignerDocument(e.target.value)} placeholder="000.000.000-00" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Endereço</Label>
+                  <Input value={signerAddress} onChange={(e) => setSignerAddress(e.target.value)} placeholder="Endereço completo" />
+                </div>
+              </>
+            )}
 
-            <div className="space-y-2">
-              <Label>CPF/CNPJ</Label>
-              <Input
-                value={signerDocument}
-                onChange={(e) => setSignerDocument(e.target.value)}
-                placeholder="000.000.000-00"
-              />
-            </div>
+            {signMode === 'witness' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Nome da Testemunha *</Label>
+                  <Input value={witnessName} onChange={(e) => setWitnessName(e.target.value)} placeholder="Nome completo" />
+                </div>
+                <div className="space-y-2">
+                  <Label>CPF da Testemunha</Label>
+                  <Input value={witnessCpf} onChange={(e) => setWitnessCpf(e.target.value)} placeholder="000.000.000-00" />
+                </div>
+              </>
+            )}
 
-            <div className="space-y-2">
-              <Label>Endereço</Label>
-              <Input
-                value={signerAddress}
-                onChange={(e) => setSignerAddress(e.target.value)}
-                placeholder="Endereço completo"
-              />
-            </div>
+            {/* Signature Canvas */}
+            <SignatureCanvas
+              onConfirm={(dataUrl) => setSignatureDataUrl(dataUrl)}
+              onClear={() => setSignatureDataUrl(null)}
+            />
 
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="accept-terms"
-                checked={acceptedTerms}
-                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-              />
-              <label htmlFor="accept-terms" className="text-sm text-muted-foreground cursor-pointer">
-                Li e aceito todos os termos e condições deste contrato.
-              </label>
-            </div>
+            {signMode === 'client' && (
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="accept-terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                />
+                <label htmlFor="accept-terms" className="text-sm text-muted-foreground cursor-pointer">
+                  Li e aceito todos os termos e condições deste contrato.
+                </label>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setSignDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSign} disabled={signing || !acceptedTerms}>
+            <Button variant="outline" onClick={() => setSignMode(null)}>Cancelar</Button>
+            <Button
+              onClick={handleSign}
+              disabled={signing || !signatureDataUrl || (signMode === 'client' && !acceptedTerms)}
+            >
               {signing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Assinar
             </Button>

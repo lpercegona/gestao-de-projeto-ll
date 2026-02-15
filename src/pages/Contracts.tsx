@@ -58,12 +58,11 @@ import {
   CheckCircle,
   LayoutTemplate,
   User,
-  FileText,
-  Calendar,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { SignatureCanvas } from '@/components/contracts/SignatureCanvas';
 
 interface ServiceItem {
   id: string;
@@ -97,6 +96,16 @@ interface Contract {
   created_at: string;
   client_id: string | null;
   proposal_id: string | null;
+  admin_signature_url: string | null;
+  admin_signed_at: string | null;
+  client_signature_url: string | null;
+  client_signed_at: string | null;
+  contractor_cnpj: string | null;
+  contractor_cpf_responsavel: string | null;
+  admin_company: string | null;
+  admin_cnpj: string | null;
+  admin_cpf: string | null;
+  admin_address: string | null;
 }
 
 interface ContractTemplate {
@@ -122,12 +131,23 @@ export const Contracts: React.FC = () => {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [signingContractId, setSigningContractId] = useState<string | null>(null);
   
   // Form states
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
+  
+  // Admin profile data
+  const [adminProfile, setAdminProfile] = useState<{
+    company_name: string | null;
+    cnpj: string | null;
+    cpf: string | null;
+    company_address: string | null;
+    full_name: string | null;
+  } | null>(null);
   
   // Contract form
   const [formData, setFormData] = useState({
@@ -136,6 +156,8 @@ export const Contracts: React.FC = () => {
     contractorCompany: '',
     contractorDocument: '',
     contractorAddress: '',
+    contractorCnpj: '',
+    contractorCpfResponsavel: '',
     title: '',
     content: '',
     startDate: '',
@@ -155,10 +177,22 @@ export const Contracts: React.FC = () => {
   
   const [saving, setSaving] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
+    fetchAdminProfile();
   }, []);
+
+  const fetchAdminProfile = async () => {
+    if (!user?.id) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name, company_name, cnpj, cpf, company_address')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (data) setAdminProfile(data as any);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -172,7 +206,7 @@ export const Contracts: React.FC = () => {
         setContracts(contractsRes.data.map(c => ({
           ...c,
           services_summary: (c.services_summary as unknown as ServiceItem[]) || [],
-        })));
+        })) as unknown as Contract[]);
       }
       if (templatesRes.data) {
         setTemplates(templatesRes.data as ContractTemplate[]);
@@ -185,7 +219,6 @@ export const Contracts: React.FC = () => {
     }
   };
 
-  // Handle contract save
   const handleSaveContract = async () => {
     if (!formData.contractorName || !formData.contractorEmail || !formData.title) {
       toast.error('Preencha os campos obrigatórios');
@@ -194,12 +227,14 @@ export const Contracts: React.FC = () => {
 
     setSaving(true);
     try {
-      const contractData = {
+      const contractData: Record<string, unknown> = {
         contractor_name: formData.contractorName,
         contractor_email: formData.contractorEmail,
         contractor_company: formData.contractorCompany || null,
         contractor_document: formData.contractorDocument || null,
         contractor_address: formData.contractorAddress || null,
+        contractor_cnpj: formData.contractorCnpj || null,
+        contractor_cpf_responsavel: formData.contractorCpfResponsavel || null,
         title: formData.title,
         content: formData.content,
         start_date: formData.startDate || null,
@@ -209,19 +244,24 @@ export const Contracts: React.FC = () => {
         total_hours: formData.totalHours,
         total_value: formData.totalValue,
         created_by: user?.id,
+        // Auto-fill admin data
+        admin_company: adminProfile?.company_name || null,
+        admin_cnpj: adminProfile?.cnpj || null,
+        admin_cpf: adminProfile?.cpf || null,
+        admin_address: adminProfile?.company_address || null,
       };
 
       if (editingContract) {
         const { error } = await supabase
           .from('contracts')
-          .update(contractData)
+          .update(contractData as any)
           .eq('id', editingContract.id);
         if (error) throw error;
         toast.success('Contrato atualizado!');
       } else {
         const { error } = await supabase
           .from('contracts')
-          .insert(contractData);
+          .insert(contractData as any);
         if (error) throw error;
         toast.success('Contrato criado!');
       }
@@ -237,7 +277,6 @@ export const Contracts: React.FC = () => {
     }
   };
 
-  // Handle template save
   const handleSaveTemplate = async () => {
     if (!templateFormData.name) {
       toast.error('Preencha o nome do template');
@@ -278,17 +317,11 @@ export const Contracts: React.FC = () => {
     }
   };
 
-  // Delete contract
   const handleDeleteContract = async () => {
     if (!contractToDelete) return;
-    
     try {
-      const { error } = await supabase
-        .from('contracts')
-        .delete()
-        .eq('id', contractToDelete);
+      const { error } = await supabase.from('contracts').delete().eq('id', contractToDelete);
       if (error) throw error;
-      
       toast.success('Contrato excluído!');
       setDeleteDialogOpen(false);
       setContractToDelete(null);
@@ -299,17 +332,11 @@ export const Contracts: React.FC = () => {
     }
   };
 
-  // Delete template
   const handleDeleteTemplate = async () => {
     if (!templateToDelete) return;
-    
     try {
-      const { error } = await supabase
-        .from('contract_templates')
-        .delete()
-        .eq('id', templateToDelete);
+      const { error } = await supabase.from('contract_templates').delete().eq('id', templateToDelete);
       if (error) throw error;
-      
       toast.success('Template excluído!');
       setDeleteTemplateDialogOpen(false);
       setTemplateToDelete(null);
@@ -320,24 +347,93 @@ export const Contracts: React.FC = () => {
     }
   };
 
-  // Send contract
+  // Send contract via email
   const handleSendContract = async (contract: Contract) => {
+    setSending(contract.id);
     try {
-      const { error } = await supabase
+      const { data: sessionData } = await supabase.auth.getSession();
+      const contractUrl = `${window.location.origin}/contract/${contract.share_token}`;
+      
+      const { error: fnError } = await supabase.functions.invoke('send-contract-email', {
+        body: {
+          contractId: contract.id,
+          recipientEmail: contract.contractor_email,
+          recipientName: contract.contractor_name,
+          contractTitle: contract.title,
+          contractUrl,
+        },
+        headers: {
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+        },
+      });
+
+      if (fnError) throw fnError;
+
+      // Update status to sent
+      await supabase
         .from('contracts')
         .update({ status: 'sent', sent_at: new Date().toISOString() })
         .eq('id', contract.id);
-      if (error) throw error;
-      
-      toast.success('Contrato enviado!');
+
+      toast.success('Contrato enviado por email!');
       fetchData();
     } catch (error) {
       console.error('Error sending contract:', error);
-      toast.error('Erro ao enviar contrato');
+      // Fallback: just update status
+      await supabase
+        .from('contracts')
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .eq('id', contract.id);
+      toast.success('Status atualizado para enviado');
+      fetchData();
+    } finally {
+      setSending(null);
     }
   };
 
-  // Copy link
+  // Admin sign contract
+  const handleAdminSign = async (signatureDataUrl: string) => {
+    if (!signingContractId) return;
+    
+    try {
+      const contract = contracts.find(c => c.id === signingContractId);
+      if (!contract) return;
+
+      // Upload signature to storage
+      const fileName = `admin_${signingContractId}_${Date.now()}.png`;
+      const base64Data = signatureDataUrl.split(',')[1];
+      const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      
+      const { error: uploadError } = await supabase.storage
+        .from('contract-signatures')
+        .upload(fileName, binaryData, { contentType: 'image/png' });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('contract-signatures')
+        .getPublicUrl(fileName);
+
+      // Call RPC to sign as admin
+      const { error } = await supabase.rpc('sign_contract', {
+        p_token: contract.share_token,
+        p_signer_name: adminProfile?.full_name || 'Admin',
+        p_signature_type: 'admin',
+        p_signature_url: urlData.publicUrl,
+      });
+
+      if (error) throw error;
+
+      toast.success('Contrato assinado pelo administrador!');
+      setSignDialogOpen(false);
+      setSigningContractId(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error signing contract:', error);
+      toast.error('Erro ao assinar contrato');
+    }
+  };
+
   const handleCopyLink = async (shareToken: string) => {
     const url = `${window.location.origin}/contract/${shareToken}`;
     await navigator.clipboard.writeText(url);
@@ -346,7 +442,6 @@ export const Contracts: React.FC = () => {
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
-  // Reset forms
   const resetContractForm = () => {
     setEditingContract(null);
     setFormData({
@@ -355,6 +450,8 @@ export const Contracts: React.FC = () => {
       contractorCompany: '',
       contractorDocument: '',
       contractorAddress: '',
+      contractorCnpj: '',
+      contractorCpfResponsavel: '',
       title: '',
       content: '',
       startDate: '',
@@ -368,14 +465,9 @@ export const Contracts: React.FC = () => {
 
   const resetTemplateForm = () => {
     setEditingTemplate(null);
-    setTemplateFormData({
-      name: '',
-      description: '',
-      content: '',
-    });
+    setTemplateFormData({ name: '', description: '', content: '' });
   };
 
-  // Edit contract
   const openEditContract = (contract: Contract) => {
     setEditingContract(contract);
     setFormData({
@@ -384,6 +476,8 @@ export const Contracts: React.FC = () => {
       contractorCompany: contract.contractor_company || '',
       contractorDocument: contract.contractor_document || '',
       contractorAddress: contract.contractor_address || '',
+      contractorCnpj: (contract as any).contractor_cnpj || '',
+      contractorCpfResponsavel: (contract as any).contractor_cpf_responsavel || '',
       title: contract.title,
       content: contract.content,
       startDate: contract.start_date || '',
@@ -396,7 +490,6 @@ export const Contracts: React.FC = () => {
     setContractDialogOpen(true);
   };
 
-  // Edit template
   const openEditTemplate = (template: ContractTemplate) => {
     setEditingTemplate(template);
     setTemplateFormData({
@@ -407,16 +500,11 @@ export const Contracts: React.FC = () => {
     setTemplateDialogOpen(true);
   };
 
-  // Apply template
   const handleApplyTemplate = (template: ContractTemplate) => {
-    setFormData(prev => ({
-      ...prev,
-      content: template.content,
-    }));
+    setFormData(prev => ({ ...prev, content: template.content }));
     toast.success('Template aplicado!');
   };
 
-  // Status badge
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
@@ -434,36 +522,29 @@ export const Contracts: React.FC = () => {
     }
   };
 
-  // Get client name (company or contact name)
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
     const client = appData.clients.find(c => c.id === clientId);
     return client?.company || client?.name || null;
   };
 
-  // Filter contracts
   const filteredContracts = useMemo(() => {
     return contracts.filter(c => {
       const matchesSearch = 
         c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.contractor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.contractor_email.toLowerCase().includes(searchTerm.toLowerCase());
-      
       const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
-      
       return matchesSearch && matchesStatus;
     });
   }, [contracts, searchTerm, statusFilter]);
 
-  // Stats
-  const stats = useMemo(() => {
-    return {
-      total: contracts.length,
-      pending: contracts.filter(c => ['draft', 'sent', 'viewed'].includes(c.status)).length,
-      signed: contracts.filter(c => c.status === 'signed').length,
-      totalValue: contracts.filter(c => c.status === 'signed').reduce((sum, c) => sum + Number(c.total_value), 0),
-    };
-  }, [contracts]);
+  const stats = useMemo(() => ({
+    total: contracts.length,
+    pending: contracts.filter(c => ['draft', 'sent', 'viewed'].includes(c.status)).length,
+    signed: contracts.filter(c => c.status === 'signed').length,
+    totalValue: contracts.filter(c => c.status === 'signed').reduce((sum, c) => sum + Number(c.total_value), 0),
+  }), [contracts]);
 
   if (loading) {
     return (
@@ -552,7 +633,6 @@ export const Contracts: React.FC = () => {
                   <SelectItem value="sent">Enviado</SelectItem>
                   <SelectItem value="viewed">Visualizado</SelectItem>
                   <SelectItem value="signed">Assinado</SelectItem>
-                  <SelectItem value="expired">Expirado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -579,6 +659,9 @@ export const Contracts: React.FC = () => {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-foreground truncate">{contract.title}</h3>
                           {getStatusBadge(contract.status)}
+                          {contract.admin_signed_at && !contract.client_signed_at && (
+                            <Badge variant="outline" className="text-xs">Admin assinou</Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <User className="w-3 h-3" />
@@ -603,7 +686,7 @@ export const Contracts: React.FC = () => {
                           {contract.signed_at && (
                             <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                               <CheckCircle className="w-3 h-3" />
-                              Assinado por {contract.signer_name}
+                              Assinado
                             </span>
                           )}
                         </div>
@@ -613,13 +696,33 @@ export const Contracts: React.FC = () => {
                       </div>
                       
                       <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Admin sign button */}
+                        {!contract.admin_signed_at && contract.status !== 'signed' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSigningContractId(contract.id);
+                              setSignDialogOpen(true);
+                            }}
+                          >
+                            <FileSignature className="w-4 h-4 mr-2" />
+                            Assinar
+                          </Button>
+                        )}
+
                         {contract.status === 'draft' && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleSendContract(contract)}
+                            disabled={sending === contract.id}
                           >
-                            <Send className="w-4 h-4 mr-2" />
+                            {sending === contract.id ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="w-4 h-4 mr-2" />
+                            )}
                             Enviar
                           </Button>
                         )}
@@ -741,12 +844,8 @@ export const Contracts: React.FC = () => {
       <Dialog open={contractDialogOpen} onOpenChange={setContractDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingContract ? 'Editar Contrato' : 'Novo Contrato'}
-            </DialogTitle>
-            <DialogDescription>
-              Preencha os dados do contrato
-            </DialogDescription>
+            <DialogTitle>{editingContract ? 'Editar Contrato' : 'Novo Contrato'}</DialogTitle>
+            <DialogDescription>Preencha os dados do contrato</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -758,10 +857,13 @@ export const Contracts: React.FC = () => {
                 const client = appData.clients.find(c => c.id === clientId);
                 setFormData(prev => ({
                   ...prev,
-                  clientId: clientId,
+                  clientId,
                   contractorName: client?.name || prev.contractorName,
                   contractorEmail: client?.email || prev.contractorEmail,
-                  contractorCompany: prev.contractorCompany,
+                  contractorCompany: client?.company || prev.contractorCompany,
+                  contractorCnpj: (client as any)?.cnpj || prev.contractorCnpj,
+                  contractorCpfResponsavel: (client as any)?.cpf_responsavel || prev.contractorCpfResponsavel,
+                  contractorAddress: (client as any)?.endereco || prev.contractorAddress,
                 }));
               }}>
                 <SelectTrigger>
@@ -779,49 +881,82 @@ export const Contracts: React.FC = () => {
             </div>
 
             {/* Contractor info */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Nome do Contratante *</Label>
-                <Input
-                  value={formData.contractorName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contractorName: e.target.value }))}
-                  placeholder="Nome completo"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email *</Label>
-                <Input
-                  type="email"
-                  value={formData.contractorEmail}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contractorEmail: e.target.value }))}
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Empresa</Label>
-                <Input
-                  value={formData.contractorCompany}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contractorCompany: e.target.value }))}
-                  placeholder="Nome da empresa"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CPF/CNPJ</Label>
-                <Input
-                  value={formData.contractorDocument}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contractorDocument: e.target.value }))}
-                  placeholder="000.000.000-00"
-                />
-              </div>
-              <div className="sm:col-span-2 space-y-2">
-                <Label>Endereço</Label>
-                <Input
-                  value={formData.contractorAddress}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contractorAddress: e.target.value }))}
-                  placeholder="Endereço completo"
-                />
+            <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
+              <h4 className="text-sm font-medium">Dados do Contratante</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Nome do Contratante *</Label>
+                  <Input
+                    value={formData.contractorName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contractorName: e.target.value }))}
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    value={formData.contractorEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contractorEmail: e.target.value }))}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <Input
+                    value={formData.contractorCompany}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contractorCompany: e.target.value }))}
+                    placeholder="Nome da empresa"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>CPF/CNPJ</Label>
+                  <Input
+                    value={formData.contractorDocument}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contractorDocument: e.target.value }))}
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>CNPJ da Empresa</Label>
+                  <Input
+                    value={formData.contractorCnpj}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contractorCnpj: e.target.value }))}
+                    placeholder="00.000.000/0000-00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>CPF do Responsável</Label>
+                  <Input
+                    value={formData.contractorCpfResponsavel}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contractorCpfResponsavel: e.target.value }))}
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Endereço</Label>
+                  <Input
+                    value={formData.contractorAddress}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contractorAddress: e.target.value }))}
+                    placeholder="Endereço completo"
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Admin info preview */}
+            {adminProfile && (
+              <div className="border rounded-lg p-4 bg-muted/50">
+                <h4 className="text-sm font-medium mb-2">Dados do Contratado (Admin)</h4>
+                <div className="grid gap-2 sm:grid-cols-2 text-sm text-muted-foreground">
+                  <p><span className="font-medium text-foreground">Empresa:</span> {adminProfile.company_name || '—'}</p>
+                  <p><span className="font-medium text-foreground">CNPJ:</span> {adminProfile.cnpj || '—'}</p>
+                  <p><span className="font-medium text-foreground">CPF:</span> {adminProfile.cpf || '—'}</p>
+                  <p><span className="font-medium text-foreground">Endereço:</span> {adminProfile.company_address || '—'}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Edite esses dados em Preferências &gt; Perfil</p>
+              </div>
+            )}
 
             {/* Contract details */}
             <div className="space-y-2">
@@ -860,11 +995,11 @@ export const Contracts: React.FC = () => {
               <Textarea
                 value={formData.content}
                 onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                placeholder="Texto completo do contrato... Use variáveis como {{contractor_name}}, {{total_value}}, etc."
+                placeholder="Texto completo do contrato..."
                 rows={10}
               />
               <p className="text-xs text-muted-foreground">
-                Variáveis disponíveis: {'{{contractor_name}}'}, {'{{contractor_email}}'}, {'{{contractor_company}}'}, {'{{total_hours}}'}, {'{{total_value}}'}, {'{{start_date}}'}, {'{{end_date}}'}
+                Variáveis: {'{{contractor_name}}'}, {'{{contractor_email}}'}, {'{{contractor_company}}'}, {'{{contractor_cnpj}}'}, {'{{contractor_cpf}}'}, {'{{contractor_address}}'}, {'{{admin_company}}'}, {'{{admin_cnpj}}'}, {'{{admin_cpf}}'}, {'{{admin_name}}'}, {'{{admin_address}}'}, {'{{total_hours}}'}, {'{{total_value}}'}, {'{{start_date}}'}, {'{{end_date}}'}
               </p>
             </div>
 
@@ -893,7 +1028,6 @@ export const Contracts: React.FC = () => {
                   min={0}
                   value={formData.totalHours || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalHours: Number(e.target.value) }))}
-                  placeholder="0"
                 />
               </div>
               <div className="space-y-2">
@@ -903,7 +1037,6 @@ export const Contracts: React.FC = () => {
                   min={0}
                   value={formData.totalValue || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalValue: Number(e.target.value) }))}
-                  placeholder="0"
                 />
               </div>
             </div>
@@ -920,9 +1053,7 @@ export const Contracts: React.FC = () => {
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setContractDialogOpen(false)}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setContractDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveContract} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingContract ? 'Salvar' : 'Criar Contrato'}
@@ -935,12 +1066,8 @@ export const Contracts: React.FC = () => {
       <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingTemplate ? 'Editar Template' : 'Novo Template'}
-            </DialogTitle>
-            <DialogDescription>
-              Crie um modelo reutilizável para seus contratos
-            </DialogDescription>
+            <DialogTitle>{editingTemplate ? 'Editar Template' : 'Novo Template'}</DialogTitle>
+            <DialogDescription>Crie um modelo reutilizável para seus contratos</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
@@ -952,7 +1079,6 @@ export const Contracts: React.FC = () => {
                 placeholder="Ex: Contrato Padrão de Serviços"
               />
             </div>
-
             <div className="space-y-2">
               <Label>Descrição</Label>
               <Textarea
@@ -962,7 +1088,6 @@ export const Contracts: React.FC = () => {
                 rows={2}
               />
             </div>
-
             <div className="space-y-2">
               <Label>Conteúdo do Template</Label>
               <Textarea
@@ -972,20 +1097,34 @@ export const Contracts: React.FC = () => {
                 rows={12}
               />
               <p className="text-xs text-muted-foreground">
-                Use variáveis como {'{{contractor_name}}'}, {'{{total_value}}'}, {'{{start_date}}'} que serão substituídas automaticamente
+                Variáveis: {'{{contractor_name}}'}, {'{{contractor_company}}'}, {'{{contractor_cnpj}}'}, {'{{contractor_cpf}}'}, {'{{contractor_address}}'}, {'{{admin_company}}'}, {'{{admin_cnpj}}'}, {'{{admin_cpf}}'}, {'{{admin_name}}'}, {'{{admin_address}}'}, {'{{total_hours}}'}, {'{{total_value}}'}, {'{{start_date}}'}, {'{{end_date}}'}
               </p>
             </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveTemplate} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingTemplate ? 'Salvar' : 'Criar Template'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Signature Dialog */}
+      <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Assinar como Administrador</DialogTitle>
+            <DialogDescription>
+              Desenhe sua assinatura abaixo para assinar este contrato.
+            </DialogDescription>
+          </DialogHeader>
+          <SignatureCanvas
+            onConfirm={handleAdminSign}
+            onClear={() => {}}
+          />
         </DialogContent>
       </Dialog>
 

@@ -199,6 +199,10 @@ export const ClientDetail: React.FC = () => {
     contract_start_date: null as string | null,
     contract_end_date: null as string | null,
     contract_months: 1 as number | null,
+    cnpj: '',
+    cpf_responsavel: '',
+    endereco: '',
+    responsavel_name: '',
   });
 
   // Client user management state
@@ -669,6 +673,10 @@ export const ClientDetail: React.FC = () => {
         contract_start_date: client.contract_start_date || null,
         contract_end_date: client.contract_end_date || null,
         contract_months: client.contract_months || 1,
+        cnpj: (client as any).cnpj || '',
+        cpf_responsavel: (client as any).cpf_responsavel || '',
+        endereco: (client as any).endereco || '',
+        responsavel_name: (client as any).responsavel_name || '',
       });
     }
   }, [client]);
@@ -1185,6 +1193,18 @@ export const ClientDetail: React.FC = () => {
                   <p className="text-sm font-medium text-foreground">
                     {format(new Date(client.contract_end_date), "MMM/yyyy", { locale: ptBR })}
                   </p>
+                </div>
+              )}
+              {(client as any).cnpj && (
+                <div>
+                  <span className="text-xs text-muted-foreground">CNPJ</span>
+                  <p className="text-sm font-medium text-foreground">{(client as any).cnpj}</p>
+                </div>
+              )}
+              {(client as any).endereco && (
+                <div className="col-span-2">
+                  <span className="text-xs text-muted-foreground">Endereço</span>
+                  <p className="text-sm font-medium text-foreground">{(client as any).endereco}</p>
                 </div>
               )}
             </div>
@@ -1846,6 +1866,53 @@ export const ClientDetail: React.FC = () => {
                         onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
                         disabled={editSubmitting}
                       />
+                    </div>
+                  </div>
+
+                  {/* Dados Fiscais */}
+                  <div className="space-y-2 border rounded-lg p-4 bg-muted/50">
+                    <h4 className="text-sm font-medium mb-3">Dados Fiscais e Localização</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-cnpj">CNPJ</Label>
+                        <Input
+                          id="edit-cnpj"
+                          value={editFormData.cnpj}
+                          onChange={(e) => setEditFormData({ ...editFormData, cnpj: e.target.value })}
+                          placeholder="00.000.000/0000-00"
+                          disabled={editSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-cpf-responsavel">CPF do Responsável</Label>
+                        <Input
+                          id="edit-cpf-responsavel"
+                          value={editFormData.cpf_responsavel}
+                          onChange={(e) => setEditFormData({ ...editFormData, cpf_responsavel: e.target.value })}
+                          placeholder="000.000.000-00"
+                          disabled={editSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-responsavel-name">Nome do Responsável Legal</Label>
+                        <Input
+                          id="edit-responsavel-name"
+                          value={editFormData.responsavel_name}
+                          onChange={(e) => setEditFormData({ ...editFormData, responsavel_name: e.target.value })}
+                          placeholder="Nome completo do responsável"
+                          disabled={editSubmitting}
+                        />
+                      </div>
+                      <div className="col-span-2 space-y-2">
+                        <Label htmlFor="edit-endereco">Endereço</Label>
+                        <Input
+                          id="edit-endereco"
+                          value={editFormData.endereco}
+                          onChange={(e) => setEditFormData({ ...editFormData, endereco: e.target.value })}
+                          placeholder="Endereço completo"
+                          disabled={editSubmitting}
+                        />
+                      </div>
                     </div>
                   </div>
 
