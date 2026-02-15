@@ -24,11 +24,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587", 10);
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASS");
-
     const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -111,22 +106,47 @@ Deno.serve(async (req) => {
       .update({ status: "sent" })
       .eq("id", proposal_id);
 
-    if (smtpHost && smtpUser && smtpPass) {
+    // Get SMTP credentials: smtp_settings (owner -> global) -> env vars
+    const creatorOwnerId = proposal.created_by || proposal.owner_id;
+    let smtp: { host: string; port: number; user: string; pass: string; fromName: string } | null = null;
+
+    if (creatorOwnerId) {
+      const { data: ownerSmtp } = await adminClient.from("smtp_settings").select("*").eq("owner_id", creatorOwnerId).maybeSingle();
+      if (ownerSmtp?.smtp_host && ownerSmtp?.smtp_user) {
+        smtp = { host: ownerSmtp.smtp_host, port: ownerSmtp.smtp_port || 587, user: ownerSmtp.smtp_user, pass: ownerSmtp.smtp_pass || "", fromName: ownerSmtp.smtp_from_name || "" };
+      }
+    }
+    if (!smtp) {
+      const { data: globalSmtp } = await adminClient.from("smtp_settings").select("*").is("owner_id", null).maybeSingle();
+      if (globalSmtp?.smtp_host && globalSmtp?.smtp_user) {
+        smtp = { host: globalSmtp.smtp_host, port: globalSmtp.smtp_port || 587, user: globalSmtp.smtp_user, pass: globalSmtp.smtp_pass || "", fromName: globalSmtp.smtp_from_name || "" };
+      }
+    }
+    if (!smtp) {
+      const envHost = Deno.env.get("SMTP_HOST");
+      const envUser = Deno.env.get("SMTP_USER");
+      const envPass = Deno.env.get("SMTP_PASS");
+      const envPort = parseInt(Deno.env.get("SMTP_PORT") || "587", 10);
+      if (envHost && envUser && envPass) {
+        smtp = { host: envHost, port: envPort, user: envUser, pass: envPass, fromName: "" };
+      }
+    }
+
+    if (smtp) {
       try {
         const client = new SMTPClient({
           connection: {
-            hostname: smtpHost,
-            port: smtpPort,
-            tls: smtpPort === 465,
-            auth: {
-              username: smtpUser,
-              password: smtpPass,
-            },
+            hostname: smtp.host,
+            port: smtp.port,
+            tls: smtp.port === 465,
+            auth: { username: smtp.user, password: smtp.pass },
           },
         });
 
+        const fromAddress = smtp.fromName ? `${smtp.fromName} <${smtp.user}>` : smtp.user;
+
         await client.send({
-          from: smtpUser,
+          from: fromAddress,
           to: proposal.recipient_email,
           subject,
           content: "auto",
