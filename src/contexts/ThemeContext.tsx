@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const HEADER_HUE_STORAGE_KEY = 'theme:header-hue';
+const MENU_HUE_STORAGE_KEY = 'theme:menu-hue';
 
 interface ThemeSettings {
   primaryColor: string;
@@ -25,9 +26,9 @@ const defaultTheme: ThemeSettings = {
   fontFamily: 'Inter',
 };
 
-const getStoredHeaderHue = (): number | null => {
+const getStoredHue = (key: string): number | null => {
   try {
-    const raw = localStorage.getItem(HEADER_HUE_STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = Number(raw);
     if (Number.isNaN(parsed)) return null;
@@ -91,6 +92,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       localStorage.setItem(HEADER_HUE_STORAGE_KEY, String(settings.headerHue));
+      localStorage.setItem(MENU_HUE_STORAGE_KEY, String(settings.headerHue));
     } catch {
       // noop
     }
@@ -120,12 +122,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .single();
       
       if (data) {
-        const fallbackStoredHue = getStoredHeaderHue();
+        const fallbackStoredHeaderHue = getStoredHue(HEADER_HUE_STORAGE_KEY);
+        const fallbackStoredMenuHue = getStoredHue(MENU_HUE_STORAGE_KEY);
         const newTheme = {
           primaryColor: data.primary_color,
           secondaryColor: data.secondary_color,
           accentColor: data.accent_color,
-          headerHue: data.header_hue ?? fallbackStoredHue ?? defaultTheme.headerHue,
+          headerHue:
+            data.header_hue ??
+            data.menu_hue ??
+            fallbackStoredHeaderHue ??
+            fallbackStoredMenuHue ??
+            defaultTheme.headerHue,
           fontFamily: data.font_family,
         };
         setTheme(newTheme);
