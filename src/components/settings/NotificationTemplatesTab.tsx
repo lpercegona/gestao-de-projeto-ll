@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/popover';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SmtpSettingsSection } from './SmtpSettingsSection';
+import { SenderNameSection } from './SenderNameSection';
 
 interface EmailTemplate {
   id: string;
@@ -199,6 +200,8 @@ export const NotificationTemplatesTab: React.FC = () => {
           </Alert>
         </>
       )}
+
+      <SenderNameSection />
 
       {templates.length > 0 && (
         <Card>
