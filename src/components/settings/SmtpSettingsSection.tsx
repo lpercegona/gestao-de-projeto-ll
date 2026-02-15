@@ -221,14 +221,6 @@ export const SmtpSettingsSection: React.FC = () => {
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>Nome do Remetente</Label>
-          <Input
-            value={settings.smtp_from_name}
-            onChange={(e) => setSettings({ ...settings, smtp_from_name: e.target.value })}
-            placeholder="Nome que aparecerá como remetente"
-          />
-        </div>
         <div className="flex items-center justify-between pt-2">
           <Button variant="outline" size="sm" onClick={handleTestConnection} disabled={testing}>
             {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}

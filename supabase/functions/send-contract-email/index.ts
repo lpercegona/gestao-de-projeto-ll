@@ -106,20 +106,32 @@ Deno.serve(async (req) => {
       .update({ status: "sent", sent_at: new Date().toISOString() })
       .eq("id", contract_id);
 
-    // Get SMTP credentials: smtp_settings (owner -> global) -> env vars
+    // Resolve fromName independently: owner -> global -> empty
     const creatorOwnerId = contract.created_by || contract.owner_id;
-    let smtp: { host: string; port: number; user: string; pass: string; fromName: string } | null = null;
+    let resolvedFromName = "";
+
+    if (creatorOwnerId) {
+      const { data: ownerSettings } = await adminClient.from("smtp_settings").select("smtp_from_name").eq("owner_id", creatorOwnerId).maybeSingle();
+      if (ownerSettings?.smtp_from_name) resolvedFromName = ownerSettings.smtp_from_name;
+    }
+    if (!resolvedFromName) {
+      const { data: globalSettings } = await adminClient.from("smtp_settings").select("smtp_from_name").is("owner_id", null).maybeSingle();
+      if (globalSettings?.smtp_from_name) resolvedFromName = globalSettings.smtp_from_name;
+    }
+
+    // Get SMTP credentials: smtp_settings (owner -> global) -> env vars
+    let smtp: { host: string; port: number; user: string; pass: string } | null = null;
 
     if (creatorOwnerId) {
       const { data: ownerSmtp } = await adminClient.from("smtp_settings").select("*").eq("owner_id", creatorOwnerId).maybeSingle();
       if (ownerSmtp?.smtp_host && ownerSmtp?.smtp_user) {
-        smtp = { host: ownerSmtp.smtp_host, port: ownerSmtp.smtp_port || 587, user: ownerSmtp.smtp_user, pass: ownerSmtp.smtp_pass || "", fromName: ownerSmtp.smtp_from_name || "" };
+        smtp = { host: ownerSmtp.smtp_host, port: ownerSmtp.smtp_port || 587, user: ownerSmtp.smtp_user, pass: ownerSmtp.smtp_pass || "" };
       }
     }
     if (!smtp) {
       const { data: globalSmtp } = await adminClient.from("smtp_settings").select("*").is("owner_id", null).maybeSingle();
       if (globalSmtp?.smtp_host && globalSmtp?.smtp_user) {
-        smtp = { host: globalSmtp.smtp_host, port: globalSmtp.smtp_port || 587, user: globalSmtp.smtp_user, pass: globalSmtp.smtp_pass || "", fromName: globalSmtp.smtp_from_name || "" };
+        smtp = { host: globalSmtp.smtp_host, port: globalSmtp.smtp_port || 587, user: globalSmtp.smtp_user, pass: globalSmtp.smtp_pass || "" };
       }
     }
     if (!smtp) {
@@ -128,7 +140,7 @@ Deno.serve(async (req) => {
       const envPass = Deno.env.get("SMTP_PASS");
       const envPort = parseInt(Deno.env.get("SMTP_PORT") || "587", 10);
       if (envHost && envUser && envPass) {
-        smtp = { host: envHost, port: envPort, user: envUser, pass: envPass, fromName: "" };
+        smtp = { host: envHost, port: envPort, user: envUser, pass: envPass };
       }
     }
 
@@ -143,7 +155,7 @@ Deno.serve(async (req) => {
           },
         });
 
-        const fromAddress = smtp.fromName ? `${smtp.fromName} <${smtp.user}>` : smtp.user;
+        const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
 
         await client.send({
           from: fromAddress,

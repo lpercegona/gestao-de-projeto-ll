@@ -7,6 +7,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function resolveFromName(adminClient: any, ownerId: string | null): Promise<string> {
+  if (ownerId) {
+    const { data } = await adminClient.from("smtp_settings").select("smtp_from_name").eq("owner_id", ownerId).maybeSingle();
+    if (data?.smtp_from_name) return data.smtp_from_name;
+  }
+  const { data: global } = await adminClient.from("smtp_settings").select("smtp_from_name").is("owner_id", null).maybeSingle();
+  if (global?.smtp_from_name) return global.smtp_from_name;
+  return "";
+}
+
 async function getSmtpCredentials(adminClient: any, ownerId: string | null) {
   // Try owner-specific SMTP settings first
   if (ownerId) {
@@ -21,7 +31,6 @@ async function getSmtpCredentials(adminClient: any, ownerId: string | null) {
         port: ownerSmtp.smtp_port || 587,
         user: ownerSmtp.smtp_user,
         pass: ownerSmtp.smtp_pass || "",
-        fromName: ownerSmtp.smtp_from_name || "",
       };
     }
   }
@@ -38,7 +47,6 @@ async function getSmtpCredentials(adminClient: any, ownerId: string | null) {
       port: globalSmtp.smtp_port || 587,
       user: globalSmtp.smtp_user,
       pass: globalSmtp.smtp_pass || "",
-      fromName: globalSmtp.smtp_from_name || "",
     };
   }
 
@@ -48,7 +56,7 @@ async function getSmtpCredentials(adminClient: any, ownerId: string | null) {
   const pass = Deno.env.get("SMTP_PASS");
   const port = parseInt(Deno.env.get("SMTP_PORT") || "587", 10);
   if (host && user) {
-    return { host, port, user, pass: pass || "", fromName: "" };
+    return { host, port, user, pass: pass || "" };
   }
 
   return null;
@@ -207,7 +215,8 @@ Deno.serve(async (req) => {
         },
       });
 
-      const fromAddress = smtp.fromName ? `${smtp.fromName} <${smtp.user}>` : smtp.user;
+      const resolvedFromName = await resolveFromName(adminClient, ownerId);
+      const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
 
       await smtpClient.send({
         from: fromAddress,
