@@ -1370,8 +1370,20 @@ export type Database = {
       get_contract_by_token: {
         Args: { p_token: string }
         Returns: {
+          admin_address: string
+          admin_cnpj: string
+          admin_company: string
+          admin_cpf: string
+          admin_signature_url: string
+          admin_signed_at: string
+          client_signature_url: string
+          client_signed_at: string
           content: string
+          contractor_address: string
+          contractor_cnpj: string
           contractor_company: string
+          contractor_cpf_responsavel: string
+          contractor_document: string
           contractor_email: string
           contractor_name: string
           created_at: string
@@ -1379,11 +1391,15 @@ export type Database = {
           id: string
           payment_terms: string
           services_summary: Json
+          signer_name: string
           start_date: string
           status: string
           title: string
           total_hours: number
           total_value: number
+          witness_name: string
+          witness_signature_url: string
+          witness_signed_at: string
         }[]
       }
       get_proposal_by_token: {
@@ -1398,6 +1414,7 @@ export type Database = {
           recipient_name: string
           status: string
           template_content: string
+          template_sections: Json
           title: string
           total_hours: number
           total_value: number
@@ -1511,6 +1528,8 @@ export type Database = {
         Args: {
           p_address?: string
           p_document?: string
+          p_signature_type?: string
+          p_signature_url?: string
           p_signer_ip?: string
           p_signer_name: string
           p_token: string

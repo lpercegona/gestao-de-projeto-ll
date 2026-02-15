@@ -52,6 +52,10 @@ export const ProfileEditTab: React.FC = () => {
 
   const [fullName, setFullName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [adminCnpj, setAdminCnpj] = useState('');
+  const [adminCpf, setAdminCpf] = useState('');
+  const [adminCompanyName, setAdminCompanyName] = useState('');
+  const [adminCompanyAddress, setAdminCompanyAddress] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,9 +99,20 @@ export const ProfileEditTab: React.FC = () => {
           .eq('user_id', user.id)
           .maybeSingle();
 
+        // Fetch extended fields separately to avoid type errors
+        const { data: extProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
         if (profile) {
           setFullName(profile.full_name || '');
           setAvatarUrl(profile.avatar_url || null);
+          setAdminCnpj((extProfile as any)?.cnpj || '');
+          setAdminCpf((extProfile as any)?.cpf || '');
+          setAdminCompanyName((extProfile as any)?.company_name || '');
+          setAdminCompanyAddress((extProfile as any)?.company_address || '');
         }
       } catch (err) {
         console.error('Error loading profile:', err);
@@ -211,7 +226,14 @@ export const ProfileEditTab: React.FC = () => {
 
     setSavingProfile(true);
     try {
-      const { error } = await supabase.from('profiles').update({ full_name: fullName.trim() }).eq('user_id', user.id);
+      const updateData: Record<string, unknown> = { full_name: fullName.trim() };
+      if (!isClient) {
+        updateData.cnpj = adminCnpj || null;
+        updateData.cpf = adminCpf || null;
+        updateData.company_name = adminCompanyName || null;
+        updateData.company_address = adminCompanyAddress || null;
+      }
+      const { error } = await supabase.from('profiles').update(updateData as any).eq('user_id', user.id);
       if (error) toast.error('Erro ao salvar perfil: ' + error.message);
       else toast.success('Perfil atualizado com sucesso!');
     } catch {
@@ -377,6 +399,30 @@ export const ProfileEditTab: React.FC = () => {
                 <Input value={user?.email || ''} disabled className="bg-muted" />
                 <p className="text-xs text-muted-foreground">O email não pode ser alterado</p>
               </div>
+
+              {!isClient && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="adminCompanyName">Nome da Empresa</Label>
+                      <Input id="adminCompanyName" value={adminCompanyName} onChange={(e) => setAdminCompanyName(e.target.value)} placeholder="Razão social" disabled={savingProfile} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="adminCnpj">CNPJ</Label>
+                      <Input id="adminCnpj" value={adminCnpj} onChange={(e) => setAdminCnpj(e.target.value)} placeholder="00.000.000/0000-00" disabled={savingProfile} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="adminCpf">CPF do Responsável</Label>
+                      <Input id="adminCpf" value={adminCpf} onChange={(e) => setAdminCpf(e.target.value)} placeholder="000.000.000-00" disabled={savingProfile} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="adminCompanyAddress">Endereço da Empresa</Label>
+                      <Input id="adminCompanyAddress" value={adminCompanyAddress} onChange={(e) => setAdminCompanyAddress(e.target.value)} placeholder="Endereço completo" disabled={savingProfile} />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Button type="submit" disabled={savingProfile}>
                 {savingProfile ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>) : (<><Save className="w-4 h-4 mr-2" />Salvar Alterações</>)}
               </Button>

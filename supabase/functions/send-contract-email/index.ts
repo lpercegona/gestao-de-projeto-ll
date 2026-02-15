@@ -41,9 +41,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { proposal_id } = await req.json();
-    if (!proposal_id) {
-      return new Response(JSON.stringify({ error: "proposal_id is required" }), {
+    const { contract_id } = await req.json();
+    if (!contract_id) {
+      return new Response(JSON.stringify({ error: "contract_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -51,14 +51,14 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: proposal, error: propError } = await adminClient
-      .from("proposals")
-      .select("*, proposal_templates(description, sections)")
-      .eq("id", proposal_id)
+    const { data: contract, error: contractError } = await adminClient
+      .from("contracts")
+      .select("*")
+      .eq("id", contract_id)
       .single();
 
-    if (propError || !proposal) {
-      return new Response(JSON.stringify({ error: "Proposal not found" }), {
+    if (contractError || !contract) {
+      return new Response(JSON.stringify({ error: "Contract not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -67,20 +67,20 @@ Deno.serve(async (req) => {
     const { data: emailTemplate } = await adminClient
       .from("email_templates")
       .select("*")
-      .eq("slug", "proposal_sent")
+      .eq("slug", "contract_sent")
       .single();
 
     const baseUrl = req.headers.get("origin") || `https://${req.headers.get("host")}`;
-    const proposalLink = `${baseUrl}/proposal/${proposal.share_token}`;
+    const contractLink = `${baseUrl}/contract/${contract.share_token}`;
 
-    let subject = emailTemplate?.subject || "Nova proposta: {{titulo_proposta}}";
-    let bodyHtml = emailTemplate?.body_html || `<p>Olá {{nome_cliente}},</p><p>Você recebeu uma nova proposta.</p><p><a href="{{link_proposta}}">Ver proposta</a></p>`;
+    let subject = emailTemplate?.subject || "Novo contrato: {{titulo_contrato}}";
+    let bodyHtml = emailTemplate?.body_html || `<p>Olá {{nome_cliente}},</p><p>Você recebeu um novo contrato para análise e assinatura.</p><p><a href="{{link_contrato}}">Ver e assinar contrato</a></p>`;
 
     const replacements: Record<string, string> = {
-      "{{nome_cliente}}": proposal.recipient_name || "",
-      "{{email_cliente}}": proposal.recipient_email || "",
-      "{{titulo_proposta}}": proposal.title || "",
-      "{{link_proposta}}": proposalLink,
+      "{{nome_cliente}}": contract.contractor_name || "",
+      "{{email_cliente}}": contract.contractor_email || "",
+      "{{titulo_contrato}}": contract.title || "",
+      "{{link_contrato}}": contractLink,
     };
 
     for (const [key, value] of Object.entries(replacements)) {
@@ -89,9 +89,9 @@ Deno.serve(async (req) => {
     }
 
     await adminClient
-      .from("proposals")
-      .update({ status: "sent" })
-      .eq("id", proposal_id);
+      .from("contracts")
+      .update({ status: "sent", sent_at: new Date().toISOString() })
+      .eq("id", contract_id);
 
     if (smtpHost && smtpUser && smtpPass) {
       try {
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
 
         await client.send({
           from: smtpUser,
-          to: proposal.recipient_email,
+          to: contract.contractor_email,
           subject,
           content: "auto",
           html: bodyHtml,
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("Error in send-proposal-email:", err);
+    console.error("Error in send-contract-email:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
