@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -124,80 +125,93 @@ export const NotificationTemplatesTab: React.FC = () => {
         </p>
       </div>
 
-      {templates.map((template) => {
-        const meta = TEMPLATE_META[template.slug];
-        const edits = editedTemplates[template.id] || {};
-        const hasChanges = Object.keys(edits).length > 0;
+      {templates.length > 0 && (
+        <Card>
+          <CardContent className="p-0">
+            <Accordion type="single" collapsible className="w-full">
+              {templates.map((template) => {
+                const meta = TEMPLATE_META[template.slug];
+                const edits = editedTemplates[template.id] || {};
+                const hasChanges = Object.keys(edits).length > 0;
 
-        return (
-          <Card key={template.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">
-                    {meta?.label || template.slug}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Slug: {template.slug}
-                  </CardDescription>
-                </div>
-                {meta && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8">
-                        <Info className="w-4 h-4 mr-1" />
-                        Campos
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72" align="end">
-                      <div className="space-y-1 text-sm">
-                        <p className="font-medium mb-2">Campos dinâmicos</p>
-                        {meta.fields.map((f) => (
-                          <div key={f.key} className="flex gap-2">
-                            <code className="text-xs bg-muted px-1 rounded">{f.key}</code>
-                            <span className="text-muted-foreground text-xs">{f.desc}</span>
-                          </div>
-                        ))}
+                return (
+                  <AccordionItem key={template.id} value={template.id} className="px-4">
+                    <div className="flex items-center justify-between gap-4 py-1">
+                      <AccordionTrigger className="py-3 hover:no-underline">
+                        <div className="text-left">
+                          <p className="text-base font-medium">{meta?.label || template.slug}</p>
+                          <p className="text-xs text-muted-foreground">Slug: {template.slug}</p>
+                        </div>
+                      </AccordionTrigger>
+
+                      {meta && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Info className="w-4 h-4 mr-1" />
+                              Campos
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72" align="end">
+                            <div className="space-y-1 text-sm">
+                              <p className="font-medium mb-2">Campos dinâmicos</p>
+                              {meta.fields.map((f) => (
+                                <div key={f.key} className="flex gap-2">
+                                  <code className="text-xs bg-muted px-1 rounded">{f.key}</code>
+                                  <span className="text-muted-foreground text-xs">{f.desc}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </div>
+
+                    <AccordionContent>
+                      <div className="space-y-4 pb-4">
+                        <div className="space-y-2">
+                          <Label>Assunto</Label>
+                          <Input
+                            value={edits.subject ?? template.subject}
+                            onChange={(e) => handleFieldChange(template.id, 'subject', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Corpo do Email</Label>
+                          <WysiwygEditor
+                            value={edits.body_html ?? template.body_html}
+                            onChange={(val) => handleFieldChange(template.id, 'body_html', val)}
+                            minHeight="160px"
+                          />
+                        </div>
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={() => handleSave(template)}
+                            disabled={!hasChanges || savingId === template.id}
+                            size="sm"
+                          >
+                            {savingId === template.id ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4 mr-2" />
+                            )}
+                            Salvar
+                          </Button>
+                        </div>
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Assunto</Label>
-                <Input
-                  value={edits.subject ?? template.subject}
-                  onChange={(e) => handleFieldChange(template.id, 'subject', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Corpo do Email</Label>
-                <WysiwygEditor
-                  value={edits.body_html ?? template.body_html}
-                  onChange={(val) => handleFieldChange(template.id, 'body_html', val)}
-                  minHeight="160px"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => handleSave(template)}
-                  disabled={!hasChanges || savingId === template.id}
-                  size="sm"
-                >
-                  {savingId === template.id ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Salvar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          </CardContent>
+        </Card>
+      )}
 
       {templates.length === 0 && (
         <Card>
