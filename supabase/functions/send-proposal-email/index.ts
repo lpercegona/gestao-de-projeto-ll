@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@6";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +23,12 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
+    // SMTP config
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "587", 10);
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPass = Deno.env.get("SMTP_PASS");
 
     // Verify user
     const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -93,41 +99,42 @@ Deno.serve(async (req) => {
       .update({ status: "sent" })
       .eq("id", proposal_id);
 
-    // Send email if Resend key is configured
-    if (resendApiKey) {
-      const emailRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "noreply@resend.dev",
-          to: [proposal.recipient_email],
+    // Send email via SMTP
+    if (smtpHost && smtpUser && smtpPass) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+        });
+
+        await transporter.sendMail({
+          from: smtpUser,
+          to: proposal.recipient_email,
           subject,
           html: bodyHtml,
-        }),
-      });
+        });
 
-      const emailBody = await emailRes.text();
-
-      if (!emailRes.ok) {
-        console.error("Resend error:", emailBody);
         return new Response(
-          JSON.stringify({ success: true, email_sent: false, email_error: emailBody }),
+          JSON.stringify({ success: true, email_sent: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (emailErr) {
+        console.error("SMTP error:", emailErr);
+        return new Response(
+          JSON.stringify({ success: true, email_sent: false, email_error: String(emailErr) }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
-      return new Response(
-        JSON.stringify({ success: true, email_sent: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
-    // No Resend key - just update status
+    // No SMTP config
     return new Response(
-      JSON.stringify({ success: true, email_sent: false, reason: "RESEND_API_KEY not configured" }),
+      JSON.stringify({ success: true, email_sent: false, reason: "SMTP not configured" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
