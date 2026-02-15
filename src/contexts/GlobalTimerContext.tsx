@@ -537,15 +537,18 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     })?.id;
     const timerIdToDelete = dbTimerId || fallbackTimerId;
 
+    if (timerIdToDelete) {
+      const { error } = await supabase.from('task_timers').delete().eq('id', timerIdToDelete);
+      if (error) {
+        console.error('Error deleting timer on reset:', error);
+      }
+    }
+
     setTimerState(initialState);
     setTaskBindingState(null);
     persistTaskBinding(null);
     setShowCompleteDialog(false);
     clearPersistedState();
-
-    if (timerIdToDelete) {
-      await supabase.from('task_timers').delete().eq('id', timerIdToDelete);
-    }
   }, [timerState.dbTimerId, timerState.taskId, taskBinding?.taskId, data.taskTimers, user]);
 
   const getElapsedHours = useCallback(() => {
