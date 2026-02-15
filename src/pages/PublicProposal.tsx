@@ -395,14 +395,7 @@ export const PublicProposal: React.FC = () => {
           </Card>
         )}
 
-        {/* Proposal description */}
-        {proposal.description && (
-          <Card>
-            <CardContent className="pt-6">
-              <WysiwygContent content={proposal.description} />
-            </CardContent>
-          </Card>
-        )}
+  
 
         {/* ITEMS & PRICING (Footer section) */}
         <Card>
