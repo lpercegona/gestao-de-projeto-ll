@@ -77,6 +77,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Project } from '@/types';
 import { ProjectListView } from '@/components/projects/ProjectListView';
+import { AutoReportConfig } from '@/components/client/AutoReportConfig';
 
 interface ProjectRequestHistory {
   id: string;
@@ -1376,6 +1377,14 @@ export const ClientDetail: React.FC = () => {
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
+          <AutoReportConfig
+            clientId={clientId!}
+            initialEnabled={(client as any).auto_report_enabled || false}
+            initialDay={(client as any).auto_report_day || 1}
+            initialHour={(client as any).auto_report_hour || 9}
+            initialMinute={(client as any).auto_report_minute || 0}
+          />
+
           <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
@@ -2061,78 +2070,6 @@ export const ClientDetail: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Relatório Automático */}
-                  <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium">Relatório Automático</h4>
-                        <p className="text-xs text-muted-foreground">
-                          O relatório do mês anterior será enviado automaticamente para o email do cliente na data e hora configurados.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={editFormData.auto_report_enabled}
-                        onCheckedChange={(checked) => setEditFormData({ ...editFormData, auto_report_enabled: checked })}
-                        disabled={editSubmitting}
-                      />
-                    </div>
-                    
-                    {editFormData.auto_report_enabled && (
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Dia do mês</Label>
-                          <Select
-                            value={String(editFormData.auto_report_day)}
-                            onValueChange={(v) => setEditFormData({ ...editFormData, auto_report_day: Number(v) })}
-                            disabled={editSubmitting}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-                                <SelectItem key={d} value={String(d)}>Dia {d}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Hora</Label>
-                          <Select
-                            value={String(editFormData.auto_report_hour)}
-                            onValueChange={(v) => setEditFormData({ ...editFormData, auto_report_hour: Number(v) })}
-                            disabled={editSubmitting}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 24 }, (_, i) => i).map((h) => (
-                                <SelectItem key={h} value={String(h)}>{String(h).padStart(2, '0')}h</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Minuto</Label>
-                          <Select
-                            value={String(editFormData.auto_report_minute)}
-                            onValueChange={(v) => setEditFormData({ ...editFormData, auto_report_minute: Number(v) })}
-                            disabled={editSubmitting}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[0, 15, 30, 45].map((m) => (
-                                <SelectItem key={m} value={String(m)}>{String(m).padStart(2, '0')}min</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="edit-notes">Observações</Label>
