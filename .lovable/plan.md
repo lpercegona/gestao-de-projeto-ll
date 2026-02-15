@@ -1,155 +1,280 @@
+# Plano: Correcoes e Evolucao do Sistema de Propostas e Contratos
 
-# Plano: Corrigir Proposta Publica + Templates por Secoes + Email
+## **1. Corrigir erro de build da Edge Function sem uso de serviços intermediários e mantendo as credenciais já cadastradas**
 
-## Diagnostico
+**Problema identificado**  
+O erro de build ocorre porque a dependência `nodemailer@6` depende de APIs nativas do **Node.js**, incompatíveis com o runtime **Deno** utilizado pelo Lovable Cloud nas Edge Functions.  
+A tentativa de resolver via CDN externa (como `esm.sh`) introduz dependência desnecessária de serviço intermediário.
 
-### 1. Erro no link publico da proposta
-Existem **duas funcoes** `get_proposal_by_token` no banco: uma que recebe apenas `(p_token text)` e outra que recebe `(p_token text, p_email text DEFAULT NULL)`. Quando o PostgREST recebe a chamada com apenas `p_token`, nao consegue decidir qual funcao usar, gerando erro de ambiguidade. A funcao de 2 argumentos ja cobre o caso sem email (o parametro tem DEFAULT NULL), tornando a de 1 argumento redundante.
+**Diretriz de correção**  
+A correção deve:
 
-Alem disso, o codigo referencia a coluna `share_static_html` na tabela `proposals`, mas essa coluna nao existe no banco.
+- **eliminar o uso do** `nodemailer`
+- **manter as credenciais SMTP já configuradas no projeto**
+- **evitar dependência de CDNs ou serviços de terceiros**
+- **garantir compatibilidade nativa com Deno**
 
-### 2. Templates atualmente limitados
-A edicao de templates usa apenas titulo + WYSIWYG (campo `description` do tipo text). Nao ha suporte a secoes estruturadas.
+**Ajuste técnico necessário**
 
-### 3. Estrutura visual do link publico
-O layout atual mistura header, template, itens e acoes sem separacao clara entre conteudo do template e estrutura fixa (header/footer).
+ substituir a lógica de envio por implementação **compatível com Deno**, utilizando:
 
-### 4. Envio de email
-Nao existe nenhuma funcao de envio de email. O botao "Enviar" apenas muda o status para "sent".
+- cliente SMTP nativo para Deno **ou**
+- requisição direta ao endpoint HTTP do próprio servidor de e-mail (quando disponível),
+
+sempre reutilizando:
+
+```
+SMTP_HOST
+SMTP_PORT
+SMTP_USER
+SMTP_PASS
+
+```
+
+já definidos nas variáveis de ambiente do projeto.
+
+**Resultado esperado**
+
+- Correção definitiva do erro de build no ambiente Deno.
+- Preservação integral das credenciais de e-mail existentes.
+- Remoção de dependência de `nodemailer` e de serviços externos como `esm.sh`.
+- Maior estabilidade arquitetural da Edge Function.
 
 ---
 
-## Correcoes e Implementacoes
+## 2. Corrigir imagens no link publico da proposta
 
-### Passo 1 - Corrigir erro do banco de dados (Migracao SQL)
+**Problema:** O codigo do `PublicProposal.tsx` tenta buscar `proposal_templates` diretamente via `supabase.from('proposal_templates')`, mas essa tabela tem RLS que so permite acesso a admins. Usuarios nao logados nao conseguem carregar as secoes do template (incluindo imagens).
 
-- **Dropar** a funcao `get_proposal_by_token(text)` (1 argumento), mantendo apenas `get_proposal_by_token(text, text)` que ja trata o caso com e sem email.
-- **Adicionar** a coluna `share_static_html` na tabela `proposals` como `text NULL DEFAULT NULL` para que o codigo existente funcione sem erro.
+**Solucao:** Alterar a RPC `get_proposal_by_token` para retornar tambem as secoes do template, eliminando a necessidade de consulta direta a tabela.
 
-```text
-DROP FUNCTION IF EXISTS public.get_proposal_by_token(text);
-ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS share_static_html text DEFAULT NULL;
-```
+**Migracao SQL:**
 
-### Passo 2 - Reestruturar templates para edicao por secoes (Migracao SQL + Frontend)
+- Alterar `get_proposal_by_token` para incluir coluna `template_sections jsonb` no retorno, fazendo JOIN com `proposal_templates` para buscar `sections`.
 
-**Banco de dados:**
-- Adicionar coluna `sections` (jsonb, default `'[]'`) na tabela `proposal_templates` para armazenar secoes estruturadas.
-- O campo `description` existente continua como fallback para templates antigos.
+**Frontend (`PublicProposal.tsx`):**
 
-**Estrutura de cada secao:**
-```text
-{
-  "id": "uuid",
-  "type": "title" | "text" | "image",
-  "content": "texto ou URL da imagem",
-  "order": 0
-}
-```
+- Remover a consulta direta a `proposals` e `proposal_templates` (linhas 161-177).
+- Usar `template_sections` retornado pela RPC.
 
-**Frontend - Editor de Templates (Proposals.tsx, area do template):**
-- Substituir o campo WYSIWYG unico por uma interface de secoes.
-- Cada secao tem botoes para mover (cima/baixo) e remover.
-- Botao "Adicionar secao" com opcoes: Titulo, Texto (WYSIWYG), Imagem (upload para bucket).
-- Secoes de titulo renderizam como `<h2>`.
-- Secoes de texto renderizam como conteudo WYSIWYG.
-- Secoes de imagem renderizam como `<img>` com largura maxima do layout (max-w-4xl).
+---
+
+## 3. Cadastro automatico de cliente ao criar proposta
+
+Quando uma nova proposta e criada, se nao houver `client_id` vinculado e o email do destinatario nao corresponder a nenhum cliente existente, criar automaticamente um cliente com `pipeline_status = 'negotiation'`.
+
+**Logica de categorizacao:**
+
+- Se os itens da proposta indicarem servico unico: `contract_type = 'one_time'`
+- Se indicarem plano mensal: `contract_type = 'monthly'`
+- O usuario escolhe o tipo na criacao da proposta (adicionar campo `contract_type` ao formulario)
+
+**Implementacao:** Trigger SQL `after insert` na tabela `proposals` ou logica no frontend (Proposals.tsx) apos salvar a proposta.
+
+**Frontend - Proposals.tsx:**
+
+- Adicionar campo "Tipo de Contrato" (Unico / Mensal) ao formulario de criacao de proposta
+- Apos criar proposta sem `client_id`, buscar se ja existe cliente com mesmo email; se nao, inserir novo cliente com:
+  - `name`: recipient_name
+  - `email`: recipient_email  
+  - `company`: recipient_company
+  - `pipeline_status`: 'negotiation'
+  - `contract_type`: conforme selecao
+  - `owner_id`: user.id
+  - `created_by`: user.id
+
+---
+
+## 4. Campos CNPJ/CPF no perfil do admin
+
+**Migracao SQL:**
+
+- Adicionar colunas na tabela `profiles`:
+  - `cnpj text`
+  - `cpf text`
+  - `company_name text`
+  - `company_address text`
+
+**Frontend - ProfileEditTab.tsx:**
+
+- Para usuarios admin/master_admin, exibir campos adicionais: CNPJ, CPF, Nome da Empresa e Endereco da Empresa na aba "Perfil"
+- Salvar via update na tabela `profiles`
+
+---
+
+## 5. Campos adicionais no cliente
+
+**Migracao SQL:**
+
+- Adicionar colunas na tabela `clients`:
+  - `cnpj text`
+  - `cpf_responsavel text`
+  - `endereco text`
+  - `responsavel_name text` (caso diferente do nome do contato)
+
+**Frontend - ClientDetail.tsx / formularios de cliente:**
+
+- Exibir e permitir edicao dos novos campos
+
+---
+
+## 6. Reestruturar templates de contrato (secoes)
+
+Alinhar com o sistema de propostas, usando secoes estruturadas (titulo, texto WYSIWYG, imagem).
+
+**Migracao SQL:**
+
+- Adicionar coluna `sections jsonb DEFAULT '[]'` na tabela `contract_templates`
+
+**Frontend - Contracts.tsx (aba Templates):**
+
+- Substituir textarea unico pelo `TemplateSectionEditor` (mesmo componente usado em propostas)
+- Manter campo `content` como fallback para templates antigos
+
+---
+
+## 7. Contratos: envio por email e variaveis dinamicas expandidas
+
+**Edge Function - criar `send-contract-email/index.ts`:**
+
+- Mesma estrutura do `send-proposal-email`, mas para contratos
+- Busca template de email com slug `contract_sent`
+- Envia link publico do contrato por email via SMTP
+
+**Migracao SQL:**
+
+- Inserir seed do template de email `contract_sent` na tabela `email_templates`
+
+**Frontend - Contracts.tsx:**
+
+- Botao "Enviar" chama a edge function para enviar email + atualizar status
+- Variaveis dinamicas expandidas para incluir:
+  - `{{admin_company}}`, `{{admin_cnpj}}`, `{{admin_cpf}}`, `{{admin_name}}`, `{{admin_address}}`
+  - `{{contractor_cnpj}}`, `{{contractor_cpf}}`, `{{contractor_address}}`
+  - Alem das existentes
+
+**Frontend - Contracts.tsx (formulario de criacao):**
+
+- Adicionar campos: CNPJ do cliente, CPF do responsavel, CPF de testemunha
+- Carregar automaticamente dados do admin logado (CNPJ, CPF, empresa) dos campos do perfil
+
+---
+
+## 8. Assinatura digital com desenho (canvas)
+
+**Novo componente: `SignatureCanvas.tsx**`
+
+- Canvas HTML5 para desenhar assinatura com o mouse/touch
+- Botoes: "Limpar" e "Confirmar"
+- Retorna imagem da assinatura como data URL (base64 PNG)
+- Responsivo para mobile
+
+**Migracao SQL - tabela `contracts`:**
+
+- Adicionar colunas:
+  - `admin_signature_url text` (URL da imagem no storage)
+  - `client_signature_url text`
+  - `witness_signature_url text`
+  - `witness_name text`
+  - `witness_cpf text`
+  - `witness_ip text`
+  - `admin_signed_at timestamptz`
+  - `client_signed_at timestamptz`
+  - `witness_signed_at timestamptz`
 
 **Bucket de storage:**
-- Criar bucket `proposal-images` (publico) para armazenar imagens dos templates.
 
-### Passo 3 - Reestruturar layout do link publico (PublicProposal.tsx)
+- Criar bucket `contract-signatures` (privado) para armazenar imagens de assinatura
 
-A nova estrutura sera:
+**Fluxo de assinatura no link publico (PublicContract.tsx):**
 
-```text
-+------------------------------------------+
-| HEADER: Logo + Status Badge              |
-+------------------------------------------+
-| Aviso de expiracao (se aplicavel)         |
-+------------------------------------------+
-| DETALHES DO CLIENTE                       |
-| Nome, Email, Empresa, Validade            |
-+------------------------------------------+
-| CONTEUDO DO TEMPLATE (secoes)             |
-| Titulo / Texto / Imagem (renderizados    |
-| conforme as secoes do template)           |
-| + fallback para description WYSIWYG      |
-| de templates antigos                      |
-+------------------------------------------+
-| ITENS E PRECIFICACAO (FOOTER)             |
-| Tabela de servicos + Totais               |
-+------------------------------------------+
-| ACOES                                     |
-| Aceitar / Negociar / Recusar / Comentar   |
-+------------------------------------------+
-| COMENTARIOS (se houver)                   |
-+------------------------------------------+
-| RODAPE                                    |
-| Data de geracao + info da plataforma      |
-+------------------------------------------+
-```
+1. Cliente abre modal de assinatura
+2. Preenche dados (nome, CPF, endereco)
+3. Desenha assinatura no canvas
+4. Aceita termos
+5. Ao confirmar: upload da imagem para storage, chama RPC `sign_contract` atualizada
+6. Opcionalmente, adicionar campo de testemunha (nome, CPF, assinatura)
 
-- O conteudo do template (secoes) fica entre header/detalhes e o footer de itens.
-- A funcao `renderTemplateContent` sera adaptada para renderizar secoes quando disponiveis, com fallback para o conteudo WYSIWYG antigo.
-- Campos dinamicos (`{{nome_cliente}}`, etc.) continuam funcionando dentro de secoes de texto.
+**Assinatura do admin (Contracts.tsx):**
 
-### Passo 4 - Funcao de envio de email (Edge Function)
+- Botao "Assinar como Admin" no card do contrato (quando status = draft ou sent)
+- Abre modal com canvas de assinatura
+- Salva no banco e storage
 
-Criar edge function `send-proposal-email`:
-- Recebe `proposal_id` no body.
-- Busca dados da proposta e template via service role.
-- Monta o email HTML com o link publico.
-- Envia via Resend ou servico similar (sera necessario configurar API key).
-- Atualiza status da proposta para "sent".
-- O conteudo do email segue um template editavel armazenado no banco.
+**RPC `sign_contract` atualizada:**
 
-**Tabela `email_templates` (nova, migracao SQL):**
-```text
-- id: uuid (PK)
-- slug: text UNIQUE (ex: 'proposal_sent', 'contract_sent')
-- subject: text
-- body_html: text (conteudo WYSIWYG com campos dinamicos)
-- created_at, updated_at: timestamp
-- owner_id: uuid
-```
-
-RLS: apenas admin/master_admin podem gerenciar.
-
-### Passo 5 - Aba de Notificacoes em Configuracoes (Preferences.tsx)
-
-- Adicionar nova aba "Notificacoes" (icone Bell) na pagina de Configuracoes, visivel apenas para admin/master_admin.
-- Componente `NotificationTemplatesTab` que lista os templates de email.
-- Cada template mostra: nome amigavel, assunto, e editor WYSIWYG para o corpo.
-- Campos dinamicos disponiveis para cada tipo de template (ex: para proposta: `{{nome_cliente}}`, `{{link_proposta}}`, `{{titulo_proposta}}`).
-- Botao de salvar por template individual.
-- Templates seed iniciais criados via migracao: `proposal_sent`, `contract_sent`.
+- Receber parametro `p_signature_type` ('admin', 'client', 'witness')
+- Atualizar a coluna correspondente
+- Quando admin E cliente ja assinaram, marcar status como 'signed'
 
 ---
 
-## Secao Tecnica
+## 9. Exportacao em PDF com assinaturas
+
+**Abordagem:** Usar `window.print()` com CSS de impressao otimizado, incluindo as imagens de assinatura renderizadas no layout.
+
+**PublicContract.tsx:**
+
+- Quando contrato estiver assinado (admin + cliente), exibir secao de assinaturas com as imagens
+- Botao "Exportar PDF" aciona `window.print()` com layout formatado para impressao
+- Layout de impressao inclui: conteudo do contrato, servicos, assinaturas lado a lado, dados dos signatarios
+
+---
+
+## 10. Layout do PublicContract.tsx reestruturado
+
+Nova estrutura alinhada com PublicProposal:
+
+```text
++------------------------------------------+
+| HEADER: Logo + Status                    |
++------------------------------------------+
+| DETALHES DAS PARTES                       |
+| Admin (empresa, CNPJ) | Cliente (empresa) |
++------------------------------------------+
+| CONTEUDO DO TEMPLATE (secoes)             |
+| Titulo / Texto / Imagem                  |
++------------------------------------------+
+| CONDICOES DE PAGAMENTO                   
++------------------------------------------+
+| ASSINATURAS (quando assinado)             |
+| Admin | Cliente | Testemunha (opcional)   |
++------------------------------------------+
+| ACOES (Assinar / Exportar PDF)            |
++------------------------------------------+
+```
+
+---
+
+## Secao Tecnica - Resumo de Alteracoes
 
 ```text
 Migracoes SQL:
-  1. DROP FUNCTION get_proposal_by_token(text) - remove funcao duplicada
-  2. ALTER TABLE proposals ADD COLUMN share_static_html text
-  3. ALTER TABLE proposal_templates ADD COLUMN sections jsonb DEFAULT '[]'
-  4. CREATE TABLE email_templates (id, slug, subject, body_html, owner_id, created/updated_at)
-     + RLS policies para admin/master_admin
-     + INSERT seed para templates iniciais
-  5. INSERT INTO storage.buckets (id, name, public) VALUES ('proposal-images', 'proposal-images', true)
-     + RLS policies para upload por admin
+  1. ALTER profiles ADD COLUMN cnpj, cpf, company_name, company_address
+  2. ALTER clients ADD COLUMN cnpj, cpf_responsavel, endereco, responsavel_name
+  3. ALTER contract_templates ADD COLUMN sections jsonb DEFAULT '[]'
+  4. ALTER contracts ADD COLUMN admin_signature_url, client_signature_url, 
+     witness_signature_url, witness_name, witness_cpf, witness_ip,
+     admin_signed_at, client_signed_at, witness_signed_at,
+     admin_cnpj, admin_cpf, admin_company, admin_address,
+     contractor_cnpj, contractor_cpf_responsavel, witness_cpf_field
+  5. CREATE bucket contract-signatures (privado) + RLS
+  6. UPDATE get_proposal_by_token para retornar template_sections
+  7. UPDATE sign_contract para suportar tipos de assinatura
+  8. INSERT email_templates seed para 'contract_sent'
 
 Arquivos a criar:
-  - supabase/functions/send-proposal-email/index.ts
-  - src/components/settings/NotificationTemplatesTab.tsx
+  - src/components/contracts/SignatureCanvas.tsx
+  - supabase/functions/send-contract-email/index.ts
 
 Arquivos a modificar:
-  - src/pages/PublicProposal.tsx (reestruturar layout, renderizar secoes)
-  - src/pages/Proposals.tsx (editor de templates por secoes, chamar edge function ao enviar)
-  - src/pages/Preferences.tsx (adicionar aba Notificacoes)
+  - supabase/functions/send-proposal-email/index.ts (fix import)
+  - src/pages/PublicProposal.tsx (usar RPC para secoes)
+  - src/pages/PublicContract.tsx (assinaturas, layout, PDF)
+  - src/pages/Contracts.tsx (templates por secoes, envio email, assinatura admin, campos expandidos)
+  - src/pages/Proposals.tsx (cadastro auto de cliente, campo tipo contrato)
+  - src/components/settings/ProfileEditTab.tsx (campos CNPJ/CPF para admin)
 
-Dependencias externas:
-  - API key de servico de email (Resend recomendado)
-    Sera solicitada ao usuario antes de implementar o envio
+Obs: Devido ao volume de alteracoes, a implementacao sera feita em etapas 
+sequenciais para garantir estabilidade.
 ```
