@@ -41,7 +41,7 @@ const MobileHeader: React.FC<{
   const { hasActiveTimer } = useGlobalTimer();
 
   return (
-    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-[hsl(var(--header-background))] px-4 py-3 sm:px-6 lg:hidden">
+    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-slate-100 px-4 py-3 sm:px-6 lg:hidden">
       <button
         className="flex-shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         onClick={() => setSidebarOpen(true)}
@@ -77,6 +77,12 @@ const MobileHeader: React.FC<{
       </div>
 
       <div className="flex flex-shrink-0 items-center gap-1 text-muted-foreground">
+        <div
+          className={cn(
+            "transition-all duration-300 ease-in-out",
+            hasActiveTimer && !hideTimer ? "-translate-y-8 opacity-0 pointer-events-none" : "translate-y-0 opacity-100",
+          )}
+        >
         <Button
           variant="ghost"
           size="icon"
@@ -90,6 +96,7 @@ const MobileHeader: React.FC<{
         >
           <Contrast className="h-4 w-4" />
         </Button>
+        </div>
         {!hideTimer && <HeaderTimerDisplay />}
         <NotificationBell />
       </div>
@@ -105,7 +112,7 @@ const DesktopHeader: React.FC<{
 }> = ({ hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
   const { hasActiveTimer } = useGlobalTimer();
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[hsl(var(--header-background))] lg:flex">
+    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-slate-100 lg:flex">
       <div className="ml-12 flex w-full items-center justify-between px-6">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />
@@ -367,7 +374,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[hsl(var(--menu-surface))] transition-all duration-300 lg:static",
+            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-slate-100 transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
