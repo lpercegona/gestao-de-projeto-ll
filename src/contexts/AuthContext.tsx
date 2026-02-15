@@ -132,9 +132,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Optimistic cleanup to prevent transient redirects (e.g. /first-access)
+    // while Supabase auth state event is still propagating.
+    setSession(null);
+    setUser(null);
     setUserRole(null);
     setOwnerId(null);
+
+    await supabase.auth.signOut();
   };
 
   const resetPassword = async (email: string) => {

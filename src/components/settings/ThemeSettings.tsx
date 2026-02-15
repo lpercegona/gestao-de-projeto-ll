@@ -10,10 +10,16 @@ import { Button } from '@/components/ui/button';
 import { Palette, Type, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const HEADER_HUE_STORAGE_KEY = 'theme:header-hue';
+
 interface ThemeColors {
   primary: string;
   secondary: string;
   accent: string;
+}
+
+interface SurfaceHues {
+  headerHue: number;
 }
 
 const FONT_OPTIONS = [
@@ -133,6 +139,9 @@ export const ThemeSettings: React.FC = () => {
   });
   const [fontFamily, setFontFamily] = useState('Inter');
   const [selectedPreset, setSelectedPreset] = useState('');
+  const [surfaceHues, setSurfaceHues] = useState<SurfaceHues>({
+    headerHue: 210,
+  });
 
   useEffect(() => {
     const fetchTheme = async () => {
@@ -147,6 +156,9 @@ export const ThemeSettings: React.FC = () => {
           secondary: data.secondary_color,
           accent: data.accent_color,
         });
+        setSurfaceHues({
+          headerHue: data.header_hue ?? 210,
+        });
         setFontFamily(data.font_family);
       }
       setLoading(false);
@@ -159,6 +171,8 @@ export const ThemeSettings: React.FC = () => {
     document.documentElement.style.setProperty('--primary', colors.primary);
     document.documentElement.style.setProperty('--secondary', colors.secondary);
     document.documentElement.style.setProperty('--accent', colors.accent);
+    document.documentElement.style.setProperty('--header-hue', String(surfaceHues.headerHue));
+    document.documentElement.style.setProperty('--menu-hue', String(surfaceHues.headerHue));
     
     // Load Google Font dynamically for preview
     const fontParam = GOOGLE_FONTS_PREVIEW[fontFamily];
@@ -188,7 +202,7 @@ export const ThemeSettings: React.FC = () => {
     }
     
     document.documentElement.style.setProperty('--font-sans', fontStack);
-  }, [colors, fontFamily]);
+  }, [colors, fontFamily, surfaceHues]);
 
   const handlePresetChange = (presetName: string) => {
     const preset = COLOR_PRESETS.find(p => p.name === presetName);
@@ -210,13 +224,49 @@ export const ThemeSettings: React.FC = () => {
         primary_color: colors.primary,
         secondary_color: colors.secondary,
         accent_color: colors.accent,
+        header_hue: surfaceHues.headerHue,
+        menu_hue: surfaceHues.headerHue,
         font_family: fontFamily,
       })
       .eq('id', '00000000-0000-0000-0000-000000000001');
-    
+
     if (error) {
-      console.error('Error saving theme:', error);
-      toast.error('Erro ao salvar tema.');
+      // Compatibilidade para ambientes onde colunas de hue ainda não existem.
+      const shouldRetryWithoutHues =
+        String((error as { code?: string }).code || '') === '42703' ||
+        String((error as { message?: string }).message || '').toLowerCase().includes('header_hue') ||
+        String((error as { message?: string }).message || '').toLowerCase().includes('menu_hue');
+
+      if (shouldRetryWithoutHues) {
+        try {
+          localStorage.setItem(HEADER_HUE_STORAGE_KEY, String(surfaceHues.headerHue));
+          document.documentElement.style.setProperty('--header-hue', String(surfaceHues.headerHue));
+          document.documentElement.style.setProperty('--menu-hue', String(surfaceHues.headerHue));
+        } catch {
+          // noop
+        }
+
+        const { error: fallbackError } = await supabase
+          .from('theme_settings')
+          .update({
+            primary_color: colors.primary,
+            secondary_color: colors.secondary,
+            accent_color: colors.accent,
+            font_family: fontFamily,
+          })
+          .eq('id', '00000000-0000-0000-0000-000000000001');
+
+        if (fallbackError) {
+          console.error('Error saving theme fallback:', fallbackError);
+          toast.error('Erro ao salvar tema.');
+        } else {
+          toast.success('Tema atualizado (sem suporte a Hue no banco atual).');
+          await refreshTheme();
+        }
+      } else {
+        console.error('Error saving theme:', error);
+        toast.error('Erro ao salvar tema.');
+      }
     } else {
       toast.success('Tema atualizado com sucesso!');
       // Refresh theme globally to apply changes immediately
@@ -291,6 +341,26 @@ export const ThemeSettings: React.FC = () => {
             <span className="text-sm text-muted-foreground flex-1">
               HSL: {colors.primary}
             </span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Header e Menu (mesma regra de cor)</Label>
+          <div className="space-y-2">
+            <Label htmlFor="header-hue">Hue compartilhado</Label>
+            <Input
+              id="header-hue"
+              type="range"
+              min={0}
+              max={360}
+              step={1}
+              value={surfaceHues.headerHue}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                setSurfaceHues({ headerHue: next });
+              }}
+            />
+            <p className="text-xs text-muted-foreground">H: {surfaceHues.headerHue} (S/L fixos em 40% / 95%)</p>
           </div>
         </div>
 

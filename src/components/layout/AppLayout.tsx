@@ -41,7 +41,7 @@ const MobileHeader: React.FC<{
   const { hasActiveTimer } = useGlobalTimer();
 
   return (
-    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-background px-4 py-3 sm:px-6 lg:hidden">
+    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-[hsl(var(--header-background))] px-4 py-3 sm:px-6 lg:hidden">
       <button
         className="flex-shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         onClick={() => setSidebarOpen(true)}
@@ -105,7 +105,7 @@ const DesktopHeader: React.FC<{
 }> = ({ hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
   const { hasActiveTimer } = useGlobalTimer();
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-background lg:flex">
+    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[hsl(var(--header-background))] lg:flex">
       <div className="ml-12 flex w-full items-center justify-between px-6">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />
@@ -359,7 +359,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-background lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -367,7 +367,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-background transition-all duration-300 lg:static",
+            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[hsl(var(--menu-surface))] transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
@@ -412,7 +412,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <Button
                 variant="outline"
                 className={cn(
-                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[#e2e8f0] bg-white p-0 text-[#64748b] shadow-sm transition-opacity duration-200 lg:flex",
+                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] p-0 text-[hsl(var(--menu-foreground))] shadow-sm transition-opacity duration-200 lg:flex",
                   isHovering ? "opacity-100" : "opacity-0",
                 )}
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -433,10 +433,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
                       isActive
-                        ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                        : "hover:bg-white/70 hover:text-[#334155]",
+                        ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
+                        : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
                       isCollapsed && "lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto",
                     )}
                   >
@@ -497,10 +497,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to="/preferences"
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-[#64748b] transition-colors",
+                      "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
                       location.pathname === "/preferences"
-                        ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                        : "hover:bg-white/70 hover:text-[#334155]",
+                        ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
+                        : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
                     )}
                   >
                     <Settings className="w-3.5 h-3.5" />
@@ -511,10 +511,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   to="/preferences"
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors",
+                    "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
                     location.pathname === "/preferences"
-                      ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                      : "hover:bg-white/70 hover:text-[#334155]",
+                      ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
+                      : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
                   )}
                 >
                   <Settings className="w-3.5 h-3.5" />
@@ -526,10 +526,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 to="/preferences"
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[#64748b] transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
                   location.pathname === "/preferences"
-                    ? "border border-[#e2e8f0] bg-white text-[#0f172a]"
-                    : "hover:bg-white/70 hover:text-[#334155]",
+                    ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
+                    : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
                 )}
               >
                 <Settings className="w-3.5 h-3.5" />
@@ -544,7 +544,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="mx-auto h-8 w-8 text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
+                    className="mx-auto h-8 w-8 text-[hsl(var(--menu-foreground))] hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]"
                     onClick={handleSignOut}
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -553,7 +553,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <TooltipContent side="right">Sair</TooltipContent>
                 <Button
                   variant="ghost"
-                  className="lg:hidden w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
+                  className="lg:hidden w-full justify-start text-[hsl(var(--menu-foreground))] hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]"
                   onClick={handleSignOut}
                 >
                   <LogOut className="w-3.5 h-3.5 mr-2" />
@@ -563,7 +563,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             ) : (
               <Button
                 variant="ghost"
-                className="w-full justify-start text-[#64748b] hover:bg-white/70 hover:text-[#334155]"
+                className="w-full justify-start text-[hsl(var(--menu-foreground))] hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]"
                 onClick={handleSignOut}
               >
                 <LogOut className="w-3.5 h-3.5 mr-2" />
@@ -572,7 +572,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             )}
 
             {/* Version */}
-            <div className={cn("px-3 py-2 text-xs text-[#94a3b8]", isCollapsed && "lg:hidden")}>Versão 1.0</div>
+            <div className={cn("px-3 py-2 text-xs text-[hsl(var(--menu-muted))]", isCollapsed && "lg:hidden")}>Versão 1.0</div>
           </div>
         </aside>
 
@@ -595,7 +595,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
           <div className="flex-1 overflow-auto lg:pt-[58px]">
-            <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-white px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+            <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-[hsl(var(--content-surface))] px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
               {children}
             </div>
           </div>
