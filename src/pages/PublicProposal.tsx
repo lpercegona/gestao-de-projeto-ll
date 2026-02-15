@@ -156,16 +156,24 @@ export const PublicProposal: React.FC = () => {
 
       const rawProposal = proposalData[0];
 
-      let templateSections = Array.isArray((rawProposal as any).template_sections)
-        ? ((rawProposal as any).template_sections as TemplateSection[])
-        : [];
+      // Fetch template sections if template exists
+      let templateSections: TemplateSection[] = [];
+      if (rawProposal.proposal_id) {
+        const { data: propRow } = await supabase
+          .from('proposals')
+          .select('template_id')
+          .eq('id', rawProposal.proposal_id)
+          .single();
 
-      if (templateSections.length === 0) {
-        const { data: fallbackSections } = await supabase
-          .rpc('get_proposal_template_sections_by_token', { p_token: token });
-
-        if (Array.isArray(fallbackSections)) {
-          templateSections = fallbackSections as TemplateSection[];
+        if (propRow?.template_id) {
+          const { data: tmplData } = await supabase
+            .from('proposal_templates')
+            .select('sections')
+            .eq('id', propRow.template_id)
+            .single();
+          if (tmplData && (tmplData as any).sections) {
+            templateSections = (tmplData as any).sections as TemplateSection[];
+          }
         }
       }
 
