@@ -442,7 +442,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
                       isActive
-                        ? "border border-slate-200 bg-slate-100 hover:text-foreground"
+                        ? "border border-slate-200 bg-background hover:text-foreground"
                         : "hover:bg-background hover:text-foreground",
                       isCollapsed && "lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto",
                     )}
