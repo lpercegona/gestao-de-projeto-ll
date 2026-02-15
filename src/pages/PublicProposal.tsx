@@ -156,9 +156,18 @@ export const PublicProposal: React.FC = () => {
 
       const rawProposal = proposalData[0];
 
-      const templateSections = Array.isArray((rawProposal as any).template_sections)
+      let templateSections = Array.isArray((rawProposal as any).template_sections)
         ? ((rawProposal as any).template_sections as TemplateSection[])
         : [];
+
+      if (templateSections.length === 0) {
+        const { data: fallbackSections } = await supabase
+          .rpc('get_proposal_template_sections_by_token', { p_token: token });
+
+        if (Array.isArray(fallbackSections)) {
+          templateSections = fallbackSections as TemplateSection[];
+        }
+      }
 
       setProposal({
         ...rawProposal,
