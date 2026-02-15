@@ -565,31 +565,37 @@ export const Proposals: React.FC = () => {
         templateContent,
       );
 
-      const { error } = await supabase
+      const { error: shareHtmlUpdateError } = await supabase
         .from('proposals')
-        .update({ status: 'sent', share_static_html: shareStaticHtml })
+        .update({ share_static_html: shareStaticHtml })
         .eq('id', proposal.id);
 
-      if (isMissingShareStaticHtmlColumnError(error)) {
+      let updateError = shareHtmlUpdateError;
+
+      if (isMissingShareStaticHtmlColumnError(shareHtmlUpdateError)) {
         // Fallback for environments where migration with share_static_html is not applied yet.
-        console.warn('Proposal send fallback: share_static_html unavailable, retrying with status-only update.', {
+        console.warn('Proposal send fallback: share_static_html unavailable. Continuing with email dispatch.', {
           proposalId: proposal.id,
-          ...serializeSupabaseError(error),
+          ...serializeSupabaseError(shareHtmlUpdateError),
         });
 
-        const { error: fallbackError } = await supabase
-          .from('proposals')
-          .update({ status: 'sent' })
-          .eq('id', proposal.id);
-
-        if (fallbackError) throw fallbackError;
-        toast.success('Proposta enviada!');
+        updateError = null;
         toast.warning('Compartilhamento estático indisponível até atualizar o banco de dados.');
-        fetchData();
-        return;
       }
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      const { data: sendEmailResult, error: sendEmailError } = await supabase.functions.invoke('send-proposal-email', {
+        body: { proposal_id: proposal.id },
+      });
+
+      if (sendEmailError) {
+        throw sendEmailError;
+      }
+
+      if (!sendEmailResult?.success || !sendEmailResult?.email_sent) {
+        throw new Error(sendEmailResult?.email_error || sendEmailResult?.reason || 'Falha ao enviar email da proposta');
+      }
       
       toast.success('Proposta enviada e página de compartilhamento liberada!');
       fetchData();
