@@ -173,7 +173,7 @@ export const ThemeSettings: React.FC = () => {
         const storedHeaderHue = getStoredHue(HEADER_HUE_STORAGE_KEY);
         const storedMenuHue = getStoredHue(MENU_HUE_STORAGE_KEY);
         setSurfaceHues({
-          headerHue: data.header_hue ?? data.menu_hue ?? storedHeaderHue ?? storedMenuHue ?? 210,
+          headerHue: (data as any).header_hue ?? (data as any).menu_hue ?? storedHeaderHue ?? storedMenuHue ?? 210,
         });
         setFontFamily(data.font_family);
       }

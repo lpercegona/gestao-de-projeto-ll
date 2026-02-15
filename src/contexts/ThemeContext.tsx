@@ -129,8 +129,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           secondaryColor: data.secondary_color,
           accentColor: data.accent_color,
           headerHue:
-            data.header_hue ??
-            data.menu_hue ??
+            (data as any).header_hue ??
+            (data as any).menu_hue ??
             fallbackStoredHeaderHue ??
             fallbackStoredMenuHue ??
             defaultTheme.headerHue,
