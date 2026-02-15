@@ -15,6 +15,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SmtpSettingsSection } from './SmtpSettingsSection';
 
 interface EmailTemplate {
   id: string;
@@ -188,12 +189,15 @@ export const NotificationTemplatesTab: React.FC = () => {
       </div>
 
       {isMasterAdmin && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Como Master Admin, você edita os templates globais. Essas alterações servem de modelo padrão para novos admins, mas não afetam admins que já personalizaram seus templates.
-          </AlertDescription>
-        </Alert>
+        <>
+          <SmtpSettingsSection />
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Como Master Admin, você edita os templates globais. Essas alterações servem de modelo padrão para novos admins, mas não afetam admins que já personalizaram seus templates.
+            </AlertDescription>
+          </Alert>
+        </>
       )}
 
       {templates.length > 0 && (

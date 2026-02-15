@@ -104,6 +104,11 @@ export type Database = {
       clients: {
         Row: {
           access_token: string
+          auto_report_day: number
+          auto_report_enabled: boolean
+          auto_report_hour: number
+          auto_report_last_sent: string | null
+          auto_report_minute: number
           company: string | null
           contract_end_date: string | null
           contract_months: number | null
@@ -130,6 +135,11 @@ export type Database = {
         }
         Insert: {
           access_token?: string
+          auto_report_day?: number
+          auto_report_enabled?: boolean
+          auto_report_hour?: number
+          auto_report_last_sent?: string | null
+          auto_report_minute?: number
           company?: string | null
           contract_end_date?: string | null
           contract_months?: number | null
@@ -156,6 +166,11 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          auto_report_day?: number
+          auto_report_enabled?: boolean
+          auto_report_hour?: number
+          auto_report_last_sent?: string | null
+          auto_report_minute?: number
           company?: string | null
           contract_end_date?: string | null
           contract_months?: number | null
@@ -990,6 +1005,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      smtp_settings: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string | null
+          smtp_from_name: string
+          smtp_host: string
+          smtp_pass: string
+          smtp_port: number
+          smtp_user: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          smtp_from_name?: string
+          smtp_host?: string
+          smtp_pass?: string
+          smtp_port?: number
+          smtp_user?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          smtp_from_name?: string
+          smtp_host?: string
+          smtp_pass?: string
+          smtp_port?: number
+          smtp_user?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       task_timers: {
         Row: {
