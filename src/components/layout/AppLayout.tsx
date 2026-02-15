@@ -41,7 +41,7 @@ const MobileHeader: React.FC<{
   const { hasActiveTimer } = useGlobalTimer();
 
   return (
-    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 border-b border-[hsl(var(--header-border))] bg-[hsl(var(--header-background))] px-4 py-3 sm:px-6 lg:hidden">
+    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-[hsl(var(--header-background))] px-4 py-3 sm:px-6 lg:hidden">
       <button
         className="flex-shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         onClick={() => setSidebarOpen(true)}
@@ -105,7 +105,7 @@ const DesktopHeader: React.FC<{
 }> = ({ hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
   const { hasActiveTimer } = useGlobalTimer();
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 border-b border-[hsl(var(--header-border))] bg-[hsl(var(--header-background))] lg:flex">
+    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[hsl(var(--header-background))] lg:flex">
       <div className="ml-12 flex w-full items-center justify-between px-6">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />
@@ -367,7 +367,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] transition-all duration-300 lg:static",
+            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-[hsl(var(--menu-surface))] transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
@@ -412,7 +412,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <Button
                 variant="outline"
                 className={cn(
-                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] p-0 text-[hsl(var(--menu-foreground))] shadow-sm transition-opacity duration-200 lg:flex",
+                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full p-0 text-[hsl(var(--menu-foreground))] shadow-sm transition-opacity duration-200 lg:flex",
                   isHovering ? "opacity-100" : "opacity-0",
                 )}
                 onClick={() => setIsCollapsed(!isCollapsed)}
