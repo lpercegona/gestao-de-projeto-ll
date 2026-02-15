@@ -347,7 +347,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       case "master_admin":
         return "default";
       case "admin":
-        return "secondary";
+        return "outline";
       case "collaborator":
         return "outline";
       default:
@@ -419,7 +419,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <Button
                 variant="outline"
                 className={cn(
-                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] p-0 text-[hsl(var(--menu-foreground))] shadow-sm transition-opacity duration-200 lg:flex",
+                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-slate-200 bg-background p-0 text-foreground shadow-sm transition-opacity duration-200 lg:flex",
                   isHovering ? "opacity-100" : "opacity-0",
                 )}
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -440,10 +440,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
                       isActive
-                        ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
-                        : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
+                        ? "border border-slate-200 bg-slate-100 hover:text-foreground"
+                        : "hover:bg-background hover:text-foreground",
                       isCollapsed && "lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto",
                     )}
                   >
@@ -506,7 +506,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     className={cn(
                       "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
                       location.pathname === "/preferences"
-                        ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
+                        ? "border border-slate bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
                         : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
                     )}
                   >
