@@ -39,6 +39,15 @@ const TEMPLATE_META: Record<string, { label: string; fields: { key: string; desc
       { key: '{{link_contrato}}', desc: 'Link público do contrato' },
     ],
   },
+  monthly_report_sent: {
+    label: 'Envio de Relatório Mensal',
+    fields: [
+      { key: '{{nome_cliente}}', desc: 'Nome do cliente' },
+      { key: '{{periodo_relatorio}}', desc: 'Período de referência do relatório' },
+      { key: '{{link_relatorio}}', desc: 'Link para visualizar o relatório' },
+      { key: '{{horas_totais}}', desc: 'Total de horas registradas no período' },
+    ],
+  },
 };
 
 export const NotificationTemplatesTab: React.FC = () => {
