@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Palette, Type, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const HEADER_HUE_STORAGE_KEY = 'theme:header-hue';
+
 interface ThemeColors {
   primary: string;
   secondary: string;
@@ -236,6 +238,14 @@ export const ThemeSettings: React.FC = () => {
         String((error as { message?: string }).message || '').toLowerCase().includes('menu_hue');
 
       if (shouldRetryWithoutHues) {
+        try {
+          localStorage.setItem(HEADER_HUE_STORAGE_KEY, String(surfaceHues.headerHue));
+          document.documentElement.style.setProperty('--header-hue', String(surfaceHues.headerHue));
+          document.documentElement.style.setProperty('--menu-hue', String(surfaceHues.headerHue));
+        } catch {
+          // noop
+        }
+
         const { error: fallbackError } = await supabase
           .from('theme_settings')
           .update({

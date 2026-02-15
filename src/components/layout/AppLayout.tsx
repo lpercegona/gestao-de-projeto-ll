@@ -359,7 +359,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-background lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -412,7 +412,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <Button
                 variant="outline"
                 className={cn(
-                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full p-0 text-[hsl(var(--menu-foreground))] shadow-sm transition-opacity duration-200 lg:flex",
+                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] p-0 text-[hsl(var(--menu-foreground))] shadow-sm transition-opacity duration-200 lg:flex",
                   isHovering ? "opacity-100" : "opacity-0",
                 )}
                 onClick={() => setIsCollapsed(!isCollapsed)}

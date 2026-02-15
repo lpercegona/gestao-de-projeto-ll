@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ClipboardList, Users, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,6 +53,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   const [description, setDescription] = useState('');
   const [entryType, setEntryType] = useState<'task' | 'meeting'>('task');
   const [loading, setLoading] = useState(false);
+  const suppressAutoResumeOnCloseRef = useRef(false);
 
   const boundTask = taskBinding ? data.tasks.find((task) => task.id === taskBinding.taskId) || null : null;
   const boundProject = boundTask ? data.projects.find((project) => project.id === boundTask.project_id) || null : null;
@@ -118,6 +119,12 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
 
   // Called when user cancels or closes the dialog without saving
   const handleClose = () => {
+    if (suppressAutoResumeOnCloseRef.current) {
+      suppressAutoResumeOnCloseRef.current = false;
+      onOpenChange(false);
+      return;
+    }
+
     // Resume timer if it was running before opening dialog
     cancelCompleteDialog();
     resetFormState();
@@ -125,6 +132,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
 
   // Called after successful registration - doesn't resume timer
   const handleSuccessClose = () => {
+    suppressAutoResumeOnCloseRef.current = true;
     onOpenChange(false);
     resetFormState();
   };
@@ -241,7 +249,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
       }
 
       // Create time entry
-      await createTimeEntry({
+      const createdEntry = await createTimeEntry({
         task_id: taskId,
         hours,
         description: description.trim(),
@@ -249,8 +257,12 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         entry_type: entryType,
       });
 
+      if (!createdEntry) {
+        throw new Error('Falha ao registrar horas.');
+      }
+
       clearTaskBinding();
-      resetTimer();
+      await resetTimer();
       toast.success(`Vínculo aplicado na finalização: ${formatHours(hours)} registradas com sucesso.`);
       handleSuccessClose();
     } catch (error) {
@@ -269,17 +281,26 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
   };
 
   const handleDiscard = async () => {
-    // If linked to a task timer, cancel it in the database
-    if (timerState.taskId) {
-      await cancelTaskTimer(timerState.taskId);
+    setLoading(true);
+    try {
+      // If linked to a task timer, cancel it in the database
+      if (timerState.taskId) {
+        await cancelTaskTimer(timerState.taskId);
+      }
+      clearTaskBinding();
+      await resetTimer();
+      // Don't call handleClose as it would try to resume the timer
+      // Just close the dialog and reset form state
+      suppressAutoResumeOnCloseRef.current = true;
+      onOpenChange(false);
+      resetFormState();
+      toast.info('Registro descartado');
+    } catch (error) {
+      console.error('Error discarding timer:', error);
+      toast.error('Falha ao descartar o registro.');
+    } finally {
+      setLoading(false);
     }
-    clearTaskBinding();
-    resetTimer();
-    // Don't call handleClose as it would try to resume the timer
-    // Just close the dialog and reset form state
-    onOpenChange(false);
-    resetFormState();
-    toast.info('Registro descartado');
   };
 
   return (
