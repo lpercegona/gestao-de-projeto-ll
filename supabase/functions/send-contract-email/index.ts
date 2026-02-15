@@ -64,11 +64,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: emailTemplate } = await adminClient
-      .from("email_templates")
-      .select("*")
-      .eq("slug", "contract_sent")
-      .single();
+    // Fetch email template: personal first, then global fallback
+    const creatorId = contract.created_by || contract.owner_id;
+    let emailTemplate = null;
+
+    if (creatorId) {
+      const { data: personal } = await adminClient
+        .from("email_templates")
+        .select("*")
+        .eq("slug", "contract_sent")
+        .eq("owner_id", creatorId)
+        .single();
+      emailTemplate = personal;
+    }
+
+    if (!emailTemplate) {
+      const { data: global } = await adminClient
+        .from("email_templates")
+        .select("*")
+        .eq("slug", "contract_sent")
+        .is("owner_id", null)
+        .single();
+      emailTemplate = global;
+    }
 
     const baseUrl = req.headers.get("origin") || `https://${req.headers.get("host")}`;
     const contractLink = `${baseUrl}/contract/${contract.share_token}`;

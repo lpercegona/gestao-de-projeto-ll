@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Json } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -71,7 +72,7 @@ interface ServiceRow {
   billingType: BillingType;
 }
 
-const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
+// Key will be set dynamically with userId
 
 type ServicesTab = 'services' | 'proposals' | 'contracts';
 
@@ -84,6 +85,8 @@ const tabByPath: Record<string, ServicesTab> = {
 export const Services: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const storageKey = user ? `services:manual-items:${user.id}` : 'services:manual-items';
 
   const [proposals, setProposals] = useState<ProposalRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +106,8 @@ export const Services: React.FC = () => {
   const activeTab = tabByPath[location.pathname] || 'services';
 
   useEffect(() => {
-    const storedItems = localStorage.getItem(MANUAL_ITEMS_STORAGE_KEY);
+    if (!user) return;
+    const storedItems = localStorage.getItem(storageKey);
 
     if (!storedItems) return;
 
@@ -112,13 +116,14 @@ export const Services: React.FC = () => {
       setManualItems(Array.isArray(parsedItems) ? parsedItems : []);
     } catch (error) {
       console.error('Erro ao carregar itens manuais de serviço:', error);
-      localStorage.removeItem(MANUAL_ITEMS_STORAGE_KEY);
+      localStorage.removeItem(storageKey);
     }
-  }, []);
+  }, [user, storageKey]);
 
   useEffect(() => {
-    localStorage.setItem(MANUAL_ITEMS_STORAGE_KEY, JSON.stringify(manualItems));
-  }, [manualItems]);
+    if (!user) return;
+    localStorage.setItem(storageKey, JSON.stringify(manualItems));
+  }, [manualItems, user, storageKey]);
 
   useEffect(() => {
     const fetchProposals = async () => {
