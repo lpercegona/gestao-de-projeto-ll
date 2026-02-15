@@ -156,26 +156,8 @@ export const PublicProposal: React.FC = () => {
 
       const rawProposal = proposalData[0];
 
-      // Fetch template sections if template exists
-      let templateSections: TemplateSection[] = [];
-      if (rawProposal.proposal_id) {
-        const { data: propRow } = await supabase
-          .from('proposals')
-          .select('template_id')
-          .eq('id', rawProposal.proposal_id)
-          .single();
-
-        if (propRow?.template_id) {
-          const { data: tmplData } = await supabase
-            .from('proposal_templates')
-            .select('sections')
-            .eq('id', propRow.template_id)
-            .single();
-          if (tmplData && (tmplData as any).sections) {
-            templateSections = (tmplData as any).sections as TemplateSection[];
-          }
-        }
-      }
+      // Use template_sections from RPC (no direct table access needed)
+      const templateSections: TemplateSection[] = (rawProposal as any).template_sections || [];
 
       setProposal({
         ...rawProposal,

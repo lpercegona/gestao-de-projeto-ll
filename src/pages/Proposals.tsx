@@ -341,6 +341,7 @@ export const Proposals: React.FC = () => {
     description: '',
     validUntil: '',
     clientId: '',
+    contractType: 'one_time' as 'one_time' | 'monthly',
     items: [] as ProposalItem[],
   });
   const [manualServiceItems, setManualServiceItems] = useState<ServiceCatalogItem[]>([]);
@@ -445,10 +446,56 @@ export const Proposals: React.FC = () => {
         if (error) throw error;
         toast.success('Proposta atualizada!');
       } else {
-        const { error } = await supabase
+        const { data: newProposal, error } = await supabase
           .from('proposals')
-          .insert(proposalData);
+          .insert(proposalData)
+          .select('id, client_id')
+          .single();
         if (error) throw error;
+
+        // Auto-register client if no client_id linked
+        if (!proposalData.client_id && formData.recipientEmail) {
+          try {
+            // Check if client with this email exists
+            const { data: existingClients } = await supabase
+              .from('clients')
+              .select('id')
+              .eq('email', formData.recipientEmail)
+              .limit(1);
+
+            if (!existingClients || existingClients.length === 0) {
+              const { data: newClient } = await supabase
+                .from('clients')
+                .insert({
+                  name: formData.recipientName,
+                  email: formData.recipientEmail,
+                  company: formData.recipientCompany || null,
+                  pipeline_status: 'negotiation',
+                  contract_type: formData.contractType,
+                  owner_id: user?.id,
+                  created_by: user?.id,
+                } as any)
+                .select('id')
+                .single();
+
+              if (newClient) {
+                await supabase
+                  .from('proposals')
+                  .update({ client_id: newClient.id })
+                  .eq('id', newProposal.id);
+              }
+            } else {
+              // Link existing client
+              await supabase
+                .from('proposals')
+                .update({ client_id: existingClients[0].id })
+                .eq('id', newProposal.id);
+            }
+          } catch (clientErr) {
+            console.error('Error auto-registering client:', clientErr);
+          }
+        }
+
         toast.success('Proposta criada!');
       }
 
@@ -756,6 +803,7 @@ export const Proposals: React.FC = () => {
       description: '',
       validUntil: '',
       clientId: '',
+      contractType: 'one_time',
       items: [],
     });
     setSelectedCatalogItemId('');
@@ -782,6 +830,7 @@ export const Proposals: React.FC = () => {
       description: proposal.description || '',
       validUntil: proposal.valid_until || '',
       clientId: proposal.client_id || '',
+      contractType: 'one_time',
       items: proposal.items.length > 0
         ? proposal.items.map((item) => ({
             ...item,
