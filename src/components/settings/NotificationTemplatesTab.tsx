@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, Save, Info, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, AlertTriangle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Popover,
@@ -211,41 +211,9 @@ export const NotificationTemplatesTab: React.FC = () => {
 
                 return (
                   <AccordionItem key={template.id} value={template.id} className="px-4">
-                    <div className="flex items-center justify-between gap-4 py-1">
-                      <AccordionTrigger className="py-3 hover:no-underline">
-                        <div className="text-left">
-                          <p className="text-base font-medium">{meta?.label || template.slug}</p>
-                          <p className="text-xs text-muted-foreground">Slug: {template.slug}</p>
-                        </div>
-                      </AccordionTrigger>
-
-                      {meta && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 shrink-0"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Info className="w-4 h-4 mr-1" />
-                              Campos
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-72" align="end">
-                            <div className="space-y-1 text-sm">
-                              <p className="font-medium mb-2">Campos dinâmicos</p>
-                              {meta.fields.map((f) => (
-                                <div key={f.key} className="flex gap-2">
-                                  <code className="text-xs bg-muted px-1 rounded">{f.key}</code>
-                                  <span className="text-muted-foreground text-xs">{f.desc}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                    </div>
+                    <AccordionTrigger className="justify-start gap-2 py-4 text-base font-medium hover:no-underline [&>svg]:order-first">
+                      {meta?.label || template.slug}
+                    </AccordionTrigger>
 
                     <AccordionContent>
                       <div className="space-y-4 pb-4">
@@ -264,6 +232,34 @@ export const NotificationTemplatesTab: React.FC = () => {
                             minHeight="160px"
                           />
                         </div>
+
+                        {meta && (
+                          <div className="rounded-md border bg-muted/30 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium">Campos personalizados</p>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8">
+                                    <Info className="mr-1 h-4 w-4" />
+                                    Ver campos
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-72" align="end">
+                                  <div className="space-y-1 text-sm">
+                                    <p className="mb-2 font-medium">Campos dinâmicos</p>
+                                    {meta.fields.map((f) => (
+                                      <div key={f.key} className="flex gap-2">
+                                        <code className="rounded bg-muted px-1 text-xs">{f.key}</code>
+                                        <span className="text-xs text-muted-foreground">{f.desc}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="flex justify-end">
                           <Button
                             onClick={() => handleSave(template)}
