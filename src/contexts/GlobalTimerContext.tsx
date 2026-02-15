@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -241,6 +241,17 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [wasPausedBeforeComplete, setWasPausedBeforeComplete] = useState(false);
 
+  // Refs to break dependency cycles in the sync effect
+  const dbTimerIdRef = useRef(timerState.dbTimerId);
+  const taskIdRef = useRef(timerState.taskId);
+  const operationInProgress = useRef(false);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    dbTimerIdRef.current = timerState.dbTimerId;
+    taskIdRef.current = timerState.taskId;
+  }, [timerState.dbTimerId, timerState.taskId]);
+
   useEffect(() => {
     if (!user || !data.taskTimers) return;
 
@@ -330,13 +341,13 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         persistState(newState);
         return newState;
       });
-    } else if ((timerState.dbTimerId || timerState.taskId) && !loading) {
+    } else if ((dbTimerIdRef.current || taskIdRef.current) && !loading && !operationInProgress.current) {
       setTimerState(initialState);
       setTaskBindingState(null);
       persistTaskBinding(null);
       clearPersistedState();
     }
-  }, [user, data.taskTimers, data.tasks, data.projects, data.clients, timerState.dbTimerId, timerState.taskId, loading]);
+  }, [user, data.taskTimers, data.tasks, data.projects, data.clients, loading]);
 
   useEffect(() => {
     if (!timerState.isRunning || timerState.isPaused) return;
@@ -354,6 +365,16 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const startGlobalTimer = useCallback(async () => {
     if (timerState.isRunning || !user) return;
+
+    // Server-side overlap prevention
+    const { data: existing } = await supabase
+      .from('task_timers')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1);
+    if (existing && existing.length > 0) return;
+
+    operationInProgress.current = true;
 
     const now = new Date();
     const nowMs = now.getTime();
@@ -382,6 +403,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     if (error) {
       console.error('Error starting quick timer:', error);
+      operationInProgress.current = false;
       return;
     }
 
@@ -390,10 +412,13 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       persistState(updated);
       return updated;
     });
+    operationInProgress.current = false;
   }, [timerState.isRunning, user, taskBinding]);
 
   const pauseGlobalTimer = useCallback(async () => {
     if (!timerState.isRunning || timerState.isPaused) return;
+
+    operationInProgress.current = true;
 
     if (timerState.taskId) {
       void pauseTaskTimer(timerState.taskId);
@@ -431,10 +456,13 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         });
       }
     }
+    operationInProgress.current = false;
   }, [timerState, pauseTaskTimer, data.taskTimers, user?.id, taskBinding]);
 
   const resumeGlobalTimer = useCallback(async () => {
     if (!timerState.isPaused) return;
+
+    operationInProgress.current = true;
 
     if (timerState.taskId) {
       void resumeTaskTimer(timerState.taskId);
@@ -460,6 +488,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         } as any)
         .eq('id', timerState.dbTimerId);
     }
+    operationInProgress.current = false;
   }, [timerState, resumeTaskTimer, taskBinding]);
 
   const completeGlobalTimer = useCallback(async () => {
@@ -526,6 +555,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [wasPausedBeforeComplete, timerState, resumeTaskTimer, taskBinding]);
 
   const resetTimer = useCallback(async () => {
+    operationInProgress.current = true;
     const dbTimerId = timerState.dbTimerId;
     const originTaskId = taskBinding?.taskId || timerState.taskId;
     const fallbackTimerId = data.taskTimers.find((timer) => {
@@ -549,6 +579,7 @@ export const GlobalTimerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     persistTaskBinding(null);
     setShowCompleteDialog(false);
     clearPersistedState();
+    operationInProgress.current = false;
   }, [timerState.dbTimerId, timerState.taskId, taskBinding?.taskId, data.taskTimers, user]);
 
   const getElapsedHours = useCallback(() => {
