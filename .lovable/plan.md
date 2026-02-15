@@ -1,42 +1,81 @@
 
-# Plano: Corrigir erro de build e verificar timer
+
+# Plano: Corrigir Timer Global - Race Condition e Sobreposicao
 
 ## Diagnostico
 
-O timer nao funciona porque **o app inteiro nao compila** devido a um erro de build em `Services.tsx` (linha 278). O tipo `ProposalItem[]` nao e compativel com `Json` ao atualizar propostas no banco. Este e o mesmo padrao de erro ja corrigido em `Proposals.tsx` na rodada anterior, mas que nao foi aplicado em `Services.tsx`.
+O problema principal e uma **race condition** no efeito de sincronizacao do `GlobalTimerContext.tsx` (linhas 244-339). O fluxo problematico e:
 
-A logica do timer em si (pausar, retomar, descartar, prevencao de sobreposicao) esta correta:
-- Timers standalone (sem tarefa): pause/resume manipulam o banco diretamente via `task_timers`
-- Timers vinculados a tarefa: delegam para `pauseTaskTimer`/`resumeTaskTimer` do DataContext
-- Prevencao de sobreposicao: `startGlobalTimer` retorna se `timerState.isRunning`, e `TaskTimer` bloqueia inicio se `hasForeignActiveTimer`
-- Descarte: `handleDiscard` chama `cancelTaskTimer` (para task timers) + `resetTimer` (limpa DB e estado)
+1. Usuario clica "Iniciar" - `startGlobalTimer` define estado otimista com `dbTimerId: null`
+2. O insert no banco via Supabase dispara um evento Realtime (INSERT)
+3. O Realtime atualiza `data.taskTimers` no `DataContext`
+4. O efeito de sincronizacao (useEffect linha 244) roda novamente
+5. Encontra o timer ativo no banco, mas **antes** que o callback do insert atualize `dbTimerId` no estado local
+6. Na proxima renderizacao, `dbTimerId` muda (agora nao e mais null), o que dispara o efeito **novamente** porque `timerState.dbTimerId` esta no array de dependencias
+7. Este ciclo de atualizacoes causa instabilidade e, em certos timings, o ramo `else if` (linha 333) e executado, resetando tudo para `initialState`
 
-Ha tambem um warning de console (`forwardRef`) em `HeaderTimerDisplay` que nao impede o funcionamento mas deve ser corrigido.
+A sobreposicao ocorre porque, apos o reset indevido, `timerState.isRunning` volta a ser `false`, permitindo iniciar um novo timer enquanto o registro anterior ainda existe no banco.
 
 ## Correcoes
 
-### Passo 1 - Corrigir build error em Services.tsx (linha 278)
+### Passo 1 - Remover `timerState.dbTimerId` e `timerState.taskId` das dependencias do efeito de sincronizacao
 
-Adicionar cast `as unknown as Json` no campo `items` ao fazer `.update()` na tabela `proposals`, identico ao fix ja aplicado em `Proposals.tsx`.
+O efeito de sincronizacao (linha 244) tem `timerState.dbTimerId` e `timerState.taskId` como dependencias. Isso causa re-execucoes desnecessarias: toda vez que o estado local e atualizado pelo proprio efeito, ele dispara novamente.
 
-```text
-Antes:  items: updatedItems,
-Depois: items: updatedItems as unknown as Json,
-```
+A correcao e usar refs para esses valores em vez de inclui-los diretamente nas dependencias, quebrando o ciclo de atualizacao.
 
-Adicionar o import de `Json` do arquivo de tipos do Supabase.
+### Passo 2 - Proteger o ramo de reset contra race conditions
 
-### Passo 2 - Corrigir warning forwardRef em HeaderTimerDisplay
+A condicao na linha 333 (`else if (timerState.dbTimerId || timerState.taskId) && !loading`) reseta o timer quando nao encontra um timer ativo no banco. Porem, durante o breve periodo entre o insert otimista e a chegada do evento Realtime, nao ha timer no array `data.taskTimers` ainda.
 
-O warning ocorre porque `Tooltip` do Radix tenta passar ref para componentes filhos function. A correcao e envolver os componentes dentro de `TooltipTrigger asChild` em elementos que aceitam ref (como `div` ou `span`), ou verificar se algum uso esta passando ref para um function component sem `forwardRef`.
+A correcao e adicionar um debounce ou flag de "operacao em andamento" que impeca o reset durante operacoes assincronas (insert, pause, resume, delete).
+
+### Passo 3 - Verificar timers existentes no banco antes de iniciar
+
+Atualmente `startGlobalTimer` so verifica `timerState.isRunning` localmente. Adicionar uma query ao banco (`SELECT` em `task_timers` filtrando por `user_id`) antes de fazer o INSERT para garantir que nao existe nenhum timer ativo, evitando sobreposicao mesmo apos resets indevidos.
+
+### Passo 4 - Garantir consistencia no resetTimer e completeGlobalTimer
+
+O `resetTimer` deleta o registro do banco e limpa o estado. Porem, o evento Realtime de DELETE chega depois e pode causar uma segunda execucao do efeito de sincronizacao. Garantir que o reset e idempotente e que estados ja limpos nao sejam processados novamente.
 
 ## Secao Tecnica
 
 ```text
-Arquivos a modificar:
-  - src/pages/Services.tsx (linha 278 - cast items, adicionar import Json)
-  - src/components/timer/HeaderTimerDisplay.tsx (ajuste menor no TooltipTrigger se necessario)
+Arquivo a modificar:
+  - src/contexts/GlobalTimerContext.tsx
+
+Mudancas especificas:
+
+1. Criar refs para dbTimerId e taskId:
+   const dbTimerIdRef = useRef(timerState.dbTimerId)
+   const taskIdRef = useRef(timerState.taskId)
+   // Manter sincronizados via useEffect simples
+
+2. Criar ref/flag de operacao em andamento:
+   const operationInProgress = useRef(false)
+   // Setar true antes de operacoes async (start, pause, resume, reset)
+   // Setar false apos completar
+   // No efeito de sync, ignorar o ramo de reset se operationInProgress.current === true
+
+3. No efeito de sincronizacao (linha 244-339):
+   - Remover timerState.dbTimerId e timerState.taskId do array de deps
+   - Usar dbTimerIdRef.current e taskIdRef.current no lugar
+   - Dependencias ficam: [user, data.taskTimers, data.tasks, data.projects, data.clients, loading]
+
+4. Em startGlobalTimer:
+   - Antes do insert, fazer query de verificacao:
+     const { data: existing } = await supabase
+       .from('task_timers')
+       .select('id')
+       .eq('user_id', user.id)
+       .limit(1);
+     if (existing && existing.length > 0) return;
+
+5. No ramo else if (linha 333):
+   - Adicionar: && !operationInProgress.current
+   - Condicao final: (dbTimerIdRef.current || taskIdRef.current) && !loading && !operationInProgress.current
 
 Nenhuma migracao SQL necessaria.
-Nenhuma alteracao na logica do timer.
+Nenhuma alteracao em outros arquivos.
 ```
+
