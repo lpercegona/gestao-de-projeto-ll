@@ -11,6 +11,20 @@ import { Palette, Type, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const HEADER_HUE_STORAGE_KEY = 'theme:header-hue';
+const MENU_HUE_STORAGE_KEY = 'theme:menu-hue';
+
+
+const getStoredHue = (key: string): number | null => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) return null;
+    return Math.min(360, Math.max(0, parsed));
+  } catch {
+    return null;
+  }
+};
 
 interface ThemeColors {
   primary: string;
@@ -156,8 +170,10 @@ export const ThemeSettings: React.FC = () => {
           secondary: data.secondary_color,
           accent: data.accent_color,
         });
+        const storedHeaderHue = getStoredHue(HEADER_HUE_STORAGE_KEY);
+        const storedMenuHue = getStoredHue(MENU_HUE_STORAGE_KEY);
         setSurfaceHues({
-          headerHue: data.header_hue ?? 210,
+          headerHue: data.header_hue ?? data.menu_hue ?? storedHeaderHue ?? storedMenuHue ?? 210,
         });
         setFontFamily(data.font_family);
       }
@@ -240,6 +256,7 @@ export const ThemeSettings: React.FC = () => {
       if (shouldRetryWithoutHues) {
         try {
           localStorage.setItem(HEADER_HUE_STORAGE_KEY, String(surfaceHues.headerHue));
+          localStorage.setItem(MENU_HUE_STORAGE_KEY, String(surfaceHues.headerHue));
           document.documentElement.style.setProperty('--header-hue', String(surfaceHues.headerHue));
           document.documentElement.style.setProperty('--menu-hue', String(surfaceHues.headerHue));
         } catch {
