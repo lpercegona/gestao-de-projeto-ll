@@ -1,74 +1,73 @@
 
+# Plano: Corrigir criacao de tarefas a partir de solicitacoes aprovadas
 
-# Plano: Incluir todos os usuarios com acesso nos avatares de projeto
+## Diagnostico
 
-## Problema atual
+A investigacao revelou que **todas as solicitacoes de novas tarefas foram marcadas como "aprovadas" no banco, mas nenhuma tarefa foi efetivamente criada**. Existem 9 registros aprovados em `edit_requests` com `request_type = 'new_task'`, porem 0 tarefas correspondentes na tabela `tasks`.
 
-Os componentes `ProjectListView` e `ProjectKanbanView` constroem a lista de membros do projeto usando apenas a tabela `user_project_access`. Isso exclui:
-- O **dono do projeto** (`owner_id`) - o admin que criou o projeto
-- O **criador do projeto** (`created_by`) - quem efetivamente registrou o projeto
+### Causa raiz
 
-Se esses usuarios nao estiverem na tabela `user_project_access`, eles nao aparecem nos avatares.
+O campo `due_date` na tabela `tasks` e do tipo `date` (nullable). O codigo de aprovacao faz:
+
+```text
+due_date: taskDueDate || ''
+```
+
+Quando o cliente nao informa um prazo, `taskDueDate` e `null` ou `undefined`, e o operador `||` converte para string vazia `''`. Inserir `''` em uma coluna do tipo `date` causa um erro no PostgreSQL. A funcao `createTask` captura o erro silenciosamente (retorna `null` sem lanca-lo), e o fluxo continua normalmente, marcando a solicitacao como "aprovada" sem que a tarefa tenha sido criada.
+
+O problema ocorre em **dois locais**:
+1. `handleQuickApproveRequest` - aprovacao rapida pelo dropdown do card
+2. `handleProcessEditRequest` - aprovacao pelo dialog de revisao
 
 ## Solucao
 
-Alterar os dois componentes para incluir `owner_id` e `created_by` de cada projeto na lista de membros, alem dos registros de `user_project_access`.
+### 1. Corrigir o valor de `due_date` nos dois fluxos de aprovacao
 
-### 1. Interfaces de Project nos componentes
+Trocar `due_date: taskDueDate || ''` por `due_date: taskDueDate || null` em ambos os locais.
 
-Adicionar os campos `owner_id` e `created_by` nas interfaces `Project` de ambos os componentes (`ProjectListView` e `ProjectKanbanView`). Esses campos ja existem nos dados vindos do `DataContext`.
+### 2. Verificar o resultado de `createTask` antes de aprovar
 
-### 2. Logica de `projectMembersByProjectId`
+Adicionar verificacao do retorno de `createTask`. Se retornar `null`, lancar erro para evitar que a solicitacao seja marcada como aprovada sem a tarefa ter sido criada.
 
-Em ambos os componentes, alterar o `useMemo` que monta `projectMembersByProjectId` para incluir:
+### 3. Nenhuma alteracao de banco de dados necessaria
 
-```text
-projects.forEach((project) => {
-  const userIds = new Set(
-    projectAccess
-      .filter((access) => access.project_id === project.id)
-      .map((access) => access.user_id)
-  );
-  // Incluir owner e criador do projeto
-  if (project.owner_id) userIds.add(project.owner_id);
-  if (project.created_by) userIds.add(project.created_by);
-  membersMap[project.id] = Array.from(userIds);
-});
-```
-
-### 3. Logica de `userIdsWithProjectAccess`
-
-Atualizar o `useMemo` que coleta os IDs de usuarios para busca de perfis, incluindo tambem os `owner_id` e `created_by` dos projetos:
-
-```text
-const userIdsWithProjectAccess = useMemo(() => {
-  const ids = new Set(projectAccess.map((a) => a.user_id));
-  projects.forEach((p) => {
-    if (p.owner_id) ids.add(p.owner_id);
-    if (p.created_by) ids.add(p.created_by);
-  });
-  return Array.from(ids);
-}, [projectAccess, projects]);
-```
-
-### 4. Nenhuma alteracao de banco de dados
-
-Os dados de `owner_id` e `created_by` ja estao disponiveis nos projetos carregados pelo `DataContext`. Nao e necessario alterar RLS ou criar migracoes.
+A tabela `tasks` ja aceita `null` em `due_date`. O problema e exclusivamente no codigo frontend.
 
 ## Secao Tecnica
 
 ```text
-Arquivos a modificar:
-  - src/components/projects/ProjectListView.tsx
-    1. Adicionar owner_id? e created_by? na interface Project (linhas ~19-34)
-    2. Alterar userIdsWithProjectAccess para incluir owner_id/created_by (linhas ~183-186)
-    3. Alterar projectMembersByProjectId para incluir owner_id/created_by (linhas ~227-241)
+Arquivo a modificar:
+  - src/pages/Projects.tsx
 
-  - src/components/projects/ProjectKanbanView.tsx
-    1. Adicionar owner_id? e created_by? na interface Project (linhas ~19-27)
-    2. Alterar userIdsWithProjectAccess para incluir owner_id/created_by (linhas ~164-167)
-    3. Alterar projectMembersByProjectId para incluir owner_id/created_by (linhas ~203-221)
+Alteracao 1 - handleQuickApproveRequest (~linha 492-500):
+  Antes:
+    const taskDueDate = ... ? ... : '';
+    await createTask({
+      ...
+      due_date: taskDueDate || '',
+    });
 
-Nenhuma migracao SQL necessaria.
+  Depois:
+    const taskDueDate = ... ? ... : null;
+    const newTask = await createTask({
+      ...
+      due_date: taskDueDate,
+    });
+    if (!newTask) throw new Error('Falha ao criar tarefa');
+
+Alteracao 2 - handleProcessEditRequest (~linha 796-804):
+  Antes:
+    const taskDueDate = ... ? ... : '';
+    await createTask({
+      ...
+      due_date: taskDueDate || '',
+    });
+
+  Depois:
+    const taskDueDate = ... ? ... : null;
+    const newTask = await createTask({
+      ...
+      due_date: taskDueDate,
+    });
+    if (!newTask) throw new Error('Falha ao criar tarefa');
 ```
-
