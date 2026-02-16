@@ -30,13 +30,11 @@ import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { KanbanStagesDialog } from '@/components/projects/KanbanStagesDialog';
-import { type ProjectAccessUserProfile } from '@/components/projects/ProjectAccessAvatars';
 
 interface Collaborator {
   user_id: string;
   full_name: string | null;
   email: string | null;
-  avatar_url?: string | null;
 }
 
 interface ProjectColumn {
@@ -204,7 +202,6 @@ export const Projects: React.FC = () => {
   const [isEditRequestDialogOpen, setIsEditRequestDialogOpen] = useState(false);
   const [editRequestAdminNotes, setEditRequestAdminNotes] = useState('');
   const [processingEditRequest, setProcessingEditRequest] = useState(false);
-  const [projectAccessProfiles, setProjectAccessProfiles] = useState<Record<string, ProjectAccessUserProfile>>({});
 
   // Get columns for selected client
   const clientColumns = useMemo(() => {
@@ -222,7 +219,7 @@ export const Projects: React.FC = () => {
         if (rolesError) throw rolesError;
         if (roles && roles.length > 0) {
           const userIds = roles.map(r => r.user_id);
-          const { data: profiles, error: profilesError } = await supabase.from('profiles').select('user_id, full_name, email, avatar_url').in('user_id', userIds);
+          const { data: profiles, error: profilesError } = await supabase.from('profiles').select('user_id, full_name, email').in('user_id', userIds);
           if (profilesError) throw profilesError;
           setCollaborators(profiles || []);
         }
@@ -234,43 +231,6 @@ export const Projects: React.FC = () => {
     };
     fetchCollaborators();
   }, [isAdminOrMaster]);
-
-  useEffect(() => {
-    const fetchProjectAccessProfiles = async () => {
-      const userIds = [...new Set(data.projectAccess.map((access) => access.user_id).filter(Boolean))];
-
-      if (userIds.length === 0) {
-        setProjectAccessProfiles({});
-        return;
-      }
-
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email, avatar_url')
-        .in('user_id', userIds);
-
-      if (error) {
-        console.error('Error fetching project access profiles:', error);
-        return;
-      }
-
-      const profileMap = (profiles || []).reduce<Record<string, ProjectAccessUserProfile>>((acc, profile) => {
-        if (profile.user_id) {
-          acc[profile.user_id] = {
-            user_id: profile.user_id,
-            full_name: profile.full_name,
-            email: profile.email,
-            avatar_url: profile.avatar_url,
-          };
-        }
-        return acc;
-      }, {});
-
-      setProjectAccessProfiles(profileMap);
-    };
-
-    fetchProjectAccessProfiles();
-  }, [data.projectAccess]);
 
 
   useEffect(() => {
@@ -1243,7 +1203,6 @@ export const Projects: React.FC = () => {
           taskTimers={data.taskTimers}
           projectColumns={data.projectColumns}
           projectAccess={data.projectAccess}
-          projectAccessProfiles={projectAccessProfiles}
           kanbanStages={data.kanbanStages}
           isAdminOrMaster={isAdminOrMaster}
           getProjectHours={getProjectHours}
@@ -1286,8 +1245,6 @@ export const Projects: React.FC = () => {
           projects={filteredProjects}
           clients={data.clients}
           tasks={data.tasks}
-          projectAccess={data.projectAccess}
-          projectAccessProfiles={projectAccessProfiles}
           timeEntries={data.timeEntries}
           taskTimers={data.taskTimers}
           kanbanStages={data.kanbanStages}

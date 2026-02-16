@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2 } from "lucide-react";
-import { ProjectAccessAvatars, type ProjectAccessUserProfile } from "./ProjectAccessAvatars";
 
 interface Project {
   id: string;
@@ -66,17 +65,10 @@ interface KanbanStage {
   is_default: boolean;
 }
 
-interface ProjectAccess {
-  project_id: string;
-  user_id: string;
-}
-
 interface ProjectKanbanViewProps {
   projects: Project[];
   clients: Client[];
   tasks: Task[];
-  projectAccess: ProjectAccess[];
-  projectAccessProfiles: Record<string, ProjectAccessUserProfile>;
   timeEntries: TimeEntry[];
   taskTimers: TaskTimer[];
   kanbanStages: KanbanStage[];
@@ -132,8 +124,6 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   projects,
   clients,
   tasks,
-  projectAccess,
-  projectAccessProfiles,
   timeEntries,
   kanbanStages,
   isAdminOrMaster,
@@ -192,18 +182,6 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
 
   const getProject = (projectId: string) => projects.find((p) => p.id === projectId);
   const getClient = (clientId: string) => clients.find((c) => c.id === clientId);
-
-  const collaboratorProfilesByProject = useMemo(() => {
-    return projectAccess.reduce<Record<string, ProjectAccessUserProfile[]>>((acc, access) => {
-      const profile = projectAccessProfiles[access.user_id];
-      if (!profile) return acc;
-      if (!acc[access.project_id]) {
-        acc[access.project_id] = [];
-      }
-      acc[access.project_id].push(profile);
-      return acc;
-    }, {});
-  }, [projectAccess, projectAccessProfiles]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData("taskId", taskId);
@@ -292,20 +270,11 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                               className="cursor-grab active:cursor-grabbing"
                             >
                               <div className="mb-1.5">
-                                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground px-1">
-                                  <div className="flex items-center gap-1 min-w-0">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground px-1">
                                   <GripVertical className="w-3 h-3" />
                                   <span className="truncate">{project?.name}</span>
                                   <span className="text-muted-foreground/50">•</span>
                                   <span className="truncate">{client?.company || client?.name}</span>
-                                  </div>
-                                  {project && (
-                                    <ProjectAccessAvatars
-                                      users={collaboratorProfilesByProject[project.id] || []}
-                                      sizeClassName="h-5 w-5"
-                                      maxVisible={3}
-                                    />
-                                  )}
                                 </div>
                               </div>
                               <TaskCard
