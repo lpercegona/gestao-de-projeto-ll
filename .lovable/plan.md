@@ -1,80 +1,65 @@
 
-# Plano: Separar Nome de Remetente das Credenciais SMTP
+# Plano: Corrigir exibicao de avatares nos cards de projeto
 
-## Resumo
+## Diagnostico
 
-Atualmente, o nome de remetente (smtp_from_name) esta acoplado ao card de credenciais SMTP, visivel apenas para master admin. O objetivo e:
+A investigacao revelou duas causas-raiz que impedem a exibicao dos avatares de membros do projeto:
 
-1. Separar a UI em dois cards distintos na aba Notificacoes
-2. Card "Credenciais SMTP" - visivel apenas para master admin (host, porta, usuario, senha, teste de conexao)
-3. Card "Nome do Remetente" - visivel para todos os admins, permitindo que cada admin defina seu proprio nome de remetente salvo na tabela `smtp_settings` com seu `owner_id`
+### Causa 1: Tabela `user_project_access`
+Os dados de quem tem acesso a cada projeto sao carregados pelo `DataContext` a partir da tabela `user_project_access`. Porem, as politicas de seguranca (RLS) dessa tabela so permitem:
+- Admins: ver acessos dos proprios projetos
+- Master admins: ver todos
+- Usuarios comuns: ver apenas seus proprios registros de acesso
 
-## Mudancas
+**Clientes nao tem permissao para ver quais colaboradores estao atribuidos aos seus projetos.** Isso faz com que `data.projectAccess` retorne vazio, resultando em zero avatares.
 
-### 1. Banco de Dados - RLS
+### Causa 2: Tabela `profiles`
+Mesmo que a causa 1 fosse resolvida, os componentes `ProjectListView` e `ProjectKanbanView` fazem uma consulta adicional a tabela `profiles` para buscar nomes e fotos dos usuarios. As politicas de seguranca de `profiles` nao permitem que clientes vejam perfis de colaboradores atribuidos aos seus projetos.
 
-A tabela `smtp_settings` ja tem RLS para admin gerenciar seus proprios registros (`owner_id = auth.uid()`). Porem, admins regulares precisam tambem ler as credenciais globais (owner_id IS NULL) para saber se o SMTP esta configurado. A policy "Authenticated can read" dos email_templates nao se aplica aqui. Sera necessario adicionar uma policy SELECT para admins lerem o registro global (apenas para verificar status de conexao).
+## Solucao
 
-**Migracao SQL:**
-- Adicionar policy SELECT na tabela `smtp_settings` para admins poderem ler o registro global (is null) - apenas para exibir status de conexao
+### 1. Nova politica RLS em `user_project_access`
+Permitir que clientes vejam os registros de acesso dos projetos pertencentes ao seu cliente:
 
-### 2. Frontend - SmtpSettingsSection.tsx
+```text
+CREATE POLICY "Clients can view project access for own projects"
+ON user_project_access FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM projects p
+    WHERE p.id = user_project_access.project_id
+      AND p.client_id = get_user_client_id(auth.uid())
+  )
+);
+```
 
-Refatorar para conter apenas os campos de credenciais (host, porta, usuario, senha), sem o campo "Nome do Remetente":
-- Remover o campo `smtp_from_name` do formulario
-- Manter botoes "Testar Conexao" e "Salvar Credenciais"
-- Manter badge de status de conexao
+### 2. Nova politica RLS em `profiles`
+Permitir que clientes vejam perfis de colaboradores atribuidos aos projetos do seu cliente:
 
-### 3. Frontend - Novo componente SenderNameSection.tsx
+```text
+CREATE POLICY "Clients can view profiles of project members"
+ON profiles FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM user_project_access upa
+    JOIN projects p ON p.id = upa.project_id
+    WHERE upa.user_id = profiles.user_id
+      AND p.client_id = get_user_client_id(auth.uid())
+  )
+);
+```
 
-Criar um novo componente Card para edicao do nome de remetente:
-- Campo "Nome do Remetente" com input
-- Botao "Salvar"
-- Logica: buscar/criar registro em `smtp_settings` com `owner_id = user.id`
-- Se o admin nao tem registro proprio, criar um ao salvar (apenas com `smtp_from_name`, demais campos vazios)
-- Texto explicativo: "Este nome sera exibido como remetente nos emails enviados por voce."
-
-### 4. Frontend - NotificationTemplatesTab.tsx
-
-Reorganizar a exibicao:
-- `SmtpSettingsSection` continua visivel apenas para `isMasterAdmin`
-- `SenderNameSection` (novo) visivel para todos os admins (master e regular)
-- Ordem: Credenciais SMTP (master only) -> Nome do Remetente (todos admins) -> Templates
-
-### 5. Edge Functions - Resolver fromName por admin
-
-Atualizar as 3 Edge Functions (`send-proposal-email`, `send-contract-email`, `send-monthly-report`) para:
-1. Buscar `smtp_from_name` do registro do owner (admin que criou o item) em `smtp_settings`
-2. Para credenciais de conexao (host/port/user/pass): manter a logica atual (owner -> global -> env vars)
-3. Para `fromName`: priorizar o registro do owner, depois global, depois vazio
-
-Isso permite que cada admin tenha seu proprio nome de remetente mesmo usando as credenciais SMTP globais do master admin.
-
----
+### 3. Nenhuma alteracao de codigo frontend
+Os componentes `ProjectListView` e `ProjectKanbanView` ja possuem toda a logica de exibicao de avatares implementada corretamente. Basta que os dados cheguem do banco.
 
 ## Secao Tecnica
 
 ```text
 Migracao SQL:
-  1. CREATE POLICY "Admin can read global smtp settings" ON smtp_settings
-     FOR SELECT USING (
-       has_role(auth.uid(), 'admin'::app_role)
-       AND owner_id IS NULL
-     );
+  1. CREATE POLICY na tabela user_project_access para clientes
+  2. CREATE POLICY na tabela profiles para clientes
 
-Arquivos a modificar:
-  - src/components/settings/SmtpSettingsSection.tsx
-    (remover campo smtp_from_name do formulario)
-  - src/components/settings/NotificationTemplatesTab.tsx
-    (adicionar SenderNameSection para todos admins)
-  - supabase/functions/send-proposal-email/index.ts
-    (separar resolucao de fromName da resolucao de credenciais)
-  - supabase/functions/send-contract-email/index.ts
-    (idem)
-  - supabase/functions/send-monthly-report/index.ts
-    (idem)
-
-Arquivos novos:
-  - src/components/settings/SenderNameSection.tsx
-    (card para edicao do nome de remetente por admin)
+Arquivos afetados:
+  - Nenhum arquivo frontend precisa ser alterado
+  - Apenas uma migracao SQL com duas novas politicas RLS
 ```
