@@ -219,15 +219,14 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     fetchProfiles();
   }, [userIdsWithProjectAccess]);
 
-  const getInitials = (profile?: ProfileSummary) => {
-    if (!profile) return "--";
-    const source = profile.full_name || profile.email || "";
-    const words = source.trim().split(/\s+/).filter(Boolean);
+  const getAvatarInitial = (profile?: ProfileSummary) => {
+    const source = profile?.full_name?.trim() || profile?.email?.trim() || "";
+    return source ? source[0].toUpperCase() : "U";
+  };
 
-    if (words.length === 0) return "--";
-    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-
-    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  const getAvatarSrc = (profile?: ProfileSummary) => {
+    const src = profile?.avatar_url?.trim();
+    return src ? src : undefined;
   };
 
   const projectMembersByProjectId = useMemo(() => {
@@ -494,9 +493,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                   className="h-7 w-7 border-2 border-background"
                                   title={profile?.full_name || profile?.email || "Usuário"}
                                 >
-                                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Avatar do usuário"} />
+                                  <AvatarImage src={getAvatarSrc(profile)} alt={profile?.full_name || "Avatar do usuário"} />
                                   <AvatarFallback className="text-[10px] bg-muted text-muted-foreground font-medium">
-                                    {getInitials(profile)}
+                                    {getAvatarInitial(profile)}
                                   </AvatarFallback>
                                 </Avatar>
                               );
