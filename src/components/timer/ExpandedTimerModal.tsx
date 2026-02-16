@@ -441,7 +441,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
                                   aria-label={`Concluir tarefa ${task.name}`}
                                   title="Concluir tarefa"
                                 >
-                                  <Check className="fill-current" />
+                                  <Check/>
                                 </Button>
                               </div>
                             )}
