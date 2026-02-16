@@ -162,6 +162,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   onRequestTaskEdit,
 }) => {
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, ProfileSummary>>({});
+  const [allowedRolesByUserId, setAllowedRolesByUserId] = useState<Record<string, "admin" | "client" | "collaborator">>({});
 
   const userIdsWithProjectAccess = useMemo(() => {
     const ids = new Set(projectAccess.map((a) => a.user_id));
@@ -179,13 +180,25 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
         return;
       }
 
-      const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email, avatar_url")
-        .in("user_id", userIdsWithProjectAccess);
+      const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("user_id, full_name, email, avatar_url")
+          .in("user_id", userIdsWithProjectAccess),
+        supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("user_id", userIdsWithProjectAccess)
+          .in("role", ["admin", "client", "collaborator"]),
+      ]);
 
-      if (error) {
-        console.error("Erro ao buscar perfis de usuários para projetos:", error);
+      if (profilesError) {
+        console.error("Erro ao buscar perfis de usuários para projetos:", profilesError);
+        return;
+      }
+
+      if (rolesError) {
+        console.error("Erro ao buscar perfis de papéis para projetos:", rolesError);
         return;
       }
 
@@ -194,15 +207,28 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
         nextMap[profile.user_id] = profile;
       });
 
+      const nextRolesMap: Record<string, "admin" | "client" | "collaborator"> = {};
+      (roles || []).forEach((roleRow) => {
+        if (roleRow.role === "admin" || roleRow.role === "client" || roleRow.role === "collaborator") {
+          nextRolesMap[roleRow.user_id] = roleRow.role;
+        }
+      });
+
       setProfilesByUserId(nextMap);
+      setAllowedRolesByUserId(nextRolesMap);
     };
 
     fetchProfiles();
   }, [userIdsWithProjectAccess]);
 
   const getAvatarInitial = (profile?: ProfileSummary) => {
-    const source = profile?.full_name?.trim() || profile?.email?.trim() || "";
-    return source ? source[0].toUpperCase() : "U";
+    const fullName = profile?.full_name?.trim();
+    if (fullName) return fullName[0].toUpperCase();
+
+    const email = profile?.email?.trim();
+    if (email) return email[0].toUpperCase();
+
+    return "?";
   };
 
   const getAvatarSrc = (profile?: ProfileSummary) => {
@@ -223,11 +249,11 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
       );
       if (project.owner_id) userIds.add(project.owner_id);
       if (project.created_by) userIds.add(project.created_by);
-      membersMap[project.id] = Array.from(userIds);
+      membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(allowedRolesByUserId[userId]));
     });
 
     return membersMap;
-  }, [projectAccess, projects]);
+  }, [allowedRolesByUserId, projectAccess, projects]);
 
   // Default stages if none from DB
   const stages: KanbanStage[] = useMemo(() => {
@@ -369,9 +395,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                     )}
                                   </div>
                                   <div className="flex items-center -space-x-2 shrink-0">
-                                    {(projectMembersByProjectId[task.project_id] || [])
-                                      .slice(0, 5)
-                                      .map((userId) => {
+                                    {(projectMembersByProjectId[task.project_id] || []).map((userId) => {
                                         const profile = profilesByUserId[userId];
 
                                         return (
