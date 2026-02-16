@@ -489,15 +489,16 @@ export const Projects: React.FC = () => {
         if (request.entity_type === 'project' && proposedData.request_type === 'new_task') {
           const taskName = typeof proposedData.task_name === 'string' ? proposedData.task_name : 'Nova tarefa solicitada';
           const taskDescription = typeof proposedData.task_description === 'string' ? proposedData.task_description : '';
-          const taskDueDate = typeof proposedData.task_due_date === 'string' ? proposedData.task_due_date : '';
+          const taskDueDate = typeof proposedData.task_due_date === 'string' ? proposedData.task_due_date : null;
 
-          await createTask({
+          const newTask = await createTask({
             project_id: request.entity_id,
             name: taskName,
             description: taskDescription,
             status: 'pending',
-            due_date: taskDueDate || '',
+            due_date: taskDueDate,
           });
+          if (!newTask) throw new Error('Falha ao criar tarefa');
         } else if (request.entity_type === 'project' && proposedData.request_type === 'edit_task') {
           const taskId = typeof proposedData.task_id === 'string' ? proposedData.task_id : '';
           if (!taskId) throw new Error('Solicitação de edição de tarefa inválida');
@@ -793,15 +794,16 @@ export const Projects: React.FC = () => {
         if (selectedEditRequest.entity_type === 'project' && proposedData.request_type === 'new_task') {
           const taskName = typeof proposedData.task_name === 'string' ? proposedData.task_name : 'Nova tarefa solicitada';
           const taskDescription = typeof proposedData.task_description === 'string' ? proposedData.task_description : '';
-          const taskDueDate = typeof proposedData.task_due_date === 'string' ? proposedData.task_due_date : '';
+          const taskDueDate = typeof proposedData.task_due_date === 'string' ? proposedData.task_due_date : null;
 
-          await createTask({
+          const newTask = await createTask({
             project_id: selectedEditRequest.entity_id,
             name: taskName,
             description: taskDescription,
             status: 'pending',
-            due_date: taskDueDate || '',
+            due_date: taskDueDate,
           });
+          if (!newTask) throw new Error('Falha ao criar tarefa');
         } else if (selectedEditRequest.entity_type === 'project' && proposedData.request_type === 'edit_task') {
           const taskId = typeof proposedData.task_id === 'string' ? proposedData.task_id : '';
           if (!taskId) {
