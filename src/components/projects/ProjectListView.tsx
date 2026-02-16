@@ -13,6 +13,7 @@ import { TaskCard } from "./TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { formatHours } from "@/lib/formatHours";
 import { ExpandableDescription } from "./ExpandableDescription";
+import { ProjectAccessAvatars, type ProjectAccessUserProfile } from "./ProjectAccessAvatars";
 
 interface Project {
   id: string;
@@ -97,6 +98,7 @@ interface ProjectListViewProps {
   taskTimers: TaskTimer[];
   projectColumns: ProjectColumn[];
   projectAccess: ProjectAccess[];
+  projectAccessProfiles: Record<string, ProjectAccessUserProfile>;
   kanbanStages: KanbanStage[];
   isAdminOrMaster: boolean;
   allowProjectEditOnly?: boolean;
@@ -137,6 +139,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   timeEntries,
   taskTimers,
   projectAccess,
+  projectAccessProfiles,
   kanbanStages,
   isAdminOrMaster,
   allowProjectEditOnly = false,
@@ -224,6 +227,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         const projectTasks = tasks.filter((t) => t.project_id === project.id);
         const hours = getProjectHours(project.id);
         const projectCollaborators = projectAccess.filter((a) => a.project_id === project.id);
+        const projectCollaboratorProfiles = projectCollaborators
+          .map((access) => projectAccessProfiles[access.user_id])
+          .filter((profile): profile is ProjectAccessUserProfile => Boolean(profile));
         const projectColumns = client ? getClientColumns(client.id) : [];
         const isOpen = openProjects[project.id] ?? false;
 
@@ -381,7 +387,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       )}
                       <div className="w-full flex flex-wrap gap-x-4 gap-y-1 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Cliente: </span>
+                            {!isClientRestrictedMode && <span className="text-muted-foreground">Cliente: </span>}
                             <span className="font-medium text-foreground">{client?.company || client?.name}</span>
                           </div>
                           {!project.is_request && (<>
@@ -403,6 +409,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                 </div>
                               ),
                           )}
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <ProjectAccessAvatars users={projectCollaboratorProfiles} />
                         </div>
                       </div>
                   </CardContent>
