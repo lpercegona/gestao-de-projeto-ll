@@ -71,7 +71,6 @@ interface Client {
   id: string;
   name: string;
   company?: string | null;
-  user_id?: string | null;
 }
 
 interface ProjectColumn {
@@ -180,6 +179,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, ProfileSummary>>({});
+  const [allowedRolesByUserId, setAllowedRolesByUserId] = useState<Record<string, "admin" | "client" | "collaborator">>({});
 
   const isClientRestrictedMode = allowProjectEditOnly && !isAdminOrMaster;
 
@@ -188,12 +188,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     projects.forEach((p) => {
       if (p.owner_id) ids.add(p.owner_id);
       if (p.created_by) ids.add(p.created_by);
-
-      const clientUserId = clients.find((client) => client.id === p.client_id)?.user_id;
-      if (clientUserId) ids.add(clientUserId);
     });
     return Array.from(ids);
-  }, [clients, projectAccess, projects]);
+  }, [projectAccess, projects]);
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -202,23 +199,42 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         return;
       }
 
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email, avatar_url")
-        .in("user_id", userIdsWithProjectAccess);
+      const [{ data: profiles, error: profilesError }, { data: roles, error: rolesError }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("user_id, full_name, email, avatar_url")
+          .in("user_id", userIdsWithProjectAccess),
+        supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("user_id", userIdsWithProjectAccess)
+          .in("role", ["admin", "client", "collaborator"]),
+      ]);
 
       if (profilesError) {
         console.error("Erro ao buscar perfis de usuários para projetos:", profilesError);
         return;
       }
 
+      if (rolesError) {
+        console.error("Erro ao buscar perfis de papéis para projetos:", rolesError);
+        return;
+      }
 
       const nextMap: Record<string, ProfileSummary> = {};
       (profiles || []).forEach((profile) => {
         nextMap[profile.user_id] = profile;
       });
 
+      const nextRolesMap: Record<string, "admin" | "client" | "collaborator"> = {};
+      (roles || []).forEach((roleRow) => {
+        if (roleRow.role === "admin" || roleRow.role === "client" || roleRow.role === "collaborator") {
+          nextRolesMap[roleRow.user_id] = roleRow.role;
+        }
+      });
+
       setProfilesByUserId(nextMap);
+      setAllowedRolesByUserId(nextRolesMap);
     };
 
     fetchProfiles();
@@ -250,15 +266,11 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
       );
       if (project.owner_id) userIds.add(project.owner_id);
       if (project.created_by) userIds.add(project.created_by);
-
-      const clientUserId = clients.find((client) => client.id === project.client_id)?.user_id;
-      if (clientUserId) userIds.add(clientUserId);
-
       membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(allowedRolesByUserId[userId]));
     });
 
     return membersMap;
-  }, [allowedRolesByUserId, clients, projectAccess, projects]);
+  }, [allowedRolesByUserId, projectAccess, projects]);
 
   const toggleProject = (projectId: string) => {
     setOpenProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
