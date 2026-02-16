@@ -224,6 +224,22 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     return `${words[0][0]}${words[1][0]}`.toUpperCase();
   };
 
+  const projectMembersByProjectId = useMemo(() => {
+    const membersMap: Record<string, string[]> = {};
+
+    projects.forEach((project) => {
+      membersMap[project.id] = Array.from(
+        new Set(
+          projectAccess
+            .filter((access) => access.project_id === project.id)
+            .map((access) => access.user_id),
+        ),
+      );
+    });
+
+    return membersMap;
+  }, [projectAccess, projects]);
+
   const toggleProject = (projectId: string) => {
     setOpenProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
   };
@@ -277,7 +293,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         const client = clients.find((c) => c.id === project.client_id);
         const projectTasks = tasks.filter((t) => t.project_id === project.id);
         const hours = getProjectHours(project.id);
-        const projectCollaborators = projectAccess.filter((a) => a.project_id === project.id);
+        const projectCollaborators = projectMembersByProjectId[project.id] || [];
         const projectColumns = client ? getClientColumns(client.id) : [];
         const isOpen = openProjects[project.id] ?? false;
 
@@ -462,12 +478,12 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         </div>
                         {projectCollaborators.length > 0 && (
                           <div className="flex items-center -space-x-2 pt-1">
-                            {projectCollaborators.map((collaborator) => {
-                              const profile = profilesByUserId[collaborator.user_id];
+                            {projectCollaborators.map((userId) => {
+                              const profile = profilesByUserId[userId];
 
                               return (
                                 <Avatar
-                                  key={collaborator.user_id}
+                                  key={userId}
                                   className="h-7 w-7 border-2 border-background"
                                   title={profile?.full_name || profile?.email || "Usuário"}
                                 >

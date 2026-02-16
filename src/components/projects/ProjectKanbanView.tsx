@@ -207,6 +207,22 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
 
   const isClientRestrictedMode = clientRestrictedMode && !isAdminOrMaster;
 
+  const projectMembersByProjectId = useMemo(() => {
+    const membersMap: Record<string, string[]> = {};
+
+    projects.forEach((project) => {
+      membersMap[project.id] = Array.from(
+        new Set(
+          projectAccess
+            .filter((access) => access.project_id === project.id)
+            .map((access) => access.user_id),
+        ),
+      );
+    });
+
+    return membersMap;
+  }, [projectAccess, projects]);
+
   // Default stages if none from DB
   const stages: KanbanStage[] = useMemo(() => {
     if (kanbanStages.length > 0) {
@@ -347,25 +363,24 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                     )}
                                   </div>
                                   <div className="flex items-center -space-x-2 shrink-0">
-                                    {(projectAccess
-                                      .filter((access) => access.project_id === task.project_id)
+                                    {(projectMembersByProjectId[task.project_id] || [])
                                       .slice(0, 5)
-                                    ).map((collaborator) => {
-                                      const profile = profilesByUserId[collaborator.user_id];
+                                      .map((userId) => {
+                                        const profile = profilesByUserId[userId];
 
-                                      return (
-                                        <Avatar
-                                          key={collaborator.user_id}
-                                          className="h-5 w-5 border border-background"
-                                          title={profile?.full_name || profile?.email || "Usuário"}
-                                        >
-                                          <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Avatar do usuário"} />
-                                          <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
-                                            {getInitials(profile)}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                      );
-                                    })}
+                                        return (
+                                          <Avatar
+                                            key={userId}
+                                            className="h-5 w-5 border border-background"
+                                            title={profile?.full_name || profile?.email || "Usuário"}
+                                          >
+                                            <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Avatar do usuário"} />
+                                            <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
+                                              {getInitials(profile)}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        );
+                                      })}
                                   </div>
                                 </div>
                               </div>
