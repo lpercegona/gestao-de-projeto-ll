@@ -97,7 +97,7 @@ export const SenderNameSection: React.FC = () => {
           <Input
             value={fromName}
             onChange={(e) => setFromName(e.target.value)}
-            placeholder="Ex: João Silva - Agência XYZ"
+            placeholder="Seu nome - Nome da empresa"
           />
         </div>
         <div className="flex justify-end">
