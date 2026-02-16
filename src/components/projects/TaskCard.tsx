@@ -202,13 +202,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center gap-2 flex-wrap mb-2">
           <h4 className="font-medium text-sm text-foreground">{task.name}</h4>
           {isPendingApproval && (
-            <Badge variant="outline" className="text-[0.6]">
+            <Badge variant="outline" className="text-0.6">
               {task.approval_label || 'Aguardando aprovação'}
             </Badge>
           )}
           {showStatus && (
             <span 
-              className="text-[0.6] px-2 py-0.5 rounded-full font-medium"
+              className="text-0.6 px-2 py-0.5 rounded-full font-medium"
               style={{
                 backgroundColor: stageInfo.color ? `${stageInfo.color}20` : 'hsl(var(--muted))',
                 color: stageInfo.color || 'hsl(var(--muted-foreground))',
