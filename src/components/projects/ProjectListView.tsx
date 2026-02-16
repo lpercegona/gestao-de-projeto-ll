@@ -71,6 +71,7 @@ interface Client {
   id: string;
   name: string;
   company?: string | null;
+  user_id?: string | null;
 }
 
 interface ProjectColumn {
@@ -188,9 +189,12 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     projects.forEach((p) => {
       if (p.owner_id) ids.add(p.owner_id);
       if (p.created_by) ids.add(p.created_by);
+
+      const clientUserId = clients.find((client) => client.id === p.client_id)?.user_id;
+      if (clientUserId) ids.add(clientUserId);
     });
     return Array.from(ids);
-  }, [projectAccess, projects]);
+  }, [clients, projectAccess, projects]);
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -266,11 +270,15 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
       );
       if (project.owner_id) userIds.add(project.owner_id);
       if (project.created_by) userIds.add(project.created_by);
+
+      const clientUserId = clients.find((client) => client.id === project.client_id)?.user_id;
+      if (clientUserId) userIds.add(clientUserId);
+
       membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(allowedRolesByUserId[userId]));
     });
 
     return membersMap;
-  }, [allowedRolesByUserId, projectAccess, projects]);
+  }, [allowedRolesByUserId, clients, projectAccess, projects]);
 
   const toggleProject = (projectId: string) => {
     setOpenProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));

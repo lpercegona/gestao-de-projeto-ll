@@ -236,6 +236,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setData({
         clients: (clientsRes.data || []).map(c => ({
           ...c,
+          user_id: (c as any).user_id ?? null,
           contract_type: (c as any).contract_type || 'one_time',
           contract_start_date: (c as any).contract_start_date || null,
           contract_end_date: (c as any).contract_end_date || null,
@@ -344,6 +345,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clientWithDefaults = {
       ...newClient,
+      user_id: (newClient as any).user_id ?? null,
       contract_type: (newClient as any).contract_type || 'one_time',
       contract_start_date: (newClient as any).contract_start_date || null,
       contract_end_date: (newClient as any).contract_end_date || null,
@@ -373,6 +375,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clientWithDefaults = {
       ...updated,
+      user_id: (updated as any).user_id ?? null,
       contract_type: (updated as any).contract_type || 'one_time',
       contract_start_date: (updated as any).contract_start_date || null,
       contract_end_date: (updated as any).contract_end_date || null,
