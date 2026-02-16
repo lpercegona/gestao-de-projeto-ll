@@ -547,6 +547,7 @@ export const ClientProjects: React.FC = () => {
           timeEntries={data.timeEntries}
           taskTimers={data.taskTimers}
           kanbanStages={data.kanbanStages}
+          projectAccess={data.projectAccess}
           isAdminOrMaster={false}
           getProjectHours={getProjectHours}
           getTaskHours={getTaskHours}
