@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Project {
   id: string;
@@ -57,6 +59,19 @@ interface Client {
   company?: string | null;
 }
 
+
+interface ProjectAccess {
+  project_id: string;
+  user_id: string;
+}
+
+interface ProfileSummary {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
+
 interface KanbanStage {
   id: string;
   name: string;
@@ -72,6 +87,7 @@ interface ProjectKanbanViewProps {
   timeEntries: TimeEntry[];
   taskTimers: TaskTimer[];
   kanbanStages: KanbanStage[];
+  projectAccess: ProjectAccess[];
   isAdminOrMaster: boolean;
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
@@ -126,6 +142,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   tasks,
   timeEntries,
   kanbanStages,
+  projectAccess,
   isAdminOrMaster,
   getTaskHours,
   getCreatorName,
@@ -142,6 +159,70 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   clientRestrictedMode = false,
   onRequestTaskEdit,
 }) => {
+  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, ProfileSummary>>({});
+
+  const userIdsWithProjectAccess = useMemo(
+    () => Array.from(new Set(projectAccess.map((access) => access.user_id))),
+    [projectAccess],
+  );
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (userIdsWithProjectAccess.length === 0) {
+        setProfilesByUserId({});
+        return;
+      }
+
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email, avatar_url")
+        .in("user_id", userIdsWithProjectAccess);
+
+      if (error) {
+        console.error("Erro ao buscar perfis de usuários para projetos:", error);
+        return;
+      }
+
+      const nextMap: Record<string, ProfileSummary> = {};
+      (profiles || []).forEach((profile) => {
+        nextMap[profile.user_id] = profile;
+      });
+
+      setProfilesByUserId(nextMap);
+    };
+
+    fetchProfiles();
+  }, [userIdsWithProjectAccess]);
+
+  const getInitials = (profile?: ProfileSummary) => {
+    if (!profile) return "--";
+    const source = profile.full_name || profile.email || "";
+    const words = source.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) return "--";
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  };
+
+  const isClientRestrictedMode = clientRestrictedMode && !isAdminOrMaster;
+
+  const projectMembersByProjectId = useMemo(() => {
+    const membersMap: Record<string, string[]> = {};
+
+    projects.forEach((project) => {
+      membersMap[project.id] = Array.from(
+        new Set(
+          projectAccess
+            .filter((access) => access.project_id === project.id)
+            .map((access) => access.user_id),
+        ),
+      );
+    });
+
+    return membersMap;
+  }, [projectAccess, projects]);
+
   // Default stages if none from DB
   const stages: KanbanStage[] = useMemo(() => {
     if (kanbanStages.length > 0) {
@@ -270,11 +351,37 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                               className="cursor-grab active:cursor-grabbing"
                             >
                               <div className="mb-1.5">
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground px-1">
-                                  <GripVertical className="w-3 h-3" />
-                                  <span className="truncate">{project?.name}</span>
-                                  <span className="text-muted-foreground/50">•</span>
-                                  <span className="truncate">{client?.company || client?.name}</span>
+                                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground px-1">
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <GripVertical className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{project?.name}</span>
+                                    {!isClientRestrictedMode && (
+                                      <>
+                                        <span className="text-muted-foreground/50">•</span>
+                                        <span className="truncate">{client?.company || client?.name}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center -space-x-2 shrink-0">
+                                    {(projectMembersByProjectId[task.project_id] || [])
+                                      .slice(0, 5)
+                                      .map((userId) => {
+                                        const profile = profilesByUserId[userId];
+
+                                        return (
+                                          <Avatar
+                                            key={userId}
+                                            className="h-5 w-5 border border-background"
+                                            title={profile?.full_name || profile?.email || "Usuário"}
+                                          >
+                                            <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Avatar do usuário"} />
+                                            <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
+                                              {getInitials(profile)}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        );
+                                      })}
+                                  </div>
                                 </div>
                               </div>
                               <TaskCard
