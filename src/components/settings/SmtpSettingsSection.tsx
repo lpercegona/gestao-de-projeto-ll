@@ -221,12 +221,12 @@ export const SmtpSettingsSection: React.FC = () => {
             />
           </div>
         </div>
-        <div className="flex items-center justify-between pt-2">
-          <Button variant="outline" size="sm" onClick={handleTestConnection} disabled={testing}>
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button className="w-full sm:w-auto" variant="outline" size="sm" onClick={handleTestConnection} disabled={testing}>
             {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             Testar Conexão
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button className="w-full sm:w-auto" size="sm" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Salvar Credenciais
           </Button>
