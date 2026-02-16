@@ -25,6 +25,8 @@ interface Project {
   due_date?: string | null;
   custom_fields: Record<string, string>;
   created_at: string;
+  owner_id?: string | null;
+  created_by?: string | null;
   is_request?: boolean;
   request_status?: string;
   request_label?: string;
@@ -180,10 +182,14 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
   const isClientRestrictedMode = allowProjectEditOnly && !isAdminOrMaster;
 
-  const userIdsWithProjectAccess = useMemo(
-    () => Array.from(new Set(projectAccess.map((access) => access.user_id))),
-    [projectAccess],
-  );
+  const userIdsWithProjectAccess = useMemo(() => {
+    const ids = new Set(projectAccess.map((a) => a.user_id));
+    projects.forEach((p) => {
+      if (p.owner_id) ids.add(p.owner_id);
+      if (p.created_by) ids.add(p.created_by);
+    });
+    return Array.from(ids);
+  }, [projectAccess, projects]);
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -228,13 +234,14 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     const membersMap: Record<string, string[]> = {};
 
     projects.forEach((project) => {
-      membersMap[project.id] = Array.from(
-        new Set(
-          projectAccess
-            .filter((access) => access.project_id === project.id)
-            .map((access) => access.user_id),
-        ),
+      const userIds = new Set(
+        projectAccess
+          .filter((access) => access.project_id === project.id)
+          .map((access) => access.user_id),
       );
+      if (project.owner_id) userIds.add(project.owner_id);
+      if (project.created_by) userIds.add(project.created_by);
+      membersMap[project.id] = Array.from(userIds);
     });
 
     return membersMap;
