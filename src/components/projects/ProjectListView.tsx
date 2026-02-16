@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -13,6 +13,8 @@ import { TaskCard } from "./TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { formatHours } from "@/lib/formatHours";
 import { ExpandableDescription } from "./ExpandableDescription";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Project {
   id: string;
@@ -80,6 +82,13 @@ interface ProjectColumn {
 interface ProjectAccess {
   project_id: string;
   user_id: string;
+}
+
+interface ProfileSummary {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
 }
 
 interface KanbanStage {
@@ -167,8 +176,53 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onRejectRequest,
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
+  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, ProfileSummary>>({});
 
   const isClientRestrictedMode = allowProjectEditOnly && !isAdminOrMaster;
+
+  const userIdsWithProjectAccess = useMemo(
+    () => Array.from(new Set(projectAccess.map((access) => access.user_id))),
+    [projectAccess],
+  );
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (userIdsWithProjectAccess.length === 0) {
+        setProfilesByUserId({});
+        return;
+      }
+
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email, avatar_url")
+        .in("user_id", userIdsWithProjectAccess);
+
+      if (error) {
+        console.error("Erro ao buscar perfis de usuários para projetos:", error);
+        return;
+      }
+
+      const nextMap: Record<string, ProfileSummary> = {};
+      (profiles || []).forEach((profile) => {
+        nextMap[profile.user_id] = profile;
+      });
+
+      setProfilesByUserId(nextMap);
+    };
+
+    fetchProfiles();
+  }, [userIdsWithProjectAccess]);
+
+  const getInitials = (profile?: ProfileSummary) => {
+    if (!profile) return "--";
+    const source = profile.full_name || profile.email || "";
+    const words = source.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) return "--";
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  };
 
   const toggleProject = (projectId: string) => {
     setOpenProjects((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
@@ -380,10 +434,12 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         />
                       )}
                       <div className="w-full flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Cliente: </span>
-                            <span className="font-medium text-foreground">{client?.company || client?.name}</span>
-                          </div>
+                          {!isClientRestrictedMode && (
+                            <div>
+                              <span className="text-muted-foreground">Cliente: </span>
+                              <span className="font-medium text-foreground">{client?.company || client?.name}</span>
+                            </div>
+                          )}
                           {!project.is_request && (<>
                             <div>
                               <span className="text-muted-foreground">Tarefas: </span>
@@ -404,6 +460,26 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                               ),
                           )}
                         </div>
+                        {projectCollaborators.length > 0 && (
+                          <div className="flex items-center -space-x-2 pt-1">
+                            {projectCollaborators.map((collaborator) => {
+                              const profile = profilesByUserId[collaborator.user_id];
+
+                              return (
+                                <Avatar
+                                  key={collaborator.user_id}
+                                  className="h-7 w-7 border-2 border-background"
+                                  title={profile?.full_name || profile?.email || "Usuário"}
+                                >
+                                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Avatar do usuário"} />
+                                  <AvatarFallback className="text-[10px] bg-muted text-muted-foreground font-medium">
+                                    {getInitials(profile)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                   </CardContent>
                 </CollapsibleTrigger>
