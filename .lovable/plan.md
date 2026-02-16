@@ -1,73 +1,73 @@
 
-# Plano: Corrigir criacao de tarefas a partir de solicitacoes aprovadas
+
+# Plano: Corrigir exibicao de avatares de membros do projeto para todos os perfis
 
 ## Diagnostico
 
-A investigacao revelou que **todas as solicitacoes de novas tarefas foram marcadas como "aprovadas" no banco, mas nenhuma tarefa foi efetivamente criada**. Existem 9 registros aprovados em `edit_requests` com `request_type = 'new_task'`, porem 0 tarefas correspondentes na tabela `tasks`.
+Os componentes `ProjectListView` e `ProjectKanbanView` fazem duas consultas para montar os avatares:
 
-### Causa raiz
+1. **profiles** - busca nome, email e foto dos usuarios
+2. **user_roles** - busca o papel (admin/client/collaborator) de cada usuario
 
-O campo `due_date` na tabela `tasks` e do tipo `date` (nullable). O codigo de aprovacao faz:
+Depois, na construcao de `projectMembersByProjectId`, o codigo filtra os membros assim:
 
 ```text
-due_date: taskDueDate || ''
+membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(allowedRolesByUserId[userId]));
 ```
 
-Quando o cliente nao informa um prazo, `taskDueDate` e `null` ou `undefined`, e o operador `||` converte para string vazia `''`. Inserir `''` em uma coluna do tipo `date` causa um erro no PostgreSQL. A funcao `createTask` captura o erro silenciosamente (retorna `null` sem lanca-lo), e o fluxo continua normalmente, marcando a solicitacao como "aprovada" sem que a tarefa tenha sido criada.
+O problema esta na tabela `user_roles`, cujas politicas RLS permitem:
+- **Usuarios comuns**: ver apenas o proprio papel (`auth.uid() = user_id`)
+- **Admins**: ver papeis de usuarios que eles "possuem" (com `owner_id` correspondente)
+- **Master admins**: ver todos
 
-O problema ocorre em **dois locais**:
-1. `handleQuickApproveRequest` - aprovacao rapida pelo dropdown do card
-2. `handleProcessEditRequest` - aprovacao pelo dialog de revisao
+Resultado: quando um admin consulta os papeis de todos os membros do projeto, so recebe de volta o proprio papel (e de usuarios subordinados). Os demais sao filtrados, resultando em apenas o proprio avatar visivel.
+
+A tabela `profiles` tem politicas mais permissivas (clientes e colaboradores ja conseguem ver perfis de membros de seus projetos), entao os dados de perfil chegam corretamente. O gargalo e exclusivamente a consulta de `user_roles` e o filtro subsequente.
 
 ## Solucao
 
-### 1. Corrigir o valor de `due_date` nos dois fluxos de aprovacao
+Remover a dependencia de `user_roles` para decidir quais avatares exibir. Se um usuario esta em `user_project_access`, ou e `owner_id`/`created_by` do projeto, ele deve aparecer nos avatares independentemente do seu papel.
 
-Trocar `due_date: taskDueDate || ''` por `due_date: taskDueDate || null` em ambos os locais.
+### Alteracoes em ambos os componentes
 
-### 2. Verificar o resultado de `createTask` antes de aprovar
+1. **Remover a consulta a `user_roles`** do `useEffect` que busca perfis
+2. **Remover o estado `allowedRolesByUserId`**
+3. **Simplificar `projectMembersByProjectId`** para usar apenas a existencia do perfil como criterio de exibicao (em vez do papel)
 
-Adicionar verificacao do retorno de `createTask`. Se retornar `null`, lancar erro para evitar que a solicitacao seja marcada como aprovada sem a tarefa ter sido criada.
+### Antes (em ambos os componentes):
 
-### 3. Nenhuma alteracao de banco de dados necessaria
+```text
+membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(allowedRolesByUserId[userId]));
+```
 
-A tabela `tasks` ja aceita `null` em `due_date`. O problema e exclusivamente no codigo frontend.
+### Depois:
+
+```text
+membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(profilesByUserId[userId]));
+```
+
+Isso garante que qualquer usuario cujo perfil foi carregado com sucesso aparecera nos avatares, sem depender de uma consulta a `user_roles` que e bloqueada por RLS.
 
 ## Secao Tecnica
 
 ```text
-Arquivo a modificar:
-  - src/pages/Projects.tsx
+Arquivos a modificar:
+  - src/components/projects/ProjectListView.tsx
+    1. Remover estado allowedRolesByUserId (linha ~182)
+    2. Remover consulta a user_roles do useEffect (linhas ~207-211)
+    3. Remover processamento de roles (linhas ~229-234)
+    4. Remover setAllowedRolesByUserId (linha ~237)
+    5. Alterar filtro em projectMembersByProjectId: trocar allowedRolesByUserId por profilesByUserId (linha ~269)
+    6. Remover allowedRolesByUserId das dependencias do useMemo (linha ~273)
 
-Alteracao 1 - handleQuickApproveRequest (~linha 492-500):
-  Antes:
-    const taskDueDate = ... ? ... : '';
-    await createTask({
-      ...
-      due_date: taskDueDate || '',
-    });
+  - src/components/projects/ProjectKanbanView.tsx
+    1. Remover estado allowedRolesByUserId (linha ~165)
+    2. Remover consulta a user_roles do useEffect (linhas ~188-192)
+    3. Remover processamento de roles (linhas ~210-215)
+    4. Remover setAllowedRolesByUserId (linha ~218)
+    5. Alterar filtro em projectMembersByProjectId: trocar allowedRolesByUserId por profilesByUserId (linha ~252)
+    6. Remover allowedRolesByUserId das dependencias do useMemo (linha ~256)
 
-  Depois:
-    const taskDueDate = ... ? ... : null;
-    const newTask = await createTask({
-      ...
-      due_date: taskDueDate,
-    });
-    if (!newTask) throw new Error('Falha ao criar tarefa');
-
-Alteracao 2 - handleProcessEditRequest (~linha 796-804):
-  Antes:
-    const taskDueDate = ... ? ... : '';
-    await createTask({
-      ...
-      due_date: taskDueDate || '',
-    });
-
-  Depois:
-    const taskDueDate = ... ? ... : null;
-    const newTask = await createTask({
-      ...
-      due_date: taskDueDate,
-    });
-    if (!newTask) throw new Error('Falha ao criar tarefa');
+Nenhuma migracao SQL necessaria.
+As politicas RLS de profiles ja permitem que todos os papeis vejam os perfis relevantes.
 ```
