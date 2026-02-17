@@ -135,15 +135,21 @@ Deno.serve(async (req) => {
     }
 
     if (smtp) {
-      try {
-        const client = new SMTPClient({
+      const createSmtpClient = (port: number) =>
+        new SMTPClient({
           connection: {
             hostname: smtp.host,
-            port: smtp.port,
-            tls: true,
+            port,
+            tls: port === 465,
             auth: { username: smtp.user, password: smtp.pass },
           },
         });
+
+      let client: SMTPClient | null = null;
+
+      try {
+        const preferredPort = smtp.port || 587;
+        client = createSmtpClient(preferredPort);
 
         const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
 
@@ -154,8 +160,6 @@ Deno.serve(async (req) => {
           content: "auto",
           html: bodyHtml,
         });
-
-        await client.close();
 
         // Update status to sent AFTER successful email delivery
         await adminClient
@@ -168,11 +172,56 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (emailErr) {
+        const shouldTryFallback =
+          (smtp.port || 587) === 587 &&
+          String(emailErr).toLowerCase().includes("invalidcontenttype");
+
+        if (shouldTryFallback) {
+          console.warn("[send-contract-email] STARTTLS failed on 587, retrying with implicit TLS on 465");
+
+          if (client) {
+            await client.close();
+            client = null;
+          }
+
+          try {
+            client = createSmtpClient(465);
+
+            const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
+
+            await client.send({
+              from: fromAddress,
+              to: contract.contractor_email,
+              subject,
+              content: "auto",
+              html: bodyHtml,
+            });
+
+            await adminClient
+              .from("contracts")
+              .update({ status: "sent", sent_at: new Date().toISOString() })
+              .eq("id", contract_id);
+
+            return new Response(
+              JSON.stringify({ success: true, email_sent: true }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          } catch (fallbackErr) {
+            console.error("SMTP fallback error:", fallbackErr);
+            return new Response(
+              JSON.stringify({ success: true, email_sent: false, email_error: String(fallbackErr) }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+
         console.error("SMTP error:", emailErr);
         return new Response(
           JSON.stringify({ success: true, email_sent: false, email_error: String(emailErr) }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      } finally {
+        if (client) await client.close();
       }
     }
 

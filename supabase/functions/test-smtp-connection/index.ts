@@ -46,12 +46,12 @@ Deno.serve(async (req) => {
 
     const port = smtp_port || 587;
 
-    try {
-      const client = new SMTPClient({
+    const createSmtpClient = (targetPort: number) =>
+      new SMTPClient({
         connection: {
           hostname: smtp_host,
-          port,
-          tls: true,
+          port: targetPort,
+          tls: targetPort === 465,
           auth: {
             username: smtp_user,
             password: smtp_pass || "",
@@ -59,18 +59,56 @@ Deno.serve(async (req) => {
         },
       });
 
+    let client: SMTPClient | null = null;
+
+    try {
+      client = createSmtpClient(port);
+
       await client.close();
+      client = null;
 
       return new Response(
         JSON.stringify({ success: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (smtpErr) {
+      const shouldTryFallback =
+        port === 587 &&
+        String(smtpErr).toLowerCase().includes("invalidcontenttype");
+
+      if (shouldTryFallback) {
+        console.warn("[test-smtp-connection] STARTTLS failed on 587, retrying with implicit TLS on 465");
+
+        if (client) {
+          await client.close();
+          client = null;
+        }
+
+        try {
+          client = createSmtpClient(465);
+          await client.close();
+          client = null;
+
+          return new Response(
+            JSON.stringify({ success: true, fallback_port: 465 }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (fallbackErr) {
+          console.error("SMTP fallback connection test failed:", fallbackErr);
+          return new Response(
+            JSON.stringify({ success: false, error: String(fallbackErr) }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
       console.error("SMTP connection test failed:", smtpErr);
       return new Response(
         JSON.stringify({ success: false, error: String(smtpErr) }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    } finally {
+      if (client) await client.close();
     }
   } catch (err) {
     console.error("Error in test-smtp-connection:", err);

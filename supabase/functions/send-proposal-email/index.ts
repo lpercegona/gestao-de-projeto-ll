@@ -182,17 +182,21 @@ Deno.serve(async (req) => {
     }
 
     if (smtp) {
-      let client: SMTPClient | null = null;
-
-      try {
-        client = new SMTPClient({
+      const createSmtpClient = (port: number) =>
+        new SMTPClient({
           connection: {
             hostname: smtp.host,
-            port: smtp.port,
-            tls: true,
+            port,
+            tls: port === 465,
             auth: { username: smtp.user, password: smtp.pass },
           },
         });
+
+      let client: SMTPClient | null = null;
+
+      try {
+        const preferredPort = smtp.port || 587;
+        client = createSmtpClient(preferredPort);
 
         const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
 
@@ -266,6 +270,88 @@ Deno.serve(async (req) => {
           { status: 200, headers: jsonHeaders }
         );
       } catch (emailErr) {
+        const shouldTryFallback =
+          (smtp.port || 587) === 587 &&
+          String(emailErr).toLowerCase().includes("invalidcontenttype");
+
+        if (shouldTryFallback) {
+          console.warn("[send-proposal-email] STARTTLS failed on 587, retrying with implicit TLS on 465");
+
+          if (client) {
+            await client.close();
+            client = null;
+          }
+
+          try {
+            client = createSmtpClient(465);
+
+            const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
+
+            await client.send({
+              from: fromAddress,
+              to: proposal.recipient_email,
+              subject,
+              content: "auto",
+              html: bodyHtml,
+            });
+
+            if (resend) {
+              const { error: historyError } = await adminClient
+                .from("proposal_history")
+                .insert({
+                  proposal_id,
+                  old_status: proposal.status,
+                  new_status: proposal.status || "sent",
+                  changed_by: claimsData.claims.email || claimsData.claims.sub || "system",
+                  notes: "Proposal email resent",
+                });
+
+              if (historyError) {
+                console.warn("[send-proposal-email] resend succeeded, but failed to write history", {
+                  proposal_id,
+                  error: historyError,
+                });
+              }
+
+              return new Response(
+                JSON.stringify({ success: true, email_sent: true, resend: true }),
+                { status: 200, headers: jsonHeaders }
+              );
+            }
+
+            const allowedStatusToSent = new Set(["draft", "viewed", "negotiating"]);
+            if (!allowedStatusToSent.has(proposal.status)) {
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  email_sent: true,
+                  code: "STATUS_TRANSITION_SKIPPED",
+                  reason: `Email sent, status '${proposal.status}' not eligible for automatic transition to 'sent'`,
+                }),
+                { status: 200, headers: jsonHeaders }
+              );
+            }
+
+            const { error: statusUpdateError } = await adminClient
+              .from("proposals")
+              .update({ status: "sent" })
+              .eq("id", proposal_id)
+              .in("status", Array.from(allowedStatusToSent));
+
+            if (statusUpdateError) {
+              return failResponse(500, "PROPOSAL_STATUS_UPDATE_FAILED", "Email sent, but proposal status update failed", true);
+            }
+
+            return new Response(
+              JSON.stringify({ success: true, email_sent: true }),
+              { status: 200, headers: jsonHeaders }
+            );
+          } catch (fallbackErr) {
+            console.error("SMTP fallback error:", fallbackErr);
+            return failResponse(502, "SMTP_SEND_FAILED", `Unable to send email: ${String(fallbackErr)}`);
+          }
+        }
+
         console.error("SMTP error:", emailErr);
         return failResponse(502, "SMTP_SEND_FAILED", `Unable to send email: ${String(emailErr)}`);
       } finally {

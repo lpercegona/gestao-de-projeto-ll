@@ -188,15 +188,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    try {
-      const smtpClient = new SMTPClient({
+    const createSmtpClient = (port: number) =>
+      new SMTPClient({
         connection: {
           hostname: smtp.host,
-          port: smtp.port,
-          tls: true,
+          port,
+          tls: port === 465,
           auth: { username: smtp.user, password: smtp.pass },
         },
       });
+
+    let smtpClient: SMTPClient | null = null;
+
+    try {
+      const preferredPort = smtp.port || 587;
+      smtpClient = createSmtpClient(preferredPort);
 
       const resolvedFromName = await resolveFromName(adminClient, ownerId);
       const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
@@ -208,8 +214,6 @@ Deno.serve(async (req) => {
         content: "auto",
         html: bodyHtml,
       });
-
-      await smtpClient.close();
 
       // Update last sent
       await adminClient
@@ -234,6 +238,67 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (emailErr) {
+      const shouldTryFallback =
+        (smtp.port || 587) === 587 &&
+        String(emailErr).toLowerCase().includes("invalidcontenttype");
+
+      if (shouldTryFallback) {
+        console.warn("[send-monthly-report] STARTTLS failed on 587, retrying with implicit TLS on 465");
+
+        if (smtpClient) {
+          await smtpClient.close();
+          smtpClient = null;
+        }
+
+        try {
+          smtpClient = createSmtpClient(465);
+
+          const resolvedFromName = await resolveFromName(adminClient, ownerId);
+          const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
+
+          await smtpClient.send({
+            from: fromAddress,
+            to: client.email,
+            subject,
+            content: "auto",
+            html: bodyHtml,
+          });
+
+          await adminClient
+            .from("clients")
+            .update({ auto_report_last_sent: new Date().toISOString() } as any)
+            .eq("id", client_id);
+
+          if (ownerId) {
+            const mesRelatorio = prevMonth.toLocaleDateString("pt-BR", { month: "long" });
+            const empresaCliente = client.company || client.name;
+            await adminClient.from("notifications").insert({
+              user_id: ownerId,
+              type: "auto_report_sent",
+              title: "Relatório automático enviado",
+              message: `O relatório mensal referente ao mês de ${mesRelatorio} foi enviado ao cliente ${empresaCliente}.`,
+            });
+          }
+
+          return new Response(
+            JSON.stringify({ success: true, email_sent: true }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (fallbackErr) {
+          console.error("SMTP fallback error:", fallbackErr);
+
+          await adminClient
+            .from("clients")
+            .update({ auto_report_last_sent: new Date().toISOString() } as any)
+            .eq("id", client_id);
+
+          return new Response(
+            JSON.stringify({ success: true, email_sent: false, email_error: String(fallbackErr) }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
       console.error("SMTP error:", emailErr);
 
       // Still update last sent to prevent spam retries
@@ -246,6 +311,8 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: true, email_sent: false, email_error: String(emailErr) }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    } finally {
+      if (smtpClient) await smtpClient.close();
     }
   } catch (err) {
     console.error("Error in send-monthly-report:", err);
