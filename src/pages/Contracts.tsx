@@ -378,9 +378,9 @@ export const Contracts: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const contractUrl = `${window.location.origin}/contract/${contract.share_token}`;
       
-      const { error: fnError } = await supabase.functions.invoke('send-contract-email', {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('send-contract-email', {
         body: {
-          contractId: contract.id,
+          contract_id: contract.id,
           recipientEmail: contract.contractor_email,
           recipientName: contract.contractor_name,
           contractTitle: contract.title,
@@ -393,23 +393,15 @@ export const Contracts: React.FC = () => {
 
       if (fnError) throw fnError;
 
-      // Update status to sent
-      await supabase
-        .from('contracts')
-        .update({ status: 'sent', sent_at: new Date().toISOString() })
-        .eq('id', contract.id);
-
-      toast.success('Contrato enviado por email!');
+      if (fnData?.email_sent === false) {
+        toast.error(fnData?.email_error || 'SMTP não configurado. O email não foi enviado.');
+      } else {
+        toast.success('Contrato enviado por email!');
+      }
       fetchData();
     } catch (error) {
       console.error('Error sending contract:', error);
-      // Fallback: just update status
-      await supabase
-        .from('contracts')
-        .update({ status: 'sent', sent_at: new Date().toISOString() })
-        .eq('id', contract.id);
-      toast.success('Status atualizado para enviado');
-      fetchData();
+      toast.error('Erro ao enviar contrato por email');
     } finally {
       setSending(null);
     }
