@@ -117,7 +117,7 @@ interface ContractTemplate {
 
 export const Contracts: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isMasterAdmin } = useAuth();
   const { data: appData } = useData();
   
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -197,10 +197,8 @@ export const Contracts: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [contractsRes, templatesRes] = await Promise.all([
-        supabase.from('contracts').select('*').order('created_at', { ascending: false }),
-        supabase.from('contract_templates').select('*').order('name'),
-      ]);
+      // Fetch contracts
+      const contractsRes = await supabase.from('contracts').select('*').order('created_at', { ascending: false });
 
       if (contractsRes.data) {
         setContracts(contractsRes.data.map(c => ({
@@ -208,8 +206,31 @@ export const Contracts: React.FC = () => {
           services_summary: (c.services_summary as unknown as ServiceItem[]) || [],
         })) as unknown as Contract[]);
       }
-      if (templatesRes.data) {
-        setTemplates(templatesRes.data as ContractTemplate[]);
+
+      // Fetch templates with replication logic
+      if (isMasterAdmin) {
+        const { data } = await supabase.from('contract_templates').select('*').is('owner_id', null).order('name');
+        setTemplates((data || []) as ContractTemplate[]);
+      } else if (user) {
+        const { data: personal } = await supabase.from('contract_templates').select('*').eq('owner_id', user.id).order('name');
+        if (personal && personal.length > 0) {
+          setTemplates(personal as ContractTemplate[]);
+        } else {
+          // Replicate global templates for this admin
+          const { data: globals } = await supabase.from('contract_templates').select('*').is('owner_id', null).order('name');
+          if (globals && globals.length > 0) {
+            const copies = globals.map(g => ({
+              name: g.name,
+              description: g.description,
+              content: g.content,
+              owner_id: user.id,
+            }));
+            const { data: inserted } = await supabase.from('contract_templates').insert(copies as any).select('*');
+            setTemplates((inserted || []) as ContractTemplate[]);
+          } else {
+            setTemplates([]);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -285,23 +306,26 @@ export const Contracts: React.FC = () => {
 
     setSaving(true);
     try {
-      const templateData = {
+      const templateData: Record<string, unknown> = {
         name: templateFormData.name,
         description: templateFormData.description || null,
         content: templateFormData.content,
       };
+      if (!isMasterAdmin && user) {
+        templateData.owner_id = user.id;
+      }
 
       if (editingTemplate) {
         const { error } = await supabase
           .from('contract_templates')
-          .update(templateData)
+          .update(templateData as any)
           .eq('id', editingTemplate.id);
         if (error) throw error;
         toast.success('Template atualizado!');
       } else {
         const { error } = await supabase
           .from('contract_templates')
-          .insert(templateData);
+          .insert(templateData as any);
         if (error) throw error;
         toast.success('Template criado!');
       }
