@@ -663,8 +663,6 @@ export const Proposals: React.FC = () => {
   };
 
   // Send proposal
-  const handleSendProposal = async (proposal: Proposal) => {
-    setSendingProposalId(proposal.id);
   const handleSendProposal = async (
     proposal: Proposal,
     options?: {
@@ -672,6 +670,7 @@ export const Proposals: React.FC = () => {
     },
   ) => {
     const isResend = options?.resend === true;
+    setSendingProposalId(proposal.id);
 
     try {
       const { data: proposalOwnership, error: proposalOwnershipError } = await supabase
@@ -798,7 +797,6 @@ export const Proposals: React.FC = () => {
         toast.warning('Envio concluído, mas o status ainda não foi atualizado automaticamente.');
       }
       
-      toast.success('Proposta enviada e página de compartilhamento liberada!');
       toast.success(isResend ? 'Proposta reenviada por email!' : 'Proposta enviada e página de compartilhamento liberada!');
       fetchData();
     } catch (error) {
@@ -1360,7 +1358,8 @@ export const Proposals: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              )})}
+              );
+            })}
             </div>
           )}
         </TabsContent>
