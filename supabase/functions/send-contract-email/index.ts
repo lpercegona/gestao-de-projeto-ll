@@ -36,7 +36,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { contract_id } = await req.json();
+    const body = await req.json();
+    const contract_id = body.contract_id || body.contractId;
     if (!contract_id) {
       return new Response(JSON.stringify({ error: "contract_id is required" }), {
         status: 400,
@@ -101,10 +102,7 @@ Deno.serve(async (req) => {
       bodyHtml = bodyHtml.replaceAll(key, value);
     }
 
-    await adminClient
-      .from("contracts")
-      .update({ status: "sent", sent_at: new Date().toISOString() })
-      .eq("id", contract_id);
+    // Status update moved to after successful email send
 
     // Resolve fromName independently: owner -> global -> empty
     const creatorOwnerId = contract.created_by || contract.owner_id;
@@ -142,7 +140,7 @@ Deno.serve(async (req) => {
           connection: {
             hostname: smtp.host,
             port: smtp.port,
-            tls: smtp.port === 465,
+            tls: true,
             auth: { username: smtp.user, password: smtp.pass },
           },
         });
@@ -158,6 +156,12 @@ Deno.serve(async (req) => {
         });
 
         await client.close();
+
+        // Update status to sent AFTER successful email delivery
+        await adminClient
+          .from("contracts")
+          .update({ status: "sent", sent_at: new Date().toISOString() })
+          .eq("id", contract_id);
 
         return new Response(
           JSON.stringify({ success: true, email_sent: true }),
