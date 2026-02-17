@@ -660,7 +660,14 @@ export const Proposals: React.FC = () => {
   };
 
   // Send proposal
-  const handleSendProposal = async (proposal: Proposal) => {
+  const handleSendProposal = async (
+    proposal: Proposal,
+    options?: {
+      resend?: boolean;
+    },
+  ) => {
+    const isResend = options?.resend === true;
+
     try {
       const { data: proposalOwnership, error: proposalOwnershipError } = await supabase
         .from('proposals')
@@ -737,7 +744,10 @@ export const Proposals: React.FC = () => {
       if (updateError) throw updateError;
 
       const { data: sendEmailResult, error: sendEmailError } = await supabase.functions.invoke('send-proposal-email', {
-        body: { proposal_id: proposal.id },
+        body: {
+          proposal_id: proposal.id,
+          resend: isResend,
+        },
       });
 
       if (sendEmailError) {
@@ -748,7 +758,7 @@ export const Proposals: React.FC = () => {
         throw new Error(sendEmailResult?.email_error || sendEmailResult?.reason || 'Falha ao enviar email da proposta');
       }
       
-      toast.success('Proposta enviada e página de compartilhamento liberada!');
+      toast.success(isResend ? 'Proposta reenviada por email!' : 'Proposta enviada e página de compartilhamento liberada!');
       fetchData();
     } catch (error) {
       const normalizedError = logSupabaseError('Error sending proposal', error, {
@@ -1269,6 +1279,10 @@ export const Proposals: React.FC = () => {
                             <DropdownMenuItem onClick={() => openEditProposal(proposal)}>
                               <Pencil className="w-4 h-4 mr-2" />
                               Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendProposal(proposal, { resend: true })}>
+                              <Send className="w-4 h-4 mr-2" />
+                              Reenviar por email
                             </DropdownMenuItem>
                             {proposal.status === 'accepted' && (
                               <DropdownMenuItem onClick={() => {
