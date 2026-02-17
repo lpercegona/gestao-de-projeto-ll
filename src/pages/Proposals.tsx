@@ -302,7 +302,7 @@ const isMissingShareStaticHtmlColumnError = (error: unknown): boolean => {
 
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isMasterAdmin } = useAuth();
   const { data: appData } = useData();
   
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -375,13 +375,17 @@ export const Proposals: React.FC = () => {
     }
   }, []);
 
+  const mapTemplate = (t: any): ProposalTemplate => ({
+    ...t,
+    items: (t.items as unknown as ProposalItem[]) || [],
+    sections: ((t as any).sections as TemplateSection[]) || [],
+  });
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [proposalsRes, templatesRes] = await Promise.all([
-        supabase.from('proposals').select('*').order('created_at', { ascending: false }),
-        supabase.from('proposal_templates').select('*').order('name'),
-      ]);
+      // Fetch proposals
+      const proposalsRes = await supabase.from('proposals').select('*').order('created_at', { ascending: false });
 
       if (proposalsRes.data) {
         setProposals(proposalsRes.data.map(p => ({
@@ -395,12 +399,32 @@ export const Proposals: React.FC = () => {
           })),
         })));
       }
-      if (templatesRes.data) {
-        setTemplates(templatesRes.data.map(t => ({
-          ...t,
-          items: (t.items as unknown as ProposalItem[]) || [],
-          sections: ((t as any).sections as TemplateSection[]) || [],
-        })));
+
+      // Fetch templates with replication logic
+      if (isMasterAdmin) {
+        const { data } = await supabase.from('proposal_templates').select('*').is('owner_id', null).order('name');
+        setTemplates((data || []).map(mapTemplate));
+      } else if (user) {
+        const { data: personal } = await supabase.from('proposal_templates').select('*').eq('owner_id', user.id).order('name');
+        if (personal && personal.length > 0) {
+          setTemplates(personal.map(mapTemplate));
+        } else {
+          // Replicate global templates for this admin
+          const { data: globals } = await supabase.from('proposal_templates').select('*').is('owner_id', null).order('name');
+          if (globals && globals.length > 0) {
+            const copies = globals.map(g => ({
+              name: g.name,
+              description: g.description,
+              items: g.items,
+              sections: g.sections,
+              owner_id: user.id,
+            }));
+            const { data: inserted } = await supabase.from('proposal_templates').insert(copies as any).select('*');
+            setTemplates((inserted || []).map(mapTemplate));
+          } else {
+            setTemplates([]);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -525,12 +549,15 @@ export const Proposals: React.FC = () => {
 
     setSaving(true);
     try {
-      const templateData = {
+      const templateData: Record<string, unknown> = {
         name: templateFormData.name,
         description: templateFormData.content || null,
         items: [],
         sections: templateFormData.sections as any,
       };
+      if (!isMasterAdmin && user) {
+        templateData.owner_id = user.id;
+      }
 
       if (editingTemplate) {
         const { error } = await supabase
