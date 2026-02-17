@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       const { data: creatorProfile, error: creatorProfileError } = await adminClient
         .from("profiles")
         .select("owner_id")
-        .eq("id", proposal.created_by)
+        .eq("user_id", proposal.created_by)
         .maybeSingle();
 
       if (creatorProfileError) {
@@ -84,11 +84,29 @@ Deno.serve(async (req) => {
 
       if (!effectiveOwnerId && creatorProfile?.owner_id) {
         effectiveOwnerId = creatorProfile.owner_id;
+        console.info("[send-proposal-email] owner resolved via profile", {
+          proposal_id,
+          created_by: proposal.created_by,
+          effectiveOwnerId,
+        });
       }
     }
 
     if (!effectiveOwnerId && proposal.created_by) {
       effectiveOwnerId = proposal.created_by;
+      console.info("[send-proposal-email] owner fallback to proposal.created_by", {
+        proposal_id,
+        created_by: proposal.created_by,
+        effectiveOwnerId,
+      });
+    }
+
+    if (proposal.owner_id) {
+      console.info("[send-proposal-email] owner resolved directly from proposal.owner_id", {
+        proposal_id,
+        created_by: proposal.created_by,
+        effectiveOwnerId,
+      });
     }
 
     if (!effectiveOwnerId) {
