@@ -1,73 +1,101 @@
 
 
-# Plano: Corrigir exibicao de avatares de membros do projeto para todos os perfis
+# Plano: Permitir que admins criem e gerenciem seus proprios templates de proposta e contrato
 
 ## Diagnostico
 
-Os componentes `ProjectListView` e `ProjectKanbanView` fazem duas consultas para montar os avatares:
+### Problema 1: `owner_id` ausente nos inserts
 
-1. **profiles** - busca nome, email e foto dos usuarios
-2. **user_roles** - busca o papel (admin/client/collaborator) de cada usuario
-
-Depois, na construcao de `projectMembersByProjectId`, o codigo filtra os membros assim:
+Ao criar um template, o codigo nao inclui `owner_id` no payload de insert:
 
 ```text
-membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(allowedRolesByUserId[userId]));
+// Proposals - linha 543
+.insert({ name, description, items, sections })  // sem owner_id
+
+// Contracts - linha 302
+.insert({ name, description, content })  // sem owner_id
 ```
 
-O problema esta na tabela `user_roles`, cujas politicas RLS permitem:
-- **Usuarios comuns**: ver apenas o proprio papel (`auth.uid() = user_id`)
-- **Admins**: ver papeis de usuarios que eles "possuem" (com `owner_id` correspondente)
-- **Master admins**: ver todos
+O campo `owner_id` fica `null`, e a politica RLS do admin exige `owner_id = auth.uid()`. Resultado: o insert falha silenciosamente para admins regulares. Apenas master_admin consegue criar templates (pois sua politica nao verifica `owner_id`).
 
-Resultado: quando um admin consulta os papeis de todos os membros do projeto, so recebe de volta o proprio papel (e de usuarios subordinados). Os demais sao filtrados, resultando em apenas o proprio avatar visivel.
+### Problema 2: Admins nao recebem copias dos templates globais
 
-A tabela `profiles` tem politicas mais permissivas (clientes e colaboradores ja conseguem ver perfis de membros de seus projetos), entao os dados de perfil chegam corretamente. O gargalo e exclusivamente a consulta de `user_roles` e o filtro subsequente.
+Diferente do sistema de email templates (que replica templates globais para novos admins no primeiro acesso), os templates de proposta e contrato nao tem essa logica de replicacao. Admins regulares comecam com zero templates e nao conseguem criar novos.
+
+### Problema 3: Fetch nao filtra por owner
+
+A consulta `select('*')` retorna apenas o que o RLS permite. Para admins, isso significa apenas templates com `owner_id = auth.uid()`. Como nenhum template e criado com o `owner_id` do admin, a lista sempre vem vazia.
 
 ## Solucao
 
-Remover a dependencia de `user_roles` para decidir quais avatares exibir. Se um usuario esta em `user_project_access`, ou e `owner_id`/`created_by` do projeto, ele deve aparecer nos avatares independentemente do seu papel.
+Replicar o mesmo padrao usado nos email templates: ao carregar os templates, verificar se o admin ja tem copias pessoais. Se nao, copiar dos templates globais (master admin, `owner_id IS NULL`) e salvar com o `owner_id` do admin.
 
-### Alteracoes em ambos os componentes
+### 1. Proposals - fetchData (src/pages/Proposals.tsx)
 
-1. **Remover a consulta a `user_roles`** do `useEffect` que busca perfis
-2. **Remover o estado `allowedRolesByUserId`**
-3. **Simplificar `projectMembersByProjectId`** para usar apenas a existencia do perfil como criterio de exibicao (em vez do papel)
-
-### Antes (em ambos os componentes):
+Alterar a logica de fetch de templates para:
 
 ```text
-membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(allowedRolesByUserId[userId]));
+if (isMasterAdmin) {
+  // Master admin edita templates globais (owner_id IS NULL)
+  buscar templates onde owner_id IS NULL
+} else {
+  // Admin regular: buscar templates pessoais
+  buscar templates onde owner_id = user.id
+
+  se nenhum template pessoal existir:
+    buscar templates globais (owner_id IS NULL)
+    criar copias com owner_id = user.id
+    usar as copias
+}
 ```
 
-### Depois:
+### 2. Proposals - handleSaveTemplate (src/pages/Proposals.tsx)
+
+Incluir `owner_id` no insert:
 
 ```text
-membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(profilesByUserId[userId]));
+// Para master admin: owner_id = null (template global)
+// Para admin regular: owner_id = user.id
 ```
 
-Isso garante que qualquer usuario cujo perfil foi carregado com sucesso aparecera nos avatares, sem depender de uma consulta a `user_roles` que e bloqueada por RLS.
+### 3. Contracts - fetchData (src/pages/Contracts.tsx)
+
+Mesma logica de replicacao do passo 1.
+
+### 4. Contracts - handleSaveTemplate (src/pages/Contracts.tsx)
+
+Incluir `owner_id` no insert, similar ao passo 2.
+
+### 5. Nenhuma alteracao de banco de dados
+
+As tabelas `proposal_templates` e `contract_templates` ja possuem a coluna `owner_id` nullable e as politicas RLS corretas:
+- Admin: `owner_id = auth.uid()`
+- Master admin: acesso total
 
 ## Secao Tecnica
 
 ```text
 Arquivos a modificar:
-  - src/components/projects/ProjectListView.tsx
-    1. Remover estado allowedRolesByUserId (linha ~182)
-    2. Remover consulta a user_roles do useEffect (linhas ~207-211)
-    3. Remover processamento de roles (linhas ~229-234)
-    4. Remover setAllowedRolesByUserId (linha ~237)
-    5. Alterar filtro em projectMembersByProjectId: trocar allowedRolesByUserId por profilesByUserId (linha ~269)
-    6. Remover allowedRolesByUserId das dependencias do useMemo (linha ~273)
 
-  - src/components/projects/ProjectKanbanView.tsx
-    1. Remover estado allowedRolesByUserId (linha ~165)
-    2. Remover consulta a user_roles do useEffect (linhas ~188-192)
-    3. Remover processamento de roles (linhas ~210-215)
-    4. Remover setAllowedRolesByUserId (linha ~218)
-    5. Alterar filtro em projectMembersByProjectId: trocar allowedRolesByUserId por profilesByUserId (linha ~252)
-    6. Remover allowedRolesByUserId das dependencias do useMemo (linha ~256)
+1. src/pages/Proposals.tsx
+   - Adicionar imports de useAuth (user, isMasterAdmin)
+   - Reescrever fetchData para incluir logica de replicacao de templates
+   - Alterar handleSaveTemplate para incluir owner_id no insert
+     - master admin: owner_id nao enviado (fica null = global)
+     - admin regular: owner_id = user.id
+
+2. src/pages/Contracts.tsx
+   - Adicionar imports de useAuth (user, isMasterAdmin)
+   - Reescrever fetchData para incluir logica de replicacao de templates
+   - Alterar handleSaveTemplate para incluir owner_id no insert
+     - master admin: owner_id nao enviado (fica null = global)
+     - admin regular: owner_id = user.id
+
+Logica de replicacao (identica para ambos):
+  1. Se isMasterAdmin: buscar .is('owner_id', null)
+  2. Senao: buscar .eq('owner_id', user.id)
+  3. Se resultado vazio: buscar globais, inserir copias com owner_id = user.id
+  4. Usar resultado final
 
 Nenhuma migracao SQL necessaria.
-As politicas RLS de profiles ja permitem que todos os papeis vejam os perfis relevantes.
 ```
