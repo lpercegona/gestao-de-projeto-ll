@@ -17,25 +17,8 @@ async function resolveFromName(adminClient: any, ownerId: string | null): Promis
   return "";
 }
 
-async function getSmtpCredentials(adminClient: any, ownerId: string | null) {
-  // Try owner-specific SMTP settings first
-  if (ownerId) {
-    const { data: ownerSmtp } = await adminClient
-      .from("smtp_settings")
-      .select("*")
-      .eq("owner_id", ownerId)
-      .maybeSingle();
-    if (ownerSmtp?.smtp_host && ownerSmtp?.smtp_user) {
-      return {
-        host: ownerSmtp.smtp_host,
-        port: ownerSmtp.smtp_port || 587,
-        user: ownerSmtp.smtp_user,
-        pass: ownerSmtp.smtp_pass || "",
-      };
-    }
-  }
-
-  // Try global SMTP settings
+async function getSmtpCredentials(adminClient: any, _ownerId: string | null) {
+  // Keep global SMTP settings as default for everyone
   const { data: globalSmtp } = await adminClient
     .from("smtp_settings")
     .select("*")

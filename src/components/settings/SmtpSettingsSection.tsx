@@ -165,7 +165,7 @@ export const SmtpSettingsSection: React.FC = () => {
           <div>
             <CardTitle className="text-base">Credenciais SMTP</CardTitle>
             <CardDescription>
-              Configure suas credenciais de email para envio de notificações. Essas credenciais serão usadas como padrão para todos os envios.
+              Configure as credenciais SMTP padrão da plataforma. Essas credenciais serão herdadas por todos os administradores; apenas o nome do remetente pode ser personalizado por admin.
             </CardDescription>
           </div>
           {connectionStatus === 'connected' && settings.smtp_host && (

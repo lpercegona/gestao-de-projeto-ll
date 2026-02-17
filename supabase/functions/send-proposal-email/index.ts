@@ -165,20 +165,11 @@ Deno.serve(async (req) => {
       if (globalSettings?.smtp_from_name) resolvedFromName = globalSettings.smtp_from_name;
     }
 
-    // Get SMTP credentials: smtp_settings (owner -> global) -> env vars
+    // Get SMTP credentials: keep global default for everyone, then env vars fallback
     let smtp: { host: string; port: number; user: string; pass: string } | null = null;
-
-    if (effectiveOwnerId) {
-      const { data: ownerSmtp } = await adminClient.from("smtp_settings").select("*").eq("owner_id", effectiveOwnerId).maybeSingle();
-      if (ownerSmtp?.smtp_host && ownerSmtp?.smtp_user) {
-        smtp = { host: ownerSmtp.smtp_host, port: ownerSmtp.smtp_port || 587, user: ownerSmtp.smtp_user, pass: ownerSmtp.smtp_pass || "" };
-      }
-    }
-    if (!smtp) {
-      const { data: globalSmtp } = await adminClient.from("smtp_settings").select("*").is("owner_id", null).maybeSingle();
-      if (globalSmtp?.smtp_host && globalSmtp?.smtp_user) {
-        smtp = { host: globalSmtp.smtp_host, port: globalSmtp.smtp_port || 587, user: globalSmtp.smtp_user, pass: globalSmtp.smtp_pass || "" };
-      }
+    const { data: globalSmtp } = await adminClient.from("smtp_settings").select("*").is("owner_id", null).maybeSingle();
+    if (globalSmtp?.smtp_host && globalSmtp?.smtp_user) {
+      smtp = { host: globalSmtp.smtp_host, port: globalSmtp.smtp_port || 587, user: globalSmtp.smtp_user, pass: globalSmtp.smtp_pass || "" };
     }
     if (!smtp) {
       const envHost = Deno.env.get("SMTP_HOST");
