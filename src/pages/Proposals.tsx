@@ -122,7 +122,7 @@ interface ProposalTemplate {
   sections?: TemplateSection[];
 }
 
-const MANUAL_ITEMS_STORAGE_KEY = 'services:manual-items';
+// Storage key is now dynamic per user — see component body
 
 const parseNumericValue = (value: unknown): number => {
   if (typeof value === 'number') {
@@ -303,6 +303,7 @@ const isMissingShareStaticHtmlColumnError = (error: unknown): boolean => {
 export const Proposals: React.FC = () => {
   const navigate = useNavigate();
   const { user, isMasterAdmin } = useAuth();
+  const manualItemsStorageKey = user ? `services:manual-items:${user.id}` : 'services:manual-items';
   const { data: appData } = useData();
   
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -363,7 +364,8 @@ export const Proposals: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const storedItems = localStorage.getItem(MANUAL_ITEMS_STORAGE_KEY);
+    if (!user) return;
+    const storedItems = localStorage.getItem(manualItemsStorageKey);
 
     if (!storedItems) return;
 
@@ -373,7 +375,7 @@ export const Proposals: React.FC = () => {
     } catch (error) {
       console.error('Erro ao carregar itens manuais de serviço:', error);
     }
-  }, []);
+  }, [user, manualItemsStorageKey]);
 
   const mapTemplate = (t: any): ProposalTemplate => ({
     ...t,
