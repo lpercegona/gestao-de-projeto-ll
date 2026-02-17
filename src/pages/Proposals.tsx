@@ -384,6 +384,18 @@ export const Proposals: React.FC = () => {
   
   const [saving, setSaving] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [sendingProposalId, setSendingProposalId] = useState<string | null>(null);
+
+  const normalizeProposal = (proposal: any): Proposal => ({
+    ...proposal,
+    total_hours: parseNumericValue(proposal.total_hours),
+    total_value: parseNumericValue(proposal.total_value),
+    items: ((proposal.items as unknown as ProposalItem[]) || []).map((item) => ({
+      ...item,
+      hours: parseNumericValue(item.hours),
+      pricePerHour: parseNumericValue(item.pricePerHour),
+    })),
+  });
 
   // Fetch data
   useEffect(() => {
@@ -417,16 +429,7 @@ export const Proposals: React.FC = () => {
       const proposalsRes = await supabase.from('proposals').select('*').order('created_at', { ascending: false });
 
       if (proposalsRes.data) {
-        setProposals(proposalsRes.data.map(p => ({
-          ...p,
-          total_hours: parseNumericValue(p.total_hours),
-          total_value: parseNumericValue(p.total_value),
-          items: ((p.items as unknown as ProposalItem[]) || []).map((item) => ({
-            ...item,
-            hours: parseNumericValue(item.hours),
-            pricePerHour: parseNumericValue(item.pricePerHour),
-          })),
-        })));
+        setProposals(proposalsRes.data.map(normalizeProposal));
       }
 
       // Fetch templates with replication logic
@@ -661,6 +664,8 @@ export const Proposals: React.FC = () => {
 
   // Send proposal
   const handleSendProposal = async (proposal: Proposal) => {
+    setSendingProposalId(proposal.id);
+
     try {
       const { data: proposalOwnership, error: proposalOwnershipError } = await supabase
         .from('proposals')
@@ -747,9 +752,43 @@ export const Proposals: React.FC = () => {
       if (!sendEmailResult?.success || !sendEmailResult?.email_sent) {
         throw new Error(sendEmailResult?.email_error || sendEmailResult?.reason || 'Falha ao enviar email da proposta');
       }
+
+      const startTime = Date.now();
+      const pollingIntervalMs = 2500;
+      const pollingTimeoutMs = 25000;
+      let hasDetectedStatusChange = false;
+
+      while (Date.now() - startTime < pollingTimeoutMs) {
+        const { data: refreshedProposal, error: refreshedProposalError } = await supabase
+          .from('proposals')
+          .select('*')
+          .eq('id', proposal.id)
+          .single();
+
+        if (refreshedProposalError) {
+          throw refreshedProposalError;
+        }
+
+        const normalizedRefreshedProposal = normalizeProposal(refreshedProposal);
+
+        if (normalizedRefreshedProposal.status !== proposal.status) {
+          setProposals((currentProposals) =>
+            currentProposals.map((currentProposal) =>
+              currentProposal.id === proposal.id ? normalizedRefreshedProposal : currentProposal,
+            ),
+          );
+          hasDetectedStatusChange = true;
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
+      }
+
+      if (!hasDetectedStatusChange) {
+        toast.warning('Envio concluído, mas o status ainda não foi atualizado automaticamente.');
+      }
       
       toast.success('Proposta enviada e página de compartilhamento liberada!');
-      fetchData();
     } catch (error) {
       const normalizedError = logSupabaseError('Error sending proposal', error, {
         proposalId: proposal.id,
@@ -757,6 +796,8 @@ export const Proposals: React.FC = () => {
 
       const errorCodeSuffix = normalizedError.code ? ` (código: ${normalizedError.code})` : '';
       toast.error(`Erro ao enviar proposta${errorCodeSuffix}`);
+    } finally {
+      setSendingProposalId(null);
     }
   };
 
@@ -1162,6 +1203,7 @@ export const Proposals: React.FC = () => {
             <div className="space-y-3">
               {filteredProposals.map((proposal) => {
                 const proposalTotals = getProposalTotals(proposal);
+                const isSendingCurrentProposal = sendingProposalId === proposal.id;
 
                 return (
                 <Card key={proposal.id} className="group">
@@ -1171,6 +1213,12 @@ export const Proposals: React.FC = () => {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-foreground truncate">{proposal.title}</h3>
                           {getStatusBadge(proposal.status)}
+                          {isSendingCurrentProposal && (
+                            <Badge variant="secondary" className="inline-flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Enviando agora...
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <User className="w-3 h-3" />
@@ -1219,6 +1267,7 @@ export const Proposals: React.FC = () => {
                           <Button
                             size="sm"
                             variant="outline"
+                            disabled={isSendingCurrentProposal}
                             onClick={() => handleSendProposal(proposal)}
                           >
                             <Send className="w-4 h-4 mr-2" />
@@ -1250,7 +1299,7 @@ export const Proposals: React.FC = () => {
                         
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost">
+                            <Button size="sm" variant="ghost" disabled={isSendingCurrentProposal}>
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
