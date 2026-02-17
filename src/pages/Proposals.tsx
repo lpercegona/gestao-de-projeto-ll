@@ -271,6 +271,32 @@ const serializeSupabaseError = (error: unknown): SupabaseLikeError => {
   };
 };
 
+const logSupabaseError = (context: string, error: unknown, metadata?: Record<string, unknown>): SupabaseLikeError => {
+  const normalizedError = serializeSupabaseError(error);
+
+  console.error(context, {
+    ...metadata,
+    ...normalizedError,
+  });
+
+  return normalizedError;
+};
+
+const isOwnershipPolicyError = (error: unknown): boolean => {
+  const normalizedError = serializeSupabaseError(error);
+  const message = [normalizedError.message, normalizedError.details, normalizedError.hint]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return (
+    normalizedError.code === '42501' ||
+    message.includes('row-level security') ||
+    message.includes('policy') ||
+    (message.includes('owner_id') && message.includes('update'))
+  );
+};
+
 const isMissingShareStaticHtmlColumnError = (error: unknown): boolean => {
   const normalizedError = serializeSupabaseError(error);
 
@@ -636,6 +662,42 @@ export const Proposals: React.FC = () => {
   // Send proposal
   const handleSendProposal = async (proposal: Proposal) => {
     try {
+      const { data: proposalOwnership, error: proposalOwnershipError } = await supabase
+        .from('proposals')
+        .select('id, owner_id, created_by, share_token')
+        .eq('id', proposal.id)
+        .single();
+
+      if (proposalOwnershipError) {
+        throw proposalOwnershipError;
+      }
+
+      const resolvedOwnerId = !isMasterAdmin && user
+        ? user.id
+        : proposalOwnership?.created_by ?? user?.id ?? null;
+
+      if (!proposalOwnership?.owner_id && resolvedOwnerId) {
+        const { error: ownershipFixError } = await supabase
+          .from('proposals')
+          .update({ owner_id: resolvedOwnerId })
+          .eq('id', proposal.id)
+          .is('owner_id', null);
+
+        if (ownershipFixError) {
+          if (isOwnershipPolicyError(ownershipFixError)) {
+            const ownershipErrorDetails = logSupabaseError('Proposal ownership validation failed before send', ownershipFixError, {
+              proposalId: proposal.id,
+              attemptedOwnerId: resolvedOwnerId,
+            });
+            const ownershipErrorCodeSuffix = ownershipErrorDetails.code ? ` (código: ${ownershipErrorDetails.code})` : '';
+            toast.error(`Sem permissão de ownership para atualizar esta proposta${ownershipErrorCodeSuffix}.`);
+            return;
+          }
+
+          throw ownershipFixError;
+        }
+      }
+
       const templateContent = proposal.template_id
         ? templates.find((template) => template.id === proposal.template_id)?.description || null
         : null;
@@ -663,6 +725,15 @@ export const Proposals: React.FC = () => {
         toast.warning('Compartilhamento estático indisponível até atualizar o banco de dados.');
       }
 
+      if (isOwnershipPolicyError(updateError)) {
+        const ownershipErrorDetails = logSupabaseError('Proposal share_static_html update blocked by ownership policy', updateError, {
+          proposalId: proposal.id,
+        });
+        const ownershipErrorCodeSuffix = ownershipErrorDetails.code ? ` (código: ${ownershipErrorDetails.code})` : '';
+        toast.error(`Sem permissão de ownership para liberar o compartilhamento desta proposta${ownershipErrorCodeSuffix}.`);
+        return;
+      }
+
       if (updateError) throw updateError;
 
       const { data: sendEmailResult, error: sendEmailError } = await supabase.functions.invoke('send-proposal-email', {
@@ -680,10 +751,8 @@ export const Proposals: React.FC = () => {
       toast.success('Proposta enviada e página de compartilhamento liberada!');
       fetchData();
     } catch (error) {
-      const normalizedError = serializeSupabaseError(error);
-      console.error('Error sending proposal:', {
+      const normalizedError = logSupabaseError('Error sending proposal', error, {
         proposalId: proposal.id,
-        ...normalizedError,
       });
 
       const errorCodeSuffix = normalizedError.code ? ` (código: ${normalizedError.code})` : '';
