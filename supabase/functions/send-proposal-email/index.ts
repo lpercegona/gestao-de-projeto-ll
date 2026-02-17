@@ -143,11 +143,6 @@ Deno.serve(async (req) => {
       bodyHtml = bodyHtml.replaceAll(key, value);
     }
 
-    await adminClient
-      .from("proposals")
-      .update({ status: "sent" })
-      .eq("id", proposal_id);
-
     // Resolve fromName independently: owner -> global -> empty
     let resolvedFromName = "";
 
@@ -186,8 +181,10 @@ Deno.serve(async (req) => {
     }
 
     if (smtp) {
+      let client: SMTPClient | null = null;
+
       try {
-        const client = new SMTPClient({
+        client = new SMTPClient({
           connection: {
             hostname: smtp.host,
             port: smtp.port,
@@ -206,7 +203,27 @@ Deno.serve(async (req) => {
           html: bodyHtml,
         });
 
-        await client.close();
+        const { error: statusUpdateError } = await adminClient
+          .from("proposals")
+          .update({ status: "sent" })
+          .eq("id", proposal_id);
+
+        if (statusUpdateError) {
+          console.error("[send-proposal-email] email sent but failed to update proposal status", {
+            proposal_id,
+            error: statusUpdateError,
+          });
+
+          return new Response(
+            JSON.stringify({
+              success: false,
+              email_sent: true,
+              error: "Email sent, but proposal status update failed",
+              code: "PROPOSAL_STATUS_UPDATE_FAILED",
+            }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
 
         return new Response(
           JSON.stringify({ success: true, email_sent: true }),
@@ -215,9 +232,11 @@ Deno.serve(async (req) => {
       } catch (emailErr) {
         console.error("SMTP error:", emailErr);
         return new Response(
-          JSON.stringify({ success: true, email_sent: false, email_error: String(emailErr) }),
+          JSON.stringify({ success: false, email_sent: false, email_error: String(emailErr) }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      } finally {
+        if (client) await client.close();
       }
     }
 
