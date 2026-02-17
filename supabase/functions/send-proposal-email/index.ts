@@ -59,16 +59,58 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve effective owner id with priority:
+    // 1) proposal.owner_id
+    // 2) profiles.owner_id by proposal.created_by
+    // 3) proposal.created_by
+    let effectiveOwnerId: string | null = proposal.owner_id || null;
+    let ownershipResolutionError = false;
+
+    if (!effectiveOwnerId && proposal.created_by) {
+      const { data: creatorProfile, error: creatorProfileError } = await adminClient
+        .from("profiles")
+        .select("owner_id")
+        .eq("id", proposal.created_by)
+        .maybeSingle();
+
+      if (creatorProfileError) {
+        ownershipResolutionError = true;
+        console.error("[send-proposal-email] failed to resolve owner via profile", {
+          proposal_id,
+          created_by: proposal.created_by,
+          error: creatorProfileError,
+        });
+      }
+
+      if (!effectiveOwnerId && creatorProfile?.owner_id) {
+        effectiveOwnerId = creatorProfile.owner_id;
+      }
+    }
+
+    if (!effectiveOwnerId && proposal.created_by) {
+      effectiveOwnerId = proposal.created_by;
+    }
+
+    if (!effectiveOwnerId) {
+      console.warn("[send-proposal-email] no effective owner id resolved", { proposal_id });
+    }
+
+    if (ownershipResolutionError) {
+      return new Response(
+        JSON.stringify({ error: "Ownership resolution failed", code: "OWNERSHIP_RESOLUTION_FAILED" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Fetch email template: personal first, then global fallback
-    const creatorId = proposal.created_by || proposal.owner_id;
     let emailTemplate = null;
 
-    if (creatorId) {
+    if (effectiveOwnerId) {
       const { data: personal } = await adminClient
         .from("email_templates")
         .select("*")
         .eq("slug", "proposal_sent")
-        .eq("owner_id", creatorId)
+        .eq("owner_id", effectiveOwnerId)
         .single();
       emailTemplate = personal;
     }
@@ -107,11 +149,10 @@ Deno.serve(async (req) => {
       .eq("id", proposal_id);
 
     // Resolve fromName independently: owner -> global -> empty
-    const creatorOwnerId = proposal.created_by || proposal.owner_id;
     let resolvedFromName = "";
 
-    if (creatorOwnerId) {
-      const { data: ownerSettings } = await adminClient.from("smtp_settings").select("smtp_from_name").eq("owner_id", creatorOwnerId).maybeSingle();
+    if (effectiveOwnerId) {
+      const { data: ownerSettings } = await adminClient.from("smtp_settings").select("smtp_from_name").eq("owner_id", effectiveOwnerId).maybeSingle();
       if (ownerSettings?.smtp_from_name) resolvedFromName = ownerSettings.smtp_from_name;
     }
     if (!resolvedFromName) {
@@ -122,8 +163,8 @@ Deno.serve(async (req) => {
     // Get SMTP credentials: smtp_settings (owner -> global) -> env vars
     let smtp: { host: string; port: number; user: string; pass: string } | null = null;
 
-    if (creatorOwnerId) {
-      const { data: ownerSmtp } = await adminClient.from("smtp_settings").select("*").eq("owner_id", creatorOwnerId).maybeSingle();
+    if (effectiveOwnerId) {
+      const { data: ownerSmtp } = await adminClient.from("smtp_settings").select("*").eq("owner_id", effectiveOwnerId).maybeSingle();
       if (ownerSmtp?.smtp_host && ownerSmtp?.smtp_user) {
         smtp = { host: ownerSmtp.smtp_host, port: ownerSmtp.smtp_port || 587, user: ownerSmtp.smtp_user, pass: ownerSmtp.smtp_pass || "" };
       }
@@ -181,8 +222,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, email_sent: false, reason: "SMTP not configured" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, email_sent: false, reason: "SMTP not configured", code: "SMTP_NOT_CONFIGURED" }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("Error in send-proposal-email:", err);
