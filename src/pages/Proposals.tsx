@@ -111,6 +111,7 @@ interface Proposal {
   valid_until: string | null;
   created_at: string;
   client_id: string | null;
+  owner_id?: string | null;
   share_static_html?: string | null;
 }
 
@@ -462,6 +463,9 @@ export const Proposals: React.FC = () => {
         total_value: totalValue,
         created_by: user?.id,
         client_id: formData.clientId || null,
+        ...(!isMasterAdmin && user
+          ? { owner_id: editingProposal?.owner_id ?? user.id }
+          : {}),
       };
 
       if (editingProposal) {
