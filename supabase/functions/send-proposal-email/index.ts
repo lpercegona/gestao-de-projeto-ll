@@ -13,12 +13,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+    const failResponse = (status: number, code: string, reason: string, emailSent = false) =>
+      new Response(JSON.stringify({ success: false, email_sent: emailSent, code, reason }), {
+        status,
+        headers: jsonHeaders,
+      });
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return failResponse(401, "UNAUTHORIZED", "Unauthorized");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -30,18 +34,12 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return failResponse(401, "UNAUTHORIZED", "Unauthorized");
     }
 
-    const { proposal_id } = await req.json();
+    const { proposal_id, resend = false } = await req.json();
     if (!proposal_id) {
-      return new Response(JSON.stringify({ error: "proposal_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return failResponse(400, "VALIDATION_ERROR", "proposal_id is required");
     }
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -53,10 +51,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (propError || !proposal) {
-      return new Response(JSON.stringify({ error: "Proposal not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return failResponse(404, "PROPOSAL_NOT_FOUND", "Proposal not found");
     }
 
     // Resolve effective owner id with priority:
@@ -114,10 +109,7 @@ Deno.serve(async (req) => {
     }
 
     if (ownershipResolutionError) {
-      return new Response(
-        JSON.stringify({ error: "Ownership resolution failed", code: "OWNERSHIP_RESOLUTION_FAILED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return failResponse(500, "OWNERSHIP_RESOLUTION_FAILED", "Ownership resolution failed");
     }
 
     // Fetch email template: personal first, then global fallback
@@ -221,10 +213,53 @@ Deno.serve(async (req) => {
           html: bodyHtml,
         });
 
+        if (resend) {
+          const { error: historyError } = await adminClient
+            .from("proposal_history")
+            .insert({
+              proposal_id,
+              old_status: proposal.status,
+              new_status: proposal.status || "sent",
+              changed_by: claimsData.claims.email || claimsData.claims.sub || "system",
+              notes: "Proposal email resent",
+            });
+
+          if (historyError) {
+            console.warn("[send-proposal-email] resend succeeded, but failed to write history", {
+              proposal_id,
+              error: historyError,
+            });
+          }
+
+          return new Response(
+            JSON.stringify({ success: true, email_sent: true, resend: true }),
+            { status: 200, headers: jsonHeaders }
+          );
+        }
+
+        const allowedStatusToSent = new Set(["draft", "viewed", "negotiating"]);
+        if (!allowedStatusToSent.has(proposal.status)) {
+          console.info("[send-proposal-email] email sent without status transition", {
+            proposal_id,
+            current_status: proposal.status,
+          });
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              email_sent: true,
+              code: "STATUS_TRANSITION_SKIPPED",
+              reason: `Email sent, status '${proposal.status}' not eligible for automatic transition to 'sent'`,
+            }),
+            { status: 200, headers: jsonHeaders }
+          );
+        }
+
         const { error: statusUpdateError } = await adminClient
           .from("proposals")
           .update({ status: "sent" })
-          .eq("id", proposal_id);
+          .eq("id", proposal_id)
+          .in("status", Array.from(allowedStatusToSent));
 
         if (statusUpdateError) {
           console.error("[send-proposal-email] email sent but failed to update proposal status", {
@@ -232,41 +267,30 @@ Deno.serve(async (req) => {
             error: statusUpdateError,
           });
 
-          return new Response(
-            JSON.stringify({
-              success: false,
-              email_sent: true,
-              error: "Email sent, but proposal status update failed",
-              code: "PROPOSAL_STATUS_UPDATE_FAILED",
-            }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          return failResponse(500, "PROPOSAL_STATUS_UPDATE_FAILED", "Email sent, but proposal status update failed", true);
         }
 
         return new Response(
           JSON.stringify({ success: true, email_sent: true }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: jsonHeaders }
         );
       } catch (emailErr) {
         console.error("SMTP error:", emailErr);
-        return new Response(
-          JSON.stringify({ success: false, email_sent: false, email_error: String(emailErr) }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return failResponse(502, "SMTP_SEND_FAILED", `Unable to send email: ${String(emailErr)}`);
       } finally {
         if (client) await client.close();
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: false, email_sent: false, reason: "SMTP not configured", code: "SMTP_NOT_CONFIGURED" }),
-      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return failResponse(503, "SMTP_NOT_CONFIGURED", "SMTP not configured");
   } catch (err) {
     console.error("Error in send-proposal-email:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ success: false, email_sent: false, code: "INTERNAL_ERROR", reason: "Internal server error" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
