@@ -727,35 +727,17 @@ export const Contracts: React.FC = () => {
                           </Button>
                         )}
 
-                        {contract.status === 'draft' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendContract(contract)}
-                            disabled={sending === contract.id}
-                          >
-                            {sending === contract.id ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Send className="w-4 h-4 mr-2" />
-                            )}
-                            Enviar
-                          </Button>
-                        )}
-                        
-                        {contract.status !== 'draft' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCopyLink(contract.share_token)}
-                          >
-                            {copiedToken === contract.share_token ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCopyLink(contract.share_token)}
+                        >
+                          {copiedToken === contract.share_token ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
                         
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -771,6 +753,13 @@ export const Contracts: React.FC = () => {
                             <DropdownMenuItem onClick={() => openEditContract(contract)}>
                               <Pencil className="w-4 h-4 mr-2" />
                               Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleSendContract(contract)}
+                              disabled={sending === contract.id}
+                            >
+                              <Send className="w-4 h-4 mr-2" />
+                              {contract.status === 'draft' ? 'Enviar por email' : 'Reenviar por email'}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
