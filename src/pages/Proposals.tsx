@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -65,7 +64,6 @@ import {
   User,
   ArrowLeft,
   Info,
-  banknoteArrowUp,
   Link as LinkIcon,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -121,7 +119,6 @@ interface ProposalTemplate {
   id: string;
   name: string;
   description: string | null;
-  payment_method: string | null;
   items: ProposalItem[];
   sections?: TemplateSection[];
 }
@@ -210,11 +207,7 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
-const buildProposalShareStaticHtml = (
-  proposal: Proposal,
-  templateContent: string | null,
-  templatePaymentMethod: string | null,
-) => {
+const buildProposalShareStaticHtml = (proposal: Proposal, templateContent: string | null) => {
   const totals = getProposalTotals(proposal);
   const renderedTemplate = templateContent ? renderTemplateContent(templateContent, proposal) : '';
 
@@ -254,7 +247,6 @@ const buildProposalShareStaticHtml = (
       </div>
 
       <p style="margin-top:16px; text-align:right; font-weight:600">Total: ${Number(totals.totalValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-      ${templatePaymentMethod ? `<div style="margin-top:16px; border:1px solid #e5e7eb; border-radius:8px; padding:12px"><h3 style="margin:0 0 6px; font-size:14px">Método de pagamento</h3><p style="margin:0; white-space:pre-wrap">${escapeHtml(templatePaymentMethod)}</p></div>` : ''}
     </section>
   `;
 };
@@ -387,7 +379,6 @@ export const Proposals: React.FC = () => {
   const [templateFormData, setTemplateFormData] = useState({
     name: '',
     content: '',
-    paymentMethod: '',
     sections: [] as TemplateSection[],
   });
   
@@ -456,7 +447,6 @@ export const Proposals: React.FC = () => {
             const copies = globals.map(g => ({
               name: g.name,
               description: g.description,
-              payment_method: g.payment_method || null,
               items: g.items,
               sections: g.sections,
               owner_id: user.id,
@@ -583,10 +573,7 @@ export const Proposals: React.FC = () => {
           const templateContent = normalized.template_id
             ? templates.find((t) => t.id === normalized.template_id)?.description || null
             : null;
-          const templatePaymentMethod = normalized.template_id
-            ? templates.find((t) => t.id === normalized.template_id)?.payment_method || null
-            : null;
-          const shareStaticHtml = buildProposalShareStaticHtml(normalized, templateContent, templatePaymentMethod);
+          const shareStaticHtml = buildProposalShareStaticHtml(normalized, templateContent);
 
           await supabase
             .from('proposals')
@@ -626,7 +613,6 @@ export const Proposals: React.FC = () => {
       const templateData: Record<string, unknown> = {
         name: templateFormData.name,
         description: templateFormData.content || null,
-        payment_method: templateFormData.paymentMethod || null,
         items: [],
         sections: templateFormData.sections as any,
       };
@@ -753,14 +739,9 @@ export const Proposals: React.FC = () => {
         ? templates.find((template) => template.id === proposal.template_id)?.description || null
         : null;
 
-      const templatePaymentMethod = proposal.template_id
-        ? templates.find((template) => template.id === proposal.template_id)?.payment_method || null
-        : null;
-
       const shareStaticHtml = buildProposalShareStaticHtml(
         { ...proposal, status: 'sent' },
         templateContent,
-        templatePaymentMethod,
       );
 
       const { error: shareHtmlUpdateError } = await supabase
@@ -1012,7 +993,6 @@ export const Proposals: React.FC = () => {
     setTemplateFormData({
       name: '',
       content: '',
-      paymentMethod: '',
       sections: [],
     });
   };
@@ -1048,7 +1028,6 @@ export const Proposals: React.FC = () => {
     setTemplateFormData({
       name: template.name,
       content: template.description || '',
-      paymentMethod: template.payment_method || '',
       sections: template.sections || [],
     });
     setTemplateEditorOpen(true);
@@ -1193,7 +1172,7 @@ export const Proposals: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <banknoteArrowUp className="w-4 h-4" />
+              <DollarSign className="w-4 h-4" />
               <span className="text-sm">Valor Total</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
@@ -1294,7 +1273,7 @@ export const Proposals: React.FC = () => {
                             {formatHours(proposalTotals.totalHours)}
                           </span>
                           <span className="flex items-center gap-1">
-                            <banknoteArrowUp className="w-3 h-3" />
+                            <DollarSign className="w-3 h-3" />
                             {proposalTotals.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </span>
                         </div>
@@ -1393,7 +1372,7 @@ export const Proposals: React.FC = () => {
         {/* Templates Tab */}
         <TabsContent value="templates" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => { resetTemplateForm(); setTemplateEditorOpen(true); }} variant="icon">
+            <Button onClick={() => { resetTemplateForm(); setTemplateEditorOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Novo Template</span>
             </Button>
@@ -1795,13 +1774,6 @@ export const Proposals: React.FC = () => {
               <div className="flex justify-end text-sm font-medium">
                 Total: {getProposalTotals(previewingProposal).totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </div>
-
-              {previewTemplate?.payment_method && (
-                <div className="space-y-2 rounded-md border p-3">
-                  <h4 className="font-medium">Método de pagamento</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{previewTemplate.payment_method}</p>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
@@ -1841,20 +1813,6 @@ export const Proposals: React.FC = () => {
                     sections={templateFormData.sections}
                     onChange={(sections) => setTemplateFormData(prev => ({ ...prev, sections }))}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="template-payment-method">Método de pagamento</Label>
-                  <Textarea
-                    id="template-payment-method"
-                    value={templateFormData.paymentMethod}
-                    onChange={(e) => setTemplateFormData((prev) => ({ ...prev, paymentMethod: e.target.value }))}
-                    placeholder="Ex: Pix para chave X, boleto em 15 dias, parcelamento em até 3x..."
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Esse conteúdo será exibido na proposta pública entre o total e os botões de ação.
-                  </p>
                 </div>
 
                 <div className="flex justify-start">

@@ -28,7 +28,6 @@ import {
   Mail,
   User,
   Send,
-  banknoteArrowUp,
 } from 'lucide-react';
 import { format, parseISO, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -60,7 +59,6 @@ interface ProposalData {
   template_id?: string | null;
   template_content?: string | null;
   template_sections?: TemplateSection[];
-  template_payment_method?: string | null;
   title: string;
   description: string | null;
   recipient_name: string;
@@ -166,7 +164,6 @@ export const PublicProposal: React.FC = () => {
         total_value: parseNumericValue(rawProposal.total_value),
         items: normalizeProposalItems(rawProposal.items),
         template_sections: templateSections,
-        template_payment_method: rawProposal.template_payment_method || null,
       });
 
       const { data: commentsData } = await supabase
@@ -381,7 +378,7 @@ export const PublicProposal: React.FC = () => {
                   <h4 className="font-semibold text-foreground">{item.service}</h4>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-muted-foreground" />{item.hours}h</span>
-                    <span className="flex items-center gap-1"><banknoteArrowUp className="w-4 h-4 text-muted-foreground" />{Number(item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h</span>
+                    <span className="flex items-center gap-1"><DollarSign className="w-4 h-4 text-muted-foreground" />{Number(item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h</span>
                   </div>
                 </div>
                 {item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
@@ -403,13 +400,6 @@ export const PublicProposal: React.FC = () => {
                 <p className="text-2xl font-bold text-primary">{Number(proposal.total_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               </div>
             </div>
-
-            {proposal.template_payment_method && (
-              <div className="rounded-lg border p-4">
-                <p className="text-sm text-muted-foreground">Método de pagamento</p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{proposal.template_payment_method}</p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
