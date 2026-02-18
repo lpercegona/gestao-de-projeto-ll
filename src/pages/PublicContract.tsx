@@ -19,6 +19,7 @@ import {
   FileSignature,
   Loader2,
   Clock,
+  DollarSign,
   CheckCircle,
   User,
   Building,
