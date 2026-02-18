@@ -497,25 +497,28 @@ export const Proposals: React.FC = () => {
           : {}),
       };
 
+      let savedProposalId: string;
+
       if (editingProposal) {
         const { error } = await supabase
           .from('proposals')
           .update(proposalData)
           .eq('id', editingProposal.id);
         if (error) throw error;
+        savedProposalId = editingProposal.id;
         toast.success('Proposta atualizada!');
       } else {
         const { data: newProposal, error } = await supabase
           .from('proposals')
           .insert(proposalData)
-          .select('id, client_id')
+          .select('id, client_id, share_token')
           .single();
         if (error) throw error;
+        savedProposalId = newProposal.id;
 
         // Auto-register client if no client_id linked
         if (!proposalData.client_id && formData.recipientEmail) {
           try {
-            // Check if client with this email exists
             const { data: existingClients } = await supabase
               .from('clients')
               .select('id')
@@ -544,7 +547,6 @@ export const Proposals: React.FC = () => {
                   .eq('id', newProposal.id);
               }
             } else {
-              // Link existing client
               await supabase
                 .from('proposals')
                 .update({ client_id: existingClients[0].id })
@@ -556,6 +558,30 @@ export const Proposals: React.FC = () => {
         }
 
         toast.success('Proposta criada!');
+      }
+
+      // Generate share_static_html immediately so the public link works
+      try {
+        const { data: savedProposal } = await supabase
+          .from('proposals')
+          .select('*')
+          .eq('id', savedProposalId)
+          .single();
+
+        if (savedProposal) {
+          const normalized = normalizeProposal(savedProposal);
+          const templateContent = normalized.template_id
+            ? templates.find((t) => t.id === normalized.template_id)?.description || null
+            : null;
+          const shareStaticHtml = buildProposalShareStaticHtml(normalized, templateContent);
+
+          await supabase
+            .from('proposals')
+            .update({ share_static_html: shareStaticHtml })
+            .eq('id', savedProposalId);
+        }
+      } catch (htmlErr) {
+        console.warn('Could not generate share_static_html on save:', htmlErr);
       }
 
       setProposalDialogOpen(false);
@@ -1254,50 +1280,29 @@ export const Proposals: React.FC = () => {
                         <p className="text-xs text-muted-foreground">
                           Criada em {format(parseISO(proposal.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </p>
-                        {proposal.status === 'draft' ? (
-                          <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <LinkIcon className="w-3 h-3" />
-                            A página de compartilhamento será criada após o envio.
-                          </p>
-                        ) : (
-                          <a
-                            href={buildProposalLink(proposal.share_token)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                          >
-                            <LinkIcon className="w-3 h-3" />
-                            {buildProposalLink(proposal.share_token)}
-                          </a>
-                        )}
+                        <a
+                          href={buildProposalLink(proposal.share_token)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <LinkIcon className="w-3 h-3" />
+                          {buildProposalLink(proposal.share_token)}
+                        </a>
                       </div>
                       
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {proposal.status === 'draft' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={isSendingCurrentProposal}
-                            onClick={() => handleSendProposal(proposal)}
-                          >
-                            <Send className="w-4 h-4 mr-2" />
-                            Enviar
-                          </Button>
-                        )}
-                        
-                        {proposal.status !== 'draft' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCopyLink(proposal.share_token)}
-                          >
-                            {copiedToken === proposal.share_token ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCopyLink(proposal.share_token)}
+                        >
+                          {copiedToken === proposal.share_token ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
                         
                         <Button
                           size="sm"
@@ -1329,9 +1334,9 @@ export const Proposals: React.FC = () => {
                               <Pencil className="w-4 h-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleSendProposal(proposal, { resend: true })}>
+                            <DropdownMenuItem onClick={() => handleSendProposal(proposal, { resend: proposal.status !== 'draft' })}>
                               <Send className="w-4 h-4 mr-2" />
-                              Reenviar por email
+                              {proposal.status === 'draft' ? 'Enviar por email' : 'Reenviar por email'}
                             </DropdownMenuItem>
                             {proposal.status === 'accepted' && (
                               <DropdownMenuItem onClick={() => {
@@ -1605,21 +1610,49 @@ export const Proposals: React.FC = () => {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Serviço</Label>
-                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">{item.service}</p>
+                        <Input
+                          value={item.service}
+                          onChange={(e) => {
+                            const newItems = [...formData.items];
+                            newItems[index] = { ...newItems[index], service: e.target.value };
+                            setFormData({ ...formData, items: newItems });
+                          }}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Descrição</Label>
-                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">{item.description}</p>
+                        <Input
+                          value={item.description}
+                          onChange={(e) => {
+                            const newItems = [...formData.items];
+                            newItems[index] = { ...newItems[index], description: e.target.value };
+                            setFormData({ ...formData, items: newItems });
+                          }}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Horas</Label>
-                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">{item.hours}</p>
+                        <Input
+                          type="number"
+                          value={item.hours}
+                          onChange={(e) => {
+                            const newItems = [...formData.items];
+                            newItems[index] = { ...newItems[index], hours: parseNumericValue(e.target.value) };
+                            setFormData({ ...formData, items: newItems });
+                          }}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Preço/Hora (R$)</Label>
-                        <p className="text-sm rounded-md border px-3 py-2 bg-muted/30">
-                          {item.pricePerHour.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </p>
+                        <Input
+                          type="number"
+                          value={item.pricePerHour}
+                          onChange={(e) => {
+                            const newItems = [...formData.items];
+                            newItems[index] = { ...newItems[index], pricePerHour: parseNumericValue(e.target.value) };
+                            setFormData({ ...formData, items: newItems });
+                          }}
+                        />
                       </div>
                     </div>
                     <div className="text-right text-sm text-muted-foreground">
@@ -1662,7 +1695,7 @@ export const Proposals: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Visualização completa da proposta</DialogTitle>
             <DialogDescription>
-              Esta visualização é interna. O compartilhamento externo é liberado somente após o envio.
+              Visualização interna da proposta.
             </DialogDescription>
           </DialogHeader>
 
