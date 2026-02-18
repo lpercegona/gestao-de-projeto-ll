@@ -59,6 +59,7 @@ interface ProposalData {
   template_id?: string | null;
   template_content?: string | null;
   template_sections?: TemplateSection[];
+  template_payment_method?: string | null;
   title: string;
   description: string | null;
   recipient_name: string;
@@ -164,6 +165,7 @@ export const PublicProposal: React.FC = () => {
         total_value: parseNumericValue(rawProposal.total_value),
         items: normalizeProposalItems(rawProposal.items),
         template_sections: templateSections,
+        template_payment_method: rawProposal.template_payment_method || null,
       });
 
       const { data: commentsData } = await supabase
@@ -400,6 +402,13 @@ export const PublicProposal: React.FC = () => {
                 <p className="text-2xl font-bold text-primary">{Number(proposal.total_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               </div>
             </div>
+
+            {proposal.template_payment_method && (
+              <div className="rounded-lg border p-4">
+                <p className="text-sm text-muted-foreground">Método de pagamento</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{proposal.template_payment_method}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
