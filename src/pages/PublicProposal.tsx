@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -229,17 +228,6 @@ export const PublicProposal: React.FC = () => {
     setAccessValidated(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'sent': return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Enviada</Badge>;
-      case 'viewed': return <Badge variant="secondary" className="bg-purple-100 text-purple-800">Visualizada</Badge>;
-      case 'accepted': return <Badge variant="secondary" className="bg-green-100 text-green-800">Aceita</Badge>;
-      case 'rejected': return <Badge variant="destructive">Recusada</Badge>;
-      case 'negotiating': return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Em Negociação</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   const isExpired = proposal?.valid_until ? isPast(parseISO(proposal.valid_until)) : false;
   const canRespond = proposal && !['accepted', 'rejected'].includes(proposal.status) && !isExpired;
 
@@ -297,7 +285,6 @@ export const PublicProposal: React.FC = () => {
       <header className="bg-background border-b border-border py-4 px-6">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <img src={LogoOras} alt="ORAS" className="h-8" />
-          {getStatusBadge(proposal.status)}
         </div>
       </header>
 
