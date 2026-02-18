@@ -64,6 +64,7 @@ import {
   User,
   ArrowLeft,
   Info,
+  banknoteArrowUp,
   Link as LinkIcon,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -1172,7 +1173,7 @@ export const Proposals: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <DollarSign className="w-4 h-4" />
+              <banknoteArrowUp className="w-4 h-4" />
               <span className="text-sm">Valor Total</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
@@ -1273,7 +1274,7 @@ export const Proposals: React.FC = () => {
                             {formatHours(proposalTotals.totalHours)}
                           </span>
                           <span className="flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
+                            <banknoteArrowUp className="w-3 h-3" />
                             {proposalTotals.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </span>
                         </div>
@@ -1372,7 +1373,7 @@ export const Proposals: React.FC = () => {
         {/* Templates Tab */}
         <TabsContent value="templates" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => { resetTemplateForm(); setTemplateEditorOpen(true); }}>
+            <Button onClick={() => { resetTemplateForm(); setTemplateEditorOpen(true); }} variant="icon">
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Novo Template</span>
             </Button>
