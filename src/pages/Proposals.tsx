@@ -54,7 +54,7 @@ import {
   Loader2,
   Search,
   Clock,
-  DollarSign,
+  BanknoteArrowUp,
   CheckCircle,
   XCircle,
   MessageSquare,
@@ -1172,7 +1172,7 @@ export const Proposals: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <DollarSign className="w-4 h-4" />
+              <BanknoteArrowUp className="w-4 h-4" />
               <span className="text-sm">Valor Total</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
@@ -1273,7 +1273,7 @@ export const Proposals: React.FC = () => {
                             {formatHours(proposalTotals.totalHours)}
                           </span>
                           <span className="flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
+                            <BanknoteArrowUp className="w-3 h-3" />
                             {proposalTotals.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </span>
                         </div>

@@ -54,7 +54,7 @@ import {
   Loader2,
   Search,
   Clock,
-  DollarSign,
+  BanknoteArrowUp,
   CheckCircle,
   LayoutTemplate,
   User,
@@ -604,7 +604,7 @@ export const Contracts: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <DollarSign className="w-4 h-4" />
+              <BanknoteArrowUp className="w-4 h-4" />
               <span className="text-sm">Valor Assinado</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
@@ -696,7 +696,7 @@ export const Contracts: React.FC = () => {
                             {contract.total_hours}h
                           </span>
                           <span className="flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
+                            <BanknoteArrowUp className="w-3 h-3" />
                             {contract.total_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                           </span>
                           {contract.signed_at && (
