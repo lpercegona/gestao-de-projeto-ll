@@ -72,9 +72,7 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (smtpErr) {
-      const shouldTryFallback =
-        port === 587 &&
-        String(smtpErr).toLowerCase().includes("invalidcontenttype");
+      const shouldTryFallback = port !== 465;
 
       if (shouldTryFallback) {
         console.warn("[test-smtp-connection] STARTTLS failed on 587, retrying with implicit TLS on 465");
