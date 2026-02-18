@@ -845,6 +845,7 @@ export type Database = {
           items: Json
           name: string
           owner_id: string | null
+          payment_method: string | null
           sections: Json | null
           updated_at: string
         }
@@ -855,6 +856,7 @@ export type Database = {
           items?: Json
           name: string
           owner_id?: string | null
+          payment_method?: string | null
           sections?: Json | null
           updated_at?: string
         }
@@ -865,6 +867,7 @@ export type Database = {
           items?: Json
           name?: string
           owner_id?: string | null
+          payment_method?: string | null
           sections?: Json | null
           updated_at?: string
         }
@@ -1466,6 +1469,7 @@ export type Database = {
           status: string
           template_content: string
           template_sections: Json
+          template_payment_method: string | null
           title: string
           total_hours: number
           total_value: number
