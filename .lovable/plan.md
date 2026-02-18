@@ -1,79 +1,70 @@
 
 
-# Correcao: Manter porta 587 como primaria com fallback para 465
+# Correcao: Link compartilhavel independente de email + campos editaveis nos itens
 
-## Problema
+## Problema 1: Link compartilhavel depende de envio de email
 
-O Deno Edge Runtime nao suporta STARTTLS (`Deno.startTls`), que e o metodo usado na porta 587. Isso gera erro `BadResource` ou `InvalidContentType`. A porta 465 (TLS implicito) funciona corretamente.
+Atualmente, o link publico de proposta so e liberado apos clicar "Enviar", que obrigatoriamente envia o email E atualiza o status para "sent". No card da proposta em status "draft", aparece a mensagem "A pagina de compartilhamento sera criada apos o envio" e o botao de copiar link so aparece para status != draft.
 
-## Solucao
+Para contratos, o comportamento e similar: o botao "Enviar" manda o email e muda o status, e o botao de copiar link so aparece para status != draft.
 
-Manter a tentativa na porta 587 como primeira opcao. Se falhar (qualquer erro), tentar automaticamente na porta 465 com `tls: true`. Isso ja existe parcialmente no codigo atual, mas a logica de fallback so e acionada para o erro especifico `invalidcontenttype`. A correcao expande o fallback para **qualquer erro** na porta 587.
+## Solucao 1: Separar compartilhamento do envio de email
 
-## Alteracoes
+### Propostas (`src/pages/Proposals.tsx`)
 
-### 1. `supabase/functions/send-proposal-email/index.ts`
+1. **Remover a dependencia do link com o envio de email**: O share_token ja existe no banco desde a criacao (gerado automaticamente pelo `DEFAULT gen_random_uuid()`). O link ja funciona tecnicamente pois a RPC `get_proposal_by_token` nao verifica status. Basta liberar a UI.
 
-**createSmtpClient** (linhas ~185-193): manter como esta, recebendo `port` como parametro.
+2. **Mostrar o link e botao de copiar para TODAS as propostas**, incluindo drafts:
+   - Remover a condicao `proposal.status === 'draft'` que mostra "A pagina de compartilhamento sera criada apos o envio" (linhas 1257-1272)
+   - Sempre mostrar o link clicavel com botao de copiar
+   - Remover a condicao `proposal.status !== 'draft'` do botao de copiar link (linhas 1288-1300)
 
-**Bloco catch** (linhas ~272-353): alterar a condicao de fallback. Remover a verificacao especifica de `invalidcontenttype` e acionar o fallback para qualquer erro quando a porta inicial nao for 465:
+3. **Mover o botao "Enviar" para o dropdown menu lateral**:
+   - Remover o botao "Enviar" destacado que aparece para drafts (linhas 1276-1286)
+   - Adicionar "Enviar por email" no DropdownMenu (ja existe "Reenviar por email" na linha 1332-1335, basta ajustar o label dinamicamente)
 
-```text
-// De:
-const shouldTryFallback =
-  (smtp.port || 587) === 587 &&
-  String(emailErr).toLowerCase().includes("invalidcontenttype");
+4. **Ao salvar proposta**: gerar o `share_static_html` imediatamente no `handleSaveProposal`, em vez de gerar apenas no envio. Isso garante que o link publico funcione sem depender do email.
 
-// Para:
-const shouldTryFallback = preferredPort !== 465;
-```
+5. **Ajustar o `handleSendProposal`**: manter a logica de envio de email, mas remover a obrigatoriedade — email vira uma acao opcional no menu.
 
-Isso garante que se a primeira tentativa (587) falhar por qualquer motivo, o sistema tenta na 465 com TLS implicito.
+### Contratos (`src/pages/Contracts.tsx`)
 
-### 2. `supabase/functions/send-contract-email/index.ts`
+1. **Mostrar botao de copiar link para TODOS os contratos**, incluindo drafts:
+   - Remover a condicao `contract.status !== 'draft'` (linhas 746-758)
 
-Mesma alteracao no bloco catch (linhas ~174-216):
+2. **Mover o botao "Enviar" para o dropdown menu**:
+   - Remover o botao "Enviar" destacado para drafts (linhas 730-744)
+   - Adicionar "Enviar por email" no DropdownMenu (linha 766)
 
-```text
-// De:
-const shouldTryFallback =
-  (smtp.port || 587) === 587 &&
-  String(emailErr).toLowerCase().includes("invalidcontenttype");
+---
 
-// Para:
-const shouldTryFallback = preferredPort !== 465;
-```
+## Problema 2: Campos dos itens de proposta nao sao editaveis
 
-### 3. `supabase/functions/send-monthly-report/index.ts`
+Na linha 1608, os campos de servico, descricao, horas e preco sao renderizados como `<p>` (texto estatico em `bg-muted/30`), nao como `<Input>`. Apos adicionar um item do catalogo, o usuario nao consegue alterar os valores.
 
-Localizar o bloco catch com a mesma logica de fallback e aplicar a mesma alteracao.
+## Solucao 2: Tornar campos dos itens editaveis
 
-### 4. `supabase/functions/test-smtp-connection/index.ts`
+Substituir os elementos `<p>` por `<Input>` para os 4 campos de cada item (servico, descricao, horas, preco/hora), com `onChange` que atualiza o `formData.items` pelo indice.
 
-Mesma alteracao: expandir fallback para qualquer erro quando porta inicial nao for 465.
+---
 
 ## Secao Tecnica
 
 ```text
 Arquivos modificados:
-  - supabase/functions/send-proposal-email/index.ts
-  - supabase/functions/send-contract-email/index.ts
-  - supabase/functions/send-monthly-report/index.ts
-  - supabase/functions/test-smtp-connection/index.ts
+  - src/pages/Proposals.tsx
+    1. handleSaveProposal: gerar share_static_html ao salvar (nao apenas ao enviar)
+    2. Card da proposta: remover condicao de draft para link/copiar
+    3. Mover botao Enviar para dropdown (label dinamico "Enviar por email")
+    4. Itens do formulario: trocar <p> por <Input> com onChange
 
-Mudanca em cada arquivo:
-  1. Manter createSmtpClient recebendo port como parametro
-  2. Manter tls: port === 465 (dinamico conforme a porta)
-  3. No catch: trocar condicao de fallback para "preferredPort !== 465"
-     em vez de verificar apenas "invalidcontenttype"
-  4. Fallback usa porta 465 com tls: true (TLS implicito)
-
-Comportamento final:
-  - Tenta enviar na porta configurada (587 por padrao)
-  - Se falhar (qualquer erro), tenta na porta 465 com TLS implicito
-  - Se ja estiver na 465 e falhar, retorna o erro diretamente
+  - src/pages/Contracts.tsx
+    1. Card do contrato: remover condicao de draft para copiar link
+    2. Mover botao Enviar para dropdown menu
+    3. Adicionar "Enviar por email" no DropdownMenu
 
 Nenhuma migracao SQL necessaria.
-Deploy automatico apos edicao.
+O share_token ja e gerado automaticamente pelo banco.
+A RPC get_proposal_by_token ja funciona sem verificar status.
 ```
 
