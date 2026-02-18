@@ -22,7 +22,7 @@ import {
   Loader2,
   FileText,
   Clock,
-  DollarSign,
+  BanknoteArrowUp,
   Calendar,
   Building2,
   Mail,
@@ -378,7 +378,7 @@ export const PublicProposal: React.FC = () => {
                   <h4 className="font-semibold text-foreground">{item.service}</h4>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-muted-foreground" />{item.hours}h</span>
-                    <span className="flex items-center gap-1"><DollarSign className="w-4 h-4 text-muted-foreground" />{Number(item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h</span>
+                    <span className="flex items-center gap-1"><BanknoteArrowUp className="w-4 h-4 text-muted-foreground" />{Number(item.pricePerHour).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/h</span>
                   </div>
                 </div>
                 {item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
