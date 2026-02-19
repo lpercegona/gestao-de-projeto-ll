@@ -419,8 +419,8 @@ export const Services: React.FC = () => {
               ) : filteredRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p>
               ) : (
-			  <div className="gap4 border"
-      
+              <div className="gap-4 border rounded-md p-4">
+
                 <div className="space-y-3">
                   {filteredRows.map((row) => (
                     <div key={row.id} className="grid gap-4 md:grid-cols-3">
