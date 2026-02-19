@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
@@ -195,8 +195,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
 
+  // Stable refs to avoid recreating refreshData on every render
+  const userRef = useRef(user);
+  const isCollaboratorRef = useRef(isCollaborator);
+  const isAdminOrMasterRef = useRef(isAdminOrMaster);
+
+  useEffect(() => {
+    userRef.current = user;
+    isCollaboratorRef.current = isCollaborator;
+    isAdminOrMasterRef.current = isAdminOrMaster;
+  }, [user, isCollaborator, isAdminOrMaster]);
+
   const refreshData = useCallback(async (showLoading = true) => {
-    if (!user) {
+    if (!userRef.current) {
       setData(emptyData);
       setLoading(false);
       return;
@@ -204,10 +215,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (showLoading) setLoading(true);
     try {
-      // Fetch all data in parallel
-      // Use clients_limited view for collaborators (excludes sensitive fields like access_token, email, phone)
-      // Admins and master_admins get full client data from the clients table
-      const clientsQuery = isCollaborator && !isAdminOrMaster
+      const clientsQuery = isCollaboratorRef.current && !isAdminOrMasterRef.current
         ? supabase.from('clients_limited' as any).select('*').order('created_at', { ascending: false })
         : supabase.from('clients').select('*').order('created_at', { ascending: false });
       const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes] = await Promise.all([
@@ -222,7 +230,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('kanban_stages').select('*').order('order_position', { ascending: true }),
       ]);
 
-      // Build profiles map for creator names
       const profiles: Record<string, string> = {};
       (profilesRes.data || []).forEach(p => {
         if (p.user_id && p.full_name) {
@@ -259,18 +266,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           project_name_snapshot: (timer as any).project_name_snapshot || null,
           client_name_snapshot: (timer as any).client_name_snapshot || null,
         })) as TaskTimer[],
-        kanbanStages: getEffectiveKanbanStages(allStages, user.id),
+        kanbanStages: getEffectiveKanbanStages(allStages, userRef.current.id),
       });
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
+
+  // Only reload when user.id actually changes (login/logout)
+  const prevUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+    const currentUserId = user?.id || null;
+    if (currentUserId !== prevUserIdRef.current) {
+      prevUserIdRef.current = currentUserId;
+      refreshData();
+    }
+  }, [user?.id, refreshData]);
 
   useEffect(() => {
     if (!user) return;
@@ -285,6 +299,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           table: 'task_timers',
         },
         (payload) => {
+          if (document.hidden) return;
           setData(prev => {
             if (payload.eventType === 'DELETE') {
               const deletedId = payload.old.id as string;
