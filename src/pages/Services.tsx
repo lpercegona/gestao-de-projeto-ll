@@ -419,6 +419,7 @@ export const Services: React.FC = () => {
               ) : filteredRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p>
               ) : (
+			  <div className="gap4 border"
       
                 <div className="space-y-3">
                   {filteredRows.map((row) => (
@@ -479,7 +480,9 @@ export const Services: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              )}
+             </div>
+			 )}
+			  
             </CardContent>
           </Card>
         </TabsContent>
