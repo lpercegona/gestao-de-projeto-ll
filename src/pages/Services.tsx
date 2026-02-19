@@ -419,10 +419,10 @@ export const Services: React.FC = () => {
               ) : filteredRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 border">
                   {filteredRows.map((row) => (
                     <div key={row.id} className="grid gap-4 md:grid-cols-3">
-                        <div className="md:col-span-1">
+                        <div className="md:col-span-2">
                           {row.imageUrl ? (
                             <img
                               src={row.imageUrl}
