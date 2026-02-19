@@ -242,7 +242,7 @@ export const WysiwygContent: React.FC<{ content: string; className?: string }> =
     <div
       className={cn(
         'prose prose-sm dark:prose-invert max-w-none',
-        'prose-p:my-1 prose-ul:my-1 prose-li:my-0',
+        'prose-p:my-2 prose-ul:my-2 prose-li:my-0 [&_p:empty]:min-h-[1em]',
         '[&_a]:text-primary [&_a]:underline [&_a]:cursor-pointer',
         className
       )}
