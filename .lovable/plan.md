@@ -1,70 +1,47 @@
+# Correcao: Espacamento entre paragrafos no template compartilhavel + erro de build em Services.tsx
 
+## Problema 1: Espacamento de paragrafos nao aparece na proposta compartilhavel
 
-# Correcao: Link compartilhavel independente de email + campos editaveis nos itens
+O editor TipTap gera tags `<p></p>` vazias quando o usuario pressiona Enter para criar espacamento entre paragrafos. No editor, esses paragrafos vazios sao renderizados com altura visivel (TipTap adiciona `<br>` ou min-height internamente). Porem, no componente `WysiwygContent`, essas tags `<p></p>` vazias colapsam para altura zero no HTML puro.
 
-## Problema 1: Link compartilhavel depende de envio de email
+Alem disso, a classe `prose-p:my-1` (margin de apenas 4px) comprime ainda mais o espacamento visual entre paragrafos.
 
-Atualmente, o link publico de proposta so e liberado apos clicar "Enviar", que obrigatoriamente envia o email E atualiza o status para "sent". No card da proposta em status "draft", aparece a mensagem "A pagina de compartilhamento sera criada apos o envio" e o botao de copiar link so aparece para status != draft.
+### Solucao
 
-Para contratos, o comportamento e similar: o botao "Enviar" manda o email e muda o status, e o botao de copiar link so aparece para status != draft.
+No componente `WysiwygContent` (`src/components/ui/wysiwyg-editor.tsx`):
 
-## Solucao 1: Separar compartilhamento do envio de email
+1. Adicionar CSS para que paragrafos vazios (`<p>` sem conteudo) tenham altura minima, replicando o comportamento do editor:
 
-### Propostas (`src/pages/Proposals.tsx`)
+```text
+// Adicionar ao className do WysiwygContent:
+'[&_p:empty]:min-h-[1em]'
 
-1. **Remover a dependencia do link com o envio de email**: O share_token ja existe no banco desde a criacao (gerado automaticamente pelo `DEFAULT gen_random_uuid()`). O link ja funciona tecnicamente pois a RPC `get_proposal_by_token` nao verifica status. Basta liberar a UI.
+// Trocar:
+'prose-p:my-1 prose-ul:my-1 prose-li:my-0'
+// Por:
+'prose-p:my-2 prose-ul:my-2 prose-li:my-0 [&_p:empty]:min-h-[1em]'
+```
 
-2. **Mostrar o link e botao de copiar para TODAS as propostas**, incluindo drafts:
-   - Remover a condicao `proposal.status === 'draft'` que mostra "A pagina de compartilhamento sera criada apos o envio" (linhas 1257-1272)
-   - Sempre mostrar o link clicavel com botao de copiar
-   - Remover a condicao `proposal.status !== 'draft'` do botao de copiar link (linhas 1288-1300)
+Isso garante que paragrafos vazios usados como espacamento no editor tambem aparecam na versao compartilhavel.
 
-3. **Mover o botao "Enviar" para o dropdown menu lateral**:
-   - Remover o botao "Enviar" destacado que aparece para drafts (linhas 1276-1286)
-   - Adicionar "Enviar por email" no DropdownMenu (ja existe "Reenviar por email" na linha 1332-1335, basta ajustar o label dinamicamente)
+## Problema 2: Erro de build em Services.tsx
 
-4. **Ao salvar proposta**: gerar o `share_static_html` imediatamente no `handleSaveProposal`, em vez de gerar apenas no envio. Isso garante que o link publico funcione sem depender do email.
+O ultimo diff introduziu um erro de sintaxe na linha 422: `<div className="gap4 border"` esta sem o `>` de fechamento da tag. Isso causa os erros TS2657/TS1003.
 
-5. **Ajustar o `handleSendProposal`**: manter a logica de envio de email, mas remover a obrigatoriedade — email vira uma acao opcional no menu.
+### Solucao
 
-### Contratos (`src/pages/Contracts.tsx`)
-
-1. **Mostrar botao de copiar link para TODOS os contratos**, incluindo drafts:
-   - Remover a condicao `contract.status !== 'draft'` (linhas 746-758)
-
-2. **Mover o botao "Enviar" para o dropdown menu**:
-   - Remover o botao "Enviar" destacado para drafts (linhas 730-744)
-   - Adicionar "Enviar por email" no DropdownMenu (linha 766)
-
----
-
-## Problema 2: Campos dos itens de proposta nao sao editaveis
-
-Na linha 1608, os campos de servico, descricao, horas e preco sao renderizados como `<p>` (texto estatico em `bg-muted/30`), nao como `<Input>`. Apos adicionar um item do catalogo, o usuario nao consegue alterar os valores.
-
-## Solucao 2: Tornar campos dos itens editaveis
-
-Substituir os elementos `<p>` por `<Input>` para os 4 campos de cada item (servico, descricao, horas, preco/hora), com `onChange` que atualiza o `formData.items` pelo indice.
-
----
+Corrigir a tag quebrada: adicionar `>` para fechar a abertura da div e corrigir a classe CSS `gap4` para `gap-4`.
 
 ## Secao Tecnica
 
 ```text
 Arquivos modificados:
-  - src/pages/Proposals.tsx
-    1. handleSaveProposal: gerar share_static_html ao salvar (nao apenas ao enviar)
-    2. Card da proposta: remover condicao de draft para link/copiar
-    3. Mover botao Enviar para dropdown (label dinamico "Enviar por email")
-    4. Itens do formulario: trocar <p> por <Input> com onChange
 
-  - src/pages/Contracts.tsx
-    1. Card do contrato: remover condicao de draft para copiar link
-    2. Mover botao Enviar para dropdown menu
-    3. Adicionar "Enviar por email" no DropdownMenu
+1. src/components/ui/wysiwyg-editor.tsx
+   - WysiwygContent: trocar prose-p:my-1 por prose-p:my-2
+   - WysiwygContent: adicionar [&_p:empty]:min-h-[1em]
+   - Manter mesmas classes no editor (WysiwygEditor) para consistencia
 
-Nenhuma migracao SQL necessaria.
-O share_token ja e gerado automaticamente pelo banco.
-A RPC get_proposal_by_token ja funciona sem verificar status.
+2. src/pages/Services.tsx
+   - Linha 422: corrigir <div className="gap4 border" para <div className="gap-4 border">
 ```
-
