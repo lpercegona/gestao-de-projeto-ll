@@ -1,53 +1,50 @@
-# Correcao de Estabilidade do DataContext
 
-## Estabilizar DataContext para evitar atualizacoes desnecessarias
 
-### Problema
+# Correcao: Link compartilhavel independente de email + campos editaveis nos itens
 
-- `refreshData` depende de `user` no `useCallback`, recriando o callback a cada mudanca de referencia
-- `useEffect` na linha 271-273 dispara `refreshData()` toda vez que o callback muda
-- Realtime handler de `task_timers` atualiza estado mesmo com aba em segundo plano
+## Problema 1: Link compartilhavel depende de envio de email
 
-### Alteracoes em `src/contexts/DataContext.tsx`:
+Atualmente, o link publico de proposta so e liberado apos clicar "Enviar", que obrigatoriamente envia o email E atualiza o status para "sent". No card da proposta em status "draft", aparece a mensagem "A pagina de compartilhamento sera criada apos o envio" e o botao de copiar link so aparece para status != draft.
 
-1. **Adicionar `useRef` ao import** (linha 1):
-  - Adicionar `useRef` ao import do React
-2. **Criar refs para valores usados no callback** (apos linha 196):
-  ```text
-   const userRef = useRef(user);
-   const isCollaboratorRef = useRef(isCollaborator);
-   const isAdminOrMasterRef = useRef(isAdminOrMaster);
+Para contratos, o comportamento e similar: o botao "Enviar" manda o email e muda o status, e o botao de copiar link so aparece para status != draft.
 
-   useEffect(() => {
-     userRef.current = user;
-     isCollaboratorRef.current = isCollaborator;
-     isAdminOrMasterRef.current = isAdminOrMaster;
-   }, [user, isCollaborator, isAdminOrMaster]);
-  ```
-3. **Estabilizar `refreshData**` (linhas 198-269):
-  - Trocar todas as referencias a `user` por `userRef.current`
-  - Trocar `isCollaborator` por `isCollaboratorRef.current`
-  - Trocar `isAdminOrMaster` por `isAdminOrMasterRef.current`
-  - Remover dependencia `[user]` do useCallback, deixando `[]`
-4. **Substituir useEffect de carga** (linhas 271-273):
-  ```text
-   const prevUserIdRef = useRef<string | null>(null);
+## Solucao 1: Separar compartilhamento do envio de email
 
-   useEffect(() => {
-     const currentUserId = user?.id || null;
-     if (currentUserId !== prevUserIdRef.current) {
-       prevUserIdRef.current = currentUserId;
-       refreshData();
-     }
-   }, [user?.id, refreshData]);
-  ```
-5. **Guard de visibilidade no Realtime** (linha 287):
-  ```text
-   (payload) => {
-     if (document.hidden) return;
-     setData(prev => { ... });
-   }
-  ```
+### Propostas (`src/pages/Proposals.tsx`)
+
+1. **Remover a dependencia do link com o envio de email**: O share_token ja existe no banco desde a criacao (gerado automaticamente pelo `DEFAULT gen_random_uuid()`). O link ja funciona tecnicamente pois a RPC `get_proposal_by_token` nao verifica status. Basta liberar a UI.
+
+2. **Mostrar o link e botao de copiar para TODAS as propostas**, incluindo drafts:
+   - Remover a condicao `proposal.status === 'draft'` que mostra "A pagina de compartilhamento sera criada apos o envio" (linhas 1257-1272)
+   - Sempre mostrar o link clicavel com botao de copiar
+   - Remover a condicao `proposal.status !== 'draft'` do botao de copiar link (linhas 1288-1300)
+
+3. **Mover o botao "Enviar" para o dropdown menu lateral**:
+   - Remover o botao "Enviar" destacado que aparece para drafts (linhas 1276-1286)
+   - Adicionar "Enviar por email" no DropdownMenu (ja existe "Reenviar por email" na linha 1332-1335, basta ajustar o label dinamicamente)
+
+4. **Ao salvar proposta**: gerar o `share_static_html` imediatamente no `handleSaveProposal`, em vez de gerar apenas no envio. Isso garante que o link publico funcione sem depender do email.
+
+5. **Ajustar o `handleSendProposal`**: manter a logica de envio de email, mas remover a obrigatoriedade — email vira uma acao opcional no menu.
+
+### Contratos (`src/pages/Contracts.tsx`)
+
+1. **Mostrar botao de copiar link para TODOS os contratos**, incluindo drafts:
+   - Remover a condicao `contract.status !== 'draft'` (linhas 746-758)
+
+2. **Mover o botao "Enviar" para o dropdown menu**:
+   - Remover o botao "Enviar" destacado para drafts (linhas 730-744)
+   - Adicionar "Enviar por email" no DropdownMenu (linha 766)
+
+---
+
+## Problema 2: Campos dos itens de proposta nao sao editaveis
+
+Na linha 1608, os campos de servico, descricao, horas e preco sao renderizados como `<p>` (texto estatico em `bg-muted/30`), nao como `<Input>`. Apos adicionar um item do catalogo, o usuario nao consegue alterar os valores.
+
+## Solucao 2: Tornar campos dos itens editaveis
+
+Substituir os elementos `<p>` por `<Input>` para os 4 campos de cada item (servico, descricao, horas, preco/hora), com `onChange` que atualiza o `formData.items` pelo indice.
 
 ---
 
@@ -55,19 +52,19 @@
 
 ```text
 Arquivos modificados:
-  1. supabase/functions/send-proposal-email/index.ts - mover preferredPort antes do try
-  2. supabase/functions/send-contract-email/index.ts - mover preferredPort antes do try
-  3. supabase/functions/send-monthly-report/index.ts - mover preferredPort antes do try
-  4. src/contexts/DataContext.tsx:
-     - Adicionar useRef ao import
-     - Criar refs para user, isCollaborator, isAdminOrMaster
-     - refreshData com dependencias vazias (usa refs)
-     - useEffect baseado em user?.id
-     - Guard document.hidden no handler Realtime
+  - src/pages/Proposals.tsx
+    1. handleSaveProposal: gerar share_static_html ao salvar (nao apenas ao enviar)
+    2. Card da proposta: remover condicao de draft para link/copiar
+    3. Mover botao Enviar para dropdown (label dinamico "Enviar por email")
+    4. Itens do formulario: trocar <p> por <Input> com onChange
 
-Resultado esperado:
-  - Build errors resolvidos
-  - Interface nao recarrega ao trocar de aba ou minimizar
-  - Dialogos abertos permanecem estaveis
-  - Dados Realtime so processados com aba ativa
+  - src/pages/Contracts.tsx
+    1. Card do contrato: remover condicao de draft para copiar link
+    2. Mover botao Enviar para dropdown menu
+    3. Adicionar "Enviar por email" no DropdownMenu
+
+Nenhuma migracao SQL necessaria.
+O share_token ja e gerado automaticamente pelo banco.
+A RPC get_proposal_by_token ja funciona sem verificar status.
 ```
+

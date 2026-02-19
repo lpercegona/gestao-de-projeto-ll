@@ -193,9 +193,9 @@ Deno.serve(async (req) => {
         });
 
       let client: SMTPClient | null = null;
-      const preferredPort = smtp.port || 587;
 
       try {
+        const preferredPort = smtp.port || 587;
         client = createSmtpClient(preferredPort);
 
         const fromAddress = resolvedFromName ? `${resolvedFromName} <${smtp.user}>` : smtp.user;
