@@ -128,11 +128,12 @@ export default {
   				'Times',
   				'serif'
   			],
-  			mono: [
-  				'Space Mono',
-  				'ui-monospace',
-  				'SFMono-Regular',
-  				'Menlo',
+			mono: [
+				'DM Mono',
+				'Geist Mono',
+				'ui-monospace',
+				'SFMono-Regular',
+				'Menlo',
   				'Monaco',
   				'Consolas',
   				'Liberation Mono',
