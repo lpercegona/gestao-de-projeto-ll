@@ -413,7 +413,7 @@ export const Services: React.FC = () => {
           </div>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-0">
               {loading ? (
                 <p className="text-sm text-muted-foreground">Carregando serviços/produtos...</p>
               ) : filteredRows.length === 0 ? (
