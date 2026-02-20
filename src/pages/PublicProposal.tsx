@@ -32,7 +32,7 @@ import {
 import { format, parseISO, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import LogoOras from '@/assets/logo-oras.svg';
+
 import { formatHours } from '@/lib/formatHours';
 import { TemplateSectionRenderer, type TemplateSection } from '@/components/proposals/TemplateSectionRenderer';
 import { WysiwygContent } from '@/components/ui/wysiwyg-editor';
@@ -61,6 +61,8 @@ interface ProposalData {
   template_sections?: TemplateSection[];
   title: string;
   description: string | null;
+  admin_name: string | null;
+  admin_company: string | null;
   recipient_name: string;
   recipient_email: string;
   recipient_company: string | null;
@@ -164,6 +166,8 @@ export const PublicProposal: React.FC = () => {
         total_value: parseNumericValue(rawProposal.total_value),
         items: normalizeProposalItems(rawProposal.items),
         template_sections: templateSections,
+        admin_name: (rawProposal as any).admin_name || null,
+        admin_company: (rawProposal as any).admin_company || null,
       });
 
       const { data: commentsData } = await supabase
@@ -284,7 +288,14 @@ export const PublicProposal: React.FC = () => {
       {/* HEADER */}
       <header className="bg-background border-b border-border py-4 px-6">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <img src={LogoOras} alt="ORAS" className="h-8" />
+          <div>
+            {proposal.admin_name && (
+              <p className="font-semibold text-lg text-foreground">{proposal.admin_name}</p>
+            )}
+            {proposal.admin_company && (
+              <p className="text-sm text-muted-foreground">{proposal.admin_company}</p>
+            )}
+          </div>
         </div>
       </header>
 
