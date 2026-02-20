@@ -74,6 +74,7 @@ export const SolicitacoesPanel: React.FC = () => {
               )
             `,
             )
+            .eq("status", "pending")
             .order("created_at", { ascending: false })
             .limit(10),
           supabase
@@ -92,6 +93,7 @@ export const SolicitacoesPanel: React.FC = () => {
               )
             `,
             )
+            .eq("status", "pending")
             .order("created_at", { ascending: false })
             .limit(30),
         ]);
@@ -261,7 +263,7 @@ export const SolicitacoesPanel: React.FC = () => {
             {loading ? (
               <p className="text-sm text-muted-foreground">Carregando...</p>
             ) : requests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma solicitação encontrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente.</p>
             ) : (
               <div className="space-y-3">
                 {requests.map((req) => (
