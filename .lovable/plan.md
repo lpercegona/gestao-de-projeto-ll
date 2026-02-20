@@ -1,27 +1,31 @@
 
-# Correção: Clientes criados via propostas não aparecem na listagem
 
-## Problema
+# Ajustes no Painel: Solicitacoes e Proximas Entregas
 
-Clientes cadastrados automaticamente ao criar uma proposta recebem `pipeline_status = 'negotiation'`, mas a aba "Em Negociação" na página de Clientes filtra por `pipeline_status === 'proposal'`. Como os valores não coincidem, esses clientes não aparecem em nenhuma aba, apesar de serem contabilizados no total.
+## 1. Solicitacoes - Exibir apenas pendentes
 
-Dados confirmados no banco: o cliente "Tania da Costa" possui `pipeline_status = 'negotiation'`.
+Atualmente o painel busca todas as solicitacoes (pendentes, aprovadas, rejeitadas) e exibe as 5 mais recentes. O ajuste adicionara filtro `.eq('status', 'pending')` nas duas queries (project_requests e edit_requests) para trazer apenas solicitacoes pendentes.
 
-## Solução
+- A contagem no badge do header ja mostra apenas pendentes, entao ficara consistente.
+- A mensagem vazia sera ajustada para "Nenhuma solicitacao pendente."
 
-Padronizar o valor do status. A abordagem mais segura é:
+## 2. Proximas Entregas - Exibir apenas tarefas
 
-1. Atualizar `src/pages/Proposals.tsx` para usar `'proposal'` em vez de `'negotiation'` ao criar clientes via proposta (alinhando com o filtro da listagem).
-2. Criar uma migração SQL para corrigir os registros existentes no banco que ainda possuem `pipeline_status = 'negotiation'`, convertendo-os para `'proposal'`.
+Remover todo o bloco que adiciona projetos a lista de deadlines (linhas 23-53 do ProximasEntregasPanel.tsx). Manter apenas o bloco de tarefas. A mensagem vazia do componente UpcomingDeadlines tambem sera ajustada.
 
-## Seção Técnica
+## Secao Tecnica
 
 ```text
 Arquivos modificados:
 
-1. src/pages/Proposals.tsx
-   - Linha ~535: trocar pipeline_status: 'negotiation' por pipeline_status: 'proposal'
+1. src/components/dashboard/SolicitacoesPanel.tsx
+   - Adicionar .eq('status', 'pending') na query de project_requests (linha 77)
+   - Adicionar .eq('status', 'pending') na query de edit_requests (linha 95)
+   - Alterar mensagem vazia para "Nenhuma solicitacao pendente."
+   - Remover dependencia do data.projects na dependencia do useMemo (nao aplicavel, e useEffect)
 
-2. Migração SQL (nova)
-   - UPDATE clients SET pipeline_status = 'proposal' WHERE pipeline_status = 'negotiation';
+2. src/components/dashboard/ProximasEntregasPanel.tsx
+   - Remover bloco de projetos (linhas 23-53) do useMemo
+   - Remover data.projects da lista de dependencias do useMemo
+   - Manter apenas tarefas na listagem
 ```
