@@ -419,11 +419,9 @@ export const Services: React.FC = () => {
               ) : filteredRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p>
               ) : (
-              <div className="gap-4 border rounded-md p-4">
-
-                <div className="space-y-3">
-                  {filteredRows.map((row) => (
-                    <div key={row.id} className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-3">
+                {filteredRows.map((row) => (
+                  <div key={row.id} className="grid gap-4 overflow-hidden rounded-md border bg-card p-4 md:grid-cols-3">
                         <div className="md:col-span-2">
                           {row.imageUrl ? (
                             <img
@@ -438,7 +436,7 @@ export const Services: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="space-y-2 md:col-span-2">
+                        <div className="space-y-3 md:col-span-2">
                           <div className="flex items-start justify-between gap-2">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
@@ -477,10 +475,10 @@ export const Services: React.FC = () => {
                             <span className="font-medium text-foreground">Quantidade de horas:</span> {row.hours}h
                           </div>
                         </div>
-                    </div>
-                  ))}
-                </div>
-             </div>
+
+                  </div>
+                ))}
+              </div>
 			 )}
 			  
             </CardContent>
