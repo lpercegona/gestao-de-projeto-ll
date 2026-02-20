@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SimboloOras from '@/assets/simbolo-oras.svg';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -500,8 +501,12 @@ export const PublicProposal: React.FC = () => {
 
       {/* FOOTER */}
       <footer className="border-t border-border py-6 mt-12">
-        <div className="max-w-4xl mx-auto px-4 text-center text-sm text-muted-foreground">
+        <div className="max-w-4xl mx-auto px-4 text-center text-sm text-muted-foreground space-y-2">
           <p>Proposta gerada em {format(parseISO(proposal.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+          <div className="flex items-center justify-center gap-2">
+            <img src={SimboloOras} alt="ORAS" className="h-6 w-auto" />
+            <p>© {new Date().getFullYear()} ORAS. Gestão de Projetos e Horas.</p>
+          </div>
         </div>
       </footer>
     </div>
