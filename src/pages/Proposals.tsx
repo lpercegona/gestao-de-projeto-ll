@@ -532,7 +532,7 @@ export const Proposals: React.FC = () => {
                   name: formData.recipientName,
                   email: formData.recipientEmail,
                   company: formData.recipientCompany || null,
-                  pipeline_status: 'negotiation',
+                  pipeline_status: 'proposal',
                   contract_type: formData.contractType,
                   owner_id: user?.id,
                   created_by: user?.id,
