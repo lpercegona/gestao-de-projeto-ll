@@ -1,71 +1,27 @@
 
-# Substituir logo ORAS pelo nome do admin no header da proposta compartilhavel
+# Correção: Clientes criados via propostas não aparecem na listagem
 
-## O que muda
+## Problema
 
-No header da pagina publica de proposta (`/proposta/:token`), a logo "ORAS" sera removida e substituida pelo nome completo do perfil admin que criou a proposta. Abaixo do nome, aparecera o nome da empresa cadastrada no perfil, caso exista.
+Clientes cadastrados automaticamente ao criar uma proposta recebem `pipeline_status = 'negotiation'`, mas a aba "Em Negociação" na página de Clientes filtra por `pipeline_status === 'proposal'`. Como os valores não coincidem, esses clientes não aparecem em nenhuma aba, apesar de serem contabilizados no total.
 
-## Solucao tecnica
+Dados confirmados no banco: o cliente "Tania da Costa" possui `pipeline_status = 'negotiation'`.
 
-### 1. Adicionar coluna `company_name` na tabela `profiles`
+## Solução
 
-A coluna ainda nao existe no banco. O `ProfileEditTab.tsx` ja salva esse campo usando `as any`, mas ele nao persiste de fato. Sera necessario criar uma migracao SQL:
+Padronizar o valor do status. A abordagem mais segura é:
 
-```text
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS company_name TEXT,
-  ADD COLUMN IF NOT EXISTS company_address TEXT,
-  ADD COLUMN IF NOT EXISTS cnpj TEXT,
-  ADD COLUMN IF NOT EXISTS cpf TEXT;
-```
+1. Atualizar `src/pages/Proposals.tsx` para usar `'proposal'` em vez de `'negotiation'` ao criar clientes via proposta (alinhando com o filtro da listagem).
+2. Criar uma migração SQL para corrigir os registros existentes no banco que ainda possuem `pipeline_status = 'negotiation'`, convertendo-os para `'proposal'`.
 
-Isso tambem resolve o problema silencioso do perfil do admin que ja tenta salvar esses campos.
-
-### 2. Atualizar a RPC `get_proposal_by_token`
-
-Adicionar dois campos ao retorno: `admin_name` e `admin_company`, obtidos via JOIN com a tabela `profiles` usando `p.created_by` ou `p.owner_id`:
+## Seção Técnica
 
 ```text
-RETURN QUERY
-SELECT
-  p.id, p.title, p.description, ...
-  prof.full_name AS admin_name,
-  prof.company_name AS admin_company,
-  ...
-FROM proposals p
-LEFT JOIN proposal_templates pt ON pt.id = p.template_id
-LEFT JOIN profiles prof ON prof.user_id = COALESCE(p.owner_id, p.created_by)
-WHERE p.share_token = p_token;
-```
+Arquivos modificados:
 
-### 3. Atualizar `PublicProposal.tsx`
+1. src/pages/Proposals.tsx
+   - Linha ~535: trocar pipeline_status: 'negotiation' por pipeline_status: 'proposal'
 
-- Adicionar `admin_name` e `admin_company` na interface `ProposalData`
-- No header, remover `<img src={LogoOras} .../>` e substituir por:
-
-```text
-<div>
-  <p className="font-semibold text-lg">{proposal.admin_name}</p>
-  {proposal.admin_company && (
-    <p className="text-sm text-muted-foreground">{proposal.admin_company}</p>
-  )}
-</div>
-```
-
-- Remover o import de `LogoOras` (se nao for usado em outro lugar do arquivo)
-
-### Arquivos modificados
-
-```text
-1. Migracao SQL (nova)
-   - Adicionar colunas company_name, company_address, cnpj, cpf em profiles
-
-2. Migracao SQL (nova)
-   - Atualizar RPC get_proposal_by_token para retornar admin_name e admin_company
-
-3. src/pages/PublicProposal.tsx
-   - Interface ProposalData: adicionar admin_name e admin_company
-   - fetchProposal: mapear os novos campos
-   - Header: trocar logo pelo nome do admin + empresa
-   - Remover import do LogoOras
+2. Migração SQL (nova)
+   - UPDATE clients SET pipeline_status = 'proposal' WHERE pipeline_status = 'negotiation';
 ```
