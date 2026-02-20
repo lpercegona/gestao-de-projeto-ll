@@ -1447,7 +1447,6 @@ export type Database = {
           contractor_company: string
           contractor_cpf_responsavel: string
           contractor_document: string
-          contractor_email: string
           contractor_name: string
           created_at: string
           end_date: string

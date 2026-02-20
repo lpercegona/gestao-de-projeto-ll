@@ -44,7 +44,6 @@ interface ContractData {
   title: string;
   content: string;
   contractor_name: string;
-  contractor_email: string;
   contractor_company: string | null;
   contractor_document: string | null;
   contractor_address: string | null;
@@ -204,7 +203,7 @@ export const PublicContract: React.FC = () => {
     if (!contract) return content;
     return content
       .replace(/\{\{contractor_name\}\}/g, contract.contractor_name)
-      .replace(/\{\{contractor_email\}\}/g, contract.contractor_email)
+      .replace(/\{\{contractor_email\}\}/g, '')
       .replace(/\{\{contractor_company\}\}/g, contract.contractor_company || '')
       .replace(/\{\{contractor_cnpj\}\}/g, contract.contractor_cnpj || '')
       .replace(/\{\{contractor_cpf\}\}/g, contract.contractor_cpf_responsavel || contract.contractor_document || '')
