@@ -554,6 +554,10 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          cnpj: string | null
+          company_address: string | null
+          company_name: string | null
+          cpf: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -564,6 +568,10 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          cnpj?: string | null
+          company_address?: string | null
+          company_name?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -574,6 +582,10 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          cnpj?: string | null
+          company_address?: string | null
+          company_name?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -1456,6 +1468,8 @@ export type Database = {
       get_proposal_by_token: {
         Args: { p_email?: string; p_token: string }
         Returns: {
+          admin_company: string
+          admin_name: string
           created_at: string
           description: string
           items: Json

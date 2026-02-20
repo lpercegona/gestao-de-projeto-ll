@@ -1,0 +1,6 @@
+
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS company_name TEXT,
+  ADD COLUMN IF NOT EXISTS company_address TEXT,
+  ADD COLUMN IF NOT EXISTS cnpj TEXT,
+  ADD COLUMN IF NOT EXISTS cpf TEXT;
