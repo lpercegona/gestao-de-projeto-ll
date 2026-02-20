@@ -20,38 +20,6 @@ export const ProximasEntregasPanel: React.FC = () => {
     const itemsWithDeadline: DeadlineItem[] = [];
     const itemsWithoutDeadline: DeadlineItem[] = [];
 
-    // Add projects (only active, in progress, and pending)
-    data.projects
-      .filter((p) => ALLOWED_STATUSES.has(p.status))
-      .forEach((p) => {
-        const client = data.clients.find((c) => c.id === p.client_id);
-
-        if (p.due_date) {
-          const status = getDeadlineStatus(p.due_date);
-          if (status) {
-            itemsWithDeadline.push({
-              id: p.id,
-              type: "project",
-              name: p.name,
-              due_date: p.due_date,
-              clientName: (client as any)?.company || client?.name,
-              status,
-              created_at: p.created_at,
-            });
-          }
-        } else {
-          itemsWithoutDeadline.push({
-            id: p.id,
-            type: "project",
-            name: p.name,
-            due_date: "",
-            clientName: (client as any)?.company || client?.name,
-            status: "normal",
-            created_at: p.created_at,
-          });
-        }
-      });
-
     // Add tasks (only active, in progress, and pending, from valid projects)
     data.tasks
       .filter((t) => {
@@ -98,7 +66,7 @@ export const ProximasEntregasPanel: React.FC = () => {
 
     // Combine: items with deadline first, then items without
     return [...itemsWithDeadline, ...itemsWithoutDeadline].slice(0, 10);
-  }, [data.projects, data.tasks, data.clients, loading]);
+  }, [data.tasks, data.projects, data.clients, loading]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
