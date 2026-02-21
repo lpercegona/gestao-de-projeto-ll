@@ -295,17 +295,17 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban" | "table")}
             className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
           >
-            <ToggleGroupItem value="list" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
+            <ToggleGroupItem value="list" aria-label="Visualização em cards" variant="tab" size="tb" className={cn("")}>
               <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
-              {viewMode === "list" && "Lista"}
+              {viewMode === "list" && "Cards"}
             </ToggleGroupItem>
             <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" variant="tab" size="tb" className={cn("")}>
               <Columns3 className={cn("w-3.5 h-3.5", viewMode === "kanban" && "mr-1.5")} />
               {viewMode === "kanban" && "Kanban"}
             </ToggleGroupItem>
-            <ToggleGroupItem value="table" aria-label="Visualização em tabela" variant="tab" size="tb" className={cn("")}>
+            <ToggleGroupItem value="table" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
               <ClipboardList className={cn("w-3.5 h-3.5", viewMode === "table" && "mr-1.5")} />
-              {viewMode === "table" && "Tabela"}
+              {viewMode === "table" && "Lista"}
             </ToggleGroupItem>
           </ToggleGroup>
         )}
