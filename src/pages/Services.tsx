@@ -412,7 +412,7 @@ export const Services: React.FC = () => {
             </Button>
           </div>
 
-          <Card>
+          <Card className="border-0">
             <CardContent className="p-0 border-0">
               {loading ? (
                 <p className="text-sm text-muted-foreground">Carregando serviços/produtos...</p>
