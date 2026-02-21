@@ -71,7 +71,7 @@ type ClientTask = {
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
-  const { data, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
+  const { data, refreshData, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [pendingTaskRequests, setPendingTaskRequests] = useState<PendingTaskRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -87,15 +87,17 @@ export const ClientProjects: React.FC = () => {
     id: string;
     data: Record<string, unknown>;
   } | null>(null);
-  const [taskRequestDialogOpen, setTaskRequestDialogOpen] = useState(false);
-  const [taskRequestProjectId, setTaskRequestProjectId] = useState('');
-  const [taskRequestSubmitting, setTaskRequestSubmitting] = useState(false);
-  const [taskRequestForm, setTaskRequestForm] = useState({ name: '', description: '', due_date: '' });
 
+  // Direct task creation dialog (client autonomy)
+  const [taskCreateDialogOpen, setTaskCreateDialogOpen] = useState(false);
+  const [taskCreateProjectId, setTaskCreateProjectId] = useState('');
+  const [taskCreateStatus, setTaskCreateStatus] = useState('pending');
+  const [taskCreateSubmitting, setTaskCreateSubmitting] = useState(false);
+  const [taskCreateForm, setTaskCreateForm] = useState({ name: '', description: '', due_date: '' });
+
+  // Task edit dialog (for own tasks)
   const [taskEditDialogOpen, setTaskEditDialogOpen] = useState(false);
   const [taskEditSubmitting, setTaskEditSubmitting] = useState(false);
-  const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
-  const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
   const [taskEditForm, setTaskEditForm] = useState({
     taskId: '',
     projectId: '',
@@ -103,6 +105,24 @@ export const ClientProjects: React.FC = () => {
     description: '',
     due_date: '',
   });
+
+  // Task edit request dialog (for admin tasks)
+  const [taskEditRequestDialogOpen, setTaskEditRequestDialogOpen] = useState(false);
+  const [taskEditRequestSubmitting, setTaskEditRequestSubmitting] = useState(false);
+  const [taskEditRequestForm, setTaskEditRequestForm] = useState({
+    taskId: '',
+    projectId: '',
+    name: '',
+    description: '',
+    due_date: '',
+  });
+
+  // Delete task dialog
+  const [taskDeleteDialogOpen, setTaskDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<ClientTask | null>(null);
+
+  const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
+  const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
 
   const getCurrentUserActiveTimer = useCallback((taskId: string) => {
     const timer = getActiveTimer(taskId);
@@ -119,11 +139,9 @@ export const ClientProjects: React.FC = () => {
 
   const visibleProjects = useMemo(() => {
     let projects = data.projects;
-
     if (filterStageId !== 'all') {
       projects = projects.filter((project) => project.status === filterStageId);
     }
-
     if (filterDateRange?.from) {
       projects = projects.filter((project) => {
         if (!project.due_date) return false;
@@ -133,17 +151,14 @@ export const ClientProjects: React.FC = () => {
         return isWithinInterval(dueDate, { start: from, end: to });
       });
     }
-
     if (filterStageId === 'all') {
       projects = projects.filter((project) => project.status !== 'archived');
     }
-
     return projects;
   }, [data.projects, filterDateRange, filterStageId]);
 
   const visibleRequestProjects = useMemo<UnifiedProject[]>(() => {
     if (viewMode === 'kanban') return [];
-
     return requests
       .filter(
         (request) =>
@@ -180,10 +195,8 @@ export const ClientProjects: React.FC = () => {
       .map((request) => {
         const taskName = request.proposed_data?.task_name;
         if (typeof taskName !== 'string' || !taskName.trim()) return null;
-
         const taskDescription = request.proposed_data?.task_description;
         const taskDueDate = request.proposed_data?.task_due_date;
-
         return {
           id: `pending-task-request-${request.id}`,
           project_id: request.entity_id,
@@ -198,49 +211,23 @@ export const ClientProjects: React.FC = () => {
         } as ClientTask;
       })
       .filter((task): task is ClientTask => task !== null);
-
     return [...data.tasks, ...pendingTasks];
   }, [data.tasks, pendingTaskRequests, user?.id]);
-
-  const resolveClientId = async (userId: string) => {
-    const { data: rpcClientId, error: rpcError } = await supabase.rpc('get_user_client_id', {
-      _user_id: userId,
-    });
-
-    if (rpcError) {
-      console.error('Error resolving client id via RPC:', rpcError);
-    }
-
-    if (rpcClientId) return rpcClientId;
-
-    // Fallback para ambientes ainda sem função atualizada
-    const [{ data: client }, { data: clientUser }] = await Promise.all([
-      supabase.from('clients').select('id').eq('user_id', userId).maybeSingle(),
-      supabase.from('client_users').select('client_id').eq('user_id', userId).maybeSingle(),
-    ]);
-
-    return client?.id || clientUser?.client_id || null;
-  };
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-
       try {
         const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
           supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
           supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
         ]);
-
         const resolvedClientId = clientData?.id || clientUserData?.client_id;
-
         if (!resolvedClientId) {
           setLoading(false);
           return;
         }
-
         setClientId(resolvedClientId);
-
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
@@ -256,10 +243,8 @@ export const ClientProjects: React.FC = () => {
             .contains('proposed_data', { request_type: 'new_task' })
             .order('created_at', { ascending: false }),
         ]);
-
         if (requestError) throw requestError;
         if (pendingTaskError) throw pendingTaskError;
-
         setRequests((requestsData || []) as ProjectRequest[]);
         setPendingTaskRequests((pendingTaskData || []) as PendingTaskRequest[]);
       } catch (error) {
@@ -268,29 +253,21 @@ export const ClientProjects: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [user]);
 
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
     if (!user) return;
-
     const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
       supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
       supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
     ]);
-
     const resolvedClientId = clientData?.id || clientUserData?.client_id;
-
     if (!resolvedClientId) {
       toast.error('Erro: Cliente não encontrado');
       return;
     }
-
-    if (!clientId) {
-      setClientId(resolvedClientId);
-    }
-
+    if (!clientId) setClientId(resolvedClientId);
     const { data: newRequest, error } = await supabase
       .from('project_requests')
       .insert({
@@ -302,53 +279,39 @@ export const ClientProjects: React.FC = () => {
       })
       .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();
-
     if (error) {
       console.error('Error creating request:', error);
       toast.error('Erro ao enviar solicitação');
       return;
     }
-
     setRequests((prev) => [newRequest as ProjectRequest, ...prev]);
     toast.success('Solicitação enviada com sucesso!');
   };
 
   const openEditRequest = (project: UnifiedProject) => {
     if (!clientId) return;
-
     if (project.is_request && project.request_id) {
       setEditEntity({
         type: 'project_request',
         id: project.request_id,
-        data: {
-          title: project.name,
-          briefing: project.description || '',
-          desired_deadline: project.desired_deadline || null,
-        },
+        data: { title: project.name, briefing: project.description || '', desired_deadline: project.desired_deadline || null },
       });
     } else {
       setEditEntity({
         type: 'project',
         id: project.id,
-        data: {
-          name: project.name,
-          description: project.description || '',
-          due_date: project.due_date || null,
-        },
+        data: { name: project.name, description: project.description || '', due_date: project.due_date || null },
       });
     }
-
     setEditFormOpen(true);
   };
 
   const handleDeleteRequest = async () => {
     const project = deletingRequest;
     if (!project || !project.is_request || !project.request_id) return;
-
     try {
       const { error } = await supabase.from('project_requests').delete().eq('id', project.request_id);
       if (error) throw error;
-
       setRequests((prev) => prev.filter((item) => item.id !== project.request_id));
       toast.success('Solicitação excluída com sucesso!');
       setIsDeleteRequestDialogOpen(false);
@@ -359,55 +322,43 @@ export const ClientProjects: React.FC = () => {
     }
   };
 
-  const handleOpenTaskRequestDialog = (projectId: string) => {
-    setTaskRequestProjectId(projectId);
-    setTaskRequestForm({ name: '', description: '', due_date: '' });
-    setTaskRequestDialogOpen(true);
+  // ---- Direct task creation (client autonomy) ----
+  const handleOpenTaskCreate = (projectId: string, status?: string) => {
+    setTaskCreateProjectId(projectId);
+    setTaskCreateStatus(status || 'pending');
+    setTaskCreateForm({ name: '', description: '', due_date: '' });
+    setTaskCreateDialogOpen(true);
   };
 
-  const handleSubmitTaskRequest = async () => {
-    if (!clientId || !user || !taskRequestProjectId || !taskRequestForm.name.trim()) {
-      toast.error('Preencha o nome da tarefa para solicitar.');
+  const handleSubmitTaskCreate = async () => {
+    if (!user || !taskCreateProjectId || !taskCreateForm.name.trim()) {
+      toast.error('Preencha o nome da tarefa.');
       return;
     }
-
-    setTaskRequestSubmitting(true);
-
+    setTaskCreateSubmitting(true);
     try {
-      const { data: createdRequest, error } = await supabase.from('edit_requests').insert([
-        {
-          entity_type: 'project',
-          entity_id: taskRequestProjectId,
-          client_id: clientId,
-          requested_by: user.id,
-          original_data: {},
-          proposed_data: {
-            request_type: 'new_task',
-            task_name: taskRequestForm.name.trim(),
-            task_description: getWysiwygPlainText(taskRequestForm.description) ? taskRequestForm.description : null,
-            task_due_date: taskRequestForm.due_date || null,
-          },
-        },
-      ]).select('id, entity_id, status, proposed_data, created_at').single();
-
+      const { error } = await supabase.from('tasks').insert({
+        project_id: taskCreateProjectId,
+        name: taskCreateForm.name.trim(),
+        description: getWysiwygPlainText(taskCreateForm.description) ? taskCreateForm.description : null,
+        due_date: taskCreateForm.due_date || null,
+        status: taskCreateStatus,
+        created_by: user.id,
+      });
       if (error) throw error;
-
-      if (createdRequest) {
-        setPendingTaskRequests((prev) => [createdRequest as PendingTaskRequest, ...prev]);
-      }
-
-      toast.success('Solicitação de nova tarefa enviada para aprovação!');
-      setTaskRequestDialogOpen(false);
-      setTaskRequestProjectId('');
+      toast.success('Tarefa criada com sucesso!');
+      setTaskCreateDialogOpen(false);
+      refreshData();
     } catch (error) {
-      console.error('Error creating task request:', error);
-      toast.error('Erro ao solicitar nova tarefa');
+      console.error('Error creating task:', error);
+      toast.error('Erro ao criar tarefa.');
     } finally {
-      setTaskRequestSubmitting(false);
+      setTaskCreateSubmitting(false);
     }
   };
 
-  const handleOpenTaskEditDialog = (task: ClientTask) => {
+  // ---- Edit own task ----
+  const handleOpenTaskEdit = (task: ClientTask) => {
     setTaskEditForm({
       taskId: task.id,
       projectId: task.project_id,
@@ -418,48 +369,181 @@ export const ClientProjects: React.FC = () => {
     setTaskEditDialogOpen(true);
   };
 
+  const handleSubmitTaskEdit = async () => {
+    if (!user || !taskEditForm.taskId || !taskEditForm.name.trim()) {
+      toast.error('Preencha o nome da tarefa.');
+      return;
+    }
+    setTaskEditSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          name: taskEditForm.name.trim(),
+          description: getWysiwygPlainText(taskEditForm.description) ? taskEditForm.description : null,
+          due_date: taskEditForm.due_date || null,
+        })
+        .eq('id', taskEditForm.taskId);
+      if (error) throw error;
+      toast.success('Tarefa atualizada com sucesso!');
+      setTaskEditDialogOpen(false);
+      refreshData();
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast.error('Erro ao atualizar tarefa.');
+    } finally {
+      setTaskEditSubmitting(false);
+    }
+  };
+
+  // ---- Request edit for admin tasks ----
+  const handleOpenTaskEditRequest = (task: ClientTask) => {
+    setTaskEditRequestForm({
+      taskId: task.id,
+      projectId: task.project_id,
+      name: task.name,
+      description: task.description || '',
+      due_date: task.due_date || '',
+    });
+    setTaskEditRequestDialogOpen(true);
+  };
+
   const handleSubmitTaskEditRequest = async () => {
-    if (!clientId || !user || !taskEditForm.taskId || !taskEditForm.projectId || !taskEditForm.name.trim()) {
+    if (!clientId || !user || !taskEditRequestForm.taskId || !taskEditRequestForm.name.trim()) {
       toast.error('Preencha o nome da tarefa para solicitar a edição.');
       return;
     }
-
-    setTaskEditSubmitting(true);
-
+    setTaskEditRequestSubmitting(true);
     try {
-      const { error } = await supabase.from('edit_requests').insert([
-        {
-          entity_type: 'project',
-          entity_id: taskEditForm.projectId,
-          client_id: clientId,
-          requested_by: user.id,
-          original_data: {
-            task_id: taskEditForm.taskId,
-            task_name: taskEditForm.name,
-            task_description: taskEditForm.description || null,
-            task_due_date: taskEditForm.due_date || null,
-          },
-          proposed_data: {
-            request_type: 'edit_task',
-            task_id: taskEditForm.taskId,
-            task_name: taskEditForm.name.trim(),
-            task_description: getWysiwygPlainText(taskEditForm.description) ? taskEditForm.description : null,
-            task_due_date: taskEditForm.due_date || null,
-          },
+      const { error } = await supabase.from('edit_requests').insert([{
+        entity_type: 'project',
+        entity_id: taskEditRequestForm.projectId,
+        client_id: clientId,
+        requested_by: user.id,
+        original_data: {
+          task_id: taskEditRequestForm.taskId,
+          task_name: taskEditRequestForm.name,
+          task_description: taskEditRequestForm.description || null,
+          task_due_date: taskEditRequestForm.due_date || null,
         },
-      ]);
-
+        proposed_data: {
+          request_type: 'edit_task',
+          task_id: taskEditRequestForm.taskId,
+          task_name: taskEditRequestForm.name.trim(),
+          task_description: getWysiwygPlainText(taskEditRequestForm.description) ? taskEditRequestForm.description : null,
+          task_due_date: taskEditRequestForm.due_date || null,
+        },
+      }]);
       if (error) throw error;
-
       toast.success('Solicitação de edição da tarefa enviada para aprovação!');
-      setTaskEditDialogOpen(false);
-      setTaskEditForm({ taskId: '', projectId: '', name: '', description: '', due_date: '' });
+      setTaskEditRequestDialogOpen(false);
     } catch (error) {
       console.error('Error creating task edit request:', error);
       toast.error('Erro ao solicitar edição da tarefa');
     } finally {
-      setTaskEditSubmitting(false);
+      setTaskEditRequestSubmitting(false);
     }
+  };
+
+  // ---- Delete own task ----
+  const handleOpenTaskDelete = (task: ClientTask) => {
+    setTaskToDelete(task);
+    setTaskDeleteDialogOpen(true);
+  };
+
+  const handleConfirmTaskDelete = async () => {
+    if (!taskToDelete) return;
+    try {
+      const { error } = await supabase.from('tasks').delete().eq('id', taskToDelete.id);
+      if (error) throw error;
+      toast.success('Tarefa excluída com sucesso!');
+      setTaskDeleteDialogOpen(false);
+      setTaskToDelete(null);
+      refreshData();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast.error('Erro ao excluir tarefa.');
+    }
+  };
+
+  // ---- Timer handlers for own tasks ----
+  const handleStartTimer = async (taskId: string) => {
+    if (!user) return;
+    const task = data.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const project = data.projects.find((p) => p.id === task.project_id);
+    const client = project ? data.clients.find((c) => c.id === project.client_id) : null;
+
+    const { error } = await supabase.from('task_timers').insert({
+      task_id: taskId,
+      user_id: user.id,
+      task_title_snapshot: task.name,
+      task_description_snapshot: task.description,
+      project_name_snapshot: project?.name || null,
+      client_name_snapshot: client?.name || null,
+    });
+    if (error) {
+      console.error('Error starting timer:', error);
+      toast.error('Erro ao iniciar timer.');
+      return;
+    }
+    refreshData();
+  };
+
+  const handleStopTimer = async (taskId: string) => {
+    if (!user) return;
+    const timer = getCurrentUserActiveTimer(taskId);
+    if (!timer) return;
+    const startedAt = new Date(timer.started_at);
+    const now = new Date();
+    const elapsedMs = now.getTime() - startedAt.getTime() - (timer.paused_elapsed_seconds * 1000);
+    const hours = Math.max(0.01, parseFloat((elapsedMs / 3600000).toFixed(2)));
+
+    const { error: entryError } = await supabase.from('time_entries').insert({
+      task_id: taskId,
+      hours,
+      description: 'Registro automático via timer',
+      date: new Date().toISOString().split('T')[0],
+      created_by: user.id,
+      entry_type: 'timer',
+    });
+    if (entryError) {
+      console.error('Error creating time entry:', entryError);
+      toast.error('Erro ao registrar horas.');
+      return;
+    }
+
+    const { error: deleteError } = await supabase.from('task_timers').delete().eq('id', timer.id);
+    if (deleteError) console.error('Error deleting timer:', deleteError);
+
+    toast.success(`Timer parado. ${hours}h registradas.`);
+    refreshData();
+  };
+
+  const handleCompleteTask = async (taskId: string) => {
+    const { error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId);
+    if (error) {
+      console.error('Error completing task:', error);
+      toast.error('Erro ao concluir tarefa.');
+      return;
+    }
+    toast.success('Tarefa concluída!');
+    refreshData();
+  };
+
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    if (error) {
+      console.error('Error updating task status:', error);
+      toast.error('Erro ao atualizar status da tarefa.');
+      return;
+    }
+    refreshData();
+  };
+
+  const handleRegisterTime = (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string }) => {
+    // For now clients can use the same register time flow
+    // This could open a dialog for manual time entry
   };
 
   if (loading) {
@@ -469,6 +553,9 @@ export const ClientProjects: React.FC = () => {
       </div>
     );
   }
+
+  // Per-task permission helper
+  const isOwnTask = (task: ClientTask) => task.created_by === user?.id;
 
   return (
     <div className="space-y-4">
@@ -525,19 +612,33 @@ export const ClientProjects: React.FC = () => {
           onEditProject={(project) => openEditRequest(project as UnifiedProject)}
           onDeleteProject={() => {}}
           onArchiveProject={() => {}}
-          onCreateTask={handleOpenTaskRequestDialog}
-          onEditTask={() => {}}
-          onDeleteTask={() => {}}
-          onRegisterTime={() => {}}
-          onStartTimer={async () => {}}
-          onStopTimer={async () => {}}
-          onCompleteTask={async () => {}}
-          onRequestTaskEdit={handleOpenTaskEditDialog}
+          onCreateTask={handleOpenTaskCreate}
+          onEditTask={(task) => {
+            if (isOwnTask(task as ClientTask)) {
+              handleOpenTaskEdit(task as ClientTask);
+            }
+          }}
+          onDeleteTask={(task) => {
+            if (isOwnTask(task as ClientTask)) {
+              handleOpenTaskDelete(task as ClientTask);
+            }
+          }}
+          onRegisterTime={handleRegisterTime}
+          onStartTimer={(taskId) => handleStartTimer(taskId)}
+          onStopTimer={(taskId) => handleStopTimer(taskId)}
+          onCompleteTask={(taskId) => handleCompleteTask(taskId)}
+          onRequestTaskEdit={(task) => {
+            const t = task as ClientTask;
+            if (!isOwnTask(t)) {
+              handleOpenTaskEditRequest(t);
+            }
+          }}
           onEditRequest={(project) => openEditRequest(project as UnifiedProject)}
           onDeleteRequest={(project) => {
             setDeletingRequest(project as UnifiedProject);
             setIsDeleteRequestDialogOpen(true);
           }}
+          currentUserId={user?.id}
         />
       ) : (
         <ProjectKanbanView
@@ -553,38 +654,98 @@ export const ClientProjects: React.FC = () => {
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
           getActiveTimer={getCurrentUserActiveTimer}
-          onEditTask={() => {}}
-          onDeleteTask={() => {}}
-          onRegisterTime={() => {}}
-          onStartTimer={async () => {}}
-          onStopTimer={async () => {}}
-          onCompleteTask={async () => {}}
-          onUpdateTaskStatus={async () => {}}
-          onCreateTask={handleOpenTaskRequestDialog}
+          onEditTask={(task) => {
+            if (isOwnTask(task as ClientTask)) {
+              handleOpenTaskEdit(task as ClientTask);
+            }
+          }}
+          onDeleteTask={(task) => {
+            if (isOwnTask(task as ClientTask)) {
+              handleOpenTaskDelete(task as ClientTask);
+            }
+          }}
+          onRegisterTime={handleRegisterTime}
+          onStartTimer={(taskId) => handleStartTimer(taskId)}
+          onStopTimer={(taskId) => handleStopTimer(taskId)}
+          onCompleteTask={(taskId) => handleCompleteTask(taskId)}
+          onUpdateTaskStatus={(taskId, newStatus) => handleUpdateTaskStatus(taskId, newStatus)}
+          onCreateTask={handleOpenTaskCreate}
           onManageStages={() => {}}
-          clientRestrictedMode
-          onRequestTaskEdit={handleOpenTaskEditDialog}
+          currentUserId={user?.id}
+          onRequestTaskEdit={(task) => {
+            const t = task as ClientTask;
+            if (!isOwnTask(t)) {
+              handleOpenTaskEditRequest(t);
+            }
+          }}
         />
       )}
 
+      {/* Direct task creation dialog */}
+      <Dialog open={taskCreateDialogOpen} onOpenChange={setTaskCreateDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Nova Tarefa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              <Label htmlFor="task-create-name">Nome da tarefa</Label>
+              <Input
+                id="task-create-name"
+                value={taskCreateForm.name}
+                onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Criar arte para campanha"
+                disabled={taskCreateSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-create-description">Descrição</Label>
+              <WysiwygEditor
+                value={taskCreateForm.description}
+                onChange={(value) => setTaskCreateForm((prev) => ({ ...prev, description: value }))}
+                placeholder="Descreva o que precisa ser feito"
+                disabled={taskCreateSubmitting}
+                minHeight="120px"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-create-due-date">Prazo (opcional)</Label>
+              <Input
+                id="task-create-due-date"
+                type="date"
+                value={taskCreateForm.due_date}
+                onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, due_date: e.target.value }))}
+                disabled={taskCreateSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskCreateDialogOpen(false)} disabled={taskCreateSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitTaskCreate} disabled={taskCreateSubmitting || !taskCreateForm.name.trim()}>
+              {taskCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Criar Tarefa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
+      {/* Edit own task dialog */}
       <Dialog open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Solicitar Edição da Tarefa</DialogTitle>
+            <DialogTitle>Editar Tarefa</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="task-edit-name">Nome da tarefa</Label>
+              <Label>Nome da tarefa</Label>
               <Input
-                id="task-edit-name"
                 value={taskEditForm.name}
-                onChange={(event) => setTaskEditForm((prev) => ({ ...prev, name: event.target.value }))}
+                onChange={(e) => setTaskEditForm((prev) => ({ ...prev, name: e.target.value }))}
                 disabled={taskEditSubmitting}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="task-edit-description">Descrição</Label>
+              <Label>Descrição</Label>
               <WysiwygEditor
                 value={taskEditForm.description}
                 onChange={(value) => setTaskEditForm((prev) => ({ ...prev, description: value }))}
@@ -593,70 +754,84 @@ export const ClientProjects: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="task-edit-due-date">Prazo</Label>
+              <Label>Prazo</Label>
               <Input
-                id="task-edit-due-date"
                 type="date"
                 value={taskEditForm.due_date}
-                onChange={(event) => setTaskEditForm((prev) => ({ ...prev, due_date: event.target.value }))}
+                onChange={(e) => setTaskEditForm((prev) => ({ ...prev, due_date: e.target.value }))}
                 disabled={taskEditSubmitting}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskEditDialogOpen(false)} disabled={taskEditSubmitting}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmitTaskEditRequest} disabled={taskEditSubmitting}>
+            <Button variant="outline" onClick={() => setTaskEditDialogOpen(false)} disabled={taskEditSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitTaskEdit} disabled={taskEditSubmitting}>
               {taskEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request edit for admin tasks dialog */}
+      <Dialog open={taskEditRequestDialogOpen} onOpenChange={setTaskEditRequestDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Solicitar Edição da Tarefa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nome da tarefa</Label>
+              <Input
+                value={taskEditRequestForm.name}
+                onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, name: e.target.value }))}
+                disabled={taskEditRequestSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <WysiwygEditor
+                value={taskEditRequestForm.description}
+                onChange={(value) => setTaskEditRequestForm((prev) => ({ ...prev, description: value }))}
+                disabled={taskEditRequestSubmitting}
+                minHeight="120px"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Prazo</Label>
+              <Input
+                type="date"
+                value={taskEditRequestForm.due_date}
+                onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, due_date: e.target.value }))}
+                disabled={taskEditRequestSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskEditRequestDialogOpen(false)} disabled={taskEditRequestSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitTaskEditRequest} disabled={taskEditRequestSubmitting}>
+              {taskEditRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Enviar Solicitação
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label htmlFor="task-request-name">Nome da tarefa</Label>
-              <Input
-                id="task-request-name"
-                value={taskRequestForm.name}
-                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="Ex: Criar arte para campanha"
-                disabled={taskRequestSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-request-description">Descrição</Label>
-              <WysiwygEditor
-                value={taskRequestForm.description}
-                onChange={(value) => setTaskRequestForm((prev) => ({ ...prev, description: value }))}
-                placeholder="Descreva o que precisa ser feito"
-                disabled={taskRequestSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-request-due-date">Prazo (opcional)</Label>
-              <Input
-                id="task-request-due-date"
-                type="date"
-                value={taskRequestForm.due_date}
-                onChange={(event) => setTaskRequestForm((prev) => ({ ...prev, due_date: event.target.value }))}
-                disabled={taskRequestSubmitting}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>Enviar solicitação</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+      {/* Delete own task confirmation */}
+      <AlertDialog open={taskDeleteDialogOpen} onOpenChange={(open) => { setTaskDeleteDialogOpen(open); if (!open) setTaskToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove definitivamente a tarefa "{taskToDelete?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmTaskDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ProjectRequestForm
         open={isFormOpen}
@@ -675,9 +850,7 @@ export const ClientProjects: React.FC = () => {
             setEditFormOpen(open);
             if (!open) setEditEntity(null);
           }}
-          onSuccess={() => {
-            // Optionally refresh data
-          }}
+          onSuccess={() => {}}
         />
       )}
 

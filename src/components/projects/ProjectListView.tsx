@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProjectShareDialog } from "./ProjectShareDialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Pencil, Trash2, Plus, Users, MoreVertical, Archive, FilePenLine, Check, X } from "lucide-react";
@@ -111,6 +112,7 @@ interface ProjectListViewProps {
   kanbanStages: KanbanStage[];
   isAdminOrMaster: boolean;
   allowProjectEditOnly?: boolean;
+  currentUserId?: string;
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
@@ -151,6 +153,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   kanbanStages,
   isAdminOrMaster,
   allowProjectEditOnly = false,
+  currentUserId,
   getProjectHours,
   getTaskHours,
   getCreatorName,
@@ -179,9 +182,11 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, ProfileSummary>>({});
+  const [shareProjectId, setShareProjectId] = useState<string | null>(null);
   
 
   const isClientRestrictedMode = allowProjectEditOnly && !isAdminOrMaster;
+  const hasPerTaskPermissions = !!currentUserId && !isAdminOrMaster;
 
   const userIdsWithProjectAccess = useMemo(() => {
     const ids = new Set(projectAccess.map((a) => a.user_id));
@@ -489,10 +494,17 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                           )}
                         </div>
                         {projectCollaborators.length > 0 && (
-                          <div className="flex items-center -space-x-2 pt-1">
+                          <div
+                            className={`flex items-center -space-x-2 pt-1 ${isAdminOrMaster ? 'cursor-pointer hover:opacity-80' : ''}`}
+                            onClick={(e) => {
+                              if (isAdminOrMaster) {
+                                e.stopPropagation();
+                                setShareProjectId(project.id);
+                              }
+                            }}
+                          >
                             {projectCollaborators.map((userId) => {
                               const profile = profilesByUserId[userId];
-
                               return (
                                 <Avatar
                                   key={userId}
@@ -534,6 +546,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         const taskTimeEntries = timeEntries.filter((te) => te.task_id === task.id);
                         const activeTimer = getActiveTimer(task.id);
                         const isPendingApprovalTask = Boolean(task.is_pending_approval);
+                        const isOwnTask = currentUserId ? task.created_by === currentUserId : true;
 
                         return (
                           <TaskCard
@@ -546,17 +559,21 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             getCreatorName={getCreatorName}
                             onEditTask={() => !isPendingApprovalTask && onEditTask(task)}
                             onDeleteTask={() => !isPendingApprovalTask && onDeleteTask(task)}
-                            onRequestEdit={!isPendingApprovalTask && isClientRestrictedMode && onRequestTaskEdit ? () => onRequestTaskEdit(task) : undefined}
+                            onRequestEdit={
+                              !isPendingApprovalTask && !isOwnTask && onRequestTaskEdit
+                                ? () => onRequestTaskEdit(task)
+                                : undefined
+                            }
                             onRegisterTime={onRegisterTime}
                             onStartTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStartTimer(task.id))}
                             onStopTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStopTimer(task.id))}
                             onCompleteTask={() => (isPendingApprovalTask ? Promise.resolve() : onCompleteTask(task.id))}
                             showStatus={true}
-                            showTimeControls={!isClientRestrictedMode}
-                            allowTaskEdit={!isPendingApprovalTask && !isClientRestrictedMode}
-                            allowTaskDelete={!isPendingApprovalTask && !isClientRestrictedMode}
-                            showRegisterTimeButton={!isPendingApprovalTask && !isClientRestrictedMode}
-                            allowTimeEntryEdit={!isPendingApprovalTask && !isClientRestrictedMode}
+                            showTimeControls={hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode}
+                            allowTaskEdit={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
+                            allowTaskDelete={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
+                            showRegisterTimeButton={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
+                            allowTimeEntryEdit={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
                             onPendingApprovalClick={isPendingApprovalTask ? () => onPendingTaskClick?.(task) : undefined}
                           />
                         );
@@ -570,6 +587,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           </Card>
         );
       })}
+
+      {shareProjectId && (
+        <ProjectShareDialog
+          projectId={shareProjectId}
+          projectOwnerId={projects.find((p) => p.id === shareProjectId)?.owner_id}
+          isOpen={!!shareProjectId}
+          onClose={() => setShareProjectId(null)}
+          isAdminOrMaster={isAdminOrMaster}
+        />
+      )}
     </div>
   );
 };
