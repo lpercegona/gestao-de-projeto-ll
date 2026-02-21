@@ -85,6 +85,9 @@ export const ClientProjects: React.FC = () => {
     description: '',
     due_date: '',
   });
+  const [projectTasks, setProjectTasks] = useState<Array<{ name: string; description: string; due_date: string }>>([]);
+  const [projectTaskDialogOpen, setProjectTaskDialogOpen] = useState(false);
+  const [projectTaskForm, setProjectTaskForm] = useState({ name: '', description: '', due_date: '' });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
@@ -307,8 +310,21 @@ export const ClientProjects: React.FC = () => {
 
   const handleOpenDirectProjectDialog = () => {
     setProjectCreateForm({ name: '', description: '', due_date: '' });
+    setProjectTasks([]);
+    setProjectTaskForm({ name: '', description: '', due_date: '' });
     setIsAddProjectOptionDialogOpen(false);
     setIsDirectProjectDialogOpen(true);
+  };
+
+  const handleAddProjectTask = () => {
+    if (!projectTaskForm.name.trim()) return;
+    setProjectTasks((prev) => [...prev, { ...projectTaskForm, name: projectTaskForm.name.trim() }]);
+    setProjectTaskForm({ name: '', description: '', due_date: '' });
+    setProjectTaskDialogOpen(false);
+  };
+
+  const handleRemoveProjectTask = (index: number) => {
+    setProjectTasks((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   };
 
   const handleSubmitDirectProject = async () => {
@@ -324,14 +340,25 @@ export const ClientProjects: React.FC = () => {
 
     setProjectCreateSubmitting(true);
     try {
-      const newProject = await createProject({
-        name: projectCreateForm.name.trim(),
-        description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
-        client_id: clientId,
-        status: 'active',
-        due_date: projectCreateForm.due_date || null,
-        custom_fields: {},
+      const { data: newProject, error } = await supabase.rpc('create_client_owned_project', {
+        p_client_id: clientId,
+        p_name: projectCreateForm.name.trim(),
+        p_description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
+        p_due_date: projectCreateForm.due_date || null,
+        p_custom_fields: {},
+        p_tasks: projectTasks.map((task) => ({
+          name: task.name,
+          description: getWysiwygPlainText(task.description) ? task.description : null,
+          due_date: task.due_date || null,
+          status: 'pending',
+        })),
       });
+
+      if (error) {
+        console.error('Error creating direct project:', error);
+        toast.error('Erro ao criar projeto.');
+        return;
+      }
 
       if (!newProject) {
         toast.error('Erro ao criar projeto.');
@@ -794,6 +821,39 @@ export const ClientProjects: React.FC = () => {
                 disabled={projectCreateSubmitting}
               />
             </div>
+
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
+                  <p className="text-xs text-muted-foreground">Adicione tarefas iniciais para este projeto proprietário.</p>
+                </div>
+                <Button type="button" size="sm" variant="outline" onClick={() => setProjectTaskDialogOpen(true)} disabled={projectCreateSubmitting}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova tarefa
+                </Button>
+              </div>
+
+              {projectTasks.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhuma tarefa adicionada.</p>
+              ) : (
+                <div className="space-y-2">
+                  {projectTasks.map((task, index) => (
+                    <div key={`${task.name}-${index}`} className="rounded-md border border-border p-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{task.name}</p>
+                          <p className="text-xs text-muted-foreground">Prazo: {task.due_date || 'Não informado'}</p>
+                        </div>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => handleRemoveProjectTask(index)} disabled={projectCreateSubmitting}>
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDirectProjectDialogOpen(false)} disabled={projectCreateSubmitting}>
@@ -803,6 +863,49 @@ export const ClientProjects: React.FC = () => {
               {projectCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Criar Projeto
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={projectTaskDialogOpen} onOpenChange={setProjectTaskDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nova tarefa do projeto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="project-task-name">Nome da tarefa</Label>
+              <Input
+                id="project-task-name"
+                value={projectTaskForm.name}
+                onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Definir cronograma"
+                disabled={projectCreateSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-task-description">Descrição</Label>
+              <WysiwygEditor
+                value={projectTaskForm.description}
+                onChange={(value) => setProjectTaskForm((prev) => ({ ...prev, description: value }))}
+                disabled={projectCreateSubmitting}
+                minHeight="120px"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-task-due-date">Prazo (opcional)</Label>
+              <Input
+                id="project-task-due-date"
+                type="date"
+                value={projectTaskForm.due_date}
+                onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, due_date: e.target.value }))}
+                disabled={projectCreateSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProjectTaskDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button>
+            <Button onClick={handleAddProjectTask} disabled={projectCreateSubmitting || !projectTaskForm.name.trim()}>Adicionar tarefa</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
