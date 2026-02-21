@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,10 @@ interface ProjectShareDialogProps {
   isAdminOrMaster: boolean;
 }
 
+type Member = ProfileSummary & {
+  accessId: string;
+};
+
 export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   projectId,
   projectOwnerId,
@@ -29,13 +33,28 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   onClose,
   isAdminOrMaster,
 }) => {
-  const [members, setMembers] = useState<(ProfileSummary & { accessId: string })[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const fetchMembers = async () => {
+  const getMemberName = (member: Pick<Member, "full_name" | "email">) => {
+    const fullName = member.full_name?.trim();
+    if (fullName) return fullName;
+
+    const safeEmail = member.email?.trim();
+    if (safeEmail) return "Usuário sem perfil";
+
+    return "Usuário";
+  };
+
+  const getMemberEmail = (member: Pick<Member, "email">) => {
+    const safeEmail = member.email?.trim();
+    return safeEmail || "Email indisponível";
+  };
+
+  const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
       const { data: accessData, error: accessError } = await supabase
@@ -45,46 +64,70 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
 
       if (accessError) throw accessError;
 
-      const userIds = (accessData || []).map((a) => a.user_id);
-      if (projectOwnerId && !userIds.includes(projectOwnerId)) {
-        userIds.push(projectOwnerId);
+      const accessByUserId: Record<string, string> = {};
+      (accessData || []).forEach((entry) => {
+        accessByUserId[entry.user_id] = entry.id;
+      });
+
+      const userIds = new Set((accessData || []).map((a) => a.user_id));
+      if (projectOwnerId) {
+        userIds.add(projectOwnerId);
       }
 
-      if (userIds.length === 0) {
+      if (userIds.size === 0) {
         setMembers([]);
         setLoading(false);
         return;
       }
 
+      const userIdList = Array.from(userIds);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("user_id, full_name, email, avatar_url")
-        .in("user_id", userIds);
+        .in("user_id", userIdList);
 
       if (profilesError) throw profilesError;
 
-      const membersList = (profiles || []).map((profile) => {
-        const access = (accessData || []).find((a) => a.user_id === profile.user_id);
+      const profilesByUserId: Record<string, ProfileSummary> = {};
+      (profiles || []).forEach((profile) => {
+        profilesByUserId[profile.user_id] = profile;
+      });
+
+      const membersList: Member[] = userIdList.map((userId) => {
+        const profile = profilesByUserId[userId];
         return {
-          ...profile,
-          accessId: access?.id || "",
+          user_id: userId,
+          full_name: profile?.full_name || null,
+          email: profile?.email || null,
+          avatar_url: profile?.avatar_url || null,
+          accessId: accessByUserId[userId] || "",
         };
       });
 
-      setMembers(membersList);
+      const sortedMembers = membersList.sort((a, b) => {
+        const aIsOwner = a.user_id === projectOwnerId;
+        const bIsOwner = b.user_id === projectOwnerId;
+
+        if (aIsOwner && !bIsOwner) return -1;
+        if (!aIsOwner && bIsOwner) return 1;
+
+        return getMemberName(a).localeCompare(getMemberName(b), "pt-BR", { sensitivity: "base" });
+      });
+
+      setMembers(sortedMembers);
     } catch (error) {
       console.error("Erro ao buscar membros do projeto:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId, projectOwnerId]);
 
   useEffect(() => {
     if (isOpen) {
       fetchMembers();
       setEmail("");
     }
-  }, [isOpen, projectId]);
+  }, [fetchMembers, isOpen]);
 
   const handleAdd = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -121,14 +164,12 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
         return;
       }
 
-      const { error: insertError } = await supabase
-        .from("user_project_access")
-        .insert({
-          project_id: projectId,
-          user_id: profileData.user_id,
-          granted_by: grantedBy,
-          can_edit: true,
-        });
+      const { error: insertError } = await supabase.from("user_project_access").insert({
+        project_id: projectId,
+        user_id: profileData.user_id,
+        granted_by: grantedBy,
+        can_edit: true,
+      });
 
       if (insertError) throw insertError;
 
@@ -143,7 +184,7 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
     }
   };
 
-  const handleRemove = async (member: (typeof members)[0]) => {
+  const handleRemove = async (member: Member) => {
     if (member.user_id === projectOwnerId) {
       toast.error("Não é possível remover o proprietário do projeto.");
       return;
@@ -156,14 +197,11 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
 
     setRemovingId(member.accessId);
     try {
-      const { error } = await supabase
-        .from("user_project_access")
-        .delete()
-        .eq("id", member.accessId);
+      const { error } = await supabase.from("user_project_access").delete().eq("id", member.accessId);
 
       if (error) throw error;
 
-      toast.success(`${member.full_name || member.email} removido do projeto.`);
+      toast.success(`${member.full_name || member.email || "Usuário"} removido do projeto.`);
       await fetchMembers();
     } catch (error) {
       console.error("Erro ao remover membro:", error);
@@ -173,9 +211,10 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
     }
   };
 
-  const getInitial = (profile: ProfileSummary) => {
-    if (profile.full_name?.trim()) return profile.full_name.trim()[0].toUpperCase();
-    if (profile.email?.trim()) return profile.email.trim()[0].toUpperCase();
+  const getInitial = (member: Member) => {
+    if (member.full_name?.trim()) return member.full_name.trim()[0].toUpperCase();
+    if (member.email?.trim()) return member.email.trim()[0].toUpperCase();
+    if (member.user_id.trim()) return member.user_id.trim()[0].toUpperCase();
     return "?";
   };
 
@@ -219,18 +258,14 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={member.avatar_url?.trim() || undefined} />
-                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                        {getInitial(member)}
-                      </AvatarFallback>
+                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">{getInitial(member)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate text-foreground">
-                        {member.full_name || member.email}
+                        {getMemberName(member)}
                         {isOwner && <span className="text-muted-foreground ml-1">(proprietário)</span>}
                       </p>
-                      {member.full_name && (
-                        <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                      )}
+                      <p className="text-xs text-muted-foreground truncate">{getMemberEmail(member)}</p>
                     </div>
                   </div>
                   {isAdminOrMaster && !isOwner && member.accessId && (
