@@ -71,12 +71,20 @@ type ClientTask = {
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
-  const { data, refreshData, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
+  const { data, refreshData, createProject, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [pendingTaskRequests, setPendingTaskRequests] = useState<PendingTaskRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isAddProjectOptionDialogOpen, setIsAddProjectOptionDialogOpen] = useState(false);
+  const [isDirectProjectDialogOpen, setIsDirectProjectDialogOpen] = useState(false);
+  const [projectCreateSubmitting, setProjectCreateSubmitting] = useState(false);
+  const [projectCreateForm, setProjectCreateForm] = useState({
+    name: '',
+    description: '',
+    due_date: '',
+  });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
@@ -286,6 +294,59 @@ export const ClientProjects: React.FC = () => {
     }
     setRequests((prev) => [newRequest as ProjectRequest, ...prev]);
     toast.success('Solicitação enviada com sucesso!');
+  };
+
+  const handleOpenAddProjectOptions = () => {
+    setIsAddProjectOptionDialogOpen(true);
+  };
+
+  const handleOpenProjectRequestDialog = () => {
+    setIsAddProjectOptionDialogOpen(false);
+    setIsFormOpen(true);
+  };
+
+  const handleOpenDirectProjectDialog = () => {
+    setProjectCreateForm({ name: '', description: '', due_date: '' });
+    setIsAddProjectOptionDialogOpen(false);
+    setIsDirectProjectDialogOpen(true);
+  };
+
+  const handleSubmitDirectProject = async () => {
+    if (!clientId) {
+      toast.error('Cliente não encontrado para criar o projeto.');
+      return;
+    }
+
+    if (!projectCreateForm.name.trim()) {
+      toast.error('Preencha o nome do projeto.');
+      return;
+    }
+
+    setProjectCreateSubmitting(true);
+    try {
+      const newProject = await createProject({
+        name: projectCreateForm.name.trim(),
+        description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
+        client_id: clientId,
+        status: 'active',
+        due_date: projectCreateForm.due_date || null,
+        custom_fields: {},
+      });
+
+      if (!newProject) {
+        toast.error('Erro ao criar projeto.');
+        return;
+      }
+
+      toast.success('Projeto criado com sucesso!');
+      setIsDirectProjectDialogOpen(false);
+      refreshData();
+    } catch (error) {
+      console.error('Error creating direct project:', error);
+      toast.error('Erro ao criar projeto.');
+    } finally {
+      setProjectCreateSubmitting(false);
+    }
   };
 
   const openEditRequest = (project: UnifiedProject) => {
@@ -574,7 +635,7 @@ export const ClientProjects: React.FC = () => {
         onShowOnlyRequestsChange={() => {}}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onAddProject={() => setIsFormOpen(true)}
+        onAddProject={handleOpenAddProjectOptions}
         isAdminOrMaster={false}
         showClientFilter={false}
         showRequestsFilter={false}
@@ -587,7 +648,7 @@ export const ClientProjects: React.FC = () => {
           <CardContent className="py-12 text-center">
             <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-4">Nenhum projeto encontrado para os filtros selecionados.</p>
-            <Button onClick={() => setIsFormOpen(true)} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+            <Button onClick={handleOpenAddProjectOptions} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </CardContent>
@@ -680,6 +741,71 @@ export const ClientProjects: React.FC = () => {
           }}
         />
       )}
+
+      <Dialog open={isAddProjectOptionDialogOpen} onOpenChange={setIsAddProjectOptionDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Como você deseja criar o projeto?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Button variant="outline" className="w-full justify-start" onClick={handleOpenProjectRequestDialog}>
+              Solicitar novo projeto
+            </Button>
+            <Button className="w-full justify-start" onClick={handleOpenDirectProjectDialog}>
+              Adicionar novo projeto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDirectProjectDialogOpen} onOpenChange={setIsDirectProjectDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Projeto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              <Label htmlFor="project-create-name">Nome do projeto</Label>
+              <Input
+                id="project-create-name"
+                value={projectCreateForm.name}
+                onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Campanha de lançamento"
+                disabled={projectCreateSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-create-description">Descrição</Label>
+              <WysiwygEditor
+                value={projectCreateForm.description}
+                onChange={(value) => setProjectCreateForm((prev) => ({ ...prev, description: value }))}
+                placeholder="Descreva os objetivos do projeto"
+                disabled={projectCreateSubmitting}
+                minHeight="120px"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-create-due-date">Prazo (opcional)</Label>
+              <Input
+                id="project-create-due-date"
+                type="date"
+                value={projectCreateForm.due_date}
+                onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, due_date: e.target.value }))}
+                disabled={projectCreateSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDirectProjectDialogOpen(false)} disabled={projectCreateSubmitting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmitDirectProject} disabled={projectCreateSubmitting || !projectCreateForm.name.trim()}>
+              {projectCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Criar Projeto
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Direct task creation dialog */}
       <Dialog open={taskCreateDialogOpen} onOpenChange={setTaskCreateDialogOpen}>
