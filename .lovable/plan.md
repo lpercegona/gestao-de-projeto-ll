@@ -1,64 +1,131 @@
+# Correcao de Build + Nova Visualizacao em Tabela + Ajustes de UI
 
+## 1. Corrigir erro de build: `create_client_owned_project`
 
-# Corrigir Visibilidade de Avatares nos Projetos
+O erro ocorre porque a funcao RPC `create_client_owned_project` existe no banco mas nao esta refletida no arquivo auto-gerado `types.ts`. O Supabase gera os tipos automaticamente, mas pode haver delay.
 
-## Problema
+**Solucao**: Substituir a chamada `supabase.rpc('create_client_owned_project', ...)` por inserts diretos nas tabelas `projects` e `tasks` (mesmo padrao ja usado no `handleSubmitTaskCreate`). Isso elimina a dependencia do RPC e resolve o erro de tipagem.
 
-As politicas RLS da tabela `profiles` restringem a visibilidade de perfis por papel:
-- Admin so ve perfis onde `owner_id = auth.uid()` -- nao ve perfis de outros admins ou usuarios nao criados por ele
-- Cliente ve perfis via `user_project_access`, mas o owner do projeto pode nao estar nessa tabela
-- Resultado: avatares incompletos para todos os papeis
+## 2. View toggle: exibir texto apenas no modo selecionado
 
-## Solucao
+No `ProjectFilters.tsx`, os botoes "Lista" e "Kanban" sempre mostram texto. Adicionar uma terceira opcao "Tabela" e ajustar para que o texto apareca apenas no item ativo (os inativos mostram apenas icone).
 
-Adicionar uma politica RLS na tabela `profiles` que permita qualquer usuario autenticado visualizar perfis de pessoas que compartilham o mesmo projeto (via `user_project_access`, `owner_id` ou `created_by` do projeto).
+## 3. Nova visualizacao em formato de tabela
+
+Criar o componente `ProjectTableView.tsx` com o formato solicitado:
+
+- Cada projeto aparece como uma linha-cabecalho com accordion
+- Ao expandir, mostra as tarefas do projeto em linhas filhas
+- Formato de cada linha (projeto e tarefa):
+
+```text
+[Checkbox] [Titulo] [Data prazo] [Menu ...]
+```
+
+### Checkbox
+
+- Para **projetos**: alterna entre status (active/paused/completed/archived)
+- Para **tarefas**: alterna entre as etapas kanban definidas (Pendente -> Em Andamento -> Concluida) refletindo novas etapas personalizadas se criado através do kanban.
+- Checkbox marcado = status final (completed/Concluida)
+- Checkbox intermediario (indeterminate) = em andamento
+
+### Clique no titulo
+
+- Abre um `Dialog` com todas as informacoes do projeto ou tarefa (nome, descricao, status, prazo, horas, responsavel, registros de horas)
+
+### Menu de acoes (icone ...)
+
+- Para admins: Editar / Arquivar / Excluir / 
+- Para clientes: Solicitar Alteracao (em tarefas do admin), Editar/Excluir (em tarefas proprias)
 
 ## Secao Tecnica
 
-### Migracao SQL
-
-Nova politica RLS na tabela `profiles`:
+### Arquivos novos
 
 ```text
-"Users can view profiles of shared project members"
-  - SELECT
-  - Permite ver perfis de usuarios que:
-    1. Estao em user_project_access do mesmo projeto que o usuario logado
-    2. Sao owner_id ou created_by de um projeto ao qual o usuario logado tem acesso
-    3. O usuario logado e owner_id/created_by de um projeto onde o perfil alvo tem acesso
-
-A politica usa uma subquery que cruza projetos compartilhados entre
-auth.uid() e profiles.user_id, considerando tanto user_project_access
-quanto os campos owner_id e created_by dos projetos.
-```
-
-Logica SQL da politica:
-
-```text
-CREATE POLICY "Users can view profiles of shared project members"
-ON profiles FOR SELECT
-USING (
-  EXISTS (
-    -- Projetos que o usuario logado pode acessar
-    SELECT 1 FROM projects p
-    WHERE (
-      -- usuario logado tem acesso via user_project_access, ou e owner/created_by
-      p.owner_id = auth.uid()
-      OR p.created_by = auth.uid()
-      OR EXISTS (SELECT 1 FROM user_project_access upa WHERE upa.project_id = p.id AND upa.user_id = auth.uid())
-      OR p.client_id = get_user_client_id(auth.uid())
-    )
-    AND (
-      -- o perfil alvo tambem tem acesso ao mesmo projeto
-      p.owner_id = profiles.user_id
-      OR p.created_by = profiles.user_id
-      OR EXISTS (SELECT 1 FROM user_project_access upa2 WHERE upa2.project_id = p.id AND upa2.user_id = profiles.user_id)
-    )
-  )
-);
+src/components/projects/ProjectTableView.tsx
+  - Props: mesmas do ProjectListView (reutiliza interfaces)
+  - Renderiza tabela com linhas de projeto (accordion) e linhas de tarefa
+  - Checkbox com logica de status/etapa
+  - Dialog de detalhes ao clicar no titulo
+  - Menu de acoes contextual por linha
 ```
 
 ### Arquivos modificados
 
-Nenhuma mudanca em codigo frontend -- o componente `ProjectKanbanView.tsx` ja busca perfis corretamente via `supabase.from("profiles").select(...)`. O problema e exclusivamente de RLS impedindo a leitura dos perfis.
+```text
+1. src/pages/ClientProjects.tsx
+   - Corrigir handleSubmitDirectProject: substituir supabase.rpc()
+     por supabase.from('projects').insert() + supabase.from('tasks').insert()
+   - Adicionar viewMode 'table' ao estado (type: 'list' | 'kanban' | 'table')
+   - Renderizar ProjectTableView quando viewMode === 'table'
 
+2. src/pages/Projects.tsx
+   - Adicionar viewMode 'table' ao estado
+   - Renderizar ProjectTableView quando viewMode === 'table'
+
+3. src/components/projects/ProjectFilters.tsx
+   - Adicionar terceiro item no ToggleGroup: "Tabela" com icone ClipboardList
+   - Alterar tipo do viewMode de "list" | "kanban" para "list" | "kanban" | "table"
+   - Mostrar texto ("Lista", "Kanban", "Tabela") apenas no item ativo;
+     itens inativos mostram apenas icone
+
+4. src/components/projects/ProjectListView.tsx
+   - Nenhuma mudanca (ja funciona como esta)
+
+5. src/components/projects/ProjectKanbanView.tsx
+   - Nenhuma mudanca (ja funciona como esta)
+```
+
+### Estrutura do ProjectTableView
+
+```text
+<div>
+  {projects.map(project => (
+    <Collapsible>
+      <div className="flex items-center gap-3 py-2 px-3 border-b">
+        <Checkbox
+          checked={project.status === 'completed'}
+          indeterminate={project.status === 'active' || project.status === 'paused'}
+          onCheckedChange -> cicla status
+        />
+        <span onClick={openProjectDetailDialog} className="cursor-pointer flex-1 truncate font-medium">
+          {project.name}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {project.due_date ? format(...) : ''}
+        </span>
+        <CollapsibleTrigger> <ChevronDown /> </CollapsibleTrigger>
+        <DropdownMenu> ... acoes </DropdownMenu>
+      </div>
+      <CollapsibleContent>
+        {projectTasks.map(task => (
+          <div className="flex items-center gap-3 py-1.5 px-3 pl-10 border-b bg-muted/30">
+            <Checkbox
+              checked={task.status === 'completed'}
+              onCheckedChange -> cicla etapas kanban
+            />
+            <span onClick={openTaskDetailDialog} className="cursor-pointer flex-1 truncate text-sm">
+              {task.name}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {task.due_date ? format(...) : ''}
+            </span>
+            <DropdownMenu> ... acoes </DropdownMenu>
+          </div>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  ))}
+</div>
+```
+
+### Dialog de detalhes (ao clicar no titulo)
+
+Reutiliza informacoes ja disponiveis nas props:
+
+- Nome, descricao (renderizada com ExpandableDescription), status, prazo
+- Horas registradas (via getProjectHours/getTaskHours)
+- Responsavel (via getCreatorName)
+- Campos customizados do projeto (custom_fields + projectColumns)
+- Para tarefas: lista de registros de horas (timeEntries)
