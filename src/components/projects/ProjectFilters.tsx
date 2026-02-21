@@ -6,7 +6,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Filter, LayoutList, Columns3, Plus, X, CalendarIcon } from "lucide-react";
+import { Filter, LayoutList, Columns3, ClipboardList, Plus, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -38,8 +38,8 @@ interface ProjectFiltersProps {
   pendingRequestsCount: number;
   showOnlyRequests: boolean;
   onShowOnlyRequestsChange: (value: boolean) => void;
-  viewMode: "list" | "kanban";
-  onViewModeChange: (mode: "list" | "kanban") => void;
+  viewMode: "list" | "kanban" | "table";
+  onViewModeChange: (mode: "list" | "kanban" | "table") => void;
   onAddProject: () => void;
   isAdminOrMaster: boolean;
   showClientFilter?: boolean;
@@ -292,16 +292,20 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
           <ToggleGroup
             type="single"
             value={viewMode}
-            onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban")}
+            onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban" | "table")}
             className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
           >
             <ToggleGroupItem value="list" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
-              <LayoutList className="w-3.5 h-3.5 mr-1.5" />
-              Lista
+              <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
+              {viewMode === "list" && "Lista"}
             </ToggleGroupItem>
             <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" variant="tab" size="tb" className={cn("")}>
-              <Columns3 className="w-3.5 h-3.5 mr-1.5" />
-              Kanban
+              <Columns3 className={cn("w-3.5 h-3.5", viewMode === "kanban" && "mr-1.5")} />
+              {viewMode === "kanban" && "Kanban"}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Visualização em tabela" variant="tab" size="tb" className={cn("")}>
+              <ClipboardList className={cn("w-3.5 h-3.5", viewMode === "table" && "mr-1.5")} />
+              {viewMode === "table" && "Tabela"}
             </ToggleGroupItem>
           </ToggleGroup>
         )}

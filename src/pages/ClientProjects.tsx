@@ -13,6 +13,7 @@ import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
+import { ProjectTableView } from '@/components/projects/ProjectTableView';
 import { Plus, FolderKanban, Loader2 } from 'lucide-react';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { toast } from 'sonner';
@@ -88,7 +89,7 @@ export const ClientProjects: React.FC = () => {
   const [projectTasks, setProjectTasks] = useState<Array<{ name: string; description: string; due_date: string }>>([]);
   const [projectTaskDialogOpen, setProjectTaskDialogOpen] = useState(false);
   const [projectTaskForm, setProjectTaskForm] = useState({ name: '', description: '', due_date: '' });
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'table'>('list');
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -340,29 +341,39 @@ export const ClientProjects: React.FC = () => {
 
     setProjectCreateSubmitting(true);
     try {
-      const { data: newProject, error } = await supabase.rpc('create_client_owned_project', {
-        p_client_id: clientId,
-        p_name: projectCreateForm.name.trim(),
-        p_description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
-        p_due_date: projectCreateForm.due_date || null,
-        p_custom_fields: {},
-        p_tasks: projectTasks.map((task) => ({
-          name: task.name,
-          description: getWysiwygPlainText(task.description) ? task.description : null,
-          due_date: task.due_date || null,
-          status: 'pending',
-        })),
-      });
+      const { data: newProject, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          client_id: clientId,
+          name: projectCreateForm.name.trim(),
+          description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
+          due_date: projectCreateForm.due_date || null,
+          custom_fields: {},
+          created_by: user?.id || null,
+        })
+        .select('id')
+        .single();
 
-      if (error) {
-        console.error('Error creating direct project:', error);
+      if (projectError || !newProject) {
+        console.error('Error creating direct project:', projectError);
         toast.error('Erro ao criar projeto.');
         return;
       }
 
-      if (!newProject) {
-        toast.error('Erro ao criar projeto.');
-        return;
+      if (projectTasks.length > 0) {
+        const tasksToInsert = projectTasks.map((task) => ({
+          project_id: newProject.id,
+          name: task.name,
+          description: getWysiwygPlainText(task.description) ? task.description : null,
+          due_date: task.due_date || null,
+          status: 'pending',
+          created_by: user?.id || null,
+        }));
+        const { error: tasksError } = await supabase.from('tasks').insert(tasksToInsert);
+        if (tasksError) {
+          console.error('Error creating tasks:', tasksError);
+          toast.error('Projeto criado, mas houve erro ao criar tarefas.');
+        }
       }
 
       toast.success('Projeto criado com sucesso!');
@@ -727,6 +738,46 @@ export const ClientProjects: React.FC = () => {
             setIsDeleteRequestDialogOpen(true);
           }}
           currentUserId={user?.id}
+        />
+      ) : viewMode === 'table' ? (
+        <ProjectTableView
+          projects={filteredProjects}
+          clients={data.clients}
+          tasks={tasksWithPendingRequests}
+          timeEntries={data.timeEntries}
+          projectColumns={data.projectColumns}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={false}
+          allowProjectEditOnly
+          currentUserId={user?.id}
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getClientColumns={getClientColumns}
+          onEditProject={(project) => openEditRequest(project as UnifiedProject)}
+          onDeleteProject={() => {}}
+          onArchiveProject={() => {}}
+          onEditTask={(task) => {
+            if (isOwnTask(task as ClientTask)) {
+              handleOpenTaskEdit(task as ClientTask);
+            }
+          }}
+          onDeleteTask={(task) => {
+            if (isOwnTask(task as ClientTask)) {
+              handleOpenTaskDelete(task as ClientTask);
+            }
+          }}
+          onRequestTaskEdit={(task) => {
+            const t = task as ClientTask;
+            if (!isOwnTask(t)) {
+              handleOpenTaskEditRequest(t);
+            }
+          }}
+          onEditRequest={(project) => openEditRequest(project as UnifiedProject)}
+          onDeleteRequest={(project) => {
+            setDeletingRequest(project as UnifiedProject);
+            setIsDeleteRequestDialogOpen(true);
+          }}
         />
       ) : (
         <ProjectKanbanView
