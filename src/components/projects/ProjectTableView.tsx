@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -106,6 +106,38 @@ interface ProjectTableViewProps {
 
 const PROJECT_STATUSES = ['active', 'paused', 'completed', 'archived'];
 
+// Convert tailwind bg class to hex color for inline styles
+const tailwindColorToHex = (color: string | null): string | null => {
+  if (!color) return null;
+  const map: Record<string, string> = {
+    'bg-yellow-500': '#eab308', 'bg-yellow-400': '#facc15',
+    'bg-orange-500': '#f97316', 'bg-orange-400': '#fb923c',
+    'bg-green-500': '#22c55e', 'bg-green-400': '#4ade80',
+    'bg-blue-500': '#3b82f6', 'bg-blue-400': '#60a5fa',
+    'bg-red-500': '#ef4444', 'bg-red-400': '#f87171',
+    'bg-purple-500': '#a855f7', 'bg-purple-400': '#c084fc',
+    'bg-pink-500': '#ec4899', 'bg-pink-400': '#f472b6',
+    'bg-indigo-500': '#6366f1', 'bg-indigo-400': '#818cf8',
+    'bg-teal-500': '#14b8a6', 'bg-teal-400': '#2dd4bf',
+    'bg-cyan-500': '#06b6d4', 'bg-cyan-400': '#22d3ee',
+    'bg-emerald-500': '#10b981', 'bg-emerald-400': '#34d399',
+    'bg-lime-500': '#84cc16', 'bg-lime-400': '#a3e635',
+    'bg-amber-500': '#f59e0b', 'bg-amber-400': '#fbbf24',
+    'bg-rose-500': '#f43f5e', 'bg-rose-400': '#fb7185',
+    'bg-slate-500': '#64748b', 'bg-slate-400': '#94a3b8',
+    'bg-gray-500': '#6b7280', 'bg-gray-400': '#9ca3af',
+    'bg-muted': '#6b7280',
+  };
+  return map[color] || null;
+};
+
+const PROJECT_STATUS_COLORS: Record<string, string> = {
+  active: '#eab308',
+  paused: '#f97316',
+  completed: '#22c55e',
+  archived: '#94a3b8',
+};
+
 export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   projects,
   clients,
@@ -132,6 +164,23 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [detailDialog, setDetailDialog] = useState<{ type: 'project' | 'task'; data: Project | Task } | null>(null);
 
+  // Local state for instant UI updates
+  const [localProjectStatuses, setLocalProjectStatuses] = useState<Record<string, string>>({});
+  const [localTaskStatuses, setLocalTaskStatuses] = useState<Record<string, string>>({});
+
+  // Sync local state when props change
+  useEffect(() => {
+    const ps: Record<string, string> = {};
+    projects.forEach(p => { ps[p.id] = p.status; });
+    setLocalProjectStatuses(ps);
+  }, [projects]);
+
+  useEffect(() => {
+    const ts: Record<string, string> = {};
+    tasks.forEach(t => { ts[t.id] = t.status; });
+    setLocalTaskStatuses(ts);
+  }, [tasks]);
+
   const sortedStages = useMemo(() => {
     return [...kanbanStages].sort((a, b) => a.order_position - b.order_position);
   }, [kanbanStages]);
@@ -157,17 +206,21 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     return sortedStages[next].name;
   };
 
-  const handleProjectStatusChange = async (project: Project) => {
+  const handleProjectStatusChange = useCallback(async (project: Project) => {
     if (project.is_request) return;
-    const next = getNextProjectStatus(project.status);
+    const currentStatus = localProjectStatuses[project.id] || project.status;
+    const next = getNextProjectStatus(currentStatus);
+    setLocalProjectStatuses(prev => ({ ...prev, [project.id]: next }));
     await supabase.from('projects').update({ status: next }).eq('id', project.id);
-  };
+  }, [localProjectStatuses]);
 
-  const handleTaskStatusChange = async (task: Task) => {
+  const handleTaskStatusChange = useCallback(async (task: Task) => {
     if (task.is_pending_approval) return;
-    const next = getNextTaskStatus(task.status);
+    const currentStatus = localTaskStatuses[task.id] || task.status;
+    const next = getNextTaskStatus(currentStatus);
+    setLocalTaskStatuses(prev => ({ ...prev, [task.id]: next }));
     await supabase.from('tasks').update({ status: next }).eq('id', task.id);
-  };
+  }, [localTaskStatuses, sortedStages]);
 
   const getProjectCheckState = (status: string): boolean | 'indeterminate' => {
     if (status === 'completed') return true;
@@ -182,8 +235,22 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     return 'indeterminate';
   };
 
+  const getTaskStageColor = (status: string): string | null => {
+    const stage = sortedStages.find(s => s.name === status || s.id === status);
+    return stage ? tailwindColorToHex(stage.color) : null;
+  };
+
   const getStatusLabel = (s: string) =>
     s === "active" ? "Ativo" : s === "paused" ? "Pausado" : s === "archived" ? "Arquivado" : s === "completed" ? "Concluído" : s;
+
+  const getTaskStatusLabel = (status: string): string => {
+    const stage = sortedStages.find(s => s.name === status || s.id === status);
+    if (stage) return stage.name;
+    if (status === 'pending') return 'Pendente';
+    if (status === 'in_progress') return 'Em andamento';
+    if (status === 'completed') return 'Concluída';
+    return status;
+  };
 
   const formatDate = (date?: string | null) => {
     if (!date) return '';
@@ -204,12 +271,23 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     );
   }
 
+  const getCheckboxStyle = (color: string | null, isChecked: boolean | 'indeterminate'): React.CSSProperties => {
+    if (!color || isChecked === false) return {};
+    return {
+      backgroundColor: color,
+      borderColor: color,
+    };
+  };
+
   return (
     <>
       <div className="rounded-lg border bg-card">
         {projects.map((project) => {
           const projectTasks = tasks.filter((t) => t.project_id === project.id);
           const isOpen = openProjects[project.id] ?? false;
+          const projectStatus = localProjectStatuses[project.id] || project.status;
+          const projectCheckState = getProjectCheckState(projectStatus);
+          const projectColor = PROJECT_STATUS_COLORS[projectStatus] || null;
 
           return (
             <Collapsible
@@ -219,9 +297,10 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
             >
               <div className="flex items-center gap-2 sm:gap-3 py-2 px-3 border-b hover:bg-muted/30 transition-colors">
                 <Checkbox
-                  checked={getProjectCheckState(project.status) === true}
-                  data-state={getProjectCheckState(project.status) === 'indeterminate' ? 'indeterminate' : undefined}
-                  className={getProjectCheckState(project.status) === 'indeterminate' ? 'data-[state=indeterminate]:bg-primary/50 data-[state=indeterminate]:text-primary-foreground' : ''}
+                  checked={projectCheckState === true}
+                  data-state={projectCheckState === 'indeterminate' ? 'indeterminate' : undefined}
+                  className={projectCheckState === 'indeterminate' ? 'data-[state=indeterminate]:text-primary-foreground' : projectCheckState === true ? 'data-[state=checked]:text-primary-foreground' : ''}
+                  style={getCheckboxStyle(projectColor, projectCheckState)}
                   onCheckedChange={() => handleProjectStatusChange(project)}
                   disabled={project.is_request}
                 />
@@ -291,62 +370,69 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                     Nenhuma tarefa neste projeto.
                   </div>
                 ) : (
-                  projectTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-2 sm:gap-3 py-1.5 px-3 pl-10 border-b bg-muted/20 hover:bg-muted/40 transition-colors"
-                    >
-                      <Checkbox
-                        checked={getTaskCheckState(task.status) === true}
-                        data-state={getTaskCheckState(task.status) === 'indeterminate' ? 'indeterminate' : undefined}
-                        className={getTaskCheckState(task.status) === 'indeterminate' ? 'data-[state=indeterminate]:bg-primary/50 data-[state=indeterminate]:text-primary-foreground' : ''}
-                        onCheckedChange={() => handleTaskStatusChange(task)}
-                        disabled={task.is_pending_approval}
-                      />
-                      <span
-                        onClick={() => setDetailDialog({ type: 'task', data: task })}
-                        className="cursor-pointer flex-1 truncate text-sm"
+                  projectTasks.map((task) => {
+                    const taskStatus = localTaskStatuses[task.id] || task.status;
+                    const taskCheckState = getTaskCheckState(taskStatus);
+                    const taskColor = getTaskStageColor(taskStatus);
+
+                    return (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-2 sm:gap-3 py-1.5 px-3 pl-10 border-b bg-muted/20 hover:bg-muted/40 transition-colors"
                       >
-                        {task.name}
-                      </span>
-                      {task.is_pending_approval && (
-                        <Badge variant="outline" className="text-[10px] shrink-0">
-                          {task.approval_label || 'Pendente'}
-                        </Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
-                        {formatDate(task.due_date)}
-                      </span>
-                      {!task.is_pending_approval && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {isClientMode && !isOwnTask(task) ? (
-                              <DropdownMenuItem onClick={() => onRequestTaskEdit?.(task)}>
-                                <FilePenLine className="w-4 h-4 mr-2" />
-                                Solicitar Alteração
-                              </DropdownMenuItem>
-                            ) : (
-                              <>
-                                <DropdownMenuItem onClick={() => onEditTask(task)}>
-                                  <Pencil className="w-4 h-4 mr-2" />
-                                  Editar
+                        <Checkbox
+                          checked={taskCheckState === true}
+                          data-state={taskCheckState === 'indeterminate' ? 'indeterminate' : undefined}
+                          className={taskCheckState === 'indeterminate' ? 'data-[state=indeterminate]:text-primary-foreground' : taskCheckState === true ? 'data-[state=checked]:text-primary-foreground' : ''}
+                          style={getCheckboxStyle(taskColor, taskCheckState)}
+                          onCheckedChange={() => handleTaskStatusChange(task)}
+                          disabled={task.is_pending_approval}
+                        />
+                        <span
+                          onClick={() => setDetailDialog({ type: 'task', data: task })}
+                          className="cursor-pointer flex-1 truncate text-sm"
+                        >
+                          {task.name}
+                        </span>
+                        {task.is_pending_approval && (
+                          <Badge variant="outline" className="text-[10px] shrink-0">
+                            {task.approval_label || 'Pendente'}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
+                          {formatDate(task.due_date)}
+                        </span>
+                        {!task.is_pending_approval && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isClientMode && !isOwnTask(task) ? (
+                                <DropdownMenuItem onClick={() => onRequestTaskEdit?.(task)}>
+                                  <FilePenLine className="w-4 h-4 mr-2" />
+                                  Solicitar Alteração
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive" onClick={() => onDeleteTask(task)}>
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
-                  ))
+                              ) : (
+                                <>
+                                  <DropdownMenuItem onClick={() => onEditTask(task)}>
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive" onClick={() => onDeleteTask(task)}>
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </CollapsibleContent>
             </Collapsible>
@@ -371,10 +457,21 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
               timeEntries={timeEntries}
               projectColumns={projectColumns}
               kanbanStages={kanbanStages}
+              isAdminOrMaster={isAdminOrMaster}
+              isClientMode={isClientMode}
+              currentUserId={currentUserId}
               getProjectHours={getProjectHours}
               getTaskHours={getTaskHours}
               getCreatorName={getCreatorName}
               getClientColumns={getClientColumns}
+              getTaskStatusLabel={getTaskStatusLabel}
+              onEditProject={onEditProject}
+              onDeleteProject={onDeleteProject}
+              onArchiveProject={onArchiveProject}
+              onEditTask={onEditTask}
+              onDeleteTask={onDeleteTask}
+              onRequestTaskEdit={onRequestTaskEdit}
+              onClose={() => setDetailDialog(null)}
             />
           )}
         </DialogContent>
@@ -391,10 +488,21 @@ interface DetailContentProps {
   timeEntries: TimeEntry[];
   projectColumns: ProjectColumn[];
   kanbanStages: KanbanStage[];
+  isAdminOrMaster: boolean;
+  isClientMode: boolean;
+  currentUserId?: string;
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
   getClientColumns: (clientId: string) => ProjectColumn[];
+  getTaskStatusLabel: (status: string) => string;
+  onEditProject: (project: Project) => void;
+  onDeleteProject: (project: Project) => void;
+  onArchiveProject: (project: Project) => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
+  onRequestTaskEdit?: (task: Task) => void;
+  onClose: () => void;
 }
 
 const DetailContent: React.FC<DetailContentProps> = ({
@@ -405,11 +513,34 @@ const DetailContent: React.FC<DetailContentProps> = ({
   timeEntries,
   projectColumns,
   kanbanStages,
+  isAdminOrMaster,
+  isClientMode,
+  currentUserId,
   getProjectHours,
   getTaskHours,
   getCreatorName,
   getClientColumns,
+  getTaskStatusLabel,
+  onEditProject,
+  onDeleteProject,
+  onArchiveProject,
+  onEditTask,
+  onDeleteTask,
+  onRequestTaskEdit,
+  onClose,
 }) => {
+  const getStatusLabel = (s: string) =>
+    s === "active" ? "Ativo" : s === "paused" ? "Pausado" : s === "archived" ? "Arquivado" : s === "completed" ? "Concluído" : s;
+
+  const getStatusColor = (s: string) =>
+    s === "active"
+      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      : s === "paused"
+        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        : s === "archived"
+          ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          : "bg-muted text-muted-foreground";
+
   if (type === 'project') {
     const project = data as Project;
     const client = clients.find((c) => c.id === project.client_id);
@@ -419,6 +550,28 @@ const DetailContent: React.FC<DetailContentProps> = ({
 
     return (
       <div className="space-y-4">
+        {/* Action buttons */}
+        {!project.is_request && (
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => { onClose(); onEditProject(project); }}>
+              <Pencil className="w-3.5 h-3.5 mr-1.5" />
+              {isClientMode ? 'Solicitar Edição' : 'Editar'}
+            </Button>
+            {isAdminOrMaster && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => { onClose(); onArchiveProject(project); }}>
+                  <Archive className="w-3.5 h-3.5 mr-1.5" />
+                  Arquivar
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => { onClose(); onDeleteProject(project); }}>
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  Excluir
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
         <div>
           <p className="text-sm text-muted-foreground">Nome</p>
           <p className="font-medium">{project.name}</p>
@@ -429,10 +582,12 @@ const DetailContent: React.FC<DetailContentProps> = ({
             <p className="text-sm">{client.company || client.name}</p>
           </div>
         )}
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <div>
             <p className="text-sm text-muted-foreground">Status</p>
-            <p className="text-sm">{project.status === 'active' ? 'Ativo' : project.status === 'paused' ? 'Pausado' : project.status === 'completed' ? 'Concluído' : project.status}</p>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(project.status)}`}>
+              {getStatusLabel(project.status)}
+            </span>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Horas</p>
@@ -475,7 +630,7 @@ const DetailContent: React.FC<DetailContentProps> = ({
               {projectTasks.map((t) => (
                 <div key={t.id} className="flex items-center gap-2 text-sm">
                   <span className={t.status === 'completed' ? 'line-through text-muted-foreground' : ''}>{t.name}</span>
-                  <Badge variant="outline" className="text-[10px]">{t.status}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{getTaskStatusLabel(t.status)}</Badge>
                 </div>
               ))}
             </div>
@@ -490,17 +645,41 @@ const DetailContent: React.FC<DetailContentProps> = ({
   const hours = getTaskHours(task.id);
   const taskEntries = timeEntries.filter((e) => e.task_id === task.id);
   const creatorName = getCreatorName(task.created_by);
+  const isOwnTask = task.created_by === currentUserId;
 
   return (
     <div className="space-y-4">
+      {/* Action buttons */}
+      {!task.is_pending_approval && (
+        <div className="flex gap-2 flex-wrap">
+          {isClientMode && !isOwnTask ? (
+            <Button size="sm" variant="outline" onClick={() => { onClose(); onRequestTaskEdit?.(task); }}>
+              <FilePenLine className="w-3.5 h-3.5 mr-1.5" />
+              Solicitar Alteração
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => { onClose(); onEditTask(task); }}>
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Editar
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => { onClose(); onDeleteTask(task); }}>
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                Excluir
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+
       <div>
         <p className="text-sm text-muted-foreground">Nome</p>
         <p className="font-medium">{task.name}</p>
       </div>
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
         <div>
           <p className="text-sm text-muted-foreground">Status</p>
-          <p className="text-sm">{task.status}</p>
+          <Badge variant="outline" className="text-xs">{getTaskStatusLabel(task.status)}</Badge>
         </div>
         <div>
           <p className="text-sm text-muted-foreground">Horas</p>

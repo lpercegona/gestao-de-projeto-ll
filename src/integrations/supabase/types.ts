@@ -651,6 +651,7 @@ export type Database = {
           created_by: string
           desired_deadline: string | null
           id: string
+          requested_tasks: Json | null
           status: string
           title: string
           updated_at: string
@@ -664,6 +665,7 @@ export type Database = {
           created_by: string
           desired_deadline?: string | null
           id?: string
+          requested_tasks?: Json | null
           status?: string
           title: string
           updated_at?: string
@@ -677,6 +679,7 @@ export type Database = {
           created_by?: string
           desired_deadline?: string | null
           id?: string
+          requested_tasks?: Json | null
           status?: string
           title?: string
           updated_at?: string

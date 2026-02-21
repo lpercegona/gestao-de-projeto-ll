@@ -23,10 +23,16 @@ interface ProjectColumn {
   options: string[] | null;
 }
 
+interface RequestedTask {
+  title: string;
+  description: string;
+  dueDate: string;
+}
+
 interface ProjectRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => Promise<void>;
+  onSubmit: (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string, requestedTasks?: RequestedTask[]) => Promise<void>;
 }
 
 export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
@@ -35,11 +41,6 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   onSubmit,
 }) => {
   const { user } = useAuth();
-  interface RequestedTask {
-    title: string;
-    description: string;
-    dueDate: string;
-  }
 
   const [title, setTitle] = useState('');
   const [briefing, setBriefing] = useState('');
@@ -147,7 +148,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), buildBriefingPayload(), selectedCustomFields, desiredDeadline || undefined);
+      await onSubmit(title.trim(), briefing, selectedCustomFields, desiredDeadline || undefined, requestedTasks.length > 0 ? requestedTasks : undefined);
       setTitle('');
       setBriefing('');
       setCustomFields({});

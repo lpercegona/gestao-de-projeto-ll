@@ -571,6 +571,27 @@ export const Projects: React.FC = () => {
 
       if (!createdProject?.id) throw new Error('Falha ao criar projeto a partir da solicitação');
 
+      // Fetch requested_tasks and create them
+      const { data: fullRequest } = await supabase
+        .from('project_requests')
+        .select('requested_tasks')
+        .eq('id', request.id)
+        .single();
+
+      const reqTasks = Array.isArray(fullRequest?.requested_tasks) ? fullRequest.requested_tasks : [];
+      for (const rt of reqTasks) {
+        const t = rt as Record<string, unknown>;
+        if (typeof t?.title === 'string' && t.title.trim()) {
+          await createTask({
+            project_id: createdProject.id,
+            name: t.title as string,
+            description: (typeof t.description === 'string' ? t.description : '') || '',
+            status: 'pending',
+            due_date: typeof t.dueDate === 'string' && t.dueDate ? t.dueDate : null,
+          });
+        }
+      }
+
       const { error } = await supabase
         .from('project_requests')
         .update({
@@ -725,6 +746,27 @@ export const Projects: React.FC = () => {
 
         if (!createdProject?.id) {
           throw new Error('Falha ao criar projeto a partir da solicitação');
+        }
+
+        // Fetch requested_tasks and create them
+        const { data: fullReq } = await supabase
+          .from('project_requests')
+          .select('requested_tasks')
+          .eq('id', selectedRequest.id)
+          .single();
+
+        const reqTasks = Array.isArray(fullReq?.requested_tasks) ? fullReq.requested_tasks : [];
+        for (const rt of reqTasks) {
+          const t = rt as Record<string, unknown>;
+          if (typeof t?.title === 'string' && t.title.trim()) {
+            await createTask({
+              project_id: createdProject.id,
+              name: t.title as string,
+              description: (typeof t.description === 'string' ? t.description : '') || '',
+              status: 'pending',
+              due_date: typeof t.dueDate === 'string' && t.dueDate ? t.dueDate : null,
+            });
+          }
         }
 
         convertedProjectId = createdProject.id;
