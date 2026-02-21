@@ -106,29 +106,36 @@ interface ProjectTableViewProps {
 
 const PROJECT_STATUSES = ['active', 'paused', 'completed', 'archived'];
 
-// Convert tailwind bg class to hex color for inline styles
+// Convert tailwind bg class to a saturated hex color for checkbox styling
 const tailwindColorToHex = (color: string | null): string | null => {
   if (!color) return null;
-  const map: Record<string, string> = {
-    'bg-yellow-500': '#eab308', 'bg-yellow-400': '#facc15',
-    'bg-orange-500': '#f97316', 'bg-orange-400': '#fb923c',
-    'bg-green-500': '#22c55e', 'bg-green-400': '#4ade80',
-    'bg-blue-500': '#3b82f6', 'bg-blue-400': '#60a5fa',
-    'bg-red-500': '#ef4444', 'bg-red-400': '#f87171',
-    'bg-purple-500': '#a855f7', 'bg-purple-400': '#c084fc',
-    'bg-pink-500': '#ec4899', 'bg-pink-400': '#f472b6',
-    'bg-indigo-500': '#6366f1', 'bg-indigo-400': '#818cf8',
-    'bg-teal-500': '#14b8a6', 'bg-teal-400': '#2dd4bf',
-    'bg-cyan-500': '#06b6d4', 'bg-cyan-400': '#22d3ee',
-    'bg-emerald-500': '#10b981', 'bg-emerald-400': '#34d399',
-    'bg-lime-500': '#84cc16', 'bg-lime-400': '#a3e635',
-    'bg-amber-500': '#f59e0b', 'bg-amber-400': '#fbbf24',
-    'bg-rose-500': '#f43f5e', 'bg-rose-400': '#fb7185',
-    'bg-slate-500': '#64748b', 'bg-slate-400': '#94a3b8',
-    'bg-gray-500': '#6b7280', 'bg-gray-400': '#9ca3af',
-    'bg-muted': '#6b7280',
+  // Extract the color name and shade from "bg-{color}-{shade}"
+  const match = color.match(/^bg-(\w+)-(\d+)$/);
+  if (!match) {
+    if (color === 'bg-muted') return '#6b7280';
+    return null;
+  }
+  const [, name, shade] = match;
+  // Map to saturated versions for checkbox visibility (use 500-level for light shades)
+  const baseColors: Record<string, Record<string, string>> = {
+    yellow:  { '100': '#eab308', '200': '#eab308', '300': '#eab308', '400': '#facc15', '500': '#eab308', '600': '#ca8a04', '700': '#a16207' },
+    orange:  { '100': '#f97316', '200': '#f97316', '300': '#f97316', '400': '#fb923c', '500': '#f97316', '600': '#ea580c', '700': '#c2410c' },
+    green:   { '100': '#22c55e', '200': '#22c55e', '300': '#22c55e', '400': '#4ade80', '500': '#22c55e', '600': '#16a34a', '700': '#15803d' },
+    blue:    { '100': '#3b82f6', '200': '#3b82f6', '300': '#3b82f6', '400': '#60a5fa', '500': '#3b82f6', '600': '#2563eb', '700': '#1d4ed8' },
+    red:     { '100': '#ef4444', '200': '#ef4444', '300': '#ef4444', '400': '#f87171', '500': '#ef4444', '600': '#dc2626', '700': '#b91c1c' },
+    purple:  { '100': '#a855f7', '200': '#a855f7', '300': '#a855f7', '400': '#c084fc', '500': '#a855f7', '600': '#9333ea', '700': '#7e22ce' },
+    pink:    { '100': '#ec4899', '200': '#ec4899', '300': '#ec4899', '400': '#f472b6', '500': '#ec4899', '600': '#db2777', '700': '#be185d' },
+    indigo:  { '100': '#6366f1', '200': '#6366f1', '300': '#6366f1', '400': '#818cf8', '500': '#6366f1', '600': '#4f46e5', '700': '#4338ca' },
+    teal:    { '100': '#14b8a6', '200': '#14b8a6', '300': '#14b8a6', '400': '#2dd4bf', '500': '#14b8a6', '600': '#0d9488', '700': '#0f766e' },
+    cyan:    { '100': '#06b6d4', '200': '#06b6d4', '300': '#06b6d4', '400': '#22d3ee', '500': '#06b6d4', '600': '#0891b2', '700': '#0e7490' },
+    emerald: { '100': '#10b981', '200': '#10b981', '300': '#10b981', '400': '#34d399', '500': '#10b981', '600': '#059669', '700': '#047857' },
+    lime:    { '100': '#84cc16', '200': '#84cc16', '300': '#84cc16', '400': '#a3e635', '500': '#84cc16', '600': '#65a30d', '700': '#4d7c0f' },
+    amber:   { '100': '#f59e0b', '200': '#f59e0b', '300': '#f59e0b', '400': '#fbbf24', '500': '#f59e0b', '600': '#d97706', '700': '#b45309' },
+    rose:    { '100': '#f43f5e', '200': '#f43f5e', '300': '#f43f5e', '400': '#fb7185', '500': '#f43f5e', '600': '#e11d48', '700': '#be123c' },
+    slate:   { '100': '#64748b', '200': '#64748b', '300': '#64748b', '400': '#94a3b8', '500': '#64748b', '600': '#475569', '700': '#334155' },
+    gray:    { '100': '#6b7280', '200': '#6b7280', '300': '#6b7280', '400': '#9ca3af', '500': '#6b7280', '600': '#4b5563', '700': '#374151' },
   };
-  return map[color] || null;
+  return baseColors[name]?.[shade] || null;
 };
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
