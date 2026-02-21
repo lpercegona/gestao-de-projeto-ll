@@ -268,7 +268,7 @@ export const ClientProjects: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
+  const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string, requestedTasks?: Array<{ title: string; description: string; dueDate: string }>) => {
     if (!user) return;
     const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
       supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
@@ -288,6 +288,7 @@ export const ClientProjects: React.FC = () => {
         briefing,
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
+        requested_tasks: (requestedTasks || []) as unknown as import('@/integrations/supabase/types').Json,
       })
       .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();
