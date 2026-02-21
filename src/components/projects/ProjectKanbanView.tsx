@@ -205,12 +205,30 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
     fetchProfiles();
   }, [userIdsWithProjectAccess]);
 
-  const getAvatarInitial = (profile?: ProfileSummary) => {
+  const getMemberName = (userId: string, profile?: ProfileSummary) => {
+    const fullName = profile?.full_name?.trim();
+    if (fullName) return fullName;
+
+    const email = profile?.email?.trim();
+    if (email) return "Usuário sem perfil";
+
+    return "Usuário";
+  };
+
+  const getMemberEmail = (profile?: ProfileSummary) => {
+    const email = profile?.email?.trim();
+    return email || "Email indisponível";
+  };
+
+  const getAvatarInitial = (userId: string, profile?: ProfileSummary) => {
     const fullName = profile?.full_name?.trim();
     if (fullName) return fullName[0].toUpperCase();
 
     const email = profile?.email?.trim();
     if (email) return email[0].toUpperCase();
+
+    const memberId = userId.trim();
+    if (memberId) return memberId[0].toUpperCase();
 
     return "?";
   };
@@ -234,11 +252,11 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
       );
       if (project.owner_id) userIds.add(project.owner_id);
       if (project.created_by) userIds.add(project.created_by);
-      membersMap[project.id] = Array.from(userIds).filter((userId) => Boolean(profilesByUserId[userId]));
+      membersMap[project.id] = Array.from(userIds);
     });
 
     return membersMap;
-  }, [profilesByUserId, projectAccess, projects]);
+  }, [projectAccess, projects]);
 
   // Default stages if none from DB
   const stages: KanbanStage[] = useMemo(() => {
@@ -395,11 +413,11 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                           <Avatar
                                             key={userId}
                                             className="h-5 w-5 border border-background"
-                                            title={profile?.full_name || profile?.email || "Usuário"}
+                                            title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
                                           >
-                                            <AvatarImage src={getAvatarSrc(profile)} alt={profile?.full_name || "Avatar do usuário"} />
+                                            <AvatarImage src={getAvatarSrc(profile)} alt={`${getMemberName(userId, profile)} - Avatar`} />
                                             <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
-                                              {getAvatarInitial(profile)}
+                                              {getAvatarInitial(userId, profile)}
                                             </AvatarFallback>
                                           </Avatar>
                                         );
