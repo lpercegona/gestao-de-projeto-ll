@@ -29,6 +29,7 @@ import { DateRange } from 'react-day-picker';
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
+import { ProjectTableView } from '@/components/projects/ProjectTableView';
 import { KanbanStagesDialog } from '@/components/projects/KanbanStagesDialog';
 
 interface Collaborator {
@@ -123,7 +124,7 @@ export const Projects: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   
   // View state
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'table'>('list');
   const [filterClientId, setFilterClientId] = useState<string>('all');
   const [filterStageId, setFilterStageId] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange | undefined>(undefined);
@@ -1241,6 +1242,26 @@ export const Projects: React.FC = () => {
           }}
           onApproveRequest={(project) => handleQuickApproveRequest(project as UnifiedProject)}
           onRejectRequest={(project) => handleQuickRejectRequest(project as UnifiedProject)}
+        />
+      ) : viewMode === 'table' ? (
+        <ProjectTableView
+          projects={filteredProjects}
+          clients={data.clients}
+          tasks={tasksWithPendingApprovals as any}
+          timeEntries={data.timeEntries}
+          projectColumns={data.projectColumns}
+          kanbanStages={data.kanbanStages}
+          isAdminOrMaster={isAdminOrMaster}
+          currentUserId={user?.id}
+          getProjectHours={getProjectHours}
+          getTaskHours={getTaskHours}
+          getCreatorName={getCreatorName}
+          getClientColumns={getClientColumns}
+          onEditProject={handleOpenDialog}
+          onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
+          onArchiveProject={handleArchiveProject}
+          onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
+          onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
         />
       ) : (
         <ProjectKanbanView
