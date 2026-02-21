@@ -421,7 +421,7 @@ export const Services: React.FC = () => {
               ) : (
               <div className="grid gap-3">
                 {filteredRows.map((row) => (
-                  <div key={row.id} className="grid gap-4 overflow-hidden rounded-md border bg-card p-4 md:grid-cols-3">
+                  <div key={row.id} className="grid gap-6 overflow-hidden rounded-md border bg-card p-4 md:grid-cols-3">
                         <div className="md:col-span-2">
                           {row.imageUrl ? (
                             <img
