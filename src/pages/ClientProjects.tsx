@@ -748,6 +748,8 @@ export const ClientProjects: React.FC = () => {
           timeEntries={data.timeEntries}
           projectColumns={data.projectColumns}
           kanbanStages={data.kanbanStages}
+          taskTimers={data.taskTimers}
+          projectAccess={data.projectAccess}
           isAdminOrMaster={false}
           allowProjectEditOnly
           currentUserId={user?.id}
@@ -755,9 +757,11 @@ export const ClientProjects: React.FC = () => {
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
           getClientColumns={getClientColumns}
+          getActiveTimer={getCurrentUserActiveTimer}
           onEditProject={(project) => openEditRequest(project as UnifiedProject)}
           onDeleteProject={() => {}}
           onArchiveProject={() => {}}
+          onCreateTask={handleOpenTaskCreate}
           onEditTask={(task) => {
             if (isOwnTask(task as ClientTask)) {
               handleOpenTaskEdit(task as ClientTask);
@@ -768,6 +772,10 @@ export const ClientProjects: React.FC = () => {
               handleOpenTaskDelete(task as ClientTask);
             }
           }}
+          onRegisterTime={handleRegisterTime}
+          onStartTimer={(taskId) => handleStartTimer(taskId)}
+          onStopTimer={(taskId) => handleStopTimer(taskId)}
+          onCompleteTask={(taskId) => handleCompleteTask(taskId)}
           onRequestTaskEdit={(task) => {
             const t = task as ClientTask;
             if (!isOwnTask(t)) {
