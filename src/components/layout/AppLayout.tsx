@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { HeaderTimerDisplay, HeaderTimerTaskInfo } from "@/components/timer/HeaderTimerDisplay";
+import { GlobalTimerCompleteDialog } from "@/components/timer/GlobalTimerCompleteDialog";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UniversalSearchBar } from "@/components/layout/UniversalSearchBar";
 import { WorkspaceSelector } from "@/components/layout/WorkspaceSelector";
@@ -170,6 +171,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut, isMasterAdmin, isAdmin, isCollaborator, isClient, userRole } = useAuth();
+  const { showCompleteDialog, setShowCompleteDialog } = useGlobalTimer();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -608,6 +610,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
         </main>
       </div>
+      <GlobalTimerCompleteDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog} />
     </TooltipProvider>
   );
 };
