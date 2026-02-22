@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,7 +24,7 @@ interface ProjectShareDialogProps {
   projectOwnerId?: string | null;
   isOpen: boolean;
   onClose: () => void;
-  isAdminOrMaster: boolean;
+  canManageShare: boolean;
 }
 
 type Member = ProfileSummary & {
@@ -31,7 +36,7 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   projectOwnerId,
   isOpen,
   onClose,
-  isAdminOrMaster,
+  canManageShare,
 }) => {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
@@ -111,7 +116,9 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
         if (aIsOwner && !bIsOwner) return -1;
         if (!aIsOwner && bIsOwner) return 1;
 
-        return getMemberName(a).localeCompare(getMemberName(b), "pt-BR", { sensitivity: "base" });
+        return getMemberName(a).localeCompare(getMemberName(b), "pt-BR", {
+          sensitivity: "base",
+        });
       });
 
       setMembers(sortedMembers);
@@ -130,6 +137,8 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   }, [fetchMembers, isOpen]);
 
   const handleAdd = async () => {
+    if (!canManageShare) return;
+
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail) return;
 
@@ -164,16 +173,20 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
         return;
       }
 
-      const { error: insertError } = await supabase.from("user_project_access").insert({
-        project_id: projectId,
-        user_id: profileData.user_id,
-        granted_by: grantedBy,
-        can_edit: true,
-      });
+      const { error: insertError } = await supabase
+        .from("user_project_access")
+        .insert({
+          project_id: projectId,
+          user_id: profileData.user_id,
+          granted_by: grantedBy,
+          can_edit: true,
+        });
 
       if (insertError) throw insertError;
 
-      toast.success(`${profileData.full_name || profileData.email} adicionado ao projeto.`);
+      toast.success(
+        `${profileData.full_name || profileData.email} adicionado ao projeto.`,
+      );
       setEmail("");
       await fetchMembers();
     } catch (error) {
@@ -185,6 +198,8 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   };
 
   const handleRemove = async (member: Member) => {
+    if (!canManageShare) return;
+
     if (member.user_id === projectOwnerId) {
       toast.error("Não é possível remover o proprietário do projeto.");
       return;
@@ -197,11 +212,16 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
 
     setRemovingId(member.accessId);
     try {
-      const { error } = await supabase.from("user_project_access").delete().eq("id", member.accessId);
+      const { error } = await supabase
+        .from("user_project_access")
+        .delete()
+        .eq("id", member.accessId);
 
       if (error) throw error;
 
-      toast.success(`${member.full_name || member.email || "Usuário"} removido do projeto.`);
+      toast.success(
+        `${member.full_name || member.email || "Usuário"} removido do projeto.`,
+      );
       await fetchMembers();
     } catch (error) {
       console.error("Erro ao remover membro:", error);
@@ -212,7 +232,8 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   };
 
   const getInitial = (member: Member) => {
-    if (member.full_name?.trim()) return member.full_name.trim()[0].toUpperCase();
+    if (member.full_name?.trim())
+      return member.full_name.trim()[0].toUpperCase();
     if (member.email?.trim()) return member.email.trim()[0].toUpperCase();
     if (member.user_id.trim()) return member.user_id.trim()[0].toUpperCase();
     return "?";
@@ -228,7 +249,7 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        {isAdminOrMaster && (
+        {canManageShare && (
           <div className="flex gap-2">
             <Input
               placeholder="Email do usuário"
@@ -237,8 +258,16 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               disabled={adding}
             />
-            <Button size="sm" onClick={handleAdd} disabled={adding || !email.trim()}>
-              {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            <Button
+              size="sm"
+              onClick={handleAdd}
+              disabled={adding || !email.trim()}
+            >
+              {adding ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
             </Button>
           </div>
         )}
@@ -249,26 +278,41 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           ) : members.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhum membro com acesso.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhum membro com acesso.
+            </p>
           ) : (
             members.map((member) => {
               const isOwner = member.user_id === projectOwnerId;
               return (
-                <div key={member.user_id} className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50">
+                <div
+                  key={member.user_id}
+                  className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50"
+                >
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={member.avatar_url?.trim() || undefined} />
-                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">{getInitial(member)}</AvatarFallback>
+                      <AvatarImage
+                        src={member.avatar_url?.trim() || undefined}
+                      />
+                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                        {getInitial(member)}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate text-foreground">
                         {getMemberName(member)}
-                        {isOwner && <span className="text-muted-foreground ml-1">(proprietário)</span>}
+                        {isOwner && (
+                          <span className="text-muted-foreground ml-1">
+                            (proprietário)
+                          </span>
+                        )}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">{getMemberEmail(member)}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {getMemberEmail(member)}
+                      </p>
                     </div>
                   </div>
-                  {isAdminOrMaster && !isOwner && member.accessId && (
+                  {canManageShare && !isOwner && member.accessId && (
                     <Button
                       variant="ghost"
                       size="icon"
