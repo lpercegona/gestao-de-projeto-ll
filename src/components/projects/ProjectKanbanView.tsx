@@ -5,7 +5,13 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Plus, Settings, GripVertical } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2 } from "lucide-react";
@@ -62,7 +68,6 @@ interface Client {
   company?: string | null;
 }
 
-
 interface ProjectAccess {
   project_id: string;
   user_id: string;
@@ -101,7 +106,12 @@ interface ProjectKanbanViewProps {
   onDeleteTask: (task: Task) => void;
   onRegisterTime: (
     taskId: string,
-    entry?: { id: string; hours: number; description: string | null; date: string },
+    entry?: {
+      id: string;
+      hours: number;
+      description: string | null;
+      date: string;
+    },
   ) => void;
   onStartTimer: (taskId: string) => Promise<void>;
   onStopTimer: (taskId: string) => Promise<void>;
@@ -164,9 +174,10 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   clientRestrictedMode = false,
   onRequestTaskEdit,
 }) => {
-  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, ProfileSummary>>({});
+  const [profilesByUserId, setProfilesByUserId] = useState<
+    Record<string, ProfileSummary>
+  >({});
   const [shareProjectId, setShareProjectId] = useState<string | null>(null);
-  
 
   const userIdsWithProjectAccess = useMemo(() => {
     const ids = new Set(projectAccess.map((a) => a.user_id));
@@ -190,7 +201,10 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
         .in("user_id", userIdsWithProjectAccess);
 
       if (profilesError) {
-        console.error("Erro ao buscar perfis de usuários para projetos:", profilesError);
+        console.error(
+          "Erro ao buscar perfis de usuários para projetos:",
+          profilesError,
+        );
         return;
       }
 
@@ -264,9 +278,27 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
       return kanbanStages.sort((a, b) => a.order_position - b.order_position);
     }
     return [
-      { id: "pending", name: "Pendente", order_position: 0, color: "bg-yellow-100", is_default: true },
-      { id: "in_progress", name: "Em Andamento", order_position: 1, color: "bg-blue-100", is_default: true },
-      { id: "completed", name: "Concluída", order_position: 2, color: "bg-green-100", is_default: true },
+      {
+        id: "pending",
+        name: "Pendente",
+        order_position: 0,
+        color: "bg-yellow-100",
+        is_default: true,
+      },
+      {
+        id: "in_progress",
+        name: "Em Andamento",
+        order_position: 1,
+        color: "bg-blue-100",
+        is_default: true,
+      },
+      {
+        id: "completed",
+        name: "Concluída",
+        order_position: 2,
+        color: "bg-green-100",
+        is_default: true,
+      },
     ];
   }, [kanbanStages]);
 
@@ -296,8 +328,10 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
     return grouped;
   }, [tasks, projects, stages]);
 
-  const getProject = (projectId: string) => projects.find((p) => p.id === projectId);
-  const getClient = (clientId: string) => clients.find((c) => c.id === clientId);
+  const getProject = (projectId: string) =>
+    projects.find((p) => p.id === projectId);
+  const getClient = (clientId: string) =>
+    clients.find((c) => c.id === clientId);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData("taskId", taskId);
@@ -341,12 +375,17 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage.name)}
               >
-                <Card className={`flex flex-col h-full ${getStageColor(stage.color)}`}>
+                <Card
+                  className={`flex flex-col h-full ${getStageColor(stage.color)}`}
+                >
                   <CardHeader className="py-3 px-4">
                     <div className="flex items-center justify-between column-2">
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
                         {stage.name}
-                        <Badge variant="outline" className="text-xs text-foreground px-1.5">
+                        <Badge
+                          variant="outline"
+                          className="text-xs text-foreground px-1.5"
+                        >
                           {stageTasks.length}
                         </Badge>
                       </CardTitle>
@@ -368,16 +407,30 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                   </CardHeader>
                   <CardContent className="flex flex-col flex-1p-2 min-h-[200px] max-h-[60vh] overflow-y-auto">
                     {stageTasks.length === 0 ? (
-                      <div className="text-center py-8 text-sm text-muted-foreground">Adicione novas tarefas</div>
+                      <div className="text-center py-8 text-sm text-muted-foreground">
+                        Adicione novas tarefas
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         {stageTasks.map((task) => {
                           const project = getProject(task.project_id);
-                          const client = project ? getClient(project.client_id) : null;
-                          const taskTimeEntries = timeEntries.filter((te) => te.task_id === task.id);
+                          const client = project
+                            ? getClient(project.client_id)
+                            : null;
+                          const taskTimeEntries = timeEntries.filter(
+                            (te) => te.task_id === task.id,
+                          );
                           const activeTimer = getActiveTimer(task.id);
-                          const isPendingApprovalTask = Boolean(task.is_pending_approval);
-                          const isOwnTask = currentUserId ? task.created_by === currentUserId : true;
+                          const isPendingApprovalTask = Boolean(
+                            task.is_pending_approval,
+                          );
+                          const isOwnTask = currentUserId
+                            ? task.created_by === currentUserId
+                            : true;
+                          const canManageShare =
+                            isAdminOrMaster ||
+                            (!!currentUserId &&
+                              currentUserId === project?.owner_id);
 
                           return (
                             <div
@@ -390,38 +443,58 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground px-1">
                                   <div className="flex items-center gap-1 min-w-0">
                                     <GripVertical className="w-3 h-3 shrink-0" />
-                                    <span className="truncate">{project?.name}</span>
+                                    <span className="truncate">
+                                      {project?.name}
+                                    </span>
                                     {!isClientRestrictedMode && (
                                       <>
-                                        <span className="text-muted-foreground/50">•</span>
-                                        <span className="truncate">{client?.company || client?.name}</span>
+                                        <span className="text-muted-foreground/50">
+                                          •
+                                        </span>
+                                        <span className="truncate">
+                                          {client?.company || client?.name}
+                                        </span>
                                       </>
                                     )}
                                   </div>
                                   <div
-                                    className={`flex items-center -space-x-2 shrink-0 ${isAdminOrMaster ? 'cursor-pointer hover:opacity-80' : ''}`}
+                                    className={`flex items-center -space-x-2 shrink-0 ${canManageShare ? "cursor-pointer hover:opacity-80" : ""}`}
                                     onClick={(e) => {
-                                      if (isAdminOrMaster) {
-                                        e.stopPropagation();
-                                        setShareProjectId(task.project_id);
-                                      }
+                                      if (!canManageShare) return;
+                                      e.stopPropagation();
+                                      setShareProjectId(task.project_id);
                                     }}
                                   >
-                                    {(projectMembersByProjectId[task.project_id] || []).map((userId) => {
-                                        const profile = profilesByUserId[userId];
-                                        return (
-                                          <Avatar
-                                            key={userId}
-                                            className="h-5 w-5 border border-background"
-                                            title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
-                                          >
-                                            <AvatarImage src={getAvatarSrc(profile)} alt={`${getMemberName(userId, profile)} - Avatar`} />
-                                            <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
-                                              {getAvatarInitial(userId, profile)}
-                                            </AvatarFallback>
-                                          </Avatar>
-                                        );
-                                      })}
+                                    {(
+                                      projectMembersByProjectId[
+                                        task.project_id
+                                      ] || []
+                                    ).map((userId) => {
+                                      const profile = profilesByUserId[userId];
+                                      return (
+                                        <Avatar
+                                          key={userId}
+                                          className="h-5 w-5 border border-background"
+                                          title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
+                                        >
+                                          <AvatarImage
+                                            src={getAvatarSrc(profile)}
+                                            alt={`${getMemberName(userId, profile)} - Avatar`}
+                                          />
+                                          <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
+                                            {getAvatarInitial(userId, profile)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                      );
+                                    })}
+                                    {canManageShare && (
+                                      <div
+                                        className="h-5 w-5 rounded-full border border-dashed border-muted-foreground/40 bg-background text-muted-foreground flex items-center justify-center"
+                                        title="Gerenciar compartilhamento"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -431,25 +504,67 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                 timeEntries={taskTimeEntries}
                                 activeTimer={activeTimer}
                                 getCreatorName={getCreatorName}
-                                onEditTask={() => !isPendingApprovalTask && onEditTask(task)}
-                                onDeleteTask={() => !isPendingApprovalTask && onDeleteTask(task)}
+                                onEditTask={() =>
+                                  !isPendingApprovalTask && onEditTask(task)
+                                }
+                                onDeleteTask={() =>
+                                  !isPendingApprovalTask && onDeleteTask(task)
+                                }
                                 onRequestEdit={
-                                  !isPendingApprovalTask && !isOwnTask && onRequestTaskEdit
+                                  !isPendingApprovalTask &&
+                                  !isOwnTask &&
+                                  onRequestTaskEdit
                                     ? () => onRequestTaskEdit(task)
                                     : undefined
                                 }
                                 onRegisterTime={onRegisterTime}
-                                onStartTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStartTimer(task.id))}
-                                onStopTimer={() => (isPendingApprovalTask ? Promise.resolve() : onStopTimer(task.id))}
-                                onCompleteTask={() => (isPendingApprovalTask ? Promise.resolve() : onCompleteTask(task.id))}
+                                onStartTimer={() =>
+                                  isPendingApprovalTask
+                                    ? Promise.resolve()
+                                    : onStartTimer(task.id)
+                                }
+                                onStopTimer={() =>
+                                  isPendingApprovalTask
+                                    ? Promise.resolve()
+                                    : onStopTimer(task.id)
+                                }
+                                onCompleteTask={() =>
+                                  isPendingApprovalTask
+                                    ? Promise.resolve()
+                                    : onCompleteTask(task.id)
+                                }
                                 compact
                                 showStatus={false}
                                 iconOnly
-                                showTimeControls={hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode}
-                                allowTaskEdit={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
-                                allowTaskDelete={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
-                                showRegisterTimeButton={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
-                                allowTimeEntryEdit={!isPendingApprovalTask && (hasPerTaskPermissions ? isOwnTask : !isClientRestrictedMode)}
+                                showTimeControls={
+                                  hasPerTaskPermissions
+                                    ? isOwnTask
+                                    : !isClientRestrictedMode
+                                }
+                                allowTaskEdit={
+                                  !isPendingApprovalTask &&
+                                  (hasPerTaskPermissions
+                                    ? isOwnTask
+                                    : !isClientRestrictedMode)
+                                }
+                                allowTaskDelete={
+                                  !isPendingApprovalTask &&
+                                  (hasPerTaskPermissions
+                                    ? isOwnTask
+                                    : !isClientRestrictedMode)
+                                }
+                                showRegisterTimeButton={
+                                  !isPendingApprovalTask &&
+                                  (hasPerTaskPermissions
+                                    ? isOwnTask
+                                    : !isClientRestrictedMode)
+                                }
+                                allowTimeEntryEdit={
+                                  !isPendingApprovalTask &&
+                                  (hasPerTaskPermissions
+                                    ? isOwnTask
+                                    : !isClientRestrictedMode)
+                                }
                               />
                             </div>
                           );
@@ -466,7 +581,10 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                         onClick={() => {
                           const firstProject = projects[0];
                           if (firstProject) {
-                            onCreateTask(firstProject.id, getStatusFromStageKey(stage.name));
+                            onCreateTask(
+                              firstProject.id,
+                              getStatusFromStageKey(stage.name),
+                            );
                           }
                         }}
                       >
@@ -486,10 +604,17 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
       {shareProjectId && (
         <ProjectShareDialog
           projectId={shareProjectId}
-          projectOwnerId={projects.find((p) => p.id === shareProjectId)?.owner_id}
+          projectOwnerId={
+            projects.find((p) => p.id === shareProjectId)?.owner_id
+          }
           isOpen={!!shareProjectId}
           onClose={() => setShareProjectId(null)}
-          isAdminOrMaster={isAdminOrMaster}
+          canManageShare={
+            isAdminOrMaster ||
+            (!!currentUserId &&
+              currentUserId ===
+                projects.find((p) => p.id === shareProjectId)?.owner_id)
+          }
         />
       )}
     </div>
