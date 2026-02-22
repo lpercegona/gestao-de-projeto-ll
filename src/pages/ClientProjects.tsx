@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +15,9 @@ import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { ProjectTableView } from '@/components/projects/ProjectTableView';
-import { Plus, FolderKanban, Loader2 } from 'lucide-react';
+import { Plus, FolderKanban, Loader2, Trash2, ClipboardList, Users as UsersIcon } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { toast } from 'sonner';
 import { endOfDay, isWithinInterval, startOfDay } from 'date-fns';
@@ -135,6 +138,20 @@ export const ClientProjects: React.FC = () => {
 
   const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
   const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
+
+  // Time entry dialog state
+  const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
+  const [isDeleteTimeEntryDialogOpen, setIsDeleteTimeEntryDialogOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null);
+  const [timeForm, setTimeForm] = useState({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd'), entry_type: 'task' as 'task' | 'meeting' });
+  const [submitting, setSubmitting] = useState(false);
+
+  // Pause dialog state (timer completion)
+  const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
+  const [pausingTaskId, setPausingTaskId] = useState<string | null>(null);
+  const [pauseDescription, setPauseDescription] = useState('');
+  const [pauseEntryType, setPauseEntryType] = useState<'task' | 'meeting'>('task');
 
   const getCurrentUserActiveTimer = useCallback((taskId: string) => {
     const timer = getActiveTimer(taskId);
@@ -591,8 +608,15 @@ export const ClientProjects: React.FC = () => {
   };
 
   const handleStopTimer = async (taskId: string) => {
-    if (!user) return;
-    const timer = getCurrentUserActiveTimer(taskId);
+    setPausingTaskId(taskId);
+    setPauseDescription('');
+    setPauseEntryType('task');
+    setIsPauseDialogOpen(true);
+  };
+
+  const handleConfirmPause = async () => {
+    if (!user || !pausingTaskId) return;
+    const timer = getCurrentUserActiveTimer(pausingTaskId);
     if (!timer) return;
     const startedAt = new Date(timer.started_at);
     const now = new Date();
@@ -600,12 +624,12 @@ export const ClientProjects: React.FC = () => {
     const hours = Math.max(0.01, parseFloat((elapsedMs / 3600000).toFixed(2)));
 
     const { error: entryError } = await supabase.from('time_entries').insert({
-      task_id: taskId,
+      task_id: pausingTaskId,
       hours,
-      description: 'Registro automático via timer',
+      description: pauseDescription || 'Registro via timer',
       date: new Date().toISOString().split('T')[0],
       created_by: user.id,
-      entry_type: 'timer',
+      entry_type: pauseEntryType,
     });
     if (entryError) {
       console.error('Error creating time entry:', entryError);
@@ -617,6 +641,21 @@ export const ClientProjects: React.FC = () => {
     if (deleteError) console.error('Error deleting timer:', deleteError);
 
     toast.success(`Timer parado. ${hours}h registradas.`);
+    setIsPauseDialogOpen(false);
+    setPausingTaskId(null);
+    refreshData();
+  };
+
+  const handleDiscardTimer = async () => {
+    if (!pausingTaskId) return;
+    const timer = getCurrentUserActiveTimer(pausingTaskId);
+    if (timer) {
+      await supabase.from('task_timers').delete().eq('id', timer.id);
+    }
+    setIsPauseDialogOpen(false);
+    setPausingTaskId(null);
+    setPauseDescription('');
+    toast.info('Timer descartado');
     refreshData();
   };
 
@@ -641,9 +680,73 @@ export const ClientProjects: React.FC = () => {
     refreshData();
   };
 
-  const handleRegisterTime = (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string }) => {
-    // For now clients can use the same register time flow
-    // This could open a dialog for manual time entry
+  // Helper functions for time conversion
+  const parseTimeToHours = (timeString: string): number => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours + (minutes / 60);
+  };
+
+  const formatHoursToTime = (decimalHours: number): string => {
+    const totalMinutes = Math.round(decimalHours * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  const handleRegisterTime = (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string; entry_type?: 'task' | 'meeting' }) => {
+    setSelectedTaskId(taskId);
+    if (entry) {
+      setEditingTimeEntryId(entry.id);
+      setTimeForm({ time: formatHoursToTime(entry.hours), description: entry.description || '', date: entry.date, entry_type: entry.entry_type || 'task' });
+    } else {
+      setEditingTimeEntryId(null);
+      setTimeForm({ time: '00:15', description: '', date: format(new Date(), 'yyyy-MM-dd'), entry_type: 'task' });
+    }
+    setIsTimeDialogOpen(true);
+  };
+
+  const handleSubmitTime = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const totalHours = parseTimeToHours(timeForm.time);
+    if (totalHours <= 0) { toast.error('Insira um tempo válido maior que zero.'); return; }
+    setSubmitting(true);
+    if (editingTimeEntryId) {
+      const { error } = await supabase.from('time_entries').update({
+        hours: totalHours,
+        description: timeForm.description,
+        date: timeForm.date,
+        entry_type: timeForm.entry_type,
+      }).eq('id', editingTimeEntryId);
+      if (error) { console.error(error); toast.error('Erro ao atualizar registro.'); }
+      else toast.success('Registro atualizado!');
+    } else {
+      const { error } = await supabase.from('time_entries').insert({
+        task_id: selectedTaskId,
+        hours: totalHours,
+        description: timeForm.description,
+        date: timeForm.date,
+        entry_type: timeForm.entry_type,
+        created_by: user?.id,
+      });
+      if (error) { console.error(error); toast.error('Erro ao registrar horas.'); }
+      else toast.success('Horas registradas!');
+    }
+    setSubmitting(false);
+    setIsTimeDialogOpen(false);
+    setEditingTimeEntryId(null);
+    refreshData();
+  };
+
+  const handleDeleteTimeEntry = async () => {
+    if (editingTimeEntryId) {
+      const { error } = await supabase.from('time_entries').delete().eq('id', editingTimeEntryId);
+      if (error) { console.error(error); toast.error('Erro ao excluir registro.'); }
+      else toast.success('Registro excluído!');
+      setIsDeleteTimeEntryDialogOpen(false);
+      setIsTimeDialogOpen(false);
+      setEditingTimeEntryId(null);
+      refreshData();
+    }
   };
 
   if (loading) {
@@ -1160,6 +1263,74 @@ export const ClientProjects: React.FC = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteRequest}>Excluir solicitação</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Time Entry Dialog */}
+      <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
+          <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmitTime}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2"><Label>Tempo (HH:mm)</Label><Input type="time" value={timeForm.time} onChange={(e) => setTimeForm({ ...timeForm, time: e.target.value })} required disabled={submitting} /></div>
+              <div className="space-y-2"><Label>Data</Label><Input type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} /></div>
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <ToggleGroup type="single" value={timeForm.entry_type} onValueChange={(v) => v && setTimeForm({ ...timeForm, entry_type: v as 'task' | 'meeting' })} className="justify-start">
+                  <ToggleGroupItem value="task" className="gap-1.5"><ClipboardList className="h-3.5 w-3.5" />Tarefa</ToggleGroupItem>
+                  <ToggleGroupItem value="meeting" className="gap-1.5"><UsersIcon className="h-3.5 w-3.5" />Reunião</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <div className="space-y-2"><Label>Descrição (opcional)</Label><Textarea value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} rows={2} disabled={submitting} /></div>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {editingTimeEntryId && (
+                <Button type="button" variant="destructive" onClick={() => setIsDeleteTimeEntryDialogOpen(true)} disabled={submitting} className="w-full sm:w-auto"><Trash2 className="w-4 h-4 mr-2" />Excluir</Button>
+              )}
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button>
+                <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Timer Dialog */}
+      <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
+        <DialogContent className="max-h-[85vh] overflow-hidden">
+          <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo de Registro</Label>
+              <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
+                <ToggleGroupItem value="task" aria-label="Tarefa" className="gap-2"><ClipboardList className="w-4 h-4" />Tarefa</ToggleGroupItem>
+                <ToggleGroupItem value="meeting" aria-label="Reunião" className="gap-2"><UsersIcon className="w-4 h-4" />Reunião</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="ghost" onClick={handleDiscardTimer} className="text-destructive hover:text-destructive sm:mr-auto">Descartar</Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button>
+              <Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Time Entry Confirmation */}
+      <AlertDialog open={isDeleteTimeEntryDialogOpen} onOpenChange={setIsDeleteTimeEntryDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir registro de horas?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTimeEntry}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
