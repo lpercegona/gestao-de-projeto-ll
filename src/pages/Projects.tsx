@@ -1293,17 +1293,25 @@ export const Projects: React.FC = () => {
           timeEntries={data.timeEntries}
           projectColumns={data.projectColumns}
           kanbanStages={data.kanbanStages}
+          taskTimers={data.taskTimers}
+          projectAccess={data.projectAccess}
           isAdminOrMaster={isAdminOrMaster}
           currentUserId={user?.id}
           getProjectHours={getProjectHours}
           getTaskHours={getTaskHours}
           getCreatorName={getCreatorName}
           getClientColumns={getClientColumns}
+          getActiveTimer={getCurrentUserActiveTimer}
           onEditProject={handleOpenDialog}
           onDeleteProject={(project) => { setDeletingProject(project); setIsDeleteDialogOpen(true); }}
           onArchiveProject={handleArchiveProject}
+          onCreateTask={(projectId) => handleOpenTaskDialog(projectId)}
           onEditTask={(task) => handleOpenTaskDialog(task.project_id, task)}
           onDeleteTask={(task) => { setDeletingTask(task); setIsDeleteTaskDialogOpen(true); }}
+          onRegisterTime={handleOpenTimeDialog}
+          onStartTimer={handleStartTimer}
+          onStopTimer={handleStopTimer}
+          onCompleteTask={handleCompleteTask}
         />
       ) : (
         <ProjectKanbanView

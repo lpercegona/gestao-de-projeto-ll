@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -11,12 +11,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, MoreVertical, Pencil, Trash2, Archive, FilePenLine } from "lucide-react";
+import { ChevronDown, MoreVertical, Pencil, Trash2, Archive, FilePenLine, Users, Plus } from "lucide-react";
 import { ExpandableDescription } from "./ExpandableDescription";
+import { TaskCard } from "./TaskCard";
 import { formatHours } from "@/lib/formatHours";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Project {
   id: string;
@@ -48,6 +50,7 @@ interface Task {
   created_at: string;
   is_pending_approval?: boolean;
   approval_label?: string;
+  pending_request_id?: string;
 }
 
 interface TimeEntry {
@@ -57,6 +60,7 @@ interface TimeEntry {
   description: string | null;
   date: string;
   created_by: string | null;
+  entry_type?: 'task' | 'meeting';
 }
 
 interface Client {
@@ -80,6 +84,26 @@ interface KanbanStage {
   order_position: number;
 }
 
+interface TaskTimer {
+  id: string;
+  task_id: string | null;
+  started_at: string;
+  paused_at: string | null;
+  paused_elapsed_seconds: number;
+}
+
+interface ProjectAccess {
+  project_id: string;
+  user_id: string;
+}
+
+interface ProfileSummary {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
+
 interface ProjectTableViewProps {
   projects: Project[];
   clients: Client[];
@@ -90,15 +114,23 @@ interface ProjectTableViewProps {
   isAdminOrMaster: boolean;
   allowProjectEditOnly?: boolean;
   currentUserId?: string;
+  taskTimers?: TaskTimer[];
+  projectAccess?: ProjectAccess[];
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
   getClientColumns: (clientId: string) => ProjectColumn[];
+  getActiveTimer?: (taskId: string) => TaskTimer | null;
   onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
   onArchiveProject: (project: Project) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
+  onCreateTask?: (projectId: string) => void;
+  onRegisterTime?: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string; entry_type?: 'task' | 'meeting' }) => void;
+  onStartTimer?: (taskId: string) => Promise<void>;
+  onStopTimer?: (taskId: string) => Promise<void>;
+  onCompleteTask?: (taskId: string) => Promise<void>;
   onRequestTaskEdit?: (task: Task) => void;
   onEditRequest?: (project: Project) => void;
   onDeleteRequest?: (project: Project) => void;
@@ -106,36 +138,33 @@ interface ProjectTableViewProps {
 
 const PROJECT_STATUSES = ['active', 'paused', 'completed', 'archived'];
 
+// Map legacy status values to kanban stage names
+const STATUS_TO_STAGE_NAME: Record<string, string> = {
+  pending: 'Pendente',
+  in_progress: 'Em Andamento',
+  completed: 'Concluída',
+};
+
+const mapStatusToStageName = (status: string): string => {
+  return STATUS_TO_STAGE_NAME[status] || status;
+};
+
 // Convert tailwind bg class to a saturated hex color for checkbox styling
 const tailwindColorToHex = (color: string | null): string | null => {
   if (!color) return null;
-  // Extract the color name and shade from "bg-{color}-{shade}"
   const match = color.match(/^bg-(\w+)-(\d+)$/);
   if (!match) {
     if (color === 'bg-muted') return '#6b7280';
     return null;
   }
-  const [, name, shade] = match;
-  // Map to saturated versions for checkbox visibility (use 500-level for light shades)
-  const baseColors: Record<string, Record<string, string>> = {
-    yellow:  { '100': '#eab308', '200': '#eab308', '300': '#eab308', '400': '#facc15', '500': '#eab308', '600': '#ca8a04', '700': '#a16207' },
-    orange:  { '100': '#f97316', '200': '#f97316', '300': '#f97316', '400': '#fb923c', '500': '#f97316', '600': '#ea580c', '700': '#c2410c' },
-    green:   { '100': '#22c55e', '200': '#22c55e', '300': '#22c55e', '400': '#4ade80', '500': '#22c55e', '600': '#16a34a', '700': '#15803d' },
-    blue:    { '100': '#3b82f6', '200': '#3b82f6', '300': '#3b82f6', '400': '#60a5fa', '500': '#3b82f6', '600': '#2563eb', '700': '#1d4ed8' },
-    red:     { '100': '#ef4444', '200': '#ef4444', '300': '#ef4444', '400': '#f87171', '500': '#ef4444', '600': '#dc2626', '700': '#b91c1c' },
-    purple:  { '100': '#a855f7', '200': '#a855f7', '300': '#a855f7', '400': '#c084fc', '500': '#a855f7', '600': '#9333ea', '700': '#7e22ce' },
-    pink:    { '100': '#ec4899', '200': '#ec4899', '300': '#ec4899', '400': '#f472b6', '500': '#ec4899', '600': '#db2777', '700': '#be185d' },
-    indigo:  { '100': '#6366f1', '200': '#6366f1', '300': '#6366f1', '400': '#818cf8', '500': '#6366f1', '600': '#4f46e5', '700': '#4338ca' },
-    teal:    { '100': '#14b8a6', '200': '#14b8a6', '300': '#14b8a6', '400': '#2dd4bf', '500': '#14b8a6', '600': '#0d9488', '700': '#0f766e' },
-    cyan:    { '100': '#06b6d4', '200': '#06b6d4', '300': '#06b6d4', '400': '#22d3ee', '500': '#06b6d4', '600': '#0891b2', '700': '#0e7490' },
-    emerald: { '100': '#10b981', '200': '#10b981', '300': '#10b981', '400': '#34d399', '500': '#10b981', '600': '#059669', '700': '#047857' },
-    lime:    { '100': '#84cc16', '200': '#84cc16', '300': '#84cc16', '400': '#a3e635', '500': '#84cc16', '600': '#65a30d', '700': '#4d7c0f' },
-    amber:   { '100': '#f59e0b', '200': '#f59e0b', '300': '#f59e0b', '400': '#fbbf24', '500': '#f59e0b', '600': '#d97706', '700': '#b45309' },
-    rose:    { '100': '#f43f5e', '200': '#f43f5e', '300': '#f43f5e', '400': '#fb7185', '500': '#f43f5e', '600': '#e11d48', '700': '#be123c' },
-    slate:   { '100': '#64748b', '200': '#64748b', '300': '#64748b', '400': '#94a3b8', '500': '#64748b', '600': '#475569', '700': '#334155' },
-    gray:    { '100': '#6b7280', '200': '#6b7280', '300': '#6b7280', '400': '#9ca3af', '500': '#6b7280', '600': '#4b5563', '700': '#374151' },
+  const [, name] = match;
+  const baseColors: Record<string, string> = {
+    yellow: '#eab308', orange: '#f97316', green: '#22c55e', blue: '#3b82f6',
+    red: '#ef4444', purple: '#a855f7', pink: '#ec4899', indigo: '#6366f1',
+    teal: '#14b8a6', cyan: '#06b6d4', emerald: '#10b981', lime: '#84cc16',
+    amber: '#f59e0b', rose: '#f43f5e', slate: '#64748b', gray: '#6b7280',
   };
-  return baseColors[name]?.[shade] || null;
+  return baseColors[name] || null;
 };
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
@@ -155,15 +184,23 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   isAdminOrMaster,
   allowProjectEditOnly = false,
   currentUserId,
+  taskTimers = [],
+  projectAccess = [],
   getProjectHours,
   getTaskHours,
   getCreatorName,
   getClientColumns,
+  getActiveTimer,
   onEditProject,
   onDeleteProject,
   onArchiveProject,
   onEditTask,
   onDeleteTask,
+  onCreateTask,
+  onRegisterTime,
+  onStartTimer,
+  onStopTimer,
+  onCompleteTask,
   onRequestTaskEdit,
   onEditRequest,
   onDeleteRequest,
@@ -175,7 +212,9 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   const [localProjectStatuses, setLocalProjectStatuses] = useState<Record<string, string>>({});
   const [localTaskStatuses, setLocalTaskStatuses] = useState<Record<string, string>>({});
 
-  // Sync local state when props change
+  // Profiles for member avatars
+  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, ProfileSummary>>({});
+
   useEffect(() => {
     const ps: Record<string, string> = {};
     projects.forEach(p => { ps[p.id] = p.status; });
@@ -193,7 +232,46 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   }, [kanbanStages]);
 
   const isClientMode = allowProjectEditOnly && !isAdminOrMaster;
+  const hasPerTaskPermissions = !!currentUserId && !isAdminOrMaster;
   const isOwnTask = (task: Task) => task.created_by === currentUserId;
+  const isOwnProject = (project: Project) => project.created_by === currentUserId;
+
+  // Fetch profiles for member avatars in dialog
+  const userIdsWithProjectAccess = useMemo(() => {
+    const ids = new Set(projectAccess.map((a) => a.user_id));
+    projects.forEach((p) => {
+      if (p.owner_id) ids.add(p.owner_id);
+      if (p.created_by) ids.add(p.created_by);
+    });
+    return Array.from(ids);
+  }, [projectAccess, projects]);
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (userIdsWithProjectAccess.length === 0) return;
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email, avatar_url")
+        .in("user_id", userIdsWithProjectAccess);
+      const nextMap: Record<string, ProfileSummary> = {};
+      (profiles || []).forEach((p) => { nextMap[p.user_id] = p; });
+      setProfilesByUserId(nextMap);
+    };
+    fetchProfiles();
+  }, [userIdsWithProjectAccess]);
+
+  const projectMembersByProjectId = useMemo(() => {
+    const membersMap: Record<string, string[]> = {};
+    projects.forEach((project) => {
+      const userIds = new Set(
+        projectAccess.filter((a) => a.project_id === project.id).map((a) => a.user_id),
+      );
+      if (project.owner_id) userIds.add(project.owner_id);
+      if (project.created_by) userIds.add(project.created_by);
+      membersMap[project.id] = Array.from(userIds);
+    });
+    return membersMap;
+  }, [projectAccess, projects]);
 
   const getNextProjectStatus = (current: string): string => {
     const idx = PROJECT_STATUSES.indexOf(current);
@@ -202,12 +280,13 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   };
 
   const getNextTaskStatus = (current: string): string => {
+    const mappedName = mapStatusToStageName(current);
     if (sortedStages.length === 0) {
       if (current === 'pending') return 'in_progress';
       if (current === 'in_progress') return 'completed';
       return 'pending';
     }
-    const idx = sortedStages.findIndex((s) => s.name === current || s.id === current);
+    const idx = sortedStages.findIndex((s) => s.name === mappedName || s.id === current);
     if (idx === -1) return sortedStages[0]?.name || 'pending';
     const next = (idx + 1) % sortedStages.length;
     return sortedStages[next].name;
@@ -236,27 +315,37 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   };
 
   const getTaskCheckState = (status: string): boolean | 'indeterminate' => {
+    const mappedName = mapStatusToStageName(status);
     const lastStage = sortedStages.length > 0 ? sortedStages[sortedStages.length - 1] : null;
-    if (status === 'completed' || (lastStage && (status === lastStage.name || status === lastStage.id))) return true;
-    if (status === 'pending' || (sortedStages.length > 0 && (status === sortedStages[0]?.name || status === sortedStages[0]?.id))) return false;
+    const firstStage = sortedStages.length > 0 ? sortedStages[0] : null;
+    if (status === 'completed' || (lastStage && mappedName === lastStage.name)) return true;
+    if (status === 'pending' || (firstStage && mappedName === firstStage.name)) return false;
     return 'indeterminate';
   };
 
   const getTaskStageColor = (status: string): string | null => {
-    const stage = sortedStages.find(s => s.name === status || s.id === status);
+    const mappedName = mapStatusToStageName(status);
+    const stage = sortedStages.find(s => s.name === mappedName || s.id === status);
     return stage ? tailwindColorToHex(stage.color) : null;
   };
 
   const getStatusLabel = (s: string) =>
     s === "active" ? "Ativo" : s === "paused" ? "Pausado" : s === "archived" ? "Arquivado" : s === "completed" ? "Concluído" : s;
 
+  const getStatusColor = (s: string) =>
+    s === "active"
+      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      : s === "paused"
+        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        : s === "archived"
+          ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          : "bg-muted text-muted-foreground";
+
   const getTaskStatusLabel = (status: string): string => {
-    const stage = sortedStages.find(s => s.name === status || s.id === status);
+    const mappedName = mapStatusToStageName(status);
+    const stage = sortedStages.find(s => s.name === mappedName || s.id === status);
     if (stage) return stage.name;
-    if (status === 'pending') return 'Pendente';
-    if (status === 'in_progress') return 'Em andamento';
-    if (status === 'completed') return 'Concluída';
-    return status;
+    return mappedName;
   };
 
   const formatDate = (date?: string | null) => {
@@ -286,6 +375,21 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     };
   };
 
+  // Permission helpers
+  const isProjectCheckboxDisabled = (project: Project) => {
+    if (project.is_request) return true;
+    if (isAdminOrMaster) return false;
+    if (isClientMode && !isOwnProject(project)) return true;
+    return false;
+  };
+
+  const isTaskCheckboxDisabled = (task: Task) => {
+    if (task.is_pending_approval) return true;
+    if (isAdminOrMaster) return false;
+    if (isClientMode && !isOwnTask(task)) return true;
+    return false;
+  };
+
   return (
     <>
       <div className="rounded-lg border bg-card">
@@ -309,7 +413,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                   className={projectCheckState === 'indeterminate' ? 'data-[state=indeterminate]:text-primary-foreground' : projectCheckState === true ? 'data-[state=checked]:text-primary-foreground' : ''}
                   style={getCheckboxStyle(projectColor, projectCheckState)}
                   onCheckedChange={() => handleProjectStatusChange(project)}
-                  disabled={project.is_request}
+                  disabled={isProjectCheckboxDisabled(project)}
                 />
                 <span
                   onClick={() => setDetailDialog({ type: 'project', data: project })}
@@ -393,7 +497,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                           className={taskCheckState === 'indeterminate' ? 'data-[state=indeterminate]:text-primary-foreground' : taskCheckState === true ? 'data-[state=checked]:text-primary-foreground' : ''}
                           style={getCheckboxStyle(taskColor, taskCheckState)}
                           onCheckedChange={() => handleTaskStatusChange(task)}
-                          disabled={task.is_pending_approval}
+                          disabled={isTaskCheckboxDisabled(task)}
                         />
                         <span
                           onClick={() => setDetailDialog({ type: 'task', data: task })}
@@ -447,36 +551,64 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
         })}
       </div>
 
-      {/* Detail Dialog */}
+      {/* Detail Dialog - replicates ProjectListView card layout */}
       <Dialog open={!!detailDialog} onOpenChange={(open) => !open && setDetailDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {detailDialog?.type === 'project' ? 'Detalhes do Projeto' : 'Detalhes da Tarefa'}
-            </DialogTitle>
-          </DialogHeader>
-          {detailDialog && (
-            <DetailContent
-              type={detailDialog.type}
-              data={detailDialog.data}
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {detailDialog?.type === 'project' && (
+            <ProjectDetailDialogContent
+              project={detailDialog.data as Project}
               clients={clients}
               tasks={tasks}
               timeEntries={timeEntries}
               projectColumns={projectColumns}
               kanbanStages={kanbanStages}
+              taskTimers={taskTimers}
+              projectAccess={projectAccess}
+              profilesByUserId={profilesByUserId}
+              projectMembers={projectMembersByProjectId[detailDialog.data.id] || []}
               isAdminOrMaster={isAdminOrMaster}
               isClientMode={isClientMode}
+              hasPerTaskPermissions={hasPerTaskPermissions}
               currentUserId={currentUserId}
               getProjectHours={getProjectHours}
               getTaskHours={getTaskHours}
               getCreatorName={getCreatorName}
               getClientColumns={getClientColumns}
-              getTaskStatusLabel={getTaskStatusLabel}
+              getActiveTimer={getActiveTimer}
+              getStatusLabel={getStatusLabel}
+              getStatusColor={getStatusColor}
               onEditProject={onEditProject}
               onDeleteProject={onDeleteProject}
               onArchiveProject={onArchiveProject}
+              onCreateTask={onCreateTask}
               onEditTask={onEditTask}
               onDeleteTask={onDeleteTask}
+              onRegisterTime={onRegisterTime}
+              onStartTimer={onStartTimer}
+              onStopTimer={onStopTimer}
+              onCompleteTask={onCompleteTask}
+              onRequestTaskEdit={onRequestTaskEdit}
+              onEditRequest={onEditRequest}
+              onClose={() => setDetailDialog(null)}
+            />
+          )}
+          {detailDialog?.type === 'task' && (
+            <TaskDetailDialogContent
+              task={detailDialog.data as Task}
+              timeEntries={timeEntries}
+              kanbanStages={kanbanStages}
+              isAdminOrMaster={isAdminOrMaster}
+              isClientMode={isClientMode}
+              currentUserId={currentUserId}
+              getTaskHours={getTaskHours}
+              getCreatorName={getCreatorName}
+              getActiveTimer={getActiveTimer}
+              onEditTask={onEditTask}
+              onDeleteTask={onDeleteTask}
+              onRegisterTime={onRegisterTime}
+              onStartTimer={onStartTimer}
+              onStopTimer={onStopTimer}
+              onCompleteTask={onCompleteTask}
               onRequestTaskEdit={onRequestTaskEdit}
               onClose={() => setDetailDialog(null)}
             />
@@ -487,242 +619,324 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   );
 };
 
-interface DetailContentProps {
-  type: 'project' | 'task';
-  data: Project | Task;
+// ---- Project Detail Dialog (replicates ProjectListView expanded card) ----
+
+interface ProjectDetailDialogContentProps {
+  project: Project;
   clients: Client[];
   tasks: Task[];
   timeEntries: TimeEntry[];
   projectColumns: ProjectColumn[];
   kanbanStages: KanbanStage[];
+  taskTimers: TaskTimer[];
+  projectAccess: ProjectAccess[];
+  profilesByUserId: Record<string, ProfileSummary>;
+  projectMembers: string[];
   isAdminOrMaster: boolean;
   isClientMode: boolean;
+  hasPerTaskPermissions: boolean;
   currentUserId?: string;
   getProjectHours: (projectId: string) => number;
   getTaskHours: (taskId: string) => number;
   getCreatorName: (userId: string | null) => string;
   getClientColumns: (clientId: string) => ProjectColumn[];
-  getTaskStatusLabel: (status: string) => string;
+  getActiveTimer?: (taskId: string) => TaskTimer | null;
+  getStatusLabel: (s: string) => string;
+  getStatusColor: (s: string) => string;
   onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
   onArchiveProject: (project: Project) => void;
+  onCreateTask?: (projectId: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
+  onRegisterTime?: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string; entry_type?: 'task' | 'meeting' }) => void;
+  onStartTimer?: (taskId: string) => Promise<void>;
+  onStopTimer?: (taskId: string) => Promise<void>;
+  onCompleteTask?: (taskId: string) => Promise<void>;
   onRequestTaskEdit?: (task: Task) => void;
+  onEditRequest?: (project: Project) => void;
   onClose: () => void;
 }
 
-const DetailContent: React.FC<DetailContentProps> = ({
-  type,
-  data,
+const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProps> = ({
+  project,
   clients,
   tasks,
   timeEntries,
-  projectColumns,
+  projectColumns: _projectColumns,
   kanbanStages,
   isAdminOrMaster,
   isClientMode,
+  hasPerTaskPermissions,
   currentUserId,
   getProjectHours,
   getTaskHours,
   getCreatorName,
   getClientColumns,
-  getTaskStatusLabel,
+  getActiveTimer,
+  getStatusLabel,
+  getStatusColor,
   onEditProject,
   onDeleteProject,
   onArchiveProject,
+  onCreateTask,
   onEditTask,
   onDeleteTask,
+  onRegisterTime,
+  onStartTimer,
+  onStopTimer,
+  onCompleteTask,
   onRequestTaskEdit,
+  onEditRequest,
   onClose,
+  profilesByUserId,
+  projectMembers,
 }) => {
-  const getStatusLabel = (s: string) =>
-    s === "active" ? "Ativo" : s === "paused" ? "Pausado" : s === "archived" ? "Arquivado" : s === "completed" ? "Concluído" : s;
-
-  const getStatusColor = (s: string) =>
-    s === "active"
-      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-      : s === "paused"
-        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-        : s === "archived"
-          ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-          : "bg-muted text-muted-foreground";
-
-  if (type === 'project') {
-    const project = data as Project;
-    const client = clients.find((c) => c.id === project.client_id);
-    const hours = getProjectHours(project.id);
-    const projectTasks = tasks.filter((t) => t.project_id === project.id);
-    const columns = client ? getClientColumns(client.id) : [];
-
-    return (
-      <div className="space-y-4">
-        {/* Action buttons */}
-        {!project.is_request && (
-          <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={() => { onClose(); onEditProject(project); }}>
-              <Pencil className="w-3.5 h-3.5 mr-1.5" />
-              {isClientMode ? 'Solicitar Edição' : 'Editar'}
-            </Button>
-            {isAdminOrMaster && (
-              <>
-                <Button size="sm" variant="outline" onClick={() => { onClose(); onArchiveProject(project); }}>
-                  <Archive className="w-3.5 h-3.5 mr-1.5" />
-                  Arquivar
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => { onClose(); onDeleteProject(project); }}>
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  Excluir
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-
-        <div>
-          <p className="text-sm text-muted-foreground">Nome</p>
-          <p className="font-medium">{project.name}</p>
-        </div>
-        {client && (
-          <div>
-            <p className="text-sm text-muted-foreground">Cliente</p>
-            <p className="text-sm">{client.company || client.name}</p>
-          </div>
-        )}
-        <div className="flex gap-4 flex-wrap">
-          <div>
-            <p className="text-sm text-muted-foreground">Status</p>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(project.status)}`}>
-              {getStatusLabel(project.status)}
-            </span>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Horas</p>
-            <p className="text-sm">{formatHours(hours)}</p>
-          </div>
-          {project.due_date && (
-            <div>
-              <p className="text-sm text-muted-foreground">Prazo</p>
-              <p className="text-sm">{format(new Date(project.due_date), 'dd/MM/yyyy', { locale: ptBR })}</p>
-            </div>
-          )}
-        </div>
-        {project.description && (
-          <div>
-            <p className="text-sm text-muted-foreground">Descrição</p>
-            <ExpandableDescription content={project.description} className="text-sm" />
-          </div>
-        )}
-        {columns.length > 0 && project.custom_fields && Object.keys(project.custom_fields).length > 0 && (
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">Campos personalizados</p>
-            <div className="space-y-1">
-              {columns.map((col) => {
-                const value = project.custom_fields[col.id];
-                if (!value) return null;
-                return (
-                  <div key={col.id} className="flex gap-2 text-sm">
-                    <span className="text-muted-foreground">{col.name}:</span>
-                    <span>{value}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        {projectTasks.length > 0 && (
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">Tarefas ({projectTasks.length})</p>
-            <div className="space-y-1">
-              {projectTasks.map((t) => (
-                <div key={t.id} className="flex items-center gap-2 text-sm">
-                  <span className={t.status === 'completed' ? 'line-through text-muted-foreground' : ''}>{t.name}</span>
-                  <Badge variant="outline" className="text-[10px]">{getTaskStatusLabel(t.status)}</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Task detail
-  const task = data as Task;
-  const hours = getTaskHours(task.id);
-  const taskEntries = timeEntries.filter((e) => e.task_id === task.id);
-  const creatorName = getCreatorName(task.created_by);
-  const isOwnTask = task.created_by === currentUserId;
+  const client = clients.find((c) => c.id === project.client_id);
+  const hours = getProjectHours(project.id);
+  const projectTasks = tasks.filter((t) => t.project_id === project.id);
+  const columns = client ? getClientColumns(client.id) : [];
+  const isOwnTask = (task: Task) => task.created_by === currentUserId;
 
   return (
     <div className="space-y-4">
-      {/* Action buttons */}
-      {!task.is_pending_approval && (
-        <div className="flex gap-2 flex-wrap">
-          {isClientMode && !isOwnTask ? (
-            <Button size="sm" variant="outline" onClick={() => { onClose(); onRequestTaskEdit?.(task); }}>
-              <FilePenLine className="w-3.5 h-3.5 mr-1.5" />
-              Solicitar Alteração
-            </Button>
-          ) : (
-            <>
-              <Button size="sm" variant="outline" onClick={() => { onClose(); onEditTask(task); }}>
-                <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                Editar
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => { onClose(); onDeleteTask(task); }}>
-                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                Excluir
-              </Button>
-            </>
+      {/* Header: name + status + members + menu */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+          <h3 className="font-semibold text-base text-foreground">{project.name}</h3>
+          <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>
+            {getStatusLabel(project.status)}
+          </span>
+          {projectMembers.length > 0 && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              {projectMembers.length}
+            </span>
           )}
         </div>
+        {!project.is_request && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => { onClose(); isClientMode ? onEditRequest?.(project) : onEditProject(project); }}>
+                <Pencil className="w-4 h-4 mr-2" />
+                {isClientMode ? 'Solicitar Edição' : 'Editar'}
+              </DropdownMenuItem>
+              {isAdminOrMaster && (
+                <>
+                  <DropdownMenuItem onClick={() => { onClose(); onArchiveProject(project); }}>
+                    <Archive className="w-4 h-4 mr-2" />
+                    Arquivar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive" onClick={() => { onClose(); onDeleteProject(project); }}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+
+      {/* Description */}
+      {project.description && (
+        <ExpandableDescription content={project.description} className="text-sm text-muted-foreground" />
       )}
 
-      <div>
-        <p className="text-sm text-muted-foreground">Nome</p>
-        <p className="font-medium">{task.name}</p>
-      </div>
-      <div className="flex gap-4 flex-wrap">
-        <div>
-          <p className="text-sm text-muted-foreground">Status</p>
-          <Badge variant="outline" className="text-xs">{getTaskStatusLabel(task.status)}</Badge>
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Horas</p>
-          <p className="text-sm">{formatHours(hours)}</p>
-        </div>
-        {task.due_date && (
+      {/* Info: Client, Tasks, Hours */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        {!isClientMode && client && (
           <div>
-            <p className="text-sm text-muted-foreground">Prazo</p>
-            <p className="text-sm">{format(new Date(task.due_date), 'dd/MM/yyyy', { locale: ptBR })}</p>
+            <span className="text-muted-foreground">Cliente: </span>
+            <span className="font-medium text-foreground">{client.company || client.name}</span>
+          </div>
+        )}
+        <div>
+          <span className="text-muted-foreground">Tarefas: </span>
+          <span className="font-medium text-foreground">{projectTasks.length}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Horas: </span>
+          <span className="font-medium text-foreground">{formatHours(hours)}</span>
+        </div>
+        {project.due_date && (
+          <div>
+            <span className="text-muted-foreground">Prazo: </span>
+            <span className="font-medium text-foreground">{format(new Date(project.due_date), 'dd/MM/yyyy', { locale: ptBR })}</span>
           </div>
         )}
       </div>
-      <div>
-        <p className="text-sm text-muted-foreground">Responsável</p>
-        <p className="text-sm">{creatorName}</p>
-      </div>
-      {task.description && (
-        <div>
-          <p className="text-sm text-muted-foreground">Descrição</p>
-          <ExpandableDescription content={task.description} className="text-sm" />
-        </div>
-      )}
-      {taskEntries.length > 0 && (
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">Registros de horas ({taskEntries.length})</p>
-          <div className="space-y-1 max-h-40 overflow-y-auto">
-            {taskEntries.map((entry) => (
-              <div key={entry.id} className="flex gap-2 text-sm border-b pb-1">
-                <span className="text-muted-foreground">{entry.date}</span>
-                <span className="font-medium">{formatHours(entry.hours)}</span>
-                {entry.description && <span className="truncate text-muted-foreground">- {entry.description}</span>}
+
+      {/* Custom fields */}
+      {columns.length > 0 && project.custom_fields && Object.keys(project.custom_fields).length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {columns.map((col) => {
+            const value = project.custom_fields[col.id];
+            if (!value) return null;
+            return (
+              <div key={col.id}>
+                <span className="text-muted-foreground">{col.name}: </span>
+                <span className="font-medium text-foreground">{value}</span>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
+
+      {/* Member avatars */}
+      {projectMembers.length > 0 && (
+        <div className="flex items-center -space-x-2">
+          {projectMembers.map((userId) => {
+            const profile = profilesByUserId[userId];
+            const name = profile?.full_name?.trim() || profile?.email?.trim() || 'Usuário';
+            const initial = name[0]?.toUpperCase() || '?';
+            return (
+              <Avatar key={userId} className="h-7 w-7 border-2 border-background" title={name}>
+                <AvatarImage src={profile?.avatar_url || undefined} alt={name} />
+                <AvatarFallback className="text-[10px] bg-muted text-muted-foreground font-medium">{initial}</AvatarFallback>
+              </Avatar>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tasks section */}
+      <div className="border-t pt-4">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-medium text-foreground">Tarefas ({projectTasks.length})</h4>
+          {onCreateTask && (
+            <Button size="sm" variant="outline" onClick={() => { onClose(); onCreateTask(project.id); }} className="h-8">
+              <Plus className="w-4 h-4 mr-1" />
+              Nova Tarefa
+            </Button>
+          )}
+        </div>
+
+        {projectTasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhuma tarefa neste projeto.</p>
+        ) : (
+          <div className="space-y-3">
+            {projectTasks.map((task) => {
+              const taskTimeEntries = timeEntries.filter((te) => te.task_id === task.id);
+              const activeTimer = getActiveTimer?.(task.id) || null;
+              const isPendingApproval = Boolean(task.is_pending_approval);
+              const ownTask = currentUserId ? task.created_by === currentUserId : true;
+
+              return (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  taskHours={getTaskHours(task.id)}
+                  timeEntries={taskTimeEntries}
+                  activeTimer={activeTimer}
+                  kanbanStages={kanbanStages}
+                  getCreatorName={getCreatorName}
+                  onEditTask={() => !isPendingApproval && onEditTask(task)}
+                  onDeleteTask={() => !isPendingApproval && onDeleteTask(task)}
+                  onRequestEdit={
+                    !isPendingApproval && !ownTask && onRequestTaskEdit
+                      ? () => onRequestTaskEdit(task)
+                      : undefined
+                  }
+                  onRegisterTime={onRegisterTime || (() => {})}
+                  onStartTimer={() => (isPendingApproval || !onStartTimer ? Promise.resolve() : onStartTimer(task.id))}
+                  onStopTimer={() => (isPendingApproval || !onStopTimer ? Promise.resolve() : onStopTimer(task.id))}
+                  onCompleteTask={() => (isPendingApproval || !onCompleteTask ? Promise.resolve() : onCompleteTask(task.id))}
+                  showStatus
+                  showTimeControls={hasPerTaskPermissions ? ownTask : !isClientMode}
+                  allowTaskEdit={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+                  allowTaskDelete={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+                  showRegisterTimeButton={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+                  allowTimeEntryEdit={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ---- Task Detail Dialog (renders TaskCard directly) ----
+
+interface TaskDetailDialogContentProps {
+  task: Task;
+  timeEntries: TimeEntry[];
+  kanbanStages: KanbanStage[];
+  isAdminOrMaster: boolean;
+  isClientMode: boolean;
+  currentUserId?: string;
+  getTaskHours: (taskId: string) => number;
+  getCreatorName: (userId: string | null) => string;
+  getActiveTimer?: (taskId: string) => TaskTimer | null;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (task: Task) => void;
+  onRegisterTime?: (taskId: string, entry?: { id: string; hours: number; description: string | null; date: string; entry_type?: 'task' | 'meeting' }) => void;
+  onStartTimer?: (taskId: string) => Promise<void>;
+  onStopTimer?: (taskId: string) => Promise<void>;
+  onCompleteTask?: (taskId: string) => Promise<void>;
+  onRequestTaskEdit?: (task: Task) => void;
+  onClose: () => void;
+}
+
+const TaskDetailDialogContent: React.FC<TaskDetailDialogContentProps> = ({
+  task,
+  timeEntries,
+  kanbanStages,
+  isAdminOrMaster,
+  isClientMode,
+  currentUserId,
+  getTaskHours,
+  getCreatorName,
+  getActiveTimer,
+  onEditTask,
+  onDeleteTask,
+  onRegisterTime,
+  onStartTimer,
+  onStopTimer,
+  onCompleteTask,
+  onRequestTaskEdit,
+  onClose,
+}) => {
+  const taskTimeEntries = timeEntries.filter((e) => e.task_id === task.id);
+  const activeTimer = getActiveTimer?.(task.id) || null;
+  const isPendingApproval = Boolean(task.is_pending_approval);
+  const ownTask = currentUserId ? task.created_by === currentUserId : true;
+  const hasPerTaskPermissions = !!currentUserId && !isAdminOrMaster;
+
+  return (
+    <div className="pt-2">
+      <TaskCard
+        task={task}
+        taskHours={getTaskHours(task.id)}
+        timeEntries={taskTimeEntries}
+        activeTimer={activeTimer}
+        kanbanStages={kanbanStages}
+        getCreatorName={getCreatorName}
+        onEditTask={() => { onClose(); onEditTask(task); }}
+        onDeleteTask={() => { onClose(); onDeleteTask(task); }}
+        onRequestEdit={
+          !isPendingApproval && !ownTask && onRequestTaskEdit
+            ? () => { onClose(); onRequestTaskEdit(task); }
+            : undefined
+        }
+        onRegisterTime={onRegisterTime || (() => {})}
+        onStartTimer={() => (isPendingApproval || !onStartTimer ? Promise.resolve() : onStartTimer(task.id))}
+        onStopTimer={() => (isPendingApproval || !onStopTimer ? Promise.resolve() : onStopTimer(task.id))}
+        onCompleteTask={() => (isPendingApproval || !onCompleteTask ? Promise.resolve() : onCompleteTask(task.id))}
+        showStatus
+        showTimeControls={hasPerTaskPermissions ? ownTask : !isClientMode}
+        allowTaskEdit={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+        allowTaskDelete={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+        showRegisterTimeButton={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+        allowTimeEntryEdit={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
+      />
     </div>
   );
 };
