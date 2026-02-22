@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { GlobalTimerCompleteDialog } from './GlobalTimerCompleteDialog';
+
 
 export const GlobalTimerButton: React.FC = () => {
   const {
@@ -14,8 +14,6 @@ export const GlobalTimerButton: React.FC = () => {
     resumeGlobalTimer,
     completeGlobalTimer,
     hasActiveTimer,
-    showCompleteDialog,
-    setShowCompleteDialog,
   } = useGlobalTimer();
 
   const formatTime = (totalSeconds: number) => {
@@ -38,8 +36,7 @@ export const GlobalTimerButton: React.FC = () => {
   // If not running and not paused, show play button
   if (!hasActiveTimer) {
     return (
-      <>
-        <Tooltip>
+      <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
@@ -53,17 +50,11 @@ export const GlobalTimerButton: React.FC = () => {
           </TooltipTrigger>
           <TooltipContent>Iniciar cronômetro</TooltipContent>
         </Tooltip>
-        <GlobalTimerCompleteDialog 
-          open={showCompleteDialog} 
-          onOpenChange={setShowCompleteDialog} 
-        />
-      </>
     );
   }
 
   // Timer is active (running or paused)
   return (
-    <>
       <div className="flex items-center gap-1">
         {/* Timer display */}
         <div className={cn(
@@ -115,11 +106,5 @@ export const GlobalTimerButton: React.FC = () => {
           <TooltipContent>Concluir registro</TooltipContent>
         </Tooltip>
       </div>
-
-      <GlobalTimerCompleteDialog 
-        open={showCompleteDialog} 
-        onOpenChange={setShowCompleteDialog} 
-      />
-    </>
   );
 };
