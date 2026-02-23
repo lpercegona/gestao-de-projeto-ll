@@ -376,7 +376,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen flex-col bg-secondary transition-all duration-300 lg:static",
+            "fixed inset-y-0 left-0 z-50 flex h-screen bg-transparent flex-col transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
