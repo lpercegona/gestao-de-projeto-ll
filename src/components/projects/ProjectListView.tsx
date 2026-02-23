@@ -410,61 +410,90 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (project.is_request) {
-                              onEditRequest?.(project);
-                              return;
-                            }
-                            onEditProject(project);
-                          }}
-                        >
-                          <Pencil className="w-4 h-4 mr-2" />
-                          {project.is_request
-                            ? "Editar solicitação"
-                            : allowProjectEditOnly
-                              ? "Solicitar Edição"
-                              : "Editar"}
-                        </DropdownMenuItem>
-
-                        {project.is_request && isAdminOrMaster && (
+                        {project.is_request ? (
                           <>
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onApproveRequest?.(project);
+                                onEditRequest?.(project);
                               }}
                             >
-                              <Check className="w-4 h-4 mr-2 text-green-600" />
-                              Aceitar
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Editar solicitação
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onRejectRequest?.(project);
+                                onDeleteRequest?.(project);
                               }}
                             >
-                              <X className="w-4 h-4 mr-2" />
-                              Rejeitar
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir solicitação
                             </DropdownMenuItem>
+                            {isAdminOrMaster && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onApproveRequest?.(project);
+                                  }}
+                                >
+                                  <Check className="w-4 h-4 mr-2 text-green-600" />
+                                  Aceitar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRejectRequest?.(project);
+                                  }}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Rejeitar
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </>
-                        )}
+                        ) : (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditProject(project);
+                              }}
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              {isClientRestrictedMode
+                                ? (project.created_by === currentUserId ? "Editar" : "Solicitar Edição")
+                                : "Editar"}
+                            </DropdownMenuItem>
 
-                        {isAdminOrMaster &&
-                          !allowProjectEditOnly &&
-                          !project.is_request && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onArchiveProject(project);
-                                }}
-                              >
-                                <Archive className="w-4 h-4 mr-2" />
-                                Arquivar
-                              </DropdownMenuItem>
+                            {isAdminOrMaster && !allowProjectEditOnly && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onArchiveProject(project);
+                                  }}
+                                >
+                                  <Archive className="w-4 h-4 mr-2" />
+                                  Arquivar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteProject(project);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </>
+                            )}
+
+                            {isClientRestrictedMode && project.created_by === currentUserId && (
                               <DropdownMenuItem
                                 className="text-destructive"
                                 onClick={(e) => {
@@ -475,20 +504,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Excluir
                               </DropdownMenuItem>
-                            </>
-                          )}
-
-                        {project.is_request && (
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteRequest?.(project);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir solicitação
-                          </DropdownMenuItem>
+                            )}
+                          </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>

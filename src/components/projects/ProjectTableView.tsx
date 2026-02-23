@@ -454,9 +454,11 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                       </>
                     ) : (
                       <>
-                        <DropdownMenuItem onClick={() => isClientMode ? onEditRequest?.(project) : onEditProject(project)}>
+                        <DropdownMenuItem onClick={() => onEditProject(project)}>
                           <Pencil className="w-4 h-4 mr-2" />
-                          {isClientMode ? 'Solicitar Edição' : 'Editar'}
+                          {isClientMode
+                            ? (isOwnProject(project) ? 'Editar' : 'Solicitar Edição')
+                            : 'Editar'}
                         </DropdownMenuItem>
                         {isAdminOrMaster && (
                           <>
@@ -469,6 +471,12 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                               Excluir
                             </DropdownMenuItem>
                           </>
+                        )}
+                        {isClientMode && isOwnProject(project) && (
+                          <DropdownMenuItem className="text-destructive" onClick={() => onDeleteProject(project)}>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
                         )}
                       </>
                     )}
