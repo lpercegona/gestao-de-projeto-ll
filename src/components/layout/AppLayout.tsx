@@ -376,11 +376,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen bg-secondary flex-col transition-all duration-300 lg:static shadow-[2px_0_4px_rgba(0,0,0,0.06)]",
+            "fixed inset-y-0 left-0 z-50 flex h-screen bg-secondary flex-col transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
-            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 shadow-[2px_0_4px_rgba(0,0,0,0.06)]",
           )}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
