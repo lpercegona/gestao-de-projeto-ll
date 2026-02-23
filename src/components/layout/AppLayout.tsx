@@ -18,8 +18,8 @@ import {
   Calendar,
   Database,
   Layers3,
-  Contrast,
-} from "lucide-react";
+  Contrast } from
+"lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,8 +45,8 @@ const MobileHeader: React.FC<{
     <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-secondary px-4 py-3 sm:px-6 lg:hidden">
       <button
         className="flex-shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-        onClick={() => setSidebarOpen(true)}
-      >
+        onClick={() => setSidebarOpen(true)}>
+
         <span className="sr-only">Abrir menu</span>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -58,9 +58,9 @@ const MobileHeader: React.FC<{
         <div
           className={cn(
             "transition-all duration-300 ease-in-out",
-            hasActiveTimer && !hideTimer ? "-translate-y-8 opacity-0 pointer-events-none" : "translate-y-0 opacity-100",
-          )}
-        >
+            hasActiveTimer && !hideTimer ? "-translate-y-8 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+          )}>
+
           <div className="flex justify-start">
             <UniversalSearchBar />
           </div>
@@ -70,9 +70,9 @@ const MobileHeader: React.FC<{
         <div
           className={cn(
             "absolute inset-0 flex items-center transition-all duration-300 ease-in-out",
-            hasActiveTimer && !hideTimer ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0 pointer-events-none",
-          )}
-        >
+            hasActiveTimer && !hideTimer ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0 pointer-events-none"
+          )}>
+
           <HeaderTimerTaskInfo />
         </div>
       </div>
@@ -81,28 +81,28 @@ const MobileHeader: React.FC<{
         <div
           className={cn(
             "transition-all duration-300 ease-in-out",
-            hasActiveTimer && !hideTimer ? "-translate-y-8 opacity-0 pointer-events-none" : "translate-y-0 opacity-100",
-          )}
-        >
+            hasActiveTimer && !hideTimer ? "-translate-y-8 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+          )}>
+
         <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            highContrastEnabled && "bg-accent text-accent-foreground",
-          )}
-          onClick={onToggleHighContrast}
-          aria-label={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
-          title={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
-        >
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              highContrastEnabled && "bg-accent text-accent-foreground"
+            )}
+            onClick={onToggleHighContrast}
+            aria-label={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
+            title={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}>
+
           <Contrast className="h-4 w-4" />
         </Button>
         </div>
         {!hideTimer && <HeaderTimerDisplay />}
         <NotificationBell />
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 // Desktop Header Component with breadcrumb, search and timer
@@ -132,11 +132,11 @@ const DesktopHeader: React.FC<{
                 size="icon"
                 className={cn(
                   "h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  highContrastEnabled && "bg-accent text-accent-foreground",
+                  highContrastEnabled && "bg-accent text-accent-foreground"
                 )}
                 onClick={onToggleHighContrast}
-                aria-label={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}
-              >
+                aria-label={highContrastEnabled ? "Desativar alto contraste" : "Ativar alto contraste"}>
+
                 <Contrast className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -146,23 +146,23 @@ const DesktopHeader: React.FC<{
           </Tooltip>
 
           {/* Task info - slides in from left when timer active (only if timer not hidden) */}
-          {!hideTimer && (
-            <div
-              className={cn(
-                "transition-all duration-300 ease-in-out overflow-hidden",
-                hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0",
-              )}
-            >
+          {!hideTimer &&
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              hasActiveTimer ? "max-w-[250px] opacity-100" : "max-w-0 opacity-0"
+            )}>
+
               <HeaderTimerTaskInfo />
             </div>
-          )}
+          }
 
           {!hideTimer && <HeaderTimerDisplay />}
           <NotificationBell />
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -215,108 +215,108 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   // Master Admin nav items (full access)
   const masterAdminNavItems = [
-    {
-      path: "/",
-      icon: LayoutDashboard,
-      label: "Painel",
-    },
-    {
-      path: "/projects",
-      icon: FolderKanban,
-      label: "Projetos",
-    },
-    {
-      path: "/clients",
-      icon: Users,
-      label: "Clientes",
-    },
+  {
+    path: "/",
+    icon: LayoutDashboard,
+    label: "Painel"
+  },
+  {
+    path: "/projects",
+    icon: FolderKanban,
+    label: "Projetos"
+  },
+  {
+    path: "/clients",
+    icon: Users,
+    label: "Clientes"
+  },
 
-    {
-      path: "/calendar",
-      icon: Calendar,
-      label: "Calendário",
-    },
-    {
-      path: "/services",
-      icon: Layers3,
-      label: "Serviços",
-    },
-    {
-      path: "/database-queries",
-      icon: Database,
-      label: "Strings",
-    },
-  ];
+  {
+    path: "/calendar",
+    icon: Calendar,
+    label: "Calendário"
+  },
+  {
+    path: "/services",
+    icon: Layers3,
+    label: "Serviços"
+  },
+  {
+    path: "/database-queries",
+    icon: Database,
+    label: "Strings"
+  }];
+
 
   // Admin nav items
   const adminNavItems = [
-    {
-      path: "/",
-      icon: LayoutDashboard,
-      label: "Painel",
-    },
-    {
-      path: "/projects",
-      icon: FolderKanban,
-      label: "Projetos",
-    },
-    {
-      path: "/clients",
-      icon: Users,
-      label: "Clientes",
-    },
+  {
+    path: "/",
+    icon: LayoutDashboard,
+    label: "Painel"
+  },
+  {
+    path: "/projects",
+    icon: FolderKanban,
+    label: "Projetos"
+  },
+  {
+    path: "/clients",
+    icon: Users,
+    label: "Clientes"
+  },
 
-    {
-      path: "/calendar",
-      icon: Calendar,
-      label: "Calendário",
-    },
-    {
-      path: "/services",
-      icon: Layers3,
-      label: "Serviços",
-    },
-  ];
+  {
+    path: "/calendar",
+    icon: Calendar,
+    label: "Calendário"
+  },
+  {
+    path: "/services",
+    icon: Layers3,
+    label: "Serviços"
+  }];
+
 
   // Collaborator nav items (dashboard and projects)
   const collaboratorNavItems = [
-    {
-      path: "/collaborator-dashboard",
-      icon: LayoutDashboard,
-      label: "Painel",
-    },
-    {
-      path: "/projects",
-      icon: FolderKanban,
-      label: "Projetos",
-    },
-  ];
+  {
+    path: "/collaborator-dashboard",
+    icon: LayoutDashboard,
+    label: "Painel"
+  },
+  {
+    path: "/projects",
+    icon: FolderKanban,
+    label: "Projetos"
+  }];
+
 
   // Client nav items (dashboard, reports, projects and calendar)
   const clientNavItems = [
-    {
-      path: "/",
-      icon: LayoutDashboard,
-      label: "Painel",
-    },
-    {
-      path: "/my-projects",
-      icon: FolderKanban,
-      label: "Projetos",
-    },
+  {
+    path: "/",
+    icon: LayoutDashboard,
+    label: "Painel"
+  },
+  {
+    path: "/my-projects",
+    icon: FolderKanban,
+    label: "Projetos"
+  },
 
-    {
-      path: "/calendar",
-      icon: Calendar,
-      label: "Calendário",
-    },
+  {
+    path: "/calendar",
+    icon: Calendar,
+    label: "Calendário"
+  },
 
-    {
-      path: "/my-reports",
-      icon: FileBarChart,
-      label: "Relatórios",
-    },
-  ];
+  {
+    path: "/my-reports",
+    icon: FileBarChart,
+    label: "Relatórios"
+  }];
+
 
   // Select nav items based on role
   const getNavItems = () => {
@@ -366,12 +366,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <TooltipProvider delayDuration={0}>
       <div className="flex h-screen overflow-hidden bg-background">
         {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-white/20 bg-transparent backdrop-blur-sm lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+        {sidebarOpen &&
+        <div
+          className="fixed inset-0 z-40 bg-white/20 bg-transparent backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)} />
+
+        }
 
         {/* Sidebar - Fixed height 100vh */}
         <aside
@@ -384,15 +384,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             sidebarOpen && "shadow-[2px_0_4px_rgba(0,0,0,0.08)] lg:shadow-none"
           )}
           onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-        >
+          onMouseLeave={() => setIsHovering(false)}>
+
           {/* Header with workspace selector */}
           <div
             className={cn(
               "relative flex h-14 flex-shrink-0 items-center",
-              isCollapsed ? "lg:px-2 lg:justify-center" : "px-4",
-            )}
-          >
+              isCollapsed ? "lg:px-2 lg:justify-center" : "px-4"
+            )}>
+
             <div className="flex items-center justify-start w-full">
               {/* Desktop: Workspace selector */}
               <div className="hidden lg:flex w-full justify-start">
@@ -407,8 +407,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {/* Mobile close button */}
             <button
               className="absolute right-2 top-2 rounded-md p-2 text-muted-foreground hover:bg-accent lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
+              onClick={() => setSidebarOpen(false)}>
+
               <span className="sr-only">Fechar menu</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -423,10 +423,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 variant="outline"
                 className={cn(
                   "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-slate-200 bg-background p-0 text-foreground shadow-sm transition-opacity duration-200 lg:flex",
-                  isHovering ? "opacity-100" : "opacity-0",
+                  isHovering ? "opacity-100" : "opacity-0"
                 )}
-                onClick={() => setIsCollapsed(!isCollapsed)}
-              >
+                onClick={() => setIsCollapsed(!isCollapsed)}>
+
                 {isCollapsed ? <PanelLeft className="h-3 w-3" /> : <PanelLeftClose className="h-3 w-3" />}
               </Button>
             </TooltipTrigger>
@@ -438,39 +438,39 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <ul className="space-y-1">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
-                const NavLink = (
-                  <Link
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
-                      isActive
-                        ? "border border-slate-200 bg-background hover:text-foreground"
-                        : "hover:bg-background hover:text-foreground",
-                      isCollapsed && "lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto",
-                    )}
-                  >
+                const NavLink =
+                <Link
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
+                    isActive ?
+                    "border border-slate-200 bg-background hover:text-foreground" :
+                    "hover:bg-background hover:text-foreground",
+                    isCollapsed && "lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto"
+                  )}>
+
                     <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className={cn("transition-opacity duration-300", isCollapsed && "lg:hidden")}>
                       {item.label}
                     </span>
-                  </Link>
-                );
+                  </Link>;
+
                 return (
                   <li key={item.path}>
-                    {isCollapsed ? (
-                      <Tooltip>
+                    {isCollapsed ?
+                    <Tooltip>
                         <TooltipTrigger asChild className="hidden lg:flex">
                           {NavLink}
                         </TooltipTrigger>
                         <TooltipContent side="right">{item.label}</TooltipContent>
                         <div className="lg:hidden">{NavLink}</div>
-                      </Tooltip>
-                    ) : (
-                      NavLink
-                    )}
-                  </li>
-                );
+                      </Tooltip> :
+
+                    NavLink
+                    }
+                  </li>);
+
               })}
             </ul>
           </nav>
@@ -478,10 +478,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* User section - Fixed at bottom */}
           <div className={cn("flex-shrink-0 space-y-2 p-3", isCollapsed && "lg:p-2")}>
             {/* User info */}
-            {user && (
-              <div
-                className={cn("flex items-center gap-3 px-2 py-2", isCollapsed && "lg:justify-center lg:px-0 lg:py-1")}
-              >
+            {user &&
+            <div
+              className={cn("flex items-center gap-3 px-2 py-2", isCollapsed && "lg:justify-center lg:px-0 lg:py-1")}>
+
                 <Avatar className={cn("flex-shrink-0", isCollapsed ? "h-8 w-8" : "h-9 w-9")}>
                   <AvatarImage src={userAvatar || undefined} alt="Avatar" />
                   <AvatarFallback className="bg-white text-[#0f172a] text-sm border border-[#e2e8f0]">
@@ -497,89 +497,89 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </Badge>
                 </div>
               </div>
-            )}
+            }
 
             {/* Settings link */}
-            {isCollapsed ? (
-              <Tooltip>
+            {isCollapsed ?
+            <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
                   <Link
-                    to="/preferences"
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-foreground transition-colors",
-                      location.pathname === "/preferences"
-                        ? "border border-slate-200 bg-background hover:text-foreground"
-                        : "hover:bg-background hover:text-foreground",
-                    )}                    
-                  >
+                  to="/preferences"
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-foreground transition-colors",
+                    location.pathname === "/preferences" ?
+                    "border border-slate-200 bg-background hover:text-foreground" :
+                    "hover:bg-background hover:text-foreground"
+                  )}>
+
                     <Settings className="w-3.5 h-3.5" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">Configurações</TooltipContent>
                 <Link
-                  to="/preferences"
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
-                    location.pathname === "/preferences"
-                      ? "border border-slate-200 bg-background hover:text-foreground"
-                      : "hover:bg-background hover:text-foreground",
-                  )}
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  Configurações
-                </Link>
-              </Tooltip>
-            ) : (
-              <Link
                 to="/preferences"
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-menu-foreground transition-colors",
-                  location.pathname === "/preferences"
-                    ? "border border-slate-200 bg-background hover:text-foreground"
-                    : "hover:bg-background hover:text-foreground",
-                )}
-              >
+                  "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
+                  location.pathname === "/preferences" ?
+                  "border border-slate-200 bg-background hover:text-foreground" :
+                  "hover:bg-background hover:text-foreground"
+                )}>
+
+                  <Settings className="w-3.5 h-3.5" />
+                  Configurações
+                </Link>
+              </Tooltip> :
+
+            <Link
+              to="/preferences"
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-menu-foreground transition-colors",
+                location.pathname === "/preferences" ?
+                "border border-slate-200 bg-background hover:text-foreground" :
+                "hover:bg-background hover:text-foreground"
+              )}>
+
                 <Settings className="w-3.5 h-3.5" />
                 Configurações
               </Link>
-            )}
+            }
 
             {/* Sign out button */}
-            {isCollapsed ? (
-              <Tooltip>
+            {isCollapsed ?
+            <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="mx-auto h-8 w-8 text-menu-foreground hover:bg-background hover:text-foreground"
-                    onClick={handleSignOut}
-                  >
+                  variant="ghost"
+                  size="icon"
+                  className="mx-auto h-8 w-8 text-menu-foreground hover:bg-background hover:text-foreground"
+                  onClick={handleSignOut}>
+
                     <LogOut className="w-3.5 h-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Sair</TooltipContent>
                 <Button
-                  variant="ghost"
-                  className="lg:hidden w-full justify-start text-menu-foreground hover:bg-background hover:text-foreground"
-                  onClick={handleSignOut}
-                >
+                variant="ghost"
+                className="lg:hidden w-full justify-start text-menu-foreground hover:bg-background hover:text-foreground"
+                onClick={handleSignOut}>
+
                   <LogOut className="w-3.5 h-3.5 mr-2" />
                   Sair
                 </Button>
-              </Tooltip>
-            ) : (
-              <Button
-                variant="ghost"
-                className="text-xs w-full justify-start text-foreground hover:bg-background hover:text-foreground"
-                onClick={handleSignOut}
-              >
+              </Tooltip> :
+
+            <Button
+              variant="ghost"
+              className="text-xs w-full justify-start text-foreground hover:bg-background hover:text-foreground"
+              onClick={handleSignOut}>
+
                 <LogOut className="w-3.5 h-3.5 mr-2" />
                 Sair
               </Button>
-            )}
+            }
 
             {/* Version */}
             <div className={cn("px-3 py-2 text-[10px] text-slate-400", isCollapsed && "lg:hidden")}>Versão 1.0</div>
@@ -593,18 +593,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             setSidebarOpen={setSidebarOpen}
             hideTimer={isClient}
             highContrastEnabled={highContrastEnabled}
-            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)}
-          />
+            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)} />
+
 
           {/* Desktop header buttons - hide timer for clients */}
           <DesktopHeader
             hideTimer={isClient}
             highContrastEnabled={highContrastEnabled}
-            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)}
-          />
+            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)} />
+
 
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
-          <div className="flex-1 overflow-auto lg:pt-[58px]">
+          <div className="flex-1 overflow-auto lg:pt-[58px] bg-secondary">
             <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-[hsl(var(--content-surface))] px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
               {children}
             </div>
@@ -612,6 +612,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </main>
       </div>
       <GlobalTimerCompleteDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog} />
-    </TooltipProvider>
-  );
+    </TooltipProvider>);
+
 };
