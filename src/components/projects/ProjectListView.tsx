@@ -628,7 +628,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             return (
                               <Avatar
                                 key={userId}
-                                className="h-7 w-7 border-1 border-background"
+                                className="h-7 w-7 border-2 border-background"
                                 title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
                               >
                                 <AvatarImage
