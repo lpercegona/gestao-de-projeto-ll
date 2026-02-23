@@ -368,7 +368,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-white/10 bg-transparent backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-white/20 bg-transparent backdrop-blur-sm lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -507,11 +507,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     to="/preferences"
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
+                      "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-foreground transition-colors",
                       location.pathname === "/preferences"
-                        ? "border border-slate bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
-                        : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
-                    )}
+                        ? "border border-slate-200 bg-background hover:text-foreground"
+                        : "hover:bg-background hover:text-foreground",
+                    )}                    
                   >
                     <Settings className="w-3.5 h-3.5" />
                   </Link>
@@ -521,10 +521,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   to="/preferences"
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
+                    "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
                     location.pathname === "/preferences"
-                      ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
-                      : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
+                      ? "border border-slate-200 bg-background hover:text-foreground"
+                      : "hover:bg-background hover:text-foreground",
                   )}
                 >
                   <Settings className="w-3.5 h-3.5" />
@@ -536,10 +536,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 to="/preferences"
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-menu-foreground transition-colors",
                   location.pathname === "/preferences"
-                    ? "border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu-surface))] text-[hsl(var(--menu-foreground-active))]"
-                    : "hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]",
+                    ? "border border-slate-200 bg-background hover:text-foreground"
+                    : "hover:bg-background hover:text-foreground",
                 )}
               >
                 <Settings className="w-3.5 h-3.5" />
@@ -554,7 +554,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="mx-auto h-8 w-8 text-[hsl(var(--menu-foreground))] hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]"
+                    className="mx-auto h-8 w-8 text-menu-foreground hover:bg-background hover:text-foreground"
                     onClick={handleSignOut}
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -563,7 +563,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <TooltipContent side="right">Sair</TooltipContent>
                 <Button
                   variant="ghost"
-                  className="lg:hidden w-full justify-start text-[hsl(var(--menu-foreground))] hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]"
+                  className="lg:hidden w-full justify-start text-menu-foreground hover:bg-background hover:text-foreground"
                   onClick={handleSignOut}
                 >
                   <LogOut className="w-3.5 h-3.5 mr-2" />
@@ -573,7 +573,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             ) : (
               <Button
                 variant="ghost"
-                className="w-full justify-start text-[hsl(var(--menu-foreground))] hover:bg-[hsl(var(--menu-surface-hover))] hover:text-[hsl(var(--menu-foreground-hover))]"
+                className="text-xs w-full justify-start text-foreground hover:bg-background hover:text-foreground"
                 onClick={handleSignOut}
               >
                 <LogOut className="w-3.5 h-3.5 mr-2" />
