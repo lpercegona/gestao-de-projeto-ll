@@ -616,7 +616,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       </div>
                       {projectCollaborators.length > 0 && (
                         <div
-                          className={`flex items-center -space-x-2 pt-1 ${canManageShare ? "cursor-pointer hover:opacity-80" : ""}`}
+                          className={`inline-flex items-center -space-x-2 pt-1 ${canManageShare ? "cursor-pointer hover:opacity-80" : ""}`}
                           onClick={(e) => {
                             if (!canManageShare) return;
                             e.stopPropagation();
@@ -643,7 +643,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                           })}
                           {canManageShare && (
                             <div
-                              className="h-7 w-7 rounded-full border-2 border-dashed border-muted-foreground/40 bg-background text-muted-foreground flex items-center justify-center"
+                              className="h-7 w-7 rounded-full border border-muted-foreground/40 bg-background text-muted-foreground flex items-center justify-center"
                               title="Gerenciar compartilhamento"
                             >
                               <Plus className="h-3.5 w-3.5" />
