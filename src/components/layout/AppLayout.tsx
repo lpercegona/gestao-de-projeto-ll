@@ -42,7 +42,7 @@ const MobileHeader: React.FC<{
   const { hasActiveTimer } = useGlobalTimer();
 
   return (
-    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-foreground px-4 py-3 sm:px-6 lg:hidden">
+    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-secondary px-4 py-3 sm:px-6 lg:hidden">
       <button
         className="flex-shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         onClick={() => setSidebarOpen(true)}
