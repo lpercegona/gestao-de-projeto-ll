@@ -54,6 +54,7 @@ type UnifiedProject = {
   custom_fields: Record<string, string>;
   created_at: string;
   updated_at?: string;
+  created_by?: string | null;
   is_request?: boolean;
   request_status?: string;
   request_id?: string;
@@ -138,6 +139,19 @@ export const ClientProjects: React.FC = () => {
 
   const [deletingRequest, setDeletingRequest] = useState<UnifiedProject | null>(null);
   const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
+
+  // Direct project edit/delete (for own projects)
+  const [projectEditDialogOpen, setProjectEditDialogOpen] = useState(false);
+  const [projectEditSubmitting, setProjectEditSubmitting] = useState(false);
+  const [projectEditForm, setProjectEditForm] = useState({ id: '', name: '', description: '', due_date: '' });
+  const [projectDeleteDialogOpen, setProjectDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<UnifiedProject | null>(null);
+
+  // Task request dialog (for admin-owned projects)
+  const [taskRequestDialogOpen, setTaskRequestDialogOpen] = useState(false);
+  const [taskRequestSubmitting, setTaskRequestSubmitting] = useState(false);
+  const [taskRequestProjectId, setTaskRequestProjectId] = useState('');
+  const [taskRequestForm, setTaskRequestForm] = useState({ name: '', description: '', due_date: '' });
 
   // Time entry dialog state
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
@@ -402,6 +416,115 @@ export const ClientProjects: React.FC = () => {
       toast.error('Erro ao criar projeto.');
     } finally {
       setProjectCreateSubmitting(false);
+    }
+  };
+
+  const isOwnProject = (project: UnifiedProject) => project.created_by === user?.id;
+
+  // ---- Direct project edit (own projects) ----
+  const handleDirectEditProject = (project: UnifiedProject) => {
+    setProjectEditForm({
+      id: project.id,
+      name: project.name,
+      description: project.description || '',
+      due_date: project.due_date || '',
+    });
+    setProjectEditDialogOpen(true);
+  };
+
+  const handleSubmitDirectEditProject = async () => {
+    if (!projectEditForm.id || !projectEditForm.name.trim()) {
+      toast.error('Preencha o nome do projeto.');
+      return;
+    }
+    setProjectEditSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          name: projectEditForm.name.trim(),
+          description: getWysiwygPlainText(projectEditForm.description) ? projectEditForm.description : null,
+          due_date: projectEditForm.due_date || null,
+        })
+        .eq('id', projectEditForm.id);
+      if (error) throw error;
+      toast.success('Projeto atualizado com sucesso!');
+      setProjectEditDialogOpen(false);
+      refreshData();
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast.error('Erro ao atualizar projeto.');
+    } finally {
+      setProjectEditSubmitting(false);
+    }
+  };
+
+  // ---- Delete own project ----
+  const handleDeleteProject = (project: UnifiedProject) => {
+    setProjectToDelete(project);
+    setProjectDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', projectToDelete.id);
+      if (error) throw error;
+      toast.success('Projeto excluído com sucesso!');
+      setProjectDeleteDialogOpen(false);
+      setProjectToDelete(null);
+      refreshData();
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast.error('Erro ao excluir projeto.');
+    }
+  };
+
+  // ---- Task request for admin-owned projects ----
+  const handleOpenTaskRequest = (projectId: string) => {
+    setTaskRequestProjectId(projectId);
+    setTaskRequestForm({ name: '', description: '', due_date: '' });
+    setTaskRequestDialogOpen(true);
+  };
+
+  const handleSubmitTaskRequest = async () => {
+    if (!clientId || !user || !taskRequestProjectId || !taskRequestForm.name.trim()) {
+      toast.error('Preencha o nome da tarefa.');
+      return;
+    }
+    setTaskRequestSubmitting(true);
+    try {
+      const { error } = await supabase.from('edit_requests').insert([{
+        entity_type: 'project',
+        entity_id: taskRequestProjectId,
+        client_id: clientId,
+        requested_by: user.id,
+        original_data: {},
+        proposed_data: {
+          request_type: 'new_task',
+          task_name: taskRequestForm.name.trim(),
+          task_description: getWysiwygPlainText(taskRequestForm.description) ? taskRequestForm.description : null,
+          task_due_date: taskRequestForm.due_date || null,
+        },
+      }]);
+      if (error) throw error;
+      toast.success('Solicitação de nova tarefa enviada para aprovação!');
+      setTaskRequestDialogOpen(false);
+      // Refresh pending task requests
+      const { data: pendingTaskData } = await supabase
+        .from('edit_requests')
+        .select('id, entity_id, status, proposed_data, created_at')
+        .eq('client_id', clientId)
+        .eq('entity_type', 'project')
+        .in('status', ['pending', 'analyzing', 'in_review'])
+        .contains('proposed_data', { request_type: 'new_task' })
+        .order('created_at', { ascending: false });
+      setPendingTaskRequests((pendingTaskData || []) as PendingTaskRequest[]);
+    } catch (error) {
+      console.error('Error creating task request:', error);
+      toast.error('Erro ao solicitar nova tarefa.');
+    } finally {
+      setTaskRequestSubmitting(false);
     }
   };
 
@@ -812,10 +935,29 @@ export const ClientProjects: React.FC = () => {
           getCreatorName={getCreatorName}
           getActiveTimer={getCurrentUserActiveTimer}
           getClientColumns={getClientColumns}
-          onEditProject={(project) => openEditRequest(project as UnifiedProject)}
-          onDeleteProject={() => {}}
+          onEditProject={(project) => {
+            const p = project as UnifiedProject;
+            if (isOwnProject(p)) {
+              handleDirectEditProject(p);
+            } else {
+              openEditRequest(p);
+            }
+          }}
+          onDeleteProject={(project) => {
+            const p = project as UnifiedProject;
+            if (isOwnProject(p)) {
+              handleDeleteProject(p);
+            }
+          }}
           onArchiveProject={() => {}}
-          onCreateTask={handleOpenTaskCreate}
+          onCreateTask={(projectId) => {
+            const project = filteredProjects.find(p => p.id === projectId);
+            if (project && isOwnProject(project)) {
+              handleOpenTaskCreate(projectId);
+            } else {
+              handleOpenTaskRequest(projectId);
+            }
+          }}
           onEditTask={(task) => {
             if (isOwnTask(task as ClientTask)) {
               handleOpenTaskEdit(task as ClientTask);
@@ -861,10 +1003,29 @@ export const ClientProjects: React.FC = () => {
           getCreatorName={getCreatorName}
           getClientColumns={getClientColumns}
           getActiveTimer={getCurrentUserActiveTimer}
-          onEditProject={(project) => openEditRequest(project as UnifiedProject)}
-          onDeleteProject={() => {}}
+          onEditProject={(project) => {
+            const p = project as UnifiedProject;
+            if (isOwnProject(p)) {
+              handleDirectEditProject(p);
+            } else {
+              openEditRequest(p);
+            }
+          }}
+          onDeleteProject={(project) => {
+            const p = project as UnifiedProject;
+            if (isOwnProject(p)) {
+              handleDeleteProject(p);
+            }
+          }}
           onArchiveProject={() => {}}
-          onCreateTask={handleOpenTaskCreate}
+          onCreateTask={(projectId) => {
+            const project = filteredProjects.find(p => p.id === projectId);
+            if (project && isOwnProject(project)) {
+              handleOpenTaskCreate(projectId);
+            } else {
+              handleOpenTaskRequest(projectId);
+            }
+          }}
           onEditTask={(task) => {
             if (isOwnTask(task as ClientTask)) {
               handleOpenTaskEdit(task as ClientTask);
@@ -920,7 +1081,14 @@ export const ClientProjects: React.FC = () => {
           onStopTimer={(taskId) => handleStopTimer(taskId)}
           onCompleteTask={(taskId) => handleCompleteTask(taskId)}
           onUpdateTaskStatus={(taskId, newStatus) => handleUpdateTaskStatus(taskId, newStatus)}
-          onCreateTask={handleOpenTaskCreate}
+          onCreateTask={(projectId) => {
+            const project = visibleProjects.find(p => p.id === projectId);
+            if (project && isOwnProject(project as UnifiedProject)) {
+              handleOpenTaskCreate(projectId);
+            } else {
+              handleOpenTaskRequest(projectId);
+            }
+          }}
           onManageStages={() => {}}
           currentUserId={user?.id}
           onRequestTaskEdit={(task) => {
@@ -1069,6 +1237,112 @@ export const ClientProjects: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setProjectTaskDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button>
             <Button onClick={handleAddProjectTask} disabled={projectCreateSubmitting || !projectTaskForm.name.trim()}>Adicionar tarefa</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Direct project edit dialog (own projects) */}
+      <Dialog open={projectEditDialogOpen} onOpenChange={setProjectEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Editar Projeto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              <Label>Nome do projeto</Label>
+              <Input
+                value={projectEditForm.name}
+                onChange={(e) => setProjectEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                disabled={projectEditSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <WysiwygEditor
+                value={projectEditForm.description}
+                onChange={(value) => setProjectEditForm((prev) => ({ ...prev, description: value }))}
+                disabled={projectEditSubmitting}
+                minHeight="120px"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Prazo</Label>
+              <Input
+                type="date"
+                value={projectEditForm.due_date}
+                onChange={(e) => setProjectEditForm((prev) => ({ ...prev, due_date: e.target.value }))}
+                disabled={projectEditSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProjectEditDialogOpen(false)} disabled={projectEditSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitDirectEditProject} disabled={projectEditSubmitting || !projectEditForm.name.trim()}>
+              {projectEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete own project confirmation */}
+      <AlertDialog open={projectDeleteDialogOpen} onOpenChange={(open) => { setProjectDeleteDialogOpen(open); if (!open) setProjectToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir projeto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação remove definitivamente o projeto "{projectToDelete?.name}" e todas as suas tarefas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteProject}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Task request dialog (for admin-owned projects) */}
+      <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              <Label>Nome da tarefa</Label>
+              <Input
+                value={taskRequestForm.name}
+                onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Criar arte para campanha"
+                disabled={taskRequestSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <WysiwygEditor
+                value={taskRequestForm.description}
+                onChange={(value) => setTaskRequestForm((prev) => ({ ...prev, description: value }))}
+                placeholder="Descreva o que precisa ser feito"
+                disabled={taskRequestSubmitting}
+                minHeight="120px"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Prazo (opcional)</Label>
+              <Input
+                type="date"
+                value={taskRequestForm.due_date}
+                onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, due_date: e.target.value }))}
+                disabled={taskRequestSubmitting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>
+              {taskRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Enviar Solicitação
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
