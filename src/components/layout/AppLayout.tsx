@@ -368,7 +368,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-background lg:hidden"
+            className="fixed inset-0 z-40 bg-transparent lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -376,7 +376,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen bg-transparent flex-col transition-all duration-300 lg:static",
+            "fixed inset-y-0 left-0 z-50 flex h-screen bg-secondary flex-col transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
