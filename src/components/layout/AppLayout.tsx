@@ -582,7 +582,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             )}
 
             {/* Version */}
-            <div className={cn("px-3 py-2 text-[0.6] text-slate-400", isCollapsed && "lg:hidden")}>Versão 1.0</div>
+            <div className={cn("px-3 py-2 text-[10px] text-slate-400", isCollapsed && "lg:hidden")}>Versão 1.0</div>
           </div>
         </aside>
 
