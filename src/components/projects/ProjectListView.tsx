@@ -356,7 +356,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+    <div className="columns-1 gap-4 lg:columns-3">
       {projects.map((project) => {
         const client = clients.find((c) => c.id === project.client_id);
         const projectTasks = tasks.filter((t) => t.project_id === project.id);
@@ -372,7 +372,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         return (
           <Card
             key={project.id}
-            className={`relative overflow-hidden ${getRequestCardClass(project)}`}
+            className={`relative mb-4 break-inside-avoid overflow-hidden ${getRequestCardClass(project)}`}
           >
             {/* Project Header */}
             <Collapsible
