@@ -716,7 +716,7 @@ export const SharedReport: React.FC = () => {
                                     <div key={task.id} className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-md">
                                       <div>
                                         <p className="font-medium text-foreground">{task.name}</p>
-                                        {task.description && <WysiwygContent content={task.description} className="text-sm text-muted-foreground" />}
+                                        
                                       </div>
                                       <div className="text-right"><div className="flex gap-2 text-xs">{task.monthTaskHours > 0 && <span className="text-primary font-medium">{formatHours(task.monthTaskHours)} tarefas</span>}{task.monthMeetingHours > 0 && <span className="text-accent-foreground font-medium">{formatHours(task.monthMeetingHours)} reuniões</span>}</div></div>
                                     </div>
