@@ -628,7 +628,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             return (
                               <Avatar
                                 key={userId}
-                                className="h-7 w-7 border-2 border-background"
+                                className="h-7 w-7 border-1 border-background"
                                 title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
                               >
                                 <AvatarImage
@@ -643,7 +643,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                           })}
                           {canManageShare && (
                             <div
-                              className="h-7 w-7 rounded-full border border-muted-foreground/40 bg-background text-muted-foreground flex items-center justify-center"
+                              className="h-5 w-5 rounded-full border border-muted-foreground/20 bg-background text-muted-foreground flex items-center justify-center"
                               title="Gerenciar compartilhamento"
                             >
                               <Plus className="h-3.5 w-3.5" />
