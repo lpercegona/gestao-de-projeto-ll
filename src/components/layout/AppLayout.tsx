@@ -368,7 +368,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-transparent lg:hidden"
+            className="fixed inset-0 z-40 bg-white/10 bg-transparent backdrop-blur-sm lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
