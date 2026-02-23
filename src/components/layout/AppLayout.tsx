@@ -380,7 +380,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
-            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 shadow-[2px_0_4px_rgba(0,0,0,0.06)]",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+            sidebarOpen && "shadow-[2px_0_4px_rgba(0,0,0,0.08)] lg:shadow-none"
           )}
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
