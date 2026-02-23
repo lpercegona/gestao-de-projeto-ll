@@ -80,7 +80,7 @@ export const QuickTimeTracker: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center gap-3">
-            <div className={`text-3xl font-mono tabular-nums font-bold text-foreground ${isRunning ? 'animate-pulse' : ''}`}>
+            <div className={`text-3xl font-mono tabular-nums font-semibold text-foreground ${isRunning ? 'animate-pulse' : ''}`}>
               {formatTime(timerState.elapsedSeconds)}
             </div>
             
