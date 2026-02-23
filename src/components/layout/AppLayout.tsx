@@ -45,7 +45,7 @@ const MobileHeader: React.FC<{
   return (
     <div
       className={cn(
-        "sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-secondary px-4 py-3 transition-transform duration-300 sm:px-6 lg:hidden",
+        "fixed left-0 right-0 top-0 z-30 flex items-center justify-between gap-2 bg-secondary px-4 py-3 transition-transform duration-300 sm:px-6 lg:hidden",
         hidden ? "-translate-y-full" : "translate-y-0"
       )}
     >
@@ -633,7 +633,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
 
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
-          <div className="flex-1 overflow-auto bg-secondary lg:pt-[58px]" onScroll={handleContentScroll}>
+          <div className={cn(
+            "flex-1 overflow-auto bg-secondary transition-[padding] duration-300 lg:pt-[58px]",
+            isMobileHeaderHidden ? "pt-0" : "pt-[60px]"
+          )} onScroll={handleContentScroll}>
             <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-[hsl(var(--content-surface))] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 bg-secondary">
               {children}
             </div>
