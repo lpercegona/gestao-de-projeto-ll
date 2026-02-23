@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,11 +38,17 @@ const MobileHeader: React.FC<{
   hideTimer?: boolean;
   highContrastEnabled: boolean;
   onToggleHighContrast: () => void;
-}> = ({ setSidebarOpen, hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
+  hidden?: boolean;
+}> = ({ setSidebarOpen, hideTimer = false, highContrastEnabled, onToggleHighContrast, hidden = false }) => {
   const { hasActiveTimer } = useGlobalTimer();
 
   return (
-    <div className="sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-secondary px-4 py-3 sm:px-6 lg:hidden">
+    <div
+      className={cn(
+        "sticky top-0 z-30 flex flex-shrink-0 items-center justify-between gap-2 bg-secondary px-4 py-3 transition-transform duration-300 sm:px-6 lg:hidden",
+        hidden ? "-translate-y-full" : "translate-y-0"
+      )}
+    >
       <button
         className="flex-shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         onClick={() => setSidebarOpen(true)}>
@@ -179,9 +185,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   });
   const [isHovering, setIsHovering] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [isMobileHeaderHidden, setIsMobileHeaderHidden] = useState(false);
   const [highContrastEnabled, setHighContrastEnabled] = useState(() => {
     return localStorage.getItem("high-contrast-enabled") === "true";
   });
+  const lastContentScrollTop = useRef(0);
 
   // Persist collapsed state
   useEffect(() => {
@@ -211,6 +219,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
+  };
+
+  const handleContentScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const currentScrollTop = event.currentTarget.scrollTop;
+    const previousScrollTop = lastContentScrollTop.current;
+
+    if (currentScrollTop <= 0) {
+      setIsMobileHeaderHidden(false);
+      lastContentScrollTop.current = 0;
+      return;
+    }
+
+    if (currentScrollTop > previousScrollTop) {
+      setIsMobileHeaderHidden(true);
+    } else if (currentScrollTop < previousScrollTop) {
+      setIsMobileHeaderHidden(false);
+    }
+
+    lastContentScrollTop.current = currentScrollTop;
   };
 
   // Master Admin nav items (full access)
@@ -593,7 +620,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             setSidebarOpen={setSidebarOpen}
             hideTimer={isClient}
             highContrastEnabled={highContrastEnabled}
-            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)} />
+            onToggleHighContrast={() => setHighContrastEnabled((prev) => !prev)}
+            hidden={isMobileHeaderHidden}
+          />
 
 
           {/* Desktop header buttons - hide timer for clients */}
@@ -604,7 +633,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
 
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
-          <div className="flex-1 overflow-auto lg:pt-[58px] bg-secondary">
+          <div className="flex-1 overflow-auto bg-secondary lg:pt-[58px]" onScroll={handleContentScroll}>
             <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-[hsl(var(--content-surface))] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 bg-secondary">
               {children}
             </div>
