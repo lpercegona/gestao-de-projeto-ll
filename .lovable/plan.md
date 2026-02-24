@@ -1,135 +1,84 @@
 
-# Habilitar Editar/Excluir Projetos Proprietarios e Controlar Criacao de Tarefas
+## Objetivo
 
-## Resumo
+Eliminar o erro `TypeError: Cannot read properties of undefined (reading 'close')` no teste SMTP e estabilizar o fluxo para não gerar falha 500/erro de runtime quando a conexão falha parcialmente.
 
-Clientes poderao editar e excluir diretamente projetos que eles mesmos criaram (`created_by === user.id`). Para projetos criados pelo admin, o comportamento atual de "Solicitar Edicao" sera mantido. Alem disso, o botao "Nova Tarefa" so criara tarefas diretamente em projetos proprietarios; em projetos do admin, abrira o fluxo de solicitacao de nova tarefa (via `edit_requests`).
+## Diagnóstico (o que foi verificado)
 
-## Mudancas Necessarias
+1. O erro foi confirmado nos logs do backend:
+   - `SMTP fallback failed: TypeError: Cannot read properties of undefined (reading 'close')`
+   - stack dentro de `denomailer` (`SMTPClient.close`).
+2. A requisição do frontend para `test-smtp-connection` retorna HTTP 200 com:
+   - `{ "success": false, "error": "TypeError: Cannot read properties of undefined (reading 'close')" }`
+3. Causa raiz técnica:
+   - O `denomailer` cria conexão de forma assíncrona no construtor.
+   - O código atual testa conexão com `new SMTPClient(...)` seguido de `await client.close()`.
+   - Em cenários de falha parcial/handshake, `close()` pode ser chamado antes da conexão interna existir, gerando `undefined.close`.
+   - Isso também pode acontecer em `finally`/fallback em outros arquivos que usam o mesmo padrão de fechamento direto.
 
-### 1. Banco de dados - Novas politicas RLS
+## Estratégia de correção
 
-Adicionar duas politicas na tabela `projects` para permitir que clientes atualizem e excluam seus proprios projetos:
+Trocar o teste baseado em “criar e fechar cliente” por teste real de envio controlado (que aguarda corretamente o estado interno do cliente), e padronizar fechamento defensivo em todos os fluxos SMTP.
 
-- **Clients can update own projects**: permite UPDATE onde `created_by = auth.uid()` e `client_id = get_user_client_id(auth.uid())`
-- **Clients can delete own projects**: permite DELETE onde `created_by = auth.uid()` e `client_id = get_user_client_id(auth.uid())`
+## Mudanças planejadas
 
-### 2. `src/pages/ClientProjects.tsx`
+### 1) `supabase/functions/test-smtp-connection/index.ts` (correção principal)
 
-**Novo helper**: `isOwnProject(project)` - verifica se `project.created_by === user?.id`
+- Substituir a validação atual (`create client -> close`) por:
+  1. criar cliente na porta escolhida;
+  2. executar `send(...)` para o próprio remetente (`to: smtp_user`, `from: smtp_user`) com assunto claro de teste;
+  3. fechar com `safeClose` no `finally`.
+- Manter fallback para 465 quando tentativa inicial falhar.
+- Garantir que **nenhum** ponto use `await client.close()` diretamente sem wrapper.
+- Retornar mensagens de erro limpas (sem stack crua) e manter `success: false` para falhas de autenticação/TLS.
 
-**Funcoes de edicao direta de projeto**:
-- `handleDirectEditProject(project)`: abre um dialog para editar nome, descricao e prazo do projeto diretamente (INSERT direto no banco, nao via edit_request)
-- `handleSubmitDirectEditProject()`: faz UPDATE direto no `projects`
-- `handleDeleteProject(project)`: abre confirmacao e faz DELETE direto no `projects`
+Resultado esperado: elimina o `TypeError ... close` e transforma o teste em validação real de credenciais/conectividade SMTP.
 
-**Novo dialog**: Dialog de edicao direta de projeto (reutilizando o pattern do dialog de criacao ja existente)
+### 2) Robustez adicional nas outras funções SMTP (preventivo recomendado)
 
-**Novo dialog**: AlertDialog de confirmacao de exclusao de projeto
+Arquivos:
+- `supabase/functions/send-proposal-email/index.ts`
+- `supabase/functions/send-contract-email/index.ts`
+- `supabase/functions/send-monthly-report/index.ts`
 
-**Logica condicional no `onEditProject`**:
-- Se `isOwnProject(project)`: abre dialog de edicao direta
-- Se nao: abre `openEditRequest(project)` (solicitar edicao, como hoje)
+Ajustes:
+- Introduzir `safeClose` igual ao padrão defensivo.
+- Substituir fechamentos diretos em fallback/finally por `safeClose`.
+- Evitar que erro no fechamento sobrescreva erro real de envio.
 
-**Logica condicional no `onDeleteProject`**:
-- Se `isOwnProject(project)`: abre confirmacao de exclusao
-- Se nao: nao faz nada (permanece vazio)
+Resultado esperado: evita recorrência do mesmo bug em envios reais de proposta/contrato/relatório.
 
-**Logica condicional no `onCreateTask`**:
-- Se `isOwnProject(project)`: `handleOpenTaskCreate(projectId)` (criacao direta, como hoje)
-- Se nao: abre dialog de solicitacao de nova tarefa (via `edit_requests`, igual ao `QuickRequestCard`)
+### 3) `src/components/settings/SmtpSettingsSection.tsx` (UX de erro)
 
-**Novo dialog**: Dialog de solicitacao de nova tarefa para projetos do admin (similar ao existente no `QuickRequestCard`)
+- Melhorar o feedback do botão “Testar Conexão”:
+  - quando `result.success === false`, exibir mensagem amigável (ex.: “Falha ao autenticar no servidor SMTP. Verifique host/porta/usuário/senha.”).
+  - opcional: exibir quando houve fallback para 465 com sucesso.
 
-**Mudanca nos menus de projeto nas views**: O label do botao de editar mostrara "Editar" para projetos proprios e "Solicitar Edicao" para projetos do admin. O botao de excluir so aparecera para projetos proprios.
+Resultado esperado: o usuário vê erro útil, sem `TypeError` técnico.
 
-### 3. Mudancas nas Views (`ProjectListView`, `ProjectTableView`, `ProjectKanbanView`)
+## Sequência de implementação
 
-As views ja recebem `currentUserId` e `created_by` nos projetos. A logica de qual acao executar sera controlada no `ClientProjects.tsx` (camada de callbacks), nao nas views. Porem, para mostrar/ocultar o botao "Excluir" nos menus de projeto em modo cliente:
+1. Corrigir `test-smtp-connection` (principal).
+2. Padronizar `safeClose` nas demais funções SMTP (preventivo).
+3. Ajustar mensagens no frontend (`SmtpSettingsSection`).
+4. Validar em ambiente:
+   - porta 587 válida;
+   - 587 falhando e 465 funcionando (fallback);
+   - credenciais inválidas;
+   - host inválido.
 
-- No `ProjectListView`: quando `allowProjectEditOnly && !isAdminOrMaster`, mostrar "Excluir" apenas se `project.created_by === currentUserId`
-- No `ProjectTableView`: mesma logica
-- No `ProjectKanbanView`: nao possui menu de projeto no modo cliente (nao precisa de mudanca)
+## Critérios de aceite
 
-Para o botao "Nova Tarefa" dentro dos projetos expandidos: a label e o comportamento serao controlados pelo callback `onCreateTask` que ja e passado -- a logica condicional ficara no `ClientProjects.tsx`.
+- Não aparece mais `TypeError: ... undefined (reading 'close')` no toast nem nos logs.
+- Teste SMTP retorna:
+  - `success: true` quando autentica/envia teste;
+  - `success: false` com erro legível quando falha.
+- Sem `UncaughtException` no runtime da função.
+- Fluxo de fallback 465 permanece funcional.
 
-## Secao Tecnica
+## Riscos e mitigação
 
-### Migracao SQL
-
-```sql
--- Clients can update own projects
-CREATE POLICY "Clients can update own projects"
-ON public.projects FOR UPDATE
-USING (
-  has_role(auth.uid(), 'client'::app_role) 
-  AND created_by = auth.uid() 
-  AND client_id = get_user_client_id(auth.uid())
-);
-
--- Clients can delete own projects
-CREATE POLICY "Clients can delete own projects"
-ON public.projects FOR DELETE
-USING (
-  has_role(auth.uid(), 'client'::app_role) 
-  AND created_by = auth.uid() 
-  AND client_id = get_user_client_id(auth.uid())
-);
-```
-
-### `src/pages/ClientProjects.tsx`
-
-```text
-1. Adicionar helper:
-   const isOwnProject = (project: UnifiedProject) => 
-     project.created_by === user?.id;
-
-2. Adicionar estados:
-   - projectEditDialogOpen, projectEditForm (name, description, due_date, id)
-   - projectEditSubmitting
-   - projectDeleteDialogOpen, projectToDelete
-
-3. Implementar handleDirectEditProject(project):
-   - Preencher projectEditForm com dados do projeto
-   - Abrir projectEditDialogOpen
-
-4. Implementar handleSubmitDirectEditProject:
-   - UPDATE em projects (name, description, due_date)
-   - refreshData
-
-5. Implementar handleDeleteProject(project):
-   - Setar projectToDelete
-   - Abrir projectDeleteDialogOpen
-
-6. Implementar handleConfirmDeleteProject:
-   - DELETE em projects
-   - refreshData
-
-7. Adicionar dialog de solicitacao de nova tarefa para projetos do admin:
-   - taskRequestDialogOpen, taskRequestForm, taskRequestProjectId
-   - handleSubmitTaskRequest: INSERT em edit_requests com request_type = 'new_task'
-
-8. Modificar callbacks nas 3 views:
-   - onEditProject: isOwnProject ? handleDirectEditProject : openEditRequest
-   - onDeleteProject: isOwnProject ? handleDeleteProject : () => {}
-   - onCreateTask: isOwnProject ? handleOpenTaskCreate : handleOpenTaskRequest
-
-9. Adicionar JSX dos novos dialogs (edicao direta, exclusao projeto, solicitacao tarefa)
-```
-
-### `src/components/projects/ProjectListView.tsx`
-
-```text
-No bloco de menu dropdown do projeto (linhas 455-479):
-- Quando allowProjectEditOnly && !isAdminOrMaster:
-  - Mostrar "Excluir" se project.created_by === currentUserId
-  - Mostrar label "Editar" se project.created_by === currentUserId
-  - Manter "Solicitar Edicao" se project.created_by !== currentUserId
-```
-
-### `src/components/projects/ProjectTableView.tsx`
-
-```text
-Mesmo ajuste no menu dropdown de projetos para modo cliente,
-usando isOwnProject que ja existe (linha 237).
-```
+- Risco: envio de e-mail de teste a cada clique.
+  - Mitigação: usar assunto/prefixo explícito de teste e corpo mínimo.
+- Risco: provedores com política anti-spam para autoenvio.
+  - Mitigação: tratar erro com mensagem clara; manter fallback de porta e resposta controlada.
