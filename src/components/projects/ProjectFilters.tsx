@@ -299,11 +299,11 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
               {viewMode === "list" && "Cards"}
             </ToggleGroupItem>
-            <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" variant="tab" size="tb" className={cn("")}>
+            <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" variant="tab" size="tb" className={cn("hover:bg-slate-200")}>
               <Columns3 className={cn("w-3.5 h-3.5", viewMode === "kanban" && "mr-1.5")} />
               {viewMode === "kanban" && "Kanban"}
             </ToggleGroupItem>
-            <ToggleGroupItem value="table" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("")}>
+            <ToggleGroupItem value="table" aria-label="Visualização em lista" variant="tab" size="tb" className={cn("hover:bg-slate-200")}>
               <ClipboardList className={cn("w-3.5 h-3.5", viewMode === "table" && "mr-1.5")} />
               {viewMode === "table" && "Lista"}
             </ToggleGroupItem>
