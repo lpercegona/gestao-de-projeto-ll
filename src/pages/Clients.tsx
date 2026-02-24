@@ -258,7 +258,7 @@ export const Clients: React.FC = () => {
                   </TabsTrigger>
                   <TabsTrigger
                     value="active"
-                    className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-muted"
+                    className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-background"
                   >
                     <Badge variant="circular" className="">
                       {activeCount}
