@@ -260,7 +260,7 @@ export const Clients: React.FC = () => {
                     value="active"
                     className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-background"
                   >
-                    <Badge variant="circular" className="active:bg-secondary">
+                    <Badge variant="circular" className="">
                       {activeCount}
                     </Badge>
                     <span className="sm:inline">Ativos</span>
