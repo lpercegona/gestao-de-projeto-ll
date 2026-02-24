@@ -1081,7 +1081,7 @@ export const ClientDetail: React.FC = () => {
                 <FolderKanban className="w-4 h-4" />
                 <span className="text-sm">Projetos</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{clientProjects.length}</p>
+              <p className="text-xl sm:text-2xl font-bold">{clientProjects.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -1090,14 +1090,14 @@ export const ClientDetail: React.FC = () => {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">{isMonthly ? 'Horas do Mês' : 'Horas Usadas'}</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{formatHours(displayedHours)}</p>
+              <p className="text-xl sm:text-2xl font-bold">{formatHours(displayedHours)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
+                <span className="text-xl sm:text-2xl font-bold">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
               </div>
               <p className="text-2xl font-bold text-foreground">{formatHours(availableHours)}</p>
               {isMonthly && previousOverflow > 0 && (
