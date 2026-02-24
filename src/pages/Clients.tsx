@@ -305,7 +305,7 @@ export const Clients: React.FC = () => {
                 return (
                   <Card
                     key={client.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    className="cursor-pointer hover:bg-accent/40 transition-bg"
                     onClick={() => navigate(`/clients/${client.id}`)}
                   >
                     <CardContent className="p-4">
