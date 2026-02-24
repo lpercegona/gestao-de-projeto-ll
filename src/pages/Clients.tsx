@@ -305,10 +305,10 @@ export const Clients: React.FC = () => {
                 return (
                   <Card
                     key={client.id}
-                    className="cursor-pointer hover:bg-[#FAFBFC] transition-colors"
+                    className="cursor-pointer"
                     onClick={() => navigate(`/clients/${client.id}`)}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 hover:bg-muted/30 transition-colors">
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-foreground">{client.company || client.name}</h3>
