@@ -190,6 +190,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     return localStorage.getItem("high-contrast-enabled") === "true";
   });
   const lastContentScrollTop = useRef(0);
+  const mobileHeaderScrollThreshold = 18;
 
   // Persist collapsed state
   useEffect(() => {
@@ -231,9 +232,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       return;
     }
 
-    if (currentScrollTop > previousScrollTop) {
+    const scrollDelta = currentScrollTop - previousScrollTop;
+    if (Math.abs(scrollDelta) < mobileHeaderScrollThreshold) {
+      return;
+    }
+
+    if (scrollDelta > 0) {
       setIsMobileHeaderHidden(true);
-    } else if (currentScrollTop < previousScrollTop) {
+    } else {
       setIsMobileHeaderHidden(false);
     }
 
