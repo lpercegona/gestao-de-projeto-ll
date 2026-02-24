@@ -60,6 +60,15 @@ Deno.serve(async (req) => {
 
     let client: SMTPClient | null = null;
 
+    const safeClose = async (c: SMTPClient | null) => {
+      if (!c) return;
+      try {
+        if (c && typeof c.close === 'function') {
+          await c.close();
+        }
+      } catch (_) { /* ignore close errors */ }
+    };
+
     try {
       client = createSmtpClient(port);
       await client.close();
@@ -70,15 +79,13 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (smtpErr) {
+      await safeClose(client);
+      client = null;
+
       const shouldTryFallback = port !== 465;
 
-      if (client) {
-        try { await client.close(); } catch (_) { /* ignore */ }
-        client = null;
-      }
-
       if (shouldTryFallback) {
-        console.warn("[test-smtp-connection] STARTTLS failed on 587, retrying with implicit TLS on 465");
+        console.warn("[test-smtp-connection] STARTTLS failed, retrying with implicit TLS on 465");
 
         try {
           client = createSmtpClient(465);
@@ -90,11 +97,9 @@ Deno.serve(async (req) => {
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         } catch (fallbackErr) {
-          if (client) {
-            try { await client.close(); } catch (_) { /* ignore */ }
-            client = null;
-          }
-          console.error("SMTP fallback connection test failed:", fallbackErr);
+          await safeClose(client);
+          client = null;
+          console.error("SMTP fallback failed:", fallbackErr);
           return new Response(
             JSON.stringify({ success: false, error: String(fallbackErr) }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -108,9 +113,7 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } finally {
-      if (client) {
-        try { await client.close(); } catch (_) { /* ignore */ }
-      }
+      await safeClose(client);
     }
   } catch (err) {
     console.error("Error in test-smtp-connection:", err);
