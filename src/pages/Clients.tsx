@@ -260,7 +260,7 @@ export const Clients: React.FC = () => {
                     value="active"
                     className="flex pt-1 pb-1 pl-1 pr-2 items-center gap-1 sm:gap-2 rounded-full data-[state=active]:bg-background"
                   >
-                    <Badge variant="circular" className="data-[state=active]:bg-secondary">
+                    <Badge variant="circular" className="active:bg-secondary">
                       {activeCount}
                     </Badge>
                     <span className="sm:inline">Ativos</span>
@@ -305,7 +305,7 @@ export const Clients: React.FC = () => {
                 return (
                   <Card
                     key={client.id}
-                    className="cursor-pointer "
+                    className="cursor-pointer hover:bg-muted/30"
                     onClick={() => navigate(`/clients/${client.id}`)}
                   >
                     <CardContent className="p-4">
