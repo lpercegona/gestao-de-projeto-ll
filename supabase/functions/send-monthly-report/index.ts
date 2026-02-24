@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
         console.warn("[send-monthly-report] STARTTLS failed on 587, retrying with implicit TLS on 465");
 
         if (smtpClient) {
-          await smtpClient.close();
+          try { await smtpClient.close(); } catch (_) { /* ignore */ }
           smtpClient = null;
         }
 
@@ -310,7 +310,9 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } finally {
-      if (smtpClient) await smtpClient.close();
+      if (smtpClient) {
+        try { await smtpClient.close(); } catch (_) { /* ignore */ }
+      }
     }
   } catch (err) {
     console.error("Error in send-monthly-report:", err);

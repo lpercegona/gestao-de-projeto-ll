@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
           console.warn("[send-contract-email] STARTTLS failed on 587, retrying with implicit TLS on 465");
 
           if (client) {
-            await client.close();
+            try { await client.close(); } catch (_) { /* ignore */ }
             client = null;
           }
 
@@ -219,7 +219,9 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } finally {
-        if (client) await client.close();
+        if (client) {
+          try { await client.close(); } catch (_) { /* ignore */ }
+        }
       }
     }
 

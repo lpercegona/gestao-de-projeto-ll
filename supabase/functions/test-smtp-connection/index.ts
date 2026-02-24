@@ -7,6 +7,52 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function safeClose(client: SMTPClient | null) {
+  if (!client) return;
+  try {
+    if (typeof (client as any)?.close === "function") {
+      await client.close();
+    }
+  } catch (_) {
+    /* ignore close errors on partially-initialized connections */
+  }
+}
+
+async function trySendTest(
+  smtp_host: string,
+  port: number,
+  smtp_user: string,
+  smtp_pass: string,
+): Promise<{ success: boolean; error?: string }> {
+  let client: SMTPClient | null = null;
+  try {
+    client = new SMTPClient({
+      connection: {
+        hostname: smtp_host,
+        port,
+        tls: port === 465,
+        auth: { username: smtp_user, password: smtp_pass || "" },
+      },
+    });
+
+    await client.send({
+      from: smtp_user,
+      to: smtp_user,
+      subject: "[Teste SMTP] Conexão verificada",
+      content: "Este é um e-mail automático de teste de conexão SMTP. Pode ser ignorado.",
+      html: "<p>Este é um e-mail automático de teste de conexão SMTP. Pode ser ignorado.</p>",
+    });
+
+    await safeClose(client);
+    client = null;
+    return { success: true };
+  } catch (err) {
+    await safeClose(client);
+    client = null;
+    return { success: false, error: String(err) };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -21,7 +67,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify user is master admin
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -45,76 +90,40 @@ Deno.serve(async (req) => {
 
     const port = smtp_port || 587;
 
-    const createSmtpClient = (targetPort: number) =>
-      new SMTPClient({
-        connection: {
-          hostname: smtp_host,
-          port: targetPort,
-          tls: targetPort === 465,
-          auth: {
-            username: smtp_user,
-            password: smtp_pass || "",
-          },
-        },
-      });
+    // Attempt on preferred port
+    const result = await trySendTest(smtp_host, port, smtp_user, smtp_pass);
 
-    let client: SMTPClient | null = null;
-
-    const safeClose = async (c: SMTPClient | null) => {
-      if (!c) return;
-      try {
-        if (c && typeof c.close === 'function') {
-          await c.close();
-        }
-      } catch (_) { /* ignore close errors */ }
-    };
-
-    try {
-      client = createSmtpClient(port);
-      await client.close();
-      client = null;
-
+    if (result.success) {
       return new Response(
         JSON.stringify({ success: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    } catch (smtpErr) {
-      await safeClose(client);
-      client = null;
+    }
 
-      const shouldTryFallback = port !== 465;
+    // Fallback to 465 if preferred port was not already 465
+    if (port !== 465) {
+      console.warn(`[test-smtp-connection] Port ${port} failed, retrying on 465`);
+      const fallback = await trySendTest(smtp_host, 465, smtp_user, smtp_pass);
 
-      if (shouldTryFallback) {
-        console.warn("[test-smtp-connection] STARTTLS failed, retrying with implicit TLS on 465");
-
-        try {
-          client = createSmtpClient(465);
-          await client.close();
-          client = null;
-
-          return new Response(
-            JSON.stringify({ success: true, fallback_port: 465 }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        } catch (fallbackErr) {
-          await safeClose(client);
-          client = null;
-          console.error("SMTP fallback failed:", fallbackErr);
-          return new Response(
-            JSON.stringify({ success: false, error: String(fallbackErr) }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      if (fallback.success) {
+        return new Response(
+          JSON.stringify({ success: true, fallback_port: 465 }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
 
-      console.error("SMTP connection test failed:", smtpErr);
+      console.error("[test-smtp-connection] Fallback 465 also failed:", fallback.error);
       return new Response(
-        JSON.stringify({ success: false, error: String(smtpErr) }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: fallback.error }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    } finally {
-      await safeClose(client);
     }
+
+    console.error("[test-smtp-connection] Failed:", result.error);
+    return new Response(
+      JSON.stringify({ success: false, error: result.error }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("Error in test-smtp-connection:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {

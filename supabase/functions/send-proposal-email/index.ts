@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
           console.warn("[send-proposal-email] STARTTLS failed on 587, retrying with implicit TLS on 465");
 
           if (client) {
-            await client.close();
+            try { await client.close(); } catch (_) { /* ignore */ }
             client = null;
           }
 
@@ -353,7 +353,9 @@ Deno.serve(async (req) => {
         console.error("SMTP error:", emailErr);
         return failResponse(502, "SMTP_SEND_FAILED", `Unable to send email: ${String(emailErr)}`);
       } finally {
-        if (client) await client.close();
+        if (client) {
+          try { await client.close(); } catch (_) { /* ignore */ }
+        }
       }
     }
 
