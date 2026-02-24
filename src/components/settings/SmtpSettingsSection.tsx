@@ -134,10 +134,22 @@ export const SmtpSettingsSection: React.FC = () => {
       const result = response.data;
       if (result?.success) {
         setConnectionStatus('connected');
-        toast.success('Conexão SMTP validada com sucesso!');
+        const msg = result?.fallback_port
+          ? `Conexão SMTP validada (porta ${result.fallback_port} utilizada como fallback)`
+          : 'Conexão SMTP validada com sucesso!';
+        toast.success(msg);
       } else {
         setConnectionStatus('error');
-        toast.error(result?.error || 'Falha na conexão SMTP');
+        const rawError = result?.error || '';
+        let friendlyMsg = 'Falha na conexão SMTP. Verifique host, porta, usuário e senha.';
+        if (rawError.includes('auth') || rawError.includes('535') || rawError.includes('credential')) {
+          friendlyMsg = 'Falha ao autenticar no servidor SMTP. Verifique usuário e senha.';
+        } else if (rawError.includes('hostname') || rawError.includes('ENOTFOUND') || rawError.includes('resolve')) {
+          friendlyMsg = 'Host SMTP não encontrado. Verifique o endereço do servidor.';
+        } else if (rawError.includes('timeout') || rawError.includes('ETIMEDOUT')) {
+          friendlyMsg = 'Timeout na conexão SMTP. Verifique host e porta.';
+        }
+        toast.error(friendlyMsg);
       }
     } catch (err: any) {
       console.error('SMTP test error:', err);
