@@ -293,7 +293,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
             type="single"
             value={viewMode}
             onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban" | "table")}
-            className="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
           >
             <ToggleGroupItem value="list" aria-label="Visualização em cards" variant="tab" size="tb" className={cn("hover:bg-slate-200")}>
               <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
