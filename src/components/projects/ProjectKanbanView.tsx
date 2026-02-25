@@ -363,7 +363,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Kanban board */}
-      <ScrollArea className="w-full h-10">
+      <ScrollArea className="w-full h-80">
         <div className="flex gap-4 min-w-max">
           {stages.map((stage) => {
             const stageTasks = tasksByStage[stage.name] || [];
