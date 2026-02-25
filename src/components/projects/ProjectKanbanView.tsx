@@ -474,14 +474,14 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                       return (
                                         <Avatar
                                           key={userId}
-                                          className="h-5 w-5 border border-background"
+                                          className="h-7 w-7 border-2 border-background"
                                           title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
                                         >
                                           <AvatarImage
                                             src={getAvatarSrc(profile)}
                                             alt={`${getMemberName(userId, profile)} - Avatar`}
                                           />
-                                          <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
+                                          <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
                                             {getAvatarInitial(userId, profile)}
                                           </AvatarFallback>
                                         </Avatar>
@@ -489,7 +489,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                     })}
                                     {canManageShare && (
                                       <div
-                                        className="h-5 w-5 rounded-full border border-dashed border-muted-foreground/40 bg-background text-muted-foreground flex items-center justify-center"
+                                        className="h-6 w-6 rounded-full border-2 border-background bg-secondary text-muted-foreground flex items-center justify-center z-10"
                                         title="Gerenciar compartilhamento"
                                       >
                                         <Plus className="h-3 w-3" />
