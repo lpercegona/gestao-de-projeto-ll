@@ -474,7 +474,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                       return (
                                         <Avatar
                                           key={userId}
-                                          className="h-7 w-7 border-2 border-background"
+                                          className={`h-6 w-6 border-2 ${stage.color.replace("bg-", "border-")}`}
                                           title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
                                         >
                                           <AvatarImage
