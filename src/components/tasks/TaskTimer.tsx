@@ -176,11 +176,11 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               onClick={handleStart}
               disabled={loading || disabled || anotherTimerRunning || foreignActiveTimerOnTask}
               className={cn(
-                "text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3",
+                "w-8 h-8 text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3",
                 (anotherTimerRunning || foreignActiveTimerOnTask) && "opacity-50 cursor-not-allowed"
               )}
             >
-              <Play className="w-4 h-4" />
+              <Play className="w-3.5 h-3.5" />
               {!iconOnly && <span className="hidden sm:inline ml-2">Iniciar</span>}
             </Button>
           </TooltipTrigger>
@@ -205,9 +205,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   size="sm"
                   onClick={handleResume}
                   disabled={loading || disabled || hasForeignActiveTimer}
-                  className="text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
+                  className="w-8 h-8 text-primary hover:text-primary hover:bg-primary/10 px-2 sm:px-3"
                 >
-                  <Play className="w-4 h-4" />
+                  <Play className="w-3.5 h-3.5" />
                   {!iconOnly && <span className="hidden sm:inline ml-2">Retomar</span>}
                 </Button>
               </TooltipTrigger>
@@ -221,9 +221,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                   size="sm"
                   onClick={handlePause}
                   disabled={loading || disabled || hasForeignActiveTimer}
-                  className="text-orange-600 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30 px-2 sm:px-3"
+                  className="w-8 h-8 text-orange-600 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30 px-2 sm:px-3"
                 >
-                  <Pause className="w-4 h-4" />
+                  <Pause className="w-3.5 h-3.5" />
                   {!iconOnly && <span className="hidden sm:inline ml-2">Pausar</span>}
                 </Button>
               </TooltipTrigger>
@@ -238,7 +238,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                 size="sm"
                 onClick={handleStop}
                 disabled={loading || disabled || hasForeignActiveTimer}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
+                className="w-8 h-8 text-destructive hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
               >
                 <Square className="w-3.5 h-3.5" />
                 {!iconOnly && <span className="hidden sm:inline ml-2">Concluir</span>}
