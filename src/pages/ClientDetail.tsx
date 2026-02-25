@@ -1077,7 +1077,7 @@ export const ClientDetail: React.FC = () => {
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="pt-4 pb-4">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+              <div className="flex flex-row items-center justify-between space-y-0">
               <div className="text-muted-foreground mb-1">
                 <span className="text-sm">Projetos</span>
               </div>
