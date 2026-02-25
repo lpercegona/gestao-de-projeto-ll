@@ -383,7 +383,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
                         <Badge
                           variant="outline"
-                          className="text-[10px] border-transparent font-bold text-background p-1.5 bg-[#00000060]"
+                          className="text-[10px] border-transparent font-bold text-background px-1.5 bg-[#00000040]"
                         >
                           {stageTasks.length}
                         </Badge>
