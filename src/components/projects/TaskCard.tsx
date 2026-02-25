@@ -244,7 +244,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     onClick={() => onRegisterTime(task.id)} 
                     className="w-6 h-6 px-2 text-xs"
                   >
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-2 h-2" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Registrar tempo</TooltipContent>
