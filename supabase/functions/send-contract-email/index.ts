@@ -7,6 +7,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function safeClose(client: SMTPClient | null) {
+  if (!client) return;
+  try { await client.close(); } catch (_) { /* ignore */ }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -177,10 +182,8 @@ Deno.serve(async (req) => {
         if (shouldTryFallback) {
           console.warn("[send-contract-email] STARTTLS failed on 587, retrying with implicit TLS on 465");
 
-          if (client) {
-            try { await client.close(); } catch (_) { /* ignore */ }
-            client = null;
-          }
+          await safeClose(client);
+          client = null;
 
           try {
             client = createSmtpClient(465);
@@ -219,9 +222,7 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } finally {
-        if (client) {
-          try { await client.close(); } catch (_) { /* ignore */ }
-        }
+        await safeClose(client);
       }
     }
 

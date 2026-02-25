@@ -7,6 +7,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function safeClose(client: SMTPClient | null) {
+  if (!client) return;
+  try { await client.close(); } catch (_) { /* ignore */ }
+}
+
 async function resolveFromName(adminClient: any, ownerId: string | null): Promise<string> {
   if (ownerId) {
     const { data } = await adminClient.from("smtp_settings").select("smtp_from_name").eq("owner_id", ownerId).maybeSingle();
@@ -243,10 +248,8 @@ Deno.serve(async (req) => {
       if (shouldTryFallback) {
         console.warn("[send-monthly-report] STARTTLS failed on 587, retrying with implicit TLS on 465");
 
-        if (smtpClient) {
-          try { await smtpClient.close(); } catch (_) { /* ignore */ }
-          smtpClient = null;
-        }
+        await safeClose(smtpClient);
+        smtpClient = null;
 
         try {
           smtpClient = createSmtpClient(465);
@@ -310,9 +313,7 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } finally {
-      if (smtpClient) {
-        try { await smtpClient.close(); } catch (_) { /* ignore */ }
-      }
+      await safeClose(smtpClient);
     }
   } catch (err) {
     console.error("Error in send-monthly-report:", err);

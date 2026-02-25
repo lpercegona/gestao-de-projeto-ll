@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,106 +7,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/**
- * Test SMTP connectivity using raw Deno TCP/TLS connections.
- * This avoids denomailer which throws UncaughtExceptions that crash the isolate.
- */
-async function testSmtpRaw(
-  host: string,
-  port: number,
-  user: string,
-  pass: string,
-): Promise<{ success: boolean; error?: string }> {
-  let conn: Deno.Conn | null = null;
-
-  try {
-    // Connect with a 10s timeout
-    const connectPromise = port === 465
-      ? Deno.connectTls({ hostname: host, port })
-      : Deno.connect({ hostname: host, port });
-
-    conn = await Promise.race([
-      connectPromise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Connection timeout")), 10000)
-      ),
-    ]);
-
-    const decoder = new TextDecoder();
-    const encoder = new TextEncoder();
-
-    // Helper to read a response line
-    const readResponse = async (): Promise<string> => {
-      const buf = new Uint8Array(1024);
-      const n = await Promise.race([
-        conn!.read(buf),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Read timeout")), 8000)
-        ),
-      ]);
-      if (n === null) throw new Error("Connection closed by server");
-      return decoder.decode(buf.subarray(0, n));
-    };
-
-    // Helper to send a command and read response
-    const sendCmd = async (cmd: string): Promise<string> => {
-      await conn!.write(encoder.encode(cmd + "\r\n"));
-      return await readResponse();
-    };
-
-    // Read server greeting
-    const greeting = await readResponse();
-    if (!greeting.startsWith("220")) {
-      return { success: false, error: `Server rejected connection: ${greeting.trim()}` };
-    }
-
-    // EHLO
-    const ehloResp = await sendCmd(`EHLO test`);
-
-    // For port 587 (STARTTLS), upgrade to TLS
-    if (port !== 465) {
-      const starttlsResp = await sendCmd("STARTTLS");
-      if (!starttlsResp.startsWith("220")) {
-        return { success: false, error: `STARTTLS failed: ${starttlsResp.trim()}` };
-      }
-
-      // Upgrade connection to TLS
-      const tlsConn = await Deno.startTls(conn as Deno.TcpConn, { hostname: host });
-      conn = tlsConn;
-
-      // Re-EHLO after TLS
-      await sendCmd("EHLO test");
-    }
-
-    // AUTH LOGIN
-    const authResp = await sendCmd("AUTH LOGIN");
-    if (!authResp.startsWith("334")) {
-      return { success: false, error: `AUTH LOGIN not supported: ${authResp.trim()}` };
-    }
-
-    // Send username (base64)
-    const userResp = await sendCmd(btoa(user));
-    if (!userResp.startsWith("334")) {
-      return { success: false, error: `Auth failed (username rejected): ${userResp.trim()}` };
-    }
-
-    // Send password (base64)
-    const passResp = await sendCmd(btoa(pass));
-    if (!passResp.startsWith("235")) {
-      return { success: false, error: `Auth failed (invalid credentials): ${passResp.trim()}` };
-    }
-
-    // QUIT
-    try { await sendCmd("QUIT"); } catch (_) { /* ignore */ }
-
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: String(err) };
-  } finally {
-    if (conn) {
-      try { conn.close(); } catch (_) { /* ignore */ }
-    }
-  }
+async function safeClose(client: SMTPClient | null) {
+  if (!client) return;
+  try { await client.close(); } catch (_) { /* ignore */ }
 }
 
 Deno.serve(async (req) => {
@@ -143,42 +47,75 @@ Deno.serve(async (req) => {
       });
     }
 
-    const port = smtp_port || 587;
+    const preferredPort = smtp_port || 587;
 
-    // Attempt on preferred port
-    const result = await testSmtpRaw(smtp_host, port, smtp_user, smtp_pass);
+    const createSmtpClient = (port: number) =>
+      new SMTPClient({
+        connection: {
+          hostname: smtp_host,
+          port,
+          tls: port === 465,
+          auth: { username: smtp_user, password: smtp_pass },
+        },
+      });
 
-    if (result.success) {
+    let client: SMTPClient | null = null;
+
+    try {
+      client = createSmtpClient(preferredPort);
+
+      await client.send({
+        from: smtp_user,
+        to: smtp_user,
+        subject: "[TESTE SMTP] Conexão validada",
+        content: "Este é um e-mail de teste automático para validar as credenciais SMTP.",
+        html: "<p>Este é um e-mail de teste automático para validar as credenciais SMTP.</p>",
+      });
+
       return new Response(
         JSON.stringify({ success: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
+    } catch (err) {
+      const shouldTryFallback = preferredPort !== 465;
 
-    // Fallback to 465 if preferred port was not already 465
-    if (port !== 465) {
-      console.warn(`[test-smtp-connection] Port ${port} failed (${result.error}), retrying on 465`);
-      const fallback = await testSmtpRaw(smtp_host, 465, smtp_user, smtp_pass);
+      if (shouldTryFallback) {
+        console.warn(`[test-smtp-connection] Port ${preferredPort} failed (${err}), retrying on 465`);
+        await safeClose(client);
+        client = null;
 
-      if (fallback.success) {
-        return new Response(
-          JSON.stringify({ success: true, fallback_port: 465 }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        try {
+          client = createSmtpClient(465);
+
+          await client.send({
+            from: smtp_user,
+            to: smtp_user,
+            subject: "[TESTE SMTP] Conexão validada",
+            content: "Este é um e-mail de teste automático para validar as credenciais SMTP.",
+            html: "<p>Este é um e-mail de teste automático para validar as credenciais SMTP.</p>",
+          });
+
+          return new Response(
+            JSON.stringify({ success: true, fallback_port: 465 }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        } catch (fallbackErr) {
+          console.error("[test-smtp-connection] Fallback 465 also failed:", fallbackErr);
+          return new Response(
+            JSON.stringify({ success: false, error: String(fallbackErr) }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
       }
 
-      console.error("[test-smtp-connection] Fallback 465 also failed:", fallback.error);
+      console.error("[test-smtp-connection] Failed:", err);
       return new Response(
-        JSON.stringify({ success: false, error: fallback.error }),
+        JSON.stringify({ success: false, error: String(err) }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    } finally {
+      await safeClose(client);
     }
-
-    console.error("[test-smtp-connection] Failed:", result.error);
-    return new Response(
-      JSON.stringify({ success: false, error: result.error }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
   } catch (err) {
     console.error("Error in test-smtp-connection:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
