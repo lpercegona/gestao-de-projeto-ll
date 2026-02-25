@@ -1097,7 +1097,7 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Clock className="w-4 h-4" />
-                <span className="text-xl sm:text-2xl font-bold">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
+                <span className="text-sm">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
               </div>
               <p className="text-2xl font-bold text-foreground">{formatHours(availableHours)}</p>
               {isMonthly && previousOverflow > 0 && (
