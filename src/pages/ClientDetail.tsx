@@ -1013,8 +1013,8 @@ export const ClientDetail: React.FC = () => {
             <h1 className="text-lg font-bold text-foreground">
               {client.company || client.name}
             </h1>
-            <Button variant="ghost" size="icon" className="w-6 h-6 hover:bg-slate-200" onClick={() => setIsEditDialogOpen(true)}>
-              <Pencil className="w-1 h-1 ml-1"/>
+            <Button variant="ghost" size="icon" className="w-6 h-6 hover:bg-slate-200 ml-2" onClick={() => setIsEditDialogOpen(true)}>
+              <Pencil className="w-1 h-1"/>
             </Button>
           </div>
         </div>
