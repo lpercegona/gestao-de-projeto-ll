@@ -1004,16 +1004,16 @@ export const ClientDetail: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header com título e botão de editar */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-4">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-2 w-2" />
           </Button>
           <div className="flex items-center gap-2 flex-1">
             <h1 className="text-lg font-bold text-foreground">
               {client.company || client.name}
             </h1>
-            <Button variant="ghost" size="icon" className="w-4 h-4 hover:bg-slate-200" onClick={() => setIsEditDialogOpen(true)}>
+            <Button variant="ghost" size="icon" className="w-6 h-6 hover:bg-slate-200" onClick={() => setIsEditDialogOpen(true)}>
               <Pencil className="w-2 h-2"/>
             </Button>
           </div>
