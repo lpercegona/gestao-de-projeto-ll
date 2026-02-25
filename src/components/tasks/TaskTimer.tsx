@@ -240,7 +240,7 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
                 disabled={loading || disabled || hasForeignActiveTimer}
                 className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
               >
-                <Square className="w-4 h-4" />
+                <Square className="w-3.5 h-3.5" />
                 {!iconOnly && <span className="hidden sm:inline ml-2">Concluir</span>}
               </Button>
             </TooltipTrigger>
@@ -258,9 +258,9 @@ export const TaskTimer: React.FC<TaskTimerProps> = ({
               size="sm"
               onClick={handleComplete}
               disabled={loading || disabled}
-              className="text-green-600 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 sm:px-3"
+              className="w-8 h-8 text-green-600 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 sm:px-3"
             >
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className="w-3.5 h-3.5" />
               {!iconOnly && <span className="hidden sm:inline ml-2">Finalizar</span>}
             </Button>
           </TooltipTrigger>
