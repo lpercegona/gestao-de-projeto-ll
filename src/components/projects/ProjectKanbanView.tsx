@@ -363,7 +363,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Kanban board */}
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full h-full">
         <div className="flex gap-4 min-w-max">
           {stages.map((stage) => {
             const stageTasks = tasksByStage[stage.name] || [];
@@ -371,7 +371,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
             return (
               <div
                 key={stage.id}
-                className="w-100 flex-shrink-0"
+                className="w-80 flex-shrink-0"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage.name)}
               >
