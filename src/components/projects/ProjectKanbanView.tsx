@@ -381,13 +381,14 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                   <CardHeader className="py-3 px-4">
                     <div className="flex items-center justify-between column-2">
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        {stage.name}
                         <Badge
                           variant="outline"
-                          className="text-[10px] text-background px-2 bg-[#000000]"
+                          className="text-[10px] font-bold text-background p-2 bg-[#000000]"
                         >
                           {stageTasks.length}
                         </Badge>
+                        {stage.name}
+                  
                       </CardTitle>
                       {/* Stage management button */}
                       {isAdminOrMaster && (
