@@ -577,7 +577,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full mt-auto text-xs text-muted-foreground hover:text-foreground"
+                        className="w-full mt-2 p-2 text-xs text-muted-foreground hover:text-foreground"
                         onClick={() => {
                           const firstProject = projects[0];
                           if (firstProject) {
@@ -588,7 +588,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                           }
                         }}
                       >
-                        <Plus className="w-3 h-3 p-2" />
+                        <Plus className="w-3 h-3 " />
                         Adicionar tarefa
                       </Button>
                     )}
