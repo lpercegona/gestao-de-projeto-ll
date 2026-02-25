@@ -371,7 +371,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
             return (
               <div
                 key={stage.id}
-                className="w-80 flex-shrink-0"
+                className="w-100 flex-shrink-0"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage.name)}
               >
