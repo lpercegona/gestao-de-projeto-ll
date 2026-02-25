@@ -910,6 +910,7 @@ const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProps> = ({
                   onStopTimer={() => (isPendingApproval || !onStopTimer ? Promise.resolve() : onStopTimer(task.id))}
                   onCompleteTask={() => (isPendingApproval || !onCompleteTask ? Promise.resolve() : onCompleteTask(task.id))}
                   showStatus
+                  iconOnly
                   showTimeControls={hasPerTaskPermissions ? ownTask : !isClientMode}
                   allowTaskEdit={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
                   allowTaskDelete={!isPendingApproval && (hasPerTaskPermissions ? ownTask : !isClientMode)}
