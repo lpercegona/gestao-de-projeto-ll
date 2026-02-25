@@ -273,6 +273,37 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     return membersMap;
   }, [projectAccess, projects]);
 
+  const getMemberName = (userId: string, profile?: ProfileSummary) => {
+    const fullName = profile?.full_name?.trim();
+    if (fullName) return fullName;
+
+    const email = profile?.email?.trim();
+    if (email) return email;
+
+    const memberId = userId.trim();
+    if (memberId) return "Usuário";
+
+    return "Usuário";
+  };
+
+  const getAvatarInitial = (userId: string, profile?: ProfileSummary) => {
+    const fullName = profile?.full_name?.trim();
+    if (fullName) return fullName[0].toUpperCase();
+
+    const email = profile?.email?.trim();
+    if (email) return email[0].toUpperCase();
+
+    const memberId = userId.trim();
+    if (memberId) return memberId[0].toUpperCase();
+
+    return "?";
+  };
+
+  const getAvatarSrc = (profile?: ProfileSummary) => {
+    const src = profile?.avatar_url?.trim();
+    return src ? src : undefined;
+  };
+
   const getNextProjectStatus = (current: string): string => {
     const idx = PROJECT_STATUSES.indexOf(current);
     if (idx === -1 || idx >= PROJECT_STATUSES.length - 1) return PROJECT_STATUSES[0];
@@ -421,6 +452,29 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                 >
                   {project.name}
                 </span>
+                {(projectMembersByProjectId[project.id] || []).length > 0 && (
+                  <div className="flex items-center -space-x-2 shrink-0">
+                    {(projectMembersByProjectId[project.id] || []).map((userId) => {
+                      const profile = profilesByUserId[userId];
+                      const memberName = getMemberName(userId, profile);
+                      return (
+                        <Avatar
+                          key={userId}
+                          className="h-6 w-6 border-2 border-background"
+                          title={memberName}
+                        >
+                          <AvatarImage
+                            src={getAvatarSrc(profile)}
+                            alt={`${memberName} - Avatar`}
+                          />
+                          <AvatarFallback className="text-[10px] bg-background text-muted-foreground">
+                            {getAvatarInitial(userId, profile)}
+                          </AvatarFallback>
+                        </Avatar>
+                      );
+                    })}
+                  </div>
+                )}
                 {project.is_request && (
                   <Badge variant="secondary" className="text-[10px] shrink-0">
                     {project.request_label || 'Solicitação'}
@@ -730,7 +784,7 @@ const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { onClose(); isClientMode ? onEditRequest?.(project) : onEditProject(project); }}>
+              <DropdownMenuItem onClick={() => { onClose(); if (isClientMode) { onEditRequest?.(project); } else { onEditProject(project); } }}>
                 <Pencil className="w-4 h-4 mr-2" />
                 {isClientMode ? 'Solicitar Edição' : 'Editar'}
               </DropdownMenuItem>
