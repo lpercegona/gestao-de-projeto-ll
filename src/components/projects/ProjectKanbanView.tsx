@@ -364,6 +364,20 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
     return colorMap[color] || "bg-muted";
   };
 
+  const getStageBorderColor = (color: string) => {
+    const borderMap: Record<string, string> = {
+      "bg-yellow-100": "border-yellow-200 dark:border-yellow-800",
+      "bg-blue-100": "border-blue-200 dark:border-blue-800",
+      "bg-green-100": "border-green-200 dark:border-green-800",
+      "bg-red-100": "border-red-200 dark:border-red-800",
+      "bg-purple-100": "border-purple-200 dark:border-purple-800",
+      "bg-pink-100": "border-pink-200 dark:border-pink-800",
+      "bg-orange-100": "border-orange-200 dark:border-orange-800",
+      "bg-muted": "border-border",
+    };
+    return borderMap[color] || "border-border";
+  };
+
   return (
     <div className="space-y-4">
       {/* Kanban board */}
@@ -479,7 +493,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                       return (
                           <Avatar
                                           key={userId}
-                                          className="h-6 w-6 border-2 border-background"
+                                          className={`h-6 w-6 border-2 ${getStageBorderColor(stage.color)}`}
                                           title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
                                         >
                                           <AvatarImage
@@ -494,7 +508,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                     })}
                                     {canManageShare && (
                                       <div
-                                        className="h-6 w-6 rounded-full border-2 border-background bg-background text-muted-foreground flex items-center justify-center z-10"
+                                        className={`h-6 w-6 rounded-full border-2 ${getStageBorderColor(stage.color)} bg-background text-muted-foreground flex items-center justify-center z-10`}
                                         title="Gerenciar compartilhamento"
                                       >
                                         <Plus className="h-3 w-3" />
