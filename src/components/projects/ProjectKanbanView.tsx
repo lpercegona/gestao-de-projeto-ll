@@ -363,7 +363,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Kanban board */}
-      <ScrollArea className="w-full h-80">
+      <ScrollArea className="w-full h-full">
         <div className="flex gap-4 min-w-max">
           {stages.map((stage) => {
             const stageTasks = tasksByStage[stage.name] || [];
@@ -489,7 +489,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                     })}
                                     {canManageShare && (
                                       <div
-                                        className="h-6 w-6 rounded-full border-2 border-background bg-secondary text-muted-foreground flex items-center justify-center z-10"
+                                        className={`h-6 w-6 rounded-full border-2 ${stage.color.replace("bg-", "border-")} bg-background text-muted-foreground flex items-center justify-center z-10`}
                                         title="Gerenciar compartilhamento"
                                       >
                                         <Plus className="h-3 w-3" />
