@@ -1009,7 +1009,7 @@ export const ClientDetail: React.FC = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
             <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-2 flex-1">
             <h1 className="text-lg font-bold text-foreground">
               {client.company || client.name}
             </h1>
