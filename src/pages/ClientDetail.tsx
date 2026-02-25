@@ -1007,7 +1007,7 @@ export const ClientDetail: React.FC = () => {
       <div className="space-y-2">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
             <h1 className="text-lg font-bold text-foreground">
