@@ -1010,11 +1010,11 @@ export const ClientDetail: React.FC = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
-            <h1 className="text-xg font-bold text-foreground">
+            <h1 className="text-lg font-bold text-foreground">
               {client.company || client.name}
             </h1>
-            <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}>
-              <Pencil className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="w-8 h-8 hover:bg-slate-200" onClick={() => setIsEditDialogOpen(true)}>
+              <Pencil className="w-3.5 h-3.5"/>
             </Button>
           </div>
         </div>
