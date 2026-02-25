@@ -168,7 +168,7 @@ const tailwindColorToHex = (color: string | null): string | null => {
 };
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
-  active: '#eab308',
+  active: '#3b82f6',
   paused: '#f97316',
   completed: '#22c55e',
   archived: '#94a3b8',
