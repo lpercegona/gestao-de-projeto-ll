@@ -366,13 +366,13 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
 
   const getStageBorderColor = (color: string) => {
     const borderMap: Record<string, string> = {
-      "bg-yellow-100": "border-yellow-200 dark:border-yellow-800",
-      "bg-blue-100": "border-blue-200 dark:border-blue-800",
-      "bg-green-100": "border-green-200 dark:border-green-800",
-      "bg-red-100": "border-red-200 dark:border-red-800",
-      "bg-purple-100": "border-purple-200 dark:border-purple-800",
-      "bg-pink-100": "border-pink-200 dark:border-pink-800",
-      "bg-orange-100": "border-orange-200 dark:border-orange-800",
+      "bg-yellow-100": "border-yellow-100 dark:border-yellow-800",
+      "bg-blue-100": "border-blue-100 dark:border-blue-800",
+      "bg-green-100": "border-green-100 dark:border-green-800",
+      "bg-red-100": "border-red-100 dark:border-red-800",
+      "bg-purple-100": "border-purple-100 dark:border-purple-800",
+      "bg-pink-100": "border-pink-100 dark:border-pink-800",
+      "bg-orange-100": "border-orange-100 dark:border-orange-800",
       "bg-muted": "border-border",
     };
     return borderMap[color] || "border-border";
