@@ -136,32 +136,23 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         {/* Filter button */}
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
-            <TooltipProvider delayDuration={0}>
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant="outline"
-        size="icon"
-        className={cn(
-          "relative h-8 w-8 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 border-0",
-          "hover:bg-slate-200 hover:text-slate-500",
-          activeFilters > 0 && "bg-slate-200",
-        )}
-      >
-        <Filter className="w-3.5 h-3.5" />
-        {activeFilters > 0 && (
-          <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-            {activeFilters}
-          </Badge>
-        )}
-      </Button>
-    </TooltipTrigger>
-
-    <TooltipContent side="bottom">
-      <span>Filtrar resultados</span>
-    </TooltipContent>
-  </Tooltip>
-</TooltipProvider>
+            <Button
+              title="Filtrar"
+              variant="outline"
+              size="icon"
+              className={cn(
+                "relative h-8 w-8 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 border-0",
+                "hover:bg-slate-200 hover:text-slate-500",
+                activeFilters > 0 && "bg-slate-200",
+              )}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              {activeFilters > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                  {activeFilters}
+                </Badge>
+              )}
+            </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-4" align="start">
             <div className="space-y-4">
