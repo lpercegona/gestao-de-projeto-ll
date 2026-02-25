@@ -1088,18 +1088,22 @@ export const ClientDetail: React.FC = () => {
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Clock className="w-4 h-4" />
+              <div className="flex flex-row items-center justify-between space-y-0">
+                <div className="text-muted-foreground mb-1">
                 <span className="text-sm">{isMonthly ? 'Horas do Mês' : 'Horas Usadas'}</span>
               </div>
+              <Clock className="w-4 h-4" />
+            </div>
               <p className="text-xl sm:text-2xl font-bold">{formatHours(displayedHours)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Clock className="w-4 h-4" />
+              <div className="flex flex-row items-center justify-between space-y-0">
+                <div className="text-muted-foreground mb-1">
                 <span className="text-sm">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
+              </div>
+                <Clock className="w-4 h-4" />
               </div>
               <p className="text-2xl font-bold text-foreground">{formatHours(availableHours)}</p>
               {isMonthly && previousOverflow > 0 && (
@@ -1111,9 +1115,11 @@ export const ClientDetail: React.FC = () => {
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Clock className="w-4 h-4" />
+              <div className="flex flex-row items-center justify-between space-y-0">
+              <div className="text-muted-foreground mb-1">
                 <span className="text-sm">{isMonthly ? 'Restante do Mês' : 'Disponível'}</span>
+              </div>
+                <Clock className="w-4 h-4" />
               </div>
               <p className="text-2xl font-bold text-foreground">
                 {formatHours(Math.max(availableHours - displayedHours, 0))}
