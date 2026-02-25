@@ -467,7 +467,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                             src={getAvatarSrc(profile)}
                             alt={`${memberName} - Avatar`}
                           />
-                          <AvatarFallback className="text-[10px] bg-background text-muted-foreground">
+                          <AvatarFallback className="text-[10px] bg-secondary text-muted-foreground">
                             {getAvatarInitial(userId, profile)}
                           </AvatarFallback>
                         </Avatar>
