@@ -736,6 +736,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                     : onCompleteTask(task.id)
                                 }
                                 showStatus={true}
+                                iconOnly
                                 showTimeControls={
                                   hasPerTaskPermissions
                                     ? isOwnTask
