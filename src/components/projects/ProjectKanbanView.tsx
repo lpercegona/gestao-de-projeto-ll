@@ -382,7 +382,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                     <div className="flex items-center justify-between column-2">
                       <CardTitle className="text-sm font-medium flex items-center gap-2">
                         <Badge
-                          variant="outline"
+                          
                           className="text-[10px] border-transparent font-bold text-background px-1.5 bg-[#00000040]"
                         >
                           {stageTasks.length}
