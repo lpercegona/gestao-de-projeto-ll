@@ -1079,7 +1079,7 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-row items-center justify-between space-y-0">
               <div className="text-muted-foreground mb-1">
-                <span className="text-sm">Projetos</span>
+                <span className="text-xs sm:text-sm">Projetos</span>
               </div>
               <FolderKanban className="w-4 h-4" />
             </div>
@@ -1090,7 +1090,7 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-row items-center justify-between space-y-0">
                 <div className="text-muted-foreground mb-1">
-                <span className="text-sm">{isMonthly ? 'Horas do Mês' : 'Horas Usadas'}</span>
+                <span className="text-xs sm:text-sm">{isMonthly ? 'Horas do Mês' : 'Horas Usadas'}</span>
               </div>
               <Clock className="w-4 h-4" />
             </div>
@@ -1101,7 +1101,7 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-row items-center justify-between space-y-0">
                 <div className="text-muted-foreground mb-1">
-                <span className="text-sm">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
+                <span className="text-xs sm:text-sm">{isMonthly ? 'Disponível' : 'Horas Contratadas'}</span>
               </div>
                 <Clock className="w-4 h-4" />
               </div>
@@ -1117,7 +1117,7 @@ export const ClientDetail: React.FC = () => {
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-row items-center justify-between space-y-0">
               <div className="text-muted-foreground mb-1">
-                <span className="text-sm">{isMonthly ? 'Restante do Mês' : 'Disponível'}</span>
+                <span className="text-xs sm:text-sm">{isMonthly ? 'Restante do Mês' : 'Disponível'}</span>
               </div>
                 <Clock className="w-4 h-4" />
               </div>
