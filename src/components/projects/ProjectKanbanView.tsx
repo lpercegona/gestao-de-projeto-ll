@@ -482,7 +482,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                                             src={getAvatarSrc(profile)}
                                             alt={`${getMemberName(userId, profile)} - Avatar`}
                                           />
-                                          <AvatarFallback className="text-[10px] bg-background text-muted-foreground">
+                                          <AvatarFallback className="text-[10px] bg-foreground text-muted-foreground">
                                             {getAvatarInitial(userId, profile)}
                                           </AvatarFallback>
                                         </Avatar>
