@@ -588,7 +588,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                           }
                         }}
                       >
-                        <Plus className="w-3 h-3 mr-1" />
+                        <Plus className="w-3 h-3 p-2" />
                         Adicionar tarefa
                       </Button>
                     )}
