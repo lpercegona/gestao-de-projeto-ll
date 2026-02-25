@@ -1,84 +1,73 @@
 
-## Objetivo
 
-Eliminar o erro `TypeError: Cannot read properties of undefined (reading 'close')` no teste SMTP e estabilizar o fluxo para não gerar falha 500/erro de runtime quando a conexão falha parcialmente.
+# Unificar test-smtp-connection com denomailer
 
-## Diagnóstico (o que foi verificado)
+## Contexto
 
-1. O erro foi confirmado nos logs do backend:
-   - `SMTP fallback failed: TypeError: Cannot read properties of undefined (reading 'close')`
-   - stack dentro de `denomailer` (`SMTPClient.close`).
-2. A requisição do frontend para `test-smtp-connection` retorna HTTP 200 com:
-   - `{ "success": false, "error": "TypeError: Cannot read properties of undefined (reading 'close')" }`
-3. Causa raiz técnica:
-   - O `denomailer` cria conexão de forma assíncrona no construtor.
-   - O código atual testa conexão com `new SMTPClient(...)` seguido de `await client.close()`.
-   - Em cenários de falha parcial/handshake, `close()` pode ser chamado antes da conexão interna existir, gerando `undefined.close`.
-   - Isso também pode acontecer em `finally`/fallback em outros arquivos que usam o mesmo padrão de fechamento direto.
+Atualmente, a funcao `test-smtp-connection` usa uma implementacao manual com `Deno.connect` / `Deno.connectTls` para evitar o crash do denomailer. As outras 3 funcoes de envio (proposal, contract, monthly-report) ja usam denomailer normalmente. O objetivo e unificar tudo no denomailer, mantendo a simplicidade e o padrao defensivo de fechamento.
 
-## Estratégia de correção
+## Estrategia
 
-Trocar o teste baseado em “criar e fechar cliente” por teste real de envio controlado (que aguarda corretamente o estado interno do cliente), e padronizar fechamento defensivo em todos os fluxos SMTP.
+Usar o denomailer no teste SMTP da mesma forma que nas funcoes de envio, porem com um `safeClose` defensivo e envio de um email de teste real (para o proprio remetente). Isso valida credenciais de forma concreta e elimina a implementacao manual de baixo nivel.
 
-## Mudanças planejadas
+## Alteracoes
 
-### 1) `supabase/functions/test-smtp-connection/index.ts` (correção principal)
+### 1. `supabase/functions/test-smtp-connection/index.ts`
 
-- Substituir a validação atual (`create client -> close`) por:
-  1. criar cliente na porta escolhida;
-  2. executar `send(...)` para o próprio remetente (`to: smtp_user`, `from: smtp_user`) com assunto claro de teste;
-  3. fechar com `safeClose` no `finally`.
-- Manter fallback para 465 quando tentativa inicial falhar.
-- Garantir que **nenhum** ponto use `await client.close()` diretamente sem wrapper.
-- Retornar mensagens de erro limpas (sem stack crua) e manter `success: false` para falhas de autenticação/TLS.
+Reescrever para usar denomailer com o padrao:
 
-Resultado esperado: elimina o `TypeError ... close` e transforma o teste em validação real de credenciais/conectividade SMTP.
+```text
++-----------------------------------------+
+| SMTPClient (denomailer)                 |
+| - Tenta porta preferida (587 default)   |
+| - send() email de teste para si mesmo   |
+| - safeClose() no finally                |
+| - Fallback para 465 se falhar           |
++-----------------------------------------+
+```
 
-### 2) Robustez adicional nas outras funções SMTP (preventivo recomendado)
+- Importar `SMTPClient` de `denomailer` (mesma versao das outras funcoes)
+- Criar helper `safeClose(client)` que verifica se o cliente existe antes de chamar `.close()`
+- Tentar `client.send(...)` com `to: smtp_user`, `from: smtp_user`, assunto `[TESTE SMTP] Conexao validada`
+- No `catch`, tentar fallback 465 com mesmo padrao
+- No `finally`, sempre chamar `safeClose`
+- Retornar mensagens de erro limpas (sem stack trace)
 
-Arquivos:
-- `supabase/functions/send-proposal-email/index.ts`
-- `supabase/functions/send-contract-email/index.ts`
-- `supabase/functions/send-monthly-report/index.ts`
+### 2. `supabase/functions/send-proposal-email/index.ts`
 
-Ajustes:
-- Introduzir `safeClose` igual ao padrão defensivo.
-- Substituir fechamentos diretos em fallback/finally por `safeClose`.
-- Evitar que erro no fechamento sobrescreva erro real de envio.
+- Adicionar helper `safeClose` no topo
+- Substituir `try { await client.close(); } catch (_) {}` por `await safeClose(client)` nos blocos catch e finally (3 ocorrencias)
 
-Resultado esperado: evita recorrência do mesmo bug em envios reais de proposta/contrato/relatório.
+### 3. `supabase/functions/send-contract-email/index.ts`
 
-### 3) `src/components/settings/SmtpSettingsSection.tsx` (UX de erro)
+- Mesmo ajuste: adicionar `safeClose` e substituir fechamentos diretos (3 ocorrencias)
 
-- Melhorar o feedback do botão “Testar Conexão”:
-  - quando `result.success === false`, exibir mensagem amigável (ex.: “Falha ao autenticar no servidor SMTP. Verifique host/porta/usuário/senha.”).
-  - opcional: exibir quando houve fallback para 465 com sucesso.
+### 4. `supabase/functions/send-monthly-report/index.ts`
 
-Resultado esperado: o usuário vê erro útil, sem `TypeError` técnico.
+- Mesmo ajuste: adicionar `safeClose` e substituir fechamentos diretos (3 ocorrencias)
 
-## Sequência de implementação
+### 5. `src/components/settings/SmtpSettingsSection.tsx`
 
-1. Corrigir `test-smtp-connection` (principal).
-2. Padronizar `safeClose` nas demais funções SMTP (preventivo).
-3. Ajustar mensagens no frontend (`SmtpSettingsSection`).
-4. Validar em ambiente:
-   - porta 587 válida;
-   - 587 falhando e 465 funcionando (fallback);
-   - credenciais inválidas;
-   - host inválido.
+- Sem alteracao necessaria -- o componente ja trata `result.success === false` com mensagens amigaveis e mapeia erros de auth/hostname/timeout.
 
-## Critérios de aceite
+## Helper safeClose (padrao compartilhado)
 
-- Não aparece mais `TypeError: ... undefined (reading 'close')` no toast nem nos logs.
-- Teste SMTP retorna:
-  - `success: true` quando autentica/envia teste;
-  - `success: false` com erro legível quando falha.
-- Sem `UncaughtException` no runtime da função.
-- Fluxo de fallback 465 permanece funcional.
+```typescript
+async function safeClose(client: SMTPClient | null) {
+  if (!client) return;
+  try { await client.close(); } catch (_) { /* ignore */ }
+}
+```
 
-## Riscos e mitigação
+## Riscos e mitigacao
 
-- Risco: envio de e-mail de teste a cada clique.
-  - Mitigação: usar assunto/prefixo explícito de teste e corpo mínimo.
-- Risco: provedores com política anti-spam para autoenvio.
-  - Mitigação: tratar erro com mensagem clara; manter fallback de porta e resposta controlada.
+- **Email de teste enviado a cada clique**: o assunto tera prefixo `[TESTE SMTP]` e corpo minimo, facilitando filtragem.
+- **Provedores que bloqueiam autoenvio**: erro sera capturado e retornado como `success: false` com mensagem clara.
+- **Denominaler crash no close**: o `safeClose` previne completamente esse cenario.
+
+## Ordem de implementacao
+
+1. Reescrever `test-smtp-connection` com denomailer + safeClose
+2. Adicionar `safeClose` nas 3 funcoes de envio
+3. Deploy automatico das edge functions
+
