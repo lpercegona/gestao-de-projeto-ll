@@ -1254,7 +1254,7 @@ export const ClientDetail: React.FC = () => {
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-foreground">
+            <h2 className="text-sm font-semibold text-foreground">
               {clientProjects.length} {clientProjects.length === 1 ? 'projeto' : 'projetos'}
             </h2>
             <Button size="sm" onClick={() => navigate('/projects')}>
@@ -1326,7 +1326,7 @@ export const ClientDetail: React.FC = () => {
         {/* Contracts Tab */}
         <TabsContent value="contracts" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-foreground">
+            <h2 className="text-sm font-semibold text-foreground">
               {contracts.length} {contracts.length === 1 ? 'contrato' : 'contratos'}
             </h2>
             <Button size="sm" onClick={() => navigate('/contracts')}>
