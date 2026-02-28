@@ -12,45 +12,45 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: var(--menu-surface);
     --foreground: 222.2 84% 4.9%;
 
-    --card: 0 0% 100%;
+    --card: var(--content-surface);
     --card-foreground: 222.2 84% 4.9%;
 
-    --popover: 0 0% 100%;
+    --popover: var(--content-surface);
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: var(--accent-theme);
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --secondary-hover: 210 17% 98%;
+    --secondary: var(--menu-surface);
+    --secondary-foreground: var(--menu-foreground);
+    --secondary-hover: var(--menu-surface-hover);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: var(--menu-surface-hover);
+    --muted-foreground: var(--menu-muted);
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: var(--menu-surface-hover);
+    --accent-foreground: var(--menu-foreground-hover);
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: var(--menu-border);
+    --input: var(--menu-border);
+    --ring: var(--accent-theme);
 
     --radius: 0.6rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 222.2 47.4% 11.2%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 40% 96.1%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 222.2 84% 4.9%;
+    --sidebar-background: var(--menu-surface);
+    --sidebar-foreground: var(--menu-foreground);
+    --sidebar-primary: var(--accent-theme);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: var(--menu-surface-hover);
+    --sidebar-accent-foreground: var(--menu-foreground-hover);
+    --sidebar-border: var(--menu-border);
+    --sidebar-ring: var(--accent-theme);
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -58,7 +58,7 @@ All colors MUST be HSL.
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    --sidebar: 0 0% 98%;
+    --sidebar: var(--menu-surface);
 
     --font-sans:
       ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
@@ -80,42 +80,42 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: var(--menu-surface);
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: var(--content-surface);
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: var(--content-surface);
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: var(--accent-theme);
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: var(--menu-surface);
+    --secondary-foreground: var(--menu-foreground);
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: var(--menu-surface-hover);
+    --muted-foreground: var(--menu-muted);
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: var(--menu-surface-hover);
+    --accent-foreground: var(--menu-foreground-hover);
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: var(--menu-border);
+    --input: var(--menu-border);
+    --ring: var(--accent-theme);
 
-    --sidebar-background: 222.2 84% 4.9%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
+    --sidebar-background: var(--menu-surface);
+    --sidebar-foreground: var(--menu-foreground);
+    --sidebar-primary: var(--accent-theme);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: var(--menu-surface-hover);
+    --sidebar-accent-foreground: var(--menu-foreground-hover);
+    --sidebar-border: var(--menu-border);
+    --sidebar-ring: var(--accent-theme);
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -123,9 +123,9 @@ All colors MUST be HSL.
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    --sidebar: 222.2 84% 4.9%;
+    --sidebar: var(--menu-surface);
 
-    --content-surface: 0 0% 100%;
+    --content-surface: var(--menu-surface);
 
     --shadow-2xs: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
@@ -158,7 +158,7 @@ All colors MUST be HSL.
     --input: 0 0% 100%;
     --ring: 60 100% 50%;
 
-    --header-background: 0 0% 0%;
+    --header-bg: 0 0% 0%;
     --header-border: 0 0% 100%;
     --menu-surface: 0 0% 0%;
     --menu-surface-hover: 0 0% 12%;

@@ -45,7 +45,7 @@ const MobileHeader: React.FC<{
   return (
     <div
       className={cn(
-        "fixed left-0 right-0 top-0 z-30 flex items-center justify-between gap-2 bg-secondary px-4 py-3 transition-transform duration-300 sm:px-6 lg:hidden",
+        "fixed left-0 right-0 top-0 z-30 flex items-center justify-between gap-2 bg-[hsl(var(--header-bg))] px-4 py-3 transition-transform duration-300 sm:px-6 lg:hidden",
         hidden ? "-translate-y-full" : "translate-y-0"
       )}
     >
@@ -119,7 +119,7 @@ const DesktopHeader: React.FC<{
 }> = ({ hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
   const { hasActiveTimer } = useGlobalTimer();
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-secondary lg:flex">
+    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[hsl(var(--header-bg))] lg:flex">
       <div className="ml-12 flex w-full items-center justify-between px-6">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />
@@ -409,7 +409,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Sidebar - Fixed height 100vh */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex h-screen bg-secondary flex-col transition-all duration-300 lg:static",
+            "fixed inset-y-0 left-0 z-50 flex h-screen bg-[hsl(var(--menu-surface))] flex-col transition-all duration-300 lg:static",
             isCollapsed ? "lg:w-12" : "lg:w-64",
             "w-64",
             // Mobile always full width
@@ -569,7 +569,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               to="/preferences"
               onClick={() => setSidebarOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-menu-foreground transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-[hsl(var(--menu-foreground))] transition-colors",
                 location.pathname === "/preferences" ?
                 "border border-[hsl(var(--menu-border))] bg-background hover:text-foreground" :
                 "hover:bg-background hover:text-foreground"
@@ -587,7 +587,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <Button
                   variant="ghost"
                   size="icon"
-                  className="mx-auto h-8 w-8 text-menu-foreground hover:bg-background hover:text-foreground"
+                  className="mx-auto h-8 w-8 text-[hsl(var(--menu-foreground))] hover:bg-background hover:text-foreground"
                   onClick={handleSignOut}>
 
                     <LogOut className="w-3.5 h-3.5" />
@@ -596,7 +596,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <TooltipContent side="right">Sair</TooltipContent>
                 <Button
                 variant="ghost"
-                className="lg:hidden w-full justify-start text-menu-foreground hover:bg-background hover:text-foreground"
+                className="lg:hidden w-full justify-start text-[hsl(var(--menu-foreground))] hover:bg-background hover:text-foreground"
                 onClick={handleSignOut}>
 
                   <LogOut className="w-3.5 h-3.5 mr-2" />
@@ -640,10 +640,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           {/* Content area - Scrollable, with top padding for fixed header on desktop */}
           <div className={cn(
-            "flex-1 overflow-auto bg-secondary transition-[padding] duration-300 lg:pt-[58px]",
+            "flex-1 overflow-auto bg-[hsl(var(--menu-surface))] transition-[padding] duration-300 lg:pt-[58px]",
             isMobileHeaderHidden ? "pt-0" : "pt-[60px]"
           )} onScroll={handleContentScroll}>
-            <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-[hsl(var(--content-surface))] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 bg-secondary">
+            <div className="min-h-full rounded-tl-[12px] rounded-tr-[12px] sm:rounded-tr-none bg-[hsl(var(--content-surface))] px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
               {children}
             </div>
           </div>

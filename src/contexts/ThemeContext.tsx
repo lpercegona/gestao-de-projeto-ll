@@ -2,9 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ThemeSettings {
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
   themeColor: string;
   fontFamily: string;
 }
@@ -16,9 +13,6 @@ interface ThemeContextType {
 }
 
 const defaultTheme: ThemeSettings = {
-  primaryColor: '266 4% 20.8%',
-  secondaryColor: '248 0.7% 96.8%',
-  accentColor: '248 0.7% 96.8%',
   themeColor: 'slate',
   fontFamily: 'Inter',
 };
@@ -91,13 +85,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
 
   const applyTheme = (settings: ThemeSettings) => {
-    document.documentElement.style.setProperty('--primary', settings.primaryColor);
-    document.documentElement.style.setProperty('--secondary', settings.secondaryColor);
-    document.documentElement.style.setProperty('--accent', settings.accentColor);
-
     // Apply theme color class
     applyThemeColorClass(settings.themeColor);
-    
+
     // Load Google Font dynamically
     loadGoogleFont(settings.fontFamily);
     
@@ -124,9 +114,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (data) {
         const newTheme = {
-          primaryColor: data.primary_color,
-          secondaryColor: data.secondary_color,
-          accentColor: data.accent_color,
           themeColor: (data as any).theme_color ?? defaultTheme.themeColor,
           fontFamily: data.font_family,
         };

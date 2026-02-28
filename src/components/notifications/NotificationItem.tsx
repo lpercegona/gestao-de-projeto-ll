@@ -38,22 +38,22 @@ const getIcon = (type: string) => {
     case 'project_created':
       return <FolderKanban className="h-4 w-4 text-primary" />;
     case 'project_updated':
-      return <Edit className="h-4 w-4 text-blue-500" />;
+      return <Edit className="h-4 w-4 text-primary" />;
     case 'task_created':
-      return <Plus className="h-4 w-4 text-green-500" />;
+      return <Plus className="h-4 w-4 text-primary" />;
     case 'task_updated':
-      return <Edit className="h-4 w-4 text-orange-500" />;
+      return <Edit className="h-4 w-4 text-primary" />;
     case 'task_completed':
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      return <CheckCircle2 className="h-4 w-4 text-primary" />;
     case 'time_entry':
     case 'collaborator_time_entry_created':
-      return <Clock className="h-4 w-4 text-purple-500" />;
+      return <Clock className="h-4 w-4 text-primary" />;
     case 'client_project_request_created':
-      return <FileText className="h-4 w-4 text-orange-500" />;
+      return <FileText className="h-4 w-4 text-primary" />;
     case 'client_edit_request_created':
-      return <FilePenLine className="h-4 w-4 text-blue-500" />;
+      return <FilePenLine className="h-4 w-4 text-primary" />;
     case 'client_task_request_created':
-      return <ListPlus className="h-4 w-4 text-green-500" />;
+      return <ListPlus className="h-4 w-4 text-primary" />;
     default:
       return <FolderKanban className="h-4 w-4 text-muted-foreground" />;
   }
