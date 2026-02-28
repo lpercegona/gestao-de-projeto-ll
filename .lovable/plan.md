@@ -1,109 +1,73 @@
 
 
-# Substituir personalização por Hue por cores Tailwind completas
+# Unificar test-smtp-connection com denomailer
 
-## Resumo
+## Contexto
 
-Remover o sistema de personalização baseado em hue variável (slider 0-360) e substituí-lo por seleção direta entre as 22 famílias de cores Tailwind. Corrigir o alto contraste para inverter corretamente as tonalidades (ex: slate-100 vira slate-900). Manter bordas e botões destacados coerentes com a cor escolhida.
+Atualmente, a funcao `test-smtp-connection` usa uma implementacao manual com `Deno.connect` / `Deno.connectTls` para evitar o crash do denomailer. As outras 3 funcoes de envio (proposal, contract, monthly-report) ja usam denomailer normalmente. O objetivo e unificar tudo no denomailer, mantendo a simplicidade e o padrao defensivo de fechamento.
 
-## 1. Migração do banco de dados
+## Estrategia
 
-Adicionar coluna `theme_color` (texto, default `'slate'`) na tabela `theme_settings` para armazenar a família de cor selecionada. As colunas `header_hue` e `menu_hue` permanecem no banco por compatibilidade mas deixam de ser usadas no front.
+Usar o denomailer no teste SMTP da mesma forma que nas funcoes de envio, porem com um `safeClose` defensivo e envio de um email de teste real (para o proprio remetente). Isso valida credenciais de forma concreta e elimina a implementacao manual de baixo nivel.
 
-## 2. Atualizar CSS variables (`src/index.css`)
+## Alteracoes
 
-Remover o bloco de variáveis baseadas em hue (`--header-hue`, `--menu-hue`, `--header-background`, `--menu-surface`, etc.) do `.dark` e substituir por variáveis estáticas com valores padrão (slate). Criar um mapeamento de classes CSS para cada uma das 22 cores:
+### 1. `supabase/functions/test-smtp-connection/index.ts`
+
+Reescrever para usar denomailer com o padrao:
 
 ```text
-Famílias: slate, gray, zinc, neutral, stone, red, orange, amber,
-          yellow, lime, green, emerald, teal, cyan, sky, blue,
-          indigo, violet, purple, fuchsia, pink, rose
++-----------------------------------------+
+| SMTPClient (denomailer)                 |
+| - Tenta porta preferida (587 default)   |
+| - send() email de teste para si mesmo   |
+| - safeClose() no finally                |
+| - Fallback para 465 se falhar           |
++-----------------------------------------+
 ```
 
-Para cada cor, gerar uma classe `.theme-{cor}` que define:
-- `--header-bg`: cor-100 (light) / cor-900 (dark/high-contrast)
-- `--header-border`: cor-200 / cor-800
-- `--menu-surface`: cor-50 / cor-950
-- `--menu-surface-hover`: cor-100 / cor-900
-- `--menu-foreground`: cor-700 / cor-200
-- `--menu-border`: cor-200 / cor-800
-- `--accent-theme`: cor-500 (para botões e destaques)
+- Importar `SMTPClient` de `denomailer` (mesma versao das outras funcoes)
+- Criar helper `safeClose(client)` que verifica se o cliente existe antes de chamar `.close()`
+- Tentar `client.send(...)` com `to: smtp_user`, `from: smtp_user`, assunto `[TESTE SMTP] Conexao validada`
+- No `catch`, tentar fallback 465 com mesmo padrao
+- No `finally`, sempre chamar `safeClose`
+- Retornar mensagens de erro limpas (sem stack trace)
 
-No modo `.high-contrast`, cada classe `.theme-{cor}` terá inversão completa (100→900, 200→800, etc.).
+### 2. `supabase/functions/send-proposal-email/index.ts`
 
-## 3. Atualizar `ThemeContext.tsx`
+- Adicionar helper `safeClose` no topo
+- Substituir `try { await client.close(); } catch (_) {}` por `await safeClose(client)` nos blocos catch e finally (3 ocorrencias)
 
-- Remover `headerHue` do `ThemeSettings` interface e do `defaultTheme`
-- Adicionar `themeColor: string` (default `'slate'`)
-- No `applyTheme`, em vez de setar `--header-hue`/`--menu-hue`, aplicar a classe `theme-{cor}` no `<html>`
-- Remover referências a `HEADER_HUE_STORAGE_KEY` e `MENU_HUE_STORAGE_KEY`
-- Ler `theme_color` da tabela `theme_settings`
+### 3. `supabase/functions/send-contract-email/index.ts`
 
-## 4. Atualizar `ThemeSettings.tsx`
+- Mesmo ajuste: adicionar `safeClose` e substituir fechamentos diretos (3 ocorrencias)
 
-- Remover o slider de hue e todo o bloco "Header e Menu (mesma regra de cor)"
-- Remover `SurfaceHues` interface e estado `surfaceHues`
-- Adicionar estado `themeColor` com valor inicial `'slate'`
-- Criar grid visual com as 22 cores, cada uma representada por um círculo colorido com o tom 500 da família
-- Ao selecionar uma cor, aplicar preview imediato (classe no `<html>`)
-- No `handleSave`, salvar `theme_color` junto com as demais configs (sem `header_hue`/`menu_hue`)
-- Atualizar a seção de preview para mostrar bordas e botões na cor selecionada
+### 4. `supabase/functions/send-monthly-report/index.ts`
 
-## 5. Atualizar `AppLayout.tsx`
+- Mesmo ajuste: adicionar `safeClose` e substituir fechamentos diretos (3 ocorrencias)
 
-- Substituir referências a `text-menu-foreground` por classes que usam as novas CSS variables (`text-[hsl(var(--menu-foreground))]`)
-- Isso já funciona porque as variáveis serão definidas pelas classes `.theme-{cor}`
+### 5. `src/components/settings/SmtpSettingsSection.tsx`
 
-## 6. Alto contraste corrigido
+- Sem alteracao necessaria -- o componente ja trata `result.success === false` com mensagens amigaveis e mapeia erros de auth/hostname/timeout.
 
-A classe `.high-contrast` no `index.css` continuará com suas regras base (preto/branco/amarelo), mas as classes `.theme-{cor}` dentro de `.high-contrast` terão inversão adequada:
-- Fundos claros (100) viram escuros (900)
-- Bordas claras (200) viram bordas fortes (800)
-- Textos escuros (700) viram claros (200)
-- O accent se mantém no tom 500 para visibilidade
+## Helper safeClose (padrao compartilhado)
 
-## Detalhes técnicos
-
-### Estrutura das 22 classes CSS (exemplo para slate):
-```css
-.theme-slate {
-  --header-bg: 210 40% 96.1%;      /* slate-100 */
-  --header-border: 214.3 32% 91.4%; /* slate-200 */
-  --menu-surface: 210 40% 98%;      /* slate-50 */
-  --menu-surface-hover: 210 40% 96.1%;
-  --menu-foreground: 215.3 25% 27%; /* slate-700 */
-  --menu-border: 214.3 32% 91.4%;
-  --accent-theme: 215.4 16.3% 47%;  /* slate-500 */
-}
-.high-contrast .theme-slate,
-.dark .theme-slate {
-  --header-bg: 222.2 47.4% 11.2%;   /* slate-900 */
-  --header-border: 217.2 33% 17.5%;  /* slate-800 */
-  --menu-surface: 222.2 84% 4.9%;   /* slate-950 */
-  --menu-foreground: 214.3 32% 91.4%; /* slate-200 */
-  /* ... */
-}
-```
-
-### Salvamento no banco:
 ```typescript
-await supabase.from('theme_settings').update({
-  primary_color: colors.primary,
-  secondary_color: colors.secondary,
-  accent_color: colors.accent,
-  theme_color: themeColor, // 'slate' | 'blue' | 'red' | ...
-  font_family: fontFamily,
-}).eq('id', '...');
+async function safeClose(client: SMTPClient | null) {
+  if (!client) return;
+  try { await client.close(); } catch (_) { /* ignore */ }
+}
 ```
 
-### Grid de seleção de cores:
-Grid 6x4 com círculos de 32px, cada um com a cor-500 da família, label abaixo, borda de seleção na cor ativa.
+## Riscos e mitigacao
 
-## Ordem de implementação
+- **Email de teste enviado a cada clique**: o assunto tera prefixo `[TESTE SMTP]` e corpo minimo, facilitando filtragem.
+- **Provedores que bloqueiam autoenvio**: erro sera capturado e retornado como `success: false` com mensagem clara.
+- **Denominaler crash no close**: o `safeClose` previne completamente esse cenario.
 
-1. Migração: adicionar coluna `theme_color`
-2. CSS: criar as 22 classes `.theme-{cor}` com variantes dark e high-contrast
-3. ThemeContext: remover hue, adicionar themeColor, aplicar classe
-4. ThemeSettings: substituir slider por grid de cores
-5. AppLayout: ajustar classes que usavam menu-foreground
+## Ordem de implementacao
+
+1. Reescrever `test-smtp-connection` com denomailer + safeClose
+2. Adicionar `safeClose` nas 3 funcoes de envio
+3. Deploy automatico das edge functions
 

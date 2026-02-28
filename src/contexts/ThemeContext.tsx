@@ -1,8 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+const HEADER_HUE_STORAGE_KEY = 'theme:header-hue';
+const MENU_HUE_STORAGE_KEY = 'theme:menu-hue';
+
 interface ThemeSettings {
-  themeColor: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  headerHue: number;
   fontFamily: string;
 }
 
@@ -13,8 +19,23 @@ interface ThemeContextType {
 }
 
 const defaultTheme: ThemeSettings = {
-  themeColor: 'slate',
+  primaryColor: '266 4% 20.8%',
+  secondaryColor: '248 0.7% 96.8%',
+  accentColor: '248 0.7% 96.8%',
+  headerHue: 210,
   fontFamily: 'Inter',
+};
+
+const getStoredHue = (key: string): number | null => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) return null;
+    return Math.min(360, Math.max(0, parsed));
+  } catch {
+    return null;
+  }
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -40,14 +61,6 @@ const GOOGLE_FONTS_MAP: Record<string, string> = {
   'Space Mono': 'Space+Mono:wght@400;700',
 };
 
-const VALID_THEME_COLORS = [
-  'slate', 'gray', 'zinc', 'neutral', 'stone',
-  'red', 'orange', 'amber', 'yellow', 'lime',
-  'green', 'emerald', 'teal', 'cyan', 'sky',
-  'blue', 'indigo', 'violet', 'purple', 'fuchsia',
-  'pink', 'rose',
-];
-
 function loadGoogleFont(fontFamily: string) {
   const fontParam = GOOGLE_FONTS_MAP[fontFamily];
   if (!fontParam) return;
@@ -66,28 +79,24 @@ function loadGoogleFont(fontFamily: string) {
   }
 }
 
-function applyThemeColorClass(color: string) {
-  // Remove any existing theme-* class
-  const classes = document.documentElement.classList;
-  classes.forEach((cls) => {
-    if (cls.startsWith('theme-')) {
-      classes.remove(cls);
-    }
-  });
-  // Add the new one
-  if (VALID_THEME_COLORS.includes(color)) {
-    classes.add(`theme-${color}`);
-  }
-}
-
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<ThemeSettings>(defaultTheme);
   const [loading, setLoading] = useState(true);
 
   const applyTheme = (settings: ThemeSettings) => {
-    // Apply theme color class
-    applyThemeColorClass(settings.themeColor);
+    document.documentElement.style.setProperty('--primary', settings.primaryColor);
+    document.documentElement.style.setProperty('--secondary', settings.secondaryColor);
+    document.documentElement.style.setProperty('--accent', settings.accentColor);
+    document.documentElement.style.setProperty('--header-hue', String(settings.headerHue));
+    document.documentElement.style.setProperty('--menu-hue', String(settings.headerHue));
 
+    try {
+      localStorage.setItem(HEADER_HUE_STORAGE_KEY, String(settings.headerHue));
+      localStorage.setItem(MENU_HUE_STORAGE_KEY, String(settings.headerHue));
+    } catch {
+      // noop
+    }
+    
     // Load Google Font dynamically
     loadGoogleFont(settings.fontFamily);
     
@@ -113,8 +122,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .single();
       
       if (data) {
+        const fallbackStoredHeaderHue = getStoredHue(HEADER_HUE_STORAGE_KEY);
+        const fallbackStoredMenuHue = getStoredHue(MENU_HUE_STORAGE_KEY);
         const newTheme = {
-          themeColor: (data as any).theme_color ?? defaultTheme.themeColor,
+          primaryColor: data.primary_color,
+          secondaryColor: data.secondary_color,
+          accentColor: data.accent_color,
+          headerHue:
+            (data as any).header_hue ??
+            (data as any).menu_hue ??
+            fallbackStoredHeaderHue ??
+            fallbackStoredMenuHue ??
+            defaultTheme.headerHue,
           fontFamily: data.font_family,
         };
         setTheme(newTheme);

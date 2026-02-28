@@ -1,1 +1,0 @@
-ALTER TABLE public.theme_settings ADD COLUMN IF NOT EXISTS theme_color text NOT NULL DEFAULT 'slate';
