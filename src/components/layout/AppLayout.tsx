@@ -45,7 +45,7 @@ const MobileHeader: React.FC<{
   return (
     <div
       className={cn(
-        "fixed left-0 right-0 top-0 z-30 flex items-center justify-between gap-2 bg-[hsl(var(--header-bg))] px-4 py-3 border-b border-[hsl(var(--header-border))] transition-transform duration-300 sm:px-6 lg:hidden",
+        "fixed left-0 right-0 top-0 z-30 flex items-center justify-between gap-2 bg-[hsl(var(--header-bg))] px-4 py-3 transition-transform duration-300 sm:px-6 lg:hidden",
         hidden ? "-translate-y-full" : "translate-y-0"
       )}
     >
@@ -119,7 +119,7 @@ const DesktopHeader: React.FC<{
 }> = ({ hideTimer = false, highContrastEnabled, onToggleHighContrast }) => {
   const { hasActiveTimer } = useGlobalTimer();
   return (
-    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[hsl(var(--header-bg))] border-b border-[hsl(var(--header-border))] lg:flex">
+    <div className="fixed left-0 right-0 top-0 z-30 hidden h-14 bg-[hsl(var(--header-bg))] lg:flex">
       <div className="ml-12 flex w-full items-center justify-between px-6">
         {/* Left: Breadcrumb */}
         <BreadcrumbNav />

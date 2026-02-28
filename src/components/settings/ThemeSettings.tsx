@@ -274,7 +274,7 @@ export const ThemeSettings: React.FC = () => {
         >
           <p className="text-sm font-medium" style={{ color: `hsl(var(--menu-muted))` }}>Prévia do Menu</p>
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm" style={{ backgroundColor: `hsl(var(--accent-theme))`, color: '#fff' }}>Botão Destaque</Button>
+            <Button size="sm" style={{ backgroundColor: `hsl(var(--accent-theme))`, color: `hsl(var(--primary-foreground))` }}>Botão Destaque</Button>
             <Button size="sm" style={{ backgroundColor: `hsl(var(--primary))`, color: 'hsl(var(--primary-foreground))' }}>Primário</Button>
             <Button size="sm" variant="outline" style={{ borderColor: `hsl(var(--menu-border))`, color: `hsl(var(--menu-foreground))` }}>Outline</Button>
           </div>
