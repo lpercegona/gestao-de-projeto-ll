@@ -1161,6 +1161,7 @@ export type Database = {
           menu_hue: number
           primary_color: string
           secondary_color: string
+          theme_color: string
           updated_at: string
         }
         Insert: {
@@ -1172,6 +1173,7 @@ export type Database = {
           menu_hue?: number
           primary_color?: string
           secondary_color?: string
+          theme_color?: string
           updated_at?: string
         }
         Update: {
@@ -1183,6 +1185,7 @@ export type Database = {
           menu_hue?: number
           primary_color?: string
           secondary_color?: string
+          theme_color?: string
           updated_at?: string
         }
         Relationships: []
