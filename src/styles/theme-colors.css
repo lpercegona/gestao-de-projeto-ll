@@ -1,0 +1,589 @@
+/* 22 Tailwind color families for theme personalization */
+/* Each .theme-{color} sets CSS variables for header, menu, borders, and accent */
+
+/* Default variables (applied when no theme class is set) */
+:root {
+  --header-bg: 210 40% 96.1%;
+  --header-border: 214.3 32% 91.4%;
+  --menu-surface: 210 40% 98%;
+  --menu-surface-hover: 210 40% 96.1%;
+  --menu-foreground: 215.3 25% 27%;
+  --menu-foreground-hover: 215.3 25% 20%;
+  --menu-foreground-active: 222.2 47.4% 11.2%;
+  --menu-border: 214.3 32% 91.4%;
+  --menu-muted: 215.4 16.3% 46.9%;
+  --accent-theme: 215.4 16.3% 47%;
+  --content-surface: 0 0% 100%;
+}
+
+/* ===== SLATE ===== */
+.theme-slate {
+  --header-bg: 210 40% 96.1%;
+  --header-border: 214.3 32% 91.4%;
+  --menu-surface: 210 40% 98%;
+  --menu-surface-hover: 210 40% 96.1%;
+  --menu-foreground: 215.3 25% 27%;
+  --menu-foreground-hover: 215.3 25% 20%;
+  --menu-foreground-active: 222.2 47.4% 11.2%;
+  --menu-border: 214.3 32% 91.4%;
+  --menu-muted: 215.4 16.3% 46.9%;
+  --accent-theme: 215.4 16.3% 47%;
+}
+.dark .theme-slate, .high-contrast .theme-slate {
+  --header-bg: 222.2 47.4% 11.2%;
+  --header-border: 217.2 33% 17.5%;
+  --menu-surface: 222.2 84% 4.9%;
+  --menu-surface-hover: 222.2 47.4% 11.2%;
+  --menu-foreground: 214.3 32% 91.4%;
+  --menu-foreground-hover: 210 40% 96.1%;
+  --menu-foreground-active: 210 40% 98%;
+  --menu-border: 217.2 33% 17.5%;
+  --menu-muted: 215.4 16.3% 47%;
+  --accent-theme: 215.4 16.3% 47%;
+}
+
+/* ===== GRAY ===== */
+.theme-gray {
+  --header-bg: 220 14.3% 95.9%;
+  --header-border: 220 13% 91%;
+  --menu-surface: 210 20% 98%;
+  --menu-surface-hover: 220 14.3% 95.9%;
+  --menu-foreground: 215.4 16.3% 26.9%;
+  --menu-foreground-hover: 220.9 39.3% 11%;
+  --menu-foreground-active: 220.9 39.3% 11%;
+  --menu-border: 220 13% 91%;
+  --menu-muted: 220 8.9% 46.1%;
+  --accent-theme: 220 8.9% 46.1%;
+}
+.dark .theme-gray, .high-contrast .theme-gray {
+  --header-bg: 220.9 39.3% 11%;
+  --header-border: 215 27.9% 16.9%;
+  --menu-surface: 224 71.4% 4.1%;
+  --menu-surface-hover: 220.9 39.3% 11%;
+  --menu-foreground: 220 13% 91%;
+  --menu-foreground-hover: 220 14.3% 95.9%;
+  --menu-foreground-active: 210 20% 98%;
+  --menu-border: 215 27.9% 16.9%;
+  --menu-muted: 220 8.9% 46.1%;
+  --accent-theme: 220 8.9% 46.1%;
+}
+
+/* ===== ZINC ===== */
+.theme-zinc {
+  --header-bg: 240 4.8% 95.9%;
+  --header-border: 240 5.9% 90%;
+  --menu-surface: 0 0% 98%;
+  --menu-surface-hover: 240 4.8% 95.9%;
+  --menu-foreground: 240 3.8% 26.1%;
+  --menu-foreground-hover: 240 5.9% 10%;
+  --menu-foreground-active: 240 5.9% 10%;
+  --menu-border: 240 5.9% 90%;
+  --menu-muted: 240 3.8% 46.1%;
+  --accent-theme: 240 3.8% 46.1%;
+}
+.dark .theme-zinc, .high-contrast .theme-zinc {
+  --header-bg: 240 5.9% 10%;
+  --header-border: 240 3.7% 15.9%;
+  --menu-surface: 240 10% 3.9%;
+  --menu-surface-hover: 240 5.9% 10%;
+  --menu-foreground: 240 5.9% 90%;
+  --menu-foreground-hover: 240 4.8% 95.9%;
+  --menu-foreground-active: 0 0% 98%;
+  --menu-border: 240 3.7% 15.9%;
+  --menu-muted: 240 3.8% 46.1%;
+  --accent-theme: 240 3.8% 46.1%;
+}
+
+/* ===== NEUTRAL ===== */
+.theme-neutral {
+  --header-bg: 0 0% 96.1%;
+  --header-border: 0 0% 89.8%;
+  --menu-surface: 0 0% 98%;
+  --menu-surface-hover: 0 0% 96.1%;
+  --menu-foreground: 0 0% 25.1%;
+  --menu-foreground-hover: 0 0% 9%;
+  --menu-foreground-active: 0 0% 9%;
+  --menu-border: 0 0% 89.8%;
+  --menu-muted: 0 0% 45.1%;
+  --accent-theme: 0 0% 45.1%;
+}
+.dark .theme-neutral, .high-contrast .theme-neutral {
+  --header-bg: 0 0% 9%;
+  --header-border: 0 0% 14.9%;
+  --menu-surface: 0 0% 3.9%;
+  --menu-surface-hover: 0 0% 9%;
+  --menu-foreground: 0 0% 89.8%;
+  --menu-foreground-hover: 0 0% 96.1%;
+  --menu-foreground-active: 0 0% 98%;
+  --menu-border: 0 0% 14.9%;
+  --menu-muted: 0 0% 45.1%;
+  --accent-theme: 0 0% 45.1%;
+}
+
+/* ===== STONE ===== */
+.theme-stone {
+  --header-bg: 60 4.8% 95.9%;
+  --header-border: 20 5.9% 90%;
+  --menu-surface: 60 9.1% 97.8%;
+  --menu-surface-hover: 60 4.8% 95.9%;
+  --menu-foreground: 25 5.3% 24.7%;
+  --menu-foreground-hover: 24 9.8% 10%;
+  --menu-foreground-active: 24 9.8% 10%;
+  --menu-border: 20 5.9% 90%;
+  --menu-muted: 25 5.3% 44.7%;
+  --accent-theme: 25 5.3% 44.7%;
+}
+.dark .theme-stone, .high-contrast .theme-stone {
+  --header-bg: 24 9.8% 10%;
+  --header-border: 12 6.5% 15.1%;
+  --menu-surface: 20 14.3% 4.1%;
+  --menu-surface-hover: 24 9.8% 10%;
+  --menu-foreground: 20 5.9% 90%;
+  --menu-foreground-hover: 60 4.8% 95.9%;
+  --menu-foreground-active: 60 9.1% 97.8%;
+  --menu-border: 12 6.5% 15.1%;
+  --menu-muted: 25 5.3% 44.7%;
+  --accent-theme: 25 5.3% 44.7%;
+}
+
+/* ===== RED ===== */
+.theme-red {
+  --header-bg: 0 85.7% 97.3%;
+  --header-border: 0 72.2% 90.6%;
+  --menu-surface: 0 85.7% 97.3%;
+  --menu-surface-hover: 0 72.2% 90.6%;
+  --menu-foreground: 0 63.3% 31%;
+  --menu-foreground-hover: 0 72.2% 20.6%;
+  --menu-foreground-active: 0 72.2% 20.6%;
+  --menu-border: 0 72.2% 90.6%;
+  --menu-muted: 0 84.2% 60.2%;
+  --accent-theme: 0 84.2% 60.2%;
+}
+.dark .theme-red, .high-contrast .theme-red {
+  --header-bg: 0 62.8% 30.6%;
+  --header-border: 0 74% 22%;
+  --menu-surface: 0 62.8% 15%;
+  --menu-surface-hover: 0 62.8% 30.6%;
+  --menu-foreground: 0 72.2% 90.6%;
+  --menu-foreground-hover: 0 85.7% 97.3%;
+  --menu-foreground-active: 0 85.7% 97.3%;
+  --menu-border: 0 74% 22%;
+  --menu-muted: 0 84.2% 60.2%;
+  --accent-theme: 0 84.2% 60.2%;
+}
+
+/* ===== ORANGE ===== */
+.theme-orange {
+  --header-bg: 33.3 100% 96.5%;
+  --header-border: 37.7 92.1% 84.1%;
+  --menu-surface: 33.3 100% 96.5%;
+  --menu-surface-hover: 37.7 92.1% 84.1%;
+  --menu-foreground: 15 75.4% 28.4%;
+  --menu-foreground-hover: 15 75.4% 18%;
+  --menu-foreground-active: 15 75.4% 18%;
+  --menu-border: 37.7 92.1% 84.1%;
+  --menu-muted: 24.6 95% 53.1%;
+  --accent-theme: 24.6 95% 53.1%;
+}
+.dark .theme-orange, .high-contrast .theme-orange {
+  --header-bg: 15 75.4% 28.4%;
+  --header-border: 15 75.4% 18%;
+  --menu-surface: 15 75.4% 12%;
+  --menu-surface-hover: 15 75.4% 28.4%;
+  --menu-foreground: 37.7 92.1% 84.1%;
+  --menu-foreground-hover: 33.3 100% 96.5%;
+  --menu-foreground-active: 33.3 100% 96.5%;
+  --menu-border: 15 75.4% 18%;
+  --menu-muted: 24.6 95% 53.1%;
+  --accent-theme: 24.6 95% 53.1%;
+}
+
+/* ===== AMBER ===== */
+.theme-amber {
+  --header-bg: 48 100% 96.1%;
+  --header-border: 48 96.5% 88.8%;
+  --menu-surface: 48 100% 96.1%;
+  --menu-surface-hover: 48 96.5% 88.8%;
+  --menu-foreground: 21 77.8% 26.5%;
+  --menu-foreground-hover: 21 77.8% 16%;
+  --menu-foreground-active: 21 77.8% 16%;
+  --menu-border: 48 96.5% 88.8%;
+  --menu-muted: 37.7 92.1% 50.2%;
+  --accent-theme: 37.7 92.1% 50.2%;
+}
+.dark .theme-amber, .high-contrast .theme-amber {
+  --header-bg: 21 77.8% 26.5%;
+  --header-border: 21 77.8% 16%;
+  --menu-surface: 21 77.8% 10%;
+  --menu-surface-hover: 21 77.8% 26.5%;
+  --menu-foreground: 48 96.5% 88.8%;
+  --menu-foreground-hover: 48 100% 96.1%;
+  --menu-foreground-active: 48 100% 96.1%;
+  --menu-border: 21 77.8% 16%;
+  --menu-muted: 37.7 92.1% 50.2%;
+  --accent-theme: 37.7 92.1% 50.2%;
+}
+
+/* ===== YELLOW ===== */
+.theme-yellow {
+  --header-bg: 54.9 96.7% 88%;
+  --header-border: 50.4 94.8% 79.4%;
+  --menu-surface: 54.9 96.7% 95%;
+  --menu-surface-hover: 54.9 96.7% 88%;
+  --menu-foreground: 28 73.4% 26.5%;
+  --menu-foreground-hover: 28 73.4% 16%;
+  --menu-foreground-active: 28 73.4% 16%;
+  --menu-border: 50.4 94.8% 79.4%;
+  --menu-muted: 45.4 93.4% 47.5%;
+  --accent-theme: 45.4 93.4% 47.5%;
+}
+.dark .theme-yellow, .high-contrast .theme-yellow {
+  --header-bg: 28 73.4% 26.5%;
+  --header-border: 28 73.4% 16%;
+  --menu-surface: 28 73.4% 10%;
+  --menu-surface-hover: 28 73.4% 26.5%;
+  --menu-foreground: 50.4 94.8% 79.4%;
+  --menu-foreground-hover: 54.9 96.7% 88%;
+  --menu-foreground-active: 54.9 96.7% 95%;
+  --menu-border: 28 73.4% 16%;
+  --menu-muted: 45.4 93.4% 47.5%;
+  --accent-theme: 45.4 93.4% 47.5%;
+}
+
+/* ===== LIME ===== */
+.theme-lime {
+  --header-bg: 80.9 88.5% 94.5%;
+  --header-border: 80.9 88.5% 85%;
+  --menu-surface: 80.9 88.5% 97%;
+  --menu-surface-hover: 80.9 88.5% 94.5%;
+  --menu-foreground: 85.8 78.4% 21.8%;
+  --menu-foreground-hover: 85.8 78.4% 14%;
+  --menu-foreground-active: 85.8 78.4% 14%;
+  --menu-border: 80.9 88.5% 85%;
+  --menu-muted: 83.7 80.5% 44.3%;
+  --accent-theme: 83.7 80.5% 44.3%;
+}
+.dark .theme-lime, .high-contrast .theme-lime {
+  --header-bg: 85.8 78.4% 21.8%;
+  --header-border: 85.8 78.4% 14%;
+  --menu-surface: 85.8 78.4% 8%;
+  --menu-surface-hover: 85.8 78.4% 21.8%;
+  --menu-foreground: 80.9 88.5% 85%;
+  --menu-foreground-hover: 80.9 88.5% 94.5%;
+  --menu-foreground-active: 80.9 88.5% 97%;
+  --menu-border: 85.8 78.4% 14%;
+  --menu-muted: 83.7 80.5% 44.3%;
+  --accent-theme: 83.7 80.5% 44.3%;
+}
+
+/* ===== GREEN ===== */
+.theme-green {
+  --header-bg: 141.9 69.2% 94.5%;
+  --header-border: 141 72.4% 84.1%;
+  --menu-surface: 141.9 69.2% 97%;
+  --menu-surface-hover: 141.9 69.2% 94.5%;
+  --menu-foreground: 142.4 71.8% 22.4%;
+  --menu-foreground-hover: 142.1 76.2% 14.2%;
+  --menu-foreground-active: 142.1 76.2% 14.2%;
+  --menu-border: 141 72.4% 84.1%;
+  --menu-muted: 142.1 76.2% 36.3%;
+  --accent-theme: 142.1 76.2% 36.3%;
+}
+.dark .theme-green, .high-contrast .theme-green {
+  --header-bg: 142.1 76.2% 14.2%;
+  --header-border: 142.4 71.8% 22.4%;
+  --menu-surface: 144.9 80.4% 6%;
+  --menu-surface-hover: 142.1 76.2% 14.2%;
+  --menu-foreground: 141 72.4% 84.1%;
+  --menu-foreground-hover: 141.9 69.2% 94.5%;
+  --menu-foreground-active: 141.9 69.2% 97%;
+  --menu-border: 142.4 71.8% 22.4%;
+  --menu-muted: 142.1 76.2% 36.3%;
+  --accent-theme: 142.1 76.2% 36.3%;
+}
+
+/* ===== EMERALD ===== */
+.theme-emerald {
+  --header-bg: 151.8 81% 95.9%;
+  --header-border: 149.3 80.4% 85.1%;
+  --menu-surface: 151.8 81% 97.5%;
+  --menu-surface-hover: 151.8 81% 95.9%;
+  --menu-foreground: 163.1 72.1% 22.4%;
+  --menu-foreground-hover: 163.1 72.1% 14%;
+  --menu-foreground-active: 163.1 72.1% 14%;
+  --menu-border: 149.3 80.4% 85.1%;
+  --menu-muted: 160.1 84.1% 39.4%;
+  --accent-theme: 160.1 84.1% 39.4%;
+}
+.dark .theme-emerald, .high-contrast .theme-emerald {
+  --header-bg: 163.1 72.1% 14%;
+  --header-border: 163.1 72.1% 22.4%;
+  --menu-surface: 164.2 85.7% 6.5%;
+  --menu-surface-hover: 163.1 72.1% 14%;
+  --menu-foreground: 149.3 80.4% 85.1%;
+  --menu-foreground-hover: 151.8 81% 95.9%;
+  --menu-foreground-active: 151.8 81% 97.5%;
+  --menu-border: 163.1 72.1% 22.4%;
+  --menu-muted: 160.1 84.1% 39.4%;
+  --accent-theme: 160.1 84.1% 39.4%;
+}
+
+/* ===== TEAL ===== */
+.theme-teal {
+  --header-bg: 166.2 76.5% 96.7%;
+  --header-border: 167.2 73.6% 83.9%;
+  --menu-surface: 166.2 76.5% 97.5%;
+  --menu-surface-hover: 166.2 76.5% 96.7%;
+  --menu-foreground: 175.3 77.4% 21.8%;
+  --menu-foreground-hover: 175.3 77.4% 14%;
+  --menu-foreground-active: 175.3 77.4% 14%;
+  --menu-border: 167.2 73.6% 83.9%;
+  --menu-muted: 172.5 66% 40.4%;
+  --accent-theme: 172.5 66% 40.4%;
+}
+.dark .theme-teal, .high-contrast .theme-teal {
+  --header-bg: 175.3 77.4% 14%;
+  --header-border: 175.3 77.4% 21.8%;
+  --menu-surface: 176.1 84.4% 5.5%;
+  --menu-surface-hover: 175.3 77.4% 14%;
+  --menu-foreground: 167.2 73.6% 83.9%;
+  --menu-foreground-hover: 166.2 76.5% 96.7%;
+  --menu-foreground-active: 166.2 76.5% 97.5%;
+  --menu-border: 175.3 77.4% 21.8%;
+  --menu-muted: 172.5 66% 40.4%;
+  --accent-theme: 172.5 66% 40.4%;
+}
+
+/* ===== CYAN ===== */
+.theme-cyan {
+  --header-bg: 183.2 100% 96.3%;
+  --header-border: 185.1 95.9% 84.5%;
+  --menu-surface: 183.2 100% 97.5%;
+  --menu-surface-hover: 183.2 100% 96.3%;
+  --menu-foreground: 192.9 82.3% 21%;
+  --menu-foreground-hover: 192.9 82.3% 14%;
+  --menu-foreground-active: 192.9 82.3% 14%;
+  --menu-border: 185.1 95.9% 84.5%;
+  --menu-muted: 188.7 85.7% 42.7%;
+  --accent-theme: 188.7 85.7% 42.7%;
+}
+.dark .theme-cyan, .high-contrast .theme-cyan {
+  --header-bg: 192.9 82.3% 14%;
+  --header-border: 192.9 82.3% 21%;
+  --menu-surface: 192.2 90.9% 5.3%;
+  --menu-surface-hover: 192.9 82.3% 14%;
+  --menu-foreground: 185.1 95.9% 84.5%;
+  --menu-foreground-hover: 183.2 100% 96.3%;
+  --menu-foreground-active: 183.2 100% 97.5%;
+  --menu-border: 192.9 82.3% 21%;
+  --menu-muted: 188.7 85.7% 42.7%;
+  --accent-theme: 188.7 85.7% 42.7%;
+}
+
+/* ===== SKY ===== */
+.theme-sky {
+  --header-bg: 204 93.8% 93.8%;
+  --header-border: 200.6 94.4% 83.7%;
+  --menu-surface: 204 93.8% 97%;
+  --menu-surface-hover: 204 93.8% 93.8%;
+  --menu-foreground: 204 80% 24%;
+  --menu-foreground-hover: 205.1 91.7% 14%;
+  --menu-foreground-active: 205.1 91.7% 14%;
+  --menu-border: 200.6 94.4% 83.7%;
+  --menu-muted: 198.6 88.7% 48.4%;
+  --accent-theme: 198.6 88.7% 48.4%;
+}
+.dark .theme-sky, .high-contrast .theme-sky {
+  --header-bg: 205.1 91.7% 14%;
+  --header-border: 204 80% 24%;
+  --menu-surface: 205 100% 6%;
+  --menu-surface-hover: 205.1 91.7% 14%;
+  --menu-foreground: 200.6 94.4% 83.7%;
+  --menu-foreground-hover: 204 93.8% 93.8%;
+  --menu-foreground-active: 204 93.8% 97%;
+  --menu-border: 204 80% 24%;
+  --menu-muted: 198.6 88.7% 48.4%;
+  --accent-theme: 198.6 88.7% 48.4%;
+}
+
+/* ===== BLUE ===== */
+.theme-blue {
+  --header-bg: 213.8 93.9% 93.8%;
+  --header-border: 212.7 96.9% 85.1%;
+  --menu-surface: 213.8 93.9% 97%;
+  --menu-surface-hover: 213.8 93.9% 93.8%;
+  --menu-foreground: 224.3 76.3% 27.5%;
+  --menu-foreground-hover: 224.3 76.3% 18%;
+  --menu-foreground-active: 224.3 76.3% 18%;
+  --menu-border: 212.7 96.9% 85.1%;
+  --menu-muted: 217.2 91.2% 59.8%;
+  --accent-theme: 217.2 91.2% 59.8%;
+}
+.dark .theme-blue, .high-contrast .theme-blue {
+  --header-bg: 224.3 76.3% 18%;
+  --header-border: 224.3 76.3% 27.5%;
+  --menu-surface: 226.2 57.1% 6.5%;
+  --menu-surface-hover: 224.3 76.3% 18%;
+  --menu-foreground: 212.7 96.9% 85.1%;
+  --menu-foreground-hover: 213.8 93.9% 93.8%;
+  --menu-foreground-active: 213.8 93.9% 97%;
+  --menu-border: 224.3 76.3% 27.5%;
+  --menu-muted: 217.2 91.2% 59.8%;
+  --accent-theme: 217.2 91.2% 59.8%;
+}
+
+/* ===== INDIGO ===== */
+.theme-indigo {
+  --header-bg: 225.9 100% 96.7%;
+  --header-border: 228.6 96% 88.5%;
+  --menu-surface: 225.9 100% 97.5%;
+  --menu-surface-hover: 225.9 100% 96.7%;
+  --menu-foreground: 243.7 54.5% 28.4%;
+  --menu-foreground-hover: 243.8 47.1% 16.3%;
+  --menu-foreground-active: 243.8 47.1% 16.3%;
+  --menu-border: 228.6 96% 88.5%;
+  --menu-muted: 238.7 83.5% 66.7%;
+  --accent-theme: 238.7 83.5% 66.7%;
+}
+.dark .theme-indigo, .high-contrast .theme-indigo {
+  --header-bg: 243.8 47.1% 16.3%;
+  --header-border: 243.7 54.5% 28.4%;
+  --menu-surface: 243.5 56.5% 7%;
+  --menu-surface-hover: 243.8 47.1% 16.3%;
+  --menu-foreground: 228.6 96% 88.5%;
+  --menu-foreground-hover: 225.9 100% 96.7%;
+  --menu-foreground-active: 225.9 100% 97.5%;
+  --menu-border: 243.7 54.5% 28.4%;
+  --menu-muted: 238.7 83.5% 66.7%;
+  --accent-theme: 238.7 83.5% 66.7%;
+}
+
+/* ===== VIOLET ===== */
+.theme-violet {
+  --header-bg: 250 100% 97.6%;
+  --header-border: 251.4 91.3% 90.8%;
+  --menu-surface: 250 100% 98%;
+  --menu-surface-hover: 250 100% 97.6%;
+  --menu-foreground: 263.5 70% 30.4%;
+  --menu-foreground-hover: 263.5 70% 18%;
+  --menu-foreground-active: 263.5 70% 18%;
+  --menu-border: 251.4 91.3% 90.8%;
+  --menu-muted: 258.3 89.5% 66.3%;
+  --accent-theme: 258.3 89.5% 66.3%;
+}
+.dark .theme-violet, .high-contrast .theme-violet {
+  --header-bg: 263.5 70% 18%;
+  --header-border: 263.5 70% 30.4%;
+  --menu-surface: 261.2 72.6% 7%;
+  --menu-surface-hover: 263.5 70% 18%;
+  --menu-foreground: 251.4 91.3% 90.8%;
+  --menu-foreground-hover: 250 100% 97.6%;
+  --menu-foreground-active: 250 100% 98%;
+  --menu-border: 263.5 70% 30.4%;
+  --menu-muted: 258.3 89.5% 66.3%;
+  --accent-theme: 258.3 89.5% 66.3%;
+}
+
+/* ===== PURPLE ===== */
+.theme-purple {
+  --header-bg: 270 100% 98%;
+  --header-border: 268.7 100% 91.8%;
+  --menu-surface: 270 100% 98.5%;
+  --menu-surface-hover: 270 100% 98%;
+  --menu-foreground: 273.6 72.4% 28%;
+  --menu-foreground-hover: 273.6 72.4% 18%;
+  --menu-foreground-active: 273.6 72.4% 18%;
+  --menu-border: 268.7 100% 91.8%;
+  --menu-muted: 271.5 81.3% 55.9%;
+  --accent-theme: 271.5 81.3% 55.9%;
+}
+.dark .theme-purple, .high-contrast .theme-purple {
+  --header-bg: 273.6 72.4% 18%;
+  --header-border: 273.6 72.4% 28%;
+  --menu-surface: 276 100% 6%;
+  --menu-surface-hover: 273.6 72.4% 18%;
+  --menu-foreground: 268.7 100% 91.8%;
+  --menu-foreground-hover: 270 100% 98%;
+  --menu-foreground-active: 270 100% 98.5%;
+  --menu-border: 273.6 72.4% 28%;
+  --menu-muted: 271.5 81.3% 55.9%;
+  --accent-theme: 271.5 81.3% 55.9%;
+}
+
+/* ===== FUCHSIA ===== */
+.theme-fuchsia {
+  --header-bg: 289.1 100% 97.8%;
+  --header-border: 287 100% 92%;
+  --menu-surface: 289.1 100% 98.5%;
+  --menu-surface-hover: 289.1 100% 97.8%;
+  --menu-foreground: 292.2 83.5% 25.7%;
+  --menu-foreground-hover: 292.2 83.5% 16%;
+  --menu-foreground-active: 292.2 83.5% 16%;
+  --menu-border: 287 100% 92%;
+  --menu-muted: 292.2 84.1% 60.6%;
+  --accent-theme: 292.2 84.1% 60.6%;
+}
+.dark .theme-fuchsia, .high-contrast .theme-fuchsia {
+  --header-bg: 292.2 83.5% 16%;
+  --header-border: 292.2 83.5% 25.7%;
+  --menu-surface: 297.1 100% 5%;
+  --menu-surface-hover: 292.2 83.5% 16%;
+  --menu-foreground: 287 100% 92%;
+  --menu-foreground-hover: 289.1 100% 97.8%;
+  --menu-foreground-active: 289.1 100% 98.5%;
+  --menu-border: 292.2 83.5% 25.7%;
+  --menu-muted: 292.2 84.1% 60.6%;
+  --accent-theme: 292.2 84.1% 60.6%;
+}
+
+/* ===== PINK ===== */
+.theme-pink {
+  --header-bg: 327.3 73.3% 97.1%;
+  --header-border: 325.7 77.8% 90.2%;
+  --menu-surface: 327.3 73.3% 97.5%;
+  --menu-surface-hover: 327.3 73.3% 97.1%;
+  --menu-foreground: 335.1 69.4% 27.5%;
+  --menu-foreground-hover: 335.1 69.4% 18%;
+  --menu-foreground-active: 335.1 69.4% 18%;
+  --menu-border: 325.7 77.8% 90.2%;
+  --menu-muted: 330.4 81.2% 60.4%;
+  --accent-theme: 330.4 81.2% 60.4%;
+}
+.dark .theme-pink, .high-contrast .theme-pink {
+  --header-bg: 335.1 69.4% 18%;
+  --header-border: 335.1 69.4% 27.5%;
+  --menu-surface: 336.2 83.9% 6%;
+  --menu-surface-hover: 335.1 69.4% 18%;
+  --menu-foreground: 325.7 77.8% 90.2%;
+  --menu-foreground-hover: 327.3 73.3% 97.1%;
+  --menu-foreground-active: 327.3 73.3% 97.5%;
+  --menu-border: 335.1 69.4% 27.5%;
+  --menu-muted: 330.4 81.2% 60.4%;
+  --accent-theme: 330.4 81.2% 60.4%;
+}
+
+/* ===== ROSE ===== */
+.theme-rose {
+  --header-bg: 355.7 100% 97.3%;
+  --header-border: 352.7 95.5% 90%;
+  --menu-surface: 355.7 100% 98%;
+  --menu-surface-hover: 355.7 100% 97.3%;
+  --menu-foreground: 343.1 79.7% 27.5%;
+  --menu-foreground-hover: 343.1 79.7% 18%;
+  --menu-foreground-active: 343.1 79.7% 18%;
+  --menu-border: 352.7 95.5% 90%;
+  --menu-muted: 349.7 89.2% 60.2%;
+  --accent-theme: 349.7 89.2% 60.2%;
+}
+.dark .theme-rose, .high-contrast .theme-rose {
+  --header-bg: 343.1 79.7% 18%;
+  --header-border: 343.1 79.7% 27.5%;
+  --menu-surface: 343.2 87.7% 6%;
+  --menu-surface-hover: 343.1 79.7% 18%;
+  --menu-foreground: 352.7 95.5% 90%;
+  --menu-foreground-hover: 355.7 100% 97.3%;
+  --menu-foreground-active: 355.7 100% 98%;
+  --menu-border: 343.1 79.7% 27.5%;
+  --menu-muted: 349.7 89.2% 60.2%;
+  --accent-theme: 349.7 89.2% 60.2%;
+}

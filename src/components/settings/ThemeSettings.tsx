@@ -7,24 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Palette, Type, Loader2 } from 'lucide-react';
+import { Palette, Type, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
-
-const HEADER_HUE_STORAGE_KEY = 'theme:header-hue';
-const MENU_HUE_STORAGE_KEY = 'theme:menu-hue';
-
-
-const getStoredHue = (key: string): number | null => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = Number(raw);
-    if (Number.isNaN(parsed)) return null;
-    return Math.min(360, Math.max(0, parsed));
-  } catch {
-    return null;
-  }
-};
+import { cn } from '@/lib/utils';
 
 interface ThemeColors {
   primary: string;
@@ -32,12 +17,7 @@ interface ThemeColors {
   accent: string;
 }
 
-interface SurfaceHues {
-  headerHue: number;
-}
-
 const FONT_OPTIONS = [
-  // Sans-serif
   { value: 'Roboto', label: 'Roboto', category: 'Sans-serif' },
   { value: 'Open Sans', label: 'Open Sans', category: 'Sans-serif' },
   { value: 'Inter', label: 'Inter', category: 'Sans-serif' },
@@ -51,15 +31,12 @@ const FONT_OPTIONS = [
   { value: 'Space Grotesk', label: 'Space Grotesk', category: 'Sans-serif' },
   { value: 'Nunito Sans', label: 'Nunito Sans', category: 'Sans-serif' },
   { value: 'Stack Sans Text', label: 'Stack Sans Text', category: 'Sans-serif' },
-  // Serif
   { value: 'Lora', label: 'Lora', category: 'Serif' },
-  // Monospace
   { value: 'Roboto Mono', label: 'Roboto Mono', category: 'Monospace' },
   { value: 'Source Code Pro', label: 'Source Code Pro', category: 'Monospace' },
   { value: 'Space Mono', label: 'Space Mono', category: 'Monospace' },
 ];
 
-// Map font names to their Google Fonts import parameters
 const GOOGLE_FONTS_PREVIEW: Record<string, string> = {
   'Inter': 'Inter:wght@400;500;600;700',
   'Roboto': 'Roboto:wght@400;500;700',
@@ -89,16 +66,39 @@ const COLOR_PRESETS = [
   { name: 'Rosa Moderno', primary: '330 81% 60%', secondary: '330 100% 98%', accent: '330 100% 98%' },
 ];
 
-// Helper function to convert HSL string to hex
+// 22 Tailwind color families with their 500 shade for the swatch
+const THEME_COLORS: { value: string; label: string; hex: string }[] = [
+  { value: 'slate', label: 'Slate', hex: '#64748b' },
+  { value: 'gray', label: 'Gray', hex: '#6b7280' },
+  { value: 'zinc', label: 'Zinc', hex: '#71717a' },
+  { value: 'neutral', label: 'Neutral', hex: '#737373' },
+  { value: 'stone', label: 'Stone', hex: '#78716c' },
+  { value: 'red', label: 'Red', hex: '#ef4444' },
+  { value: 'orange', label: 'Orange', hex: '#f97316' },
+  { value: 'amber', label: 'Amber', hex: '#f59e0b' },
+  { value: 'yellow', label: 'Yellow', hex: '#eab308' },
+  { value: 'lime', label: 'Lime', hex: '#84cc16' },
+  { value: 'green', label: 'Green', hex: '#22c55e' },
+  { value: 'emerald', label: 'Emerald', hex: '#10b981' },
+  { value: 'teal', label: 'Teal', hex: '#14b8a6' },
+  { value: 'cyan', label: 'Cyan', hex: '#06b6d4' },
+  { value: 'sky', label: 'Sky', hex: '#0ea5e9' },
+  { value: 'blue', label: 'Blue', hex: '#3b82f6' },
+  { value: 'indigo', label: 'Indigo', hex: '#6366f1' },
+  { value: 'violet', label: 'Violet', hex: '#8b5cf6' },
+  { value: 'purple', label: 'Purple', hex: '#a855f7' },
+  { value: 'fuchsia', label: 'Fuchsia', hex: '#d946ef' },
+  { value: 'pink', label: 'Pink', hex: '#ec4899' },
+  { value: 'rose', label: 'Rose', hex: '#f43f5e' },
+];
+
 const hslToHex = (hslString: string): string => {
   const [h, s, l] = hslString.split(' ').map(v => parseFloat(v.replace('%', '')));
   const sNorm = s / 100;
   const lNorm = l / 100;
-  
   const c = (1 - Math.abs(2 * lNorm - 1)) * sNorm;
   const x = c * (1 - Math.abs((h / 60) % 2 - 1));
   const m = lNorm - c / 2;
-  
   let r = 0, g = 0, b = 0;
   if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
   else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
@@ -106,12 +106,10 @@ const hslToHex = (hslString: string): string => {
   else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
   else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
   else { r = c; g = 0; b = x; }
-  
   const toHex = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
-// Helper function to convert hex to HSL string
 const hexToHsl = (hex: string): string => {
   let r = 0, g = 0, b = 0;
   if (hex.length === 4) {
@@ -123,11 +121,9 @@ const hexToHsl = (hex: string): string => {
     g = parseInt(hex.slice(3, 5), 16);
     b = parseInt(hex.slice(5, 7), 16);
   }
-  
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   let h = 0, s = 0, l = (max + min) / 2;
-  
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
@@ -137,9 +133,16 @@ const hexToHsl = (hex: string): string => {
       case b: h = ((r - g) / d + 4) * 60; break;
     }
   }
-  
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
+
+function applyThemeColorClass(color: string) {
+  const classes = document.documentElement.classList;
+  classes.forEach((cls) => {
+    if (cls.startsWith('theme-')) classes.remove(cls);
+  });
+  classes.add(`theme-${color}`);
+}
 
 export const ThemeSettings: React.FC = () => {
   const { isMasterAdmin } = useAuth();
@@ -153,9 +156,7 @@ export const ThemeSettings: React.FC = () => {
   });
   const [fontFamily, setFontFamily] = useState('Inter');
   const [selectedPreset, setSelectedPreset] = useState('');
-  const [surfaceHues, setSurfaceHues] = useState<SurfaceHues>({
-    headerHue: 210,
-  });
+  const [themeColor, setThemeColor] = useState('slate');
 
   useEffect(() => {
     const fetchTheme = async () => {
@@ -170,11 +171,7 @@ export const ThemeSettings: React.FC = () => {
           secondary: data.secondary_color,
           accent: data.accent_color,
         });
-        const storedHeaderHue = getStoredHue(HEADER_HUE_STORAGE_KEY);
-        const storedMenuHue = getStoredHue(MENU_HUE_STORAGE_KEY);
-        setSurfaceHues({
-          headerHue: (data as any).header_hue ?? (data as any).menu_hue ?? storedHeaderHue ?? storedMenuHue ?? 210,
-        });
+        setThemeColor((data as any).theme_color ?? 'slate');
         setFontFamily(data.font_family);
       }
       setLoading(false);
@@ -182,20 +179,21 @@ export const ThemeSettings: React.FC = () => {
     fetchTheme();
   }, []);
 
+  // Apply preview of theme color immediately
+  useEffect(() => {
+    applyThemeColorClass(themeColor);
+  }, [themeColor]);
+
   // Apply theme to CSS variables and load fonts dynamically
   useEffect(() => {
     document.documentElement.style.setProperty('--primary', colors.primary);
     document.documentElement.style.setProperty('--secondary', colors.secondary);
     document.documentElement.style.setProperty('--accent', colors.accent);
-    document.documentElement.style.setProperty('--header-hue', String(surfaceHues.headerHue));
-    document.documentElement.style.setProperty('--menu-hue', String(surfaceHues.headerHue));
     
-    // Load Google Font dynamically for preview
     const fontParam = GOOGLE_FONTS_PREVIEW[fontFamily];
     if (fontParam) {
       const linkId = 'theme-settings-preview-font';
       let linkElement = document.getElementById(linkId) as HTMLLinkElement | null;
-      
       if (linkElement) {
         linkElement.href = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
       } else {
@@ -207,7 +205,6 @@ export const ThemeSettings: React.FC = () => {
       }
     }
     
-    // Build font stack based on font type
     let fontStack: string;
     if (['Roboto Mono', 'Source Code Pro', 'Space Mono'].includes(fontFamily)) {
       fontStack = `"${fontFamily}", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
@@ -216,18 +213,13 @@ export const ThemeSettings: React.FC = () => {
     } else {
       fontStack = `"${fontFamily}", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
     }
-    
     document.documentElement.style.setProperty('--font-sans', fontStack);
-  }, [colors, fontFamily, surfaceHues]);
+  }, [colors, fontFamily]);
 
   const handlePresetChange = (presetName: string) => {
     const preset = COLOR_PRESETS.find(p => p.name === presetName);
     if (preset) {
-      setColors({
-        primary: preset.primary,
-        secondary: preset.secondary,
-        accent: preset.accent,
-      });
+      setColors({ primary: preset.primary, secondary: preset.secondary, accent: preset.accent });
       setSelectedPreset(presetName);
     }
   };
@@ -240,61 +232,22 @@ export const ThemeSettings: React.FC = () => {
         primary_color: colors.primary,
         secondary_color: colors.secondary,
         accent_color: colors.accent,
-        header_hue: surfaceHues.headerHue,
-        menu_hue: surfaceHues.headerHue,
         font_family: fontFamily,
-      })
+        theme_color: themeColor,
+      } as any)
       .eq('id', '00000000-0000-0000-0000-000000000001');
 
     if (error) {
-      // Compatibilidade para ambientes onde colunas de hue ainda não existem.
-      const shouldRetryWithoutHues =
-        String((error as { code?: string }).code || '') === '42703' ||
-        String((error as { message?: string }).message || '').toLowerCase().includes('header_hue') ||
-        String((error as { message?: string }).message || '').toLowerCase().includes('menu_hue');
-
-      if (shouldRetryWithoutHues) {
-        try {
-          localStorage.setItem(HEADER_HUE_STORAGE_KEY, String(surfaceHues.headerHue));
-          localStorage.setItem(MENU_HUE_STORAGE_KEY, String(surfaceHues.headerHue));
-          document.documentElement.style.setProperty('--header-hue', String(surfaceHues.headerHue));
-          document.documentElement.style.setProperty('--menu-hue', String(surfaceHues.headerHue));
-        } catch {
-          // noop
-        }
-
-        const { error: fallbackError } = await supabase
-          .from('theme_settings')
-          .update({
-            primary_color: colors.primary,
-            secondary_color: colors.secondary,
-            accent_color: colors.accent,
-            font_family: fontFamily,
-          })
-          .eq('id', '00000000-0000-0000-0000-000000000001');
-
-        if (fallbackError) {
-          console.error('Error saving theme fallback:', fallbackError);
-          toast.error('Erro ao salvar tema.');
-        } else {
-          toast.success('Tema atualizado (sem suporte a Hue no banco atual).');
-          await refreshTheme();
-        }
-      } else {
-        console.error('Error saving theme:', error);
-        toast.error('Erro ao salvar tema.');
-      }
+      console.error('Error saving theme:', error);
+      toast.error('Erro ao salvar tema.');
     } else {
       toast.success('Tema atualizado com sucesso!');
-      // Refresh theme globally to apply changes immediately
       await refreshTheme();
     }
     setSaving(false);
   };
 
-  if (!isMasterAdmin) {
-    return null;
-  }
+  if (!isMasterAdmin) return null;
 
   if (loading) {
     return (
@@ -361,23 +314,37 @@ export const ThemeSettings: React.FC = () => {
           </div>
         </div>
 
+        {/* Theme Color Grid */}
         <div className="space-y-3">
-          <Label>Header e Menu (mesma regra de cor)</Label>
-          <div className="space-y-2">
-            <Label htmlFor="header-hue">Hue compartilhado</Label>
-            <Input
-              id="header-hue"
-              type="range"
-              min={0}
-              max={360}
-              step={1}
-              value={surfaceHues.headerHue}
-              onChange={(e) => {
-                const next = Number(e.target.value);
-                setSurfaceHues({ headerHue: next });
-              }}
-            />
-            <p className="text-xs text-muted-foreground">H: {surfaceHues.headerHue} (S/L fixos em 40% / 95%)</p>
+          <Label>Cor do Header e Menu</Label>
+          <p className="text-xs text-muted-foreground">Selecione a família de cores para header, menu lateral e destaques</p>
+          <div className="grid grid-cols-11 gap-2">
+            {THEME_COLORS.map((color) => (
+              <button
+                key={color.value}
+                type="button"
+                onClick={() => setThemeColor(color.value)}
+                className={cn(
+                  "group relative flex flex-col items-center gap-1"
+                )}
+                title={color.label}
+              >
+                <div
+                  className={cn(
+                    "h-8 w-8 rounded-full border-2 transition-all flex items-center justify-center",
+                    themeColor === color.value
+                      ? "border-foreground scale-110 shadow-md"
+                      : "border-transparent hover:border-muted-foreground/40 hover:scale-105"
+                  )}
+                  style={{ backgroundColor: color.hex }}
+                >
+                  {themeColor === color.value && (
+                    <Check className="h-4 w-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
+                  )}
+                </div>
+                <span className="text-[9px] text-muted-foreground leading-none">{color.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -416,8 +383,10 @@ export const ThemeSettings: React.FC = () => {
 
         {/* Preview */}
         <div 
-          className="p-4 border border-border rounded-lg space-y-3"
+          className="p-4 border rounded-lg space-y-3"
           style={{ 
+            borderColor: `hsl(var(--menu-border))`,
+            backgroundColor: `hsl(var(--menu-surface))`,
             fontFamily: ['Roboto Mono', 'Source Code Pro', 'Space Mono'].includes(fontFamily)
               ? `"${fontFamily}", monospace`
               : fontFamily === 'Lora'
@@ -425,16 +394,16 @@ export const ThemeSettings: React.FC = () => {
               : `"${fontFamily}", sans-serif`
           }}
         >
-          <p className="text-sm font-medium text-muted-foreground">Prévia</p>
+          <p className="text-sm font-medium" style={{ color: `hsl(var(--menu-muted))` }}>Prévia do Menu</p>
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm" style={{ backgroundColor: `hsl(${colors.primary})` }}>Botão Primário</Button>
-            <Button size="sm" variant="secondary" style={{ backgroundColor: `hsl(${colors.secondary})` }}>Secundário</Button>
-            <Button size="sm" variant="outline">Outline</Button>
+            <Button size="sm" style={{ backgroundColor: `hsl(var(--accent-theme))`, color: '#fff' }}>Botão Destaque</Button>
+            <Button size="sm" style={{ backgroundColor: `hsl(${colors.primary})`, color: '#fff' }}>Primário</Button>
+            <Button size="sm" variant="outline" style={{ borderColor: `hsl(var(--menu-border))`, color: `hsl(var(--menu-foreground))` }}>Outline</Button>
           </div>
-          <p className="text-sm">
+          <p className="text-sm" style={{ color: `hsl(var(--menu-foreground))` }}>
             Esta é uma prévia de como o texto ficará com a fonte <strong>{fontFamily}</strong>.
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs" style={{ color: `hsl(var(--menu-muted))` }}>
             ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
           </p>
         </div>

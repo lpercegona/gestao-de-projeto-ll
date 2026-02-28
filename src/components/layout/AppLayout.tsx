@@ -455,7 +455,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <Button
                 variant="outline"
                 className={cn(
-                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-slate-200 bg-background p-0 text-foreground shadow-sm transition-opacity duration-200 lg:flex",
+                  "absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full border border-[hsl(var(--menu-border))] bg-background p-0 text-foreground shadow-sm transition-opacity duration-200 lg:flex",
                   isHovering ? "opacity-100" : "opacity-0"
                 )}
                 onClick={() => setIsCollapsed(!isCollapsed)}>
@@ -478,7 +478,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
                     isActive ?
-                    "border border-slate-200 bg-background hover:text-foreground" :
+                  "border border-[hsl(var(--menu-border))] bg-background hover:text-foreground" :
                     "hover:bg-background hover:text-foreground",
                     isCollapsed && "lg:justify-center lg:px-0 lg:h-8 lg:w-8 lg:mx-auto"
                   )}>
@@ -542,7 +542,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   className={cn(
                     "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-foreground transition-colors",
                     location.pathname === "/preferences" ?
-                    "border border-slate-200 bg-background hover:text-foreground" :
+                  "border border-[hsl(var(--menu-border))] bg-background hover:text-foreground" :
                     "hover:bg-background hover:text-foreground"
                   )}>
 
@@ -556,7 +556,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 className={cn(
                   "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
                   location.pathname === "/preferences" ?
-                  "border border-slate-200 bg-background hover:text-foreground" :
+                  "border border-[hsl(var(--menu-border))] bg-background hover:text-foreground" :
                   "hover:bg-background hover:text-foreground"
                 )}>
 
@@ -571,7 +571,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-menu-foreground transition-colors",
                 location.pathname === "/preferences" ?
-                "border border-slate-200 bg-background hover:text-foreground" :
+                "border border-[hsl(var(--menu-border))] bg-background hover:text-foreground" :
                 "hover:bg-background hover:text-foreground"
               )}>
 
@@ -615,7 +615,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             }
 
             {/* Version */}
-            <div className={cn("px-3 py-2 text-[10px] text-slate-400", isCollapsed && "lg:hidden")}>Versão 1.0</div>
+            <div className={cn("px-3 py-2 text-[10px] text-muted-foreground", isCollapsed && "lg:hidden")}>Versão 1.0</div>
           </div>
         </aside>
 
