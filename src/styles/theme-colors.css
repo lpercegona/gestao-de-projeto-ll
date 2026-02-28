@@ -14,6 +14,19 @@
   --menu-muted: 215.4 16.3% 46.9%;
   --accent-theme: 215.4 16.3% 47%;
   --content-surface: 0 0% 100%;
+
+  /* Semantic tokens used across pages/components */
+  --primary: var(--accent-theme);
+  --primary-foreground: 0 0% 100%;
+  --secondary: var(--menu-surface);
+  --secondary-foreground: var(--menu-foreground);
+  --accent: var(--menu-surface-hover);
+  --accent-foreground: var(--menu-foreground-hover);
+  --muted: var(--menu-surface-hover);
+  --muted-foreground: var(--menu-muted);
+  --border: var(--menu-border);
+  --input: var(--menu-border);
+  --ring: var(--accent-theme);
 }
 
 /* ===== SLATE ===== */
