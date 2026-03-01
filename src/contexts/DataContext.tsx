@@ -992,7 +992,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const monthNumber = (monthIndex % 12) + 1;
       const usedHours = getClientMonthlyHours(clientId, monthYear, monthNumber);
       const availableHours = Math.max(0, client.contracted_hours - overflow);
-      overflow = Math.max(0, usedHours - availableHours);
+      overflow = usedHours - availableHours;
     }
 
     return overflow;

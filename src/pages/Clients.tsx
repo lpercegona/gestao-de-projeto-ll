@@ -41,6 +41,7 @@ import {
   AlertCircle,
   FolderOpen,
   Users,
+  CheckCircle2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -371,6 +372,12 @@ export const Clients: React.FC = () => {
                           <span className="text-xs font-medium">Saldo anterior: {formatHours(previousOverflow)}</span>
                         </div>
                       )}
+                      {isMonthly && previousOverflow < 0 && (
+                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 mb-2">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span className="text-xs font-medium">Crédito: {formatHours(Math.abs(previousOverflow))}</span>
+                        </div>
+                      )}
 
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
@@ -388,6 +395,11 @@ export const Clients: React.FC = () => {
                         {isMonthly && previousOverflow > 0 && (
                           <div className="text-xs text-muted-foreground">
                             Disponível: {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} saldo
+                          </div>
+                        )}
+                        {isMonthly && previousOverflow < 0 && (
+                          <div className="text-xs text-green-600 dark:text-green-400">
+                            Disponível: {formatHours(client.contracted_hours)} + {formatHours(Math.abs(previousOverflow))} crédito
                           </div>
                         )}
                         <div className="w-full bg-muted rounded-full h-2 mt-2">

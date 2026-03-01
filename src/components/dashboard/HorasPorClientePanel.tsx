@@ -61,6 +61,11 @@ export const HorasPorClientePanel: React.FC = () => {
                               Saldo: {formatHours(previousOverflow)}
                             </Badge>
                           )}
+                          {isMonthly && previousOverflow < 0 && (
+                            <Badge variant="secondary" className="text-xs shrink-0 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
+                              Crédito: {formatHours(Math.abs(previousOverflow))}
+                            </Badge>
+                          )}
                         </div>
                         <span className="text-xs text-muted-foreground sm:shrink-0 sm:ml-2">
                           {formatHours(displayedHours)} / {formatHours(availableHours)}
