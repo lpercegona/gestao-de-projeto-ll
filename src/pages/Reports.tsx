@@ -17,7 +17,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Loader2, Users, User, RefreshCw, Clock, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Users, User, RefreshCw, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatHours } from '@/lib/formatHours';
@@ -500,6 +500,9 @@ export const Reports: React.FC = () => {
                               {isMonthly && previousOverflow > 0 && (
                                 <p className="text-xs text-muted-foreground">{formatHours(clientData.contracted_hours)} - {formatHours(previousOverflow)}</p>
                               )}
+                              {isMonthly && previousOverflow < 0 && (
+                                <p className="text-xs text-green-600 dark:text-green-400">{formatHours(clientData.contracted_hours)} + {formatHours(Math.abs(previousOverflow))} crédito</p>
+                              )}
                             </div>
                             <div>
                               <p className="text-sm text-muted-foreground">{isMonthly ? 'Usado no Mês' : 'Total Utilizado'}</p>
@@ -529,6 +532,19 @@ export const Reports: React.FC = () => {
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   Horas excedentes do mês anterior descontadas do limite deste mês
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {isMonthly && previousOverflow < 0 && (
+                            <div className="p-3 rounded-md bg-green-500/10 border border-green-500/30 flex items-start gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                  Crédito: {formatHours(Math.abs(previousOverflow))}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Horas remanescentes do mês anterior somadas ao limite deste mês
                                 </p>
                               </div>
                             </div>

@@ -1111,6 +1111,11 @@ export const ClientDetail: React.FC = () => {
                   {formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} saldo
                 </p>
               )}
+              {isMonthly && previousOverflow < 0 && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  {formatHours(client.contracted_hours)} + {formatHours(Math.abs(previousOverflow))} crédito
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -1152,6 +1157,16 @@ export const ClientDetail: React.FC = () => {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Horas excedentes do mês anterior descontadas do limite deste mês ({formatHours(client.contracted_hours)} - {formatHours(previousOverflow)} = {formatHours(availableHours)} disponíveis)
+                </p>
+              </div>
+            )}
+            {isMonthly && previousOverflow < 0 && (
+              <div className="mb-3 p-2 rounded-md bg-green-500/10 border border-green-500/30">
+                <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                  Crédito: {formatHours(Math.abs(previousOverflow))}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Horas remanescentes do mês anterior somadas ao limite deste mês ({formatHours(client.contracted_hours)} + {formatHours(Math.abs(previousOverflow))} = {formatHours(availableHours)} disponíveis)
                 </p>
               </div>
             )}

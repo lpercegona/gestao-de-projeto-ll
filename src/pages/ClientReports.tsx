@@ -689,7 +689,8 @@ export const ClientReports: React.FC = () => {
                   <p className="text-xs text-muted-foreground">
                     Disponíveis: {formatHours(availableHours)} • Usadas: {formatHours(totalMonthHours)} • Remanescentes:{" "}
                     {formatHours(remainingHours)}
-                    {isMonthly ? ` • Saldo do mês anterior descontado: ${formatHours(previousOverflow)}` : ""}
+                    {isMonthly && previousOverflow > 0 ? ` • Saldo anterior descontado: ${formatHours(previousOverflow)}` : ""}
+                    {isMonthly && previousOverflow < 0 ? ` • Crédito do mês anterior: ${formatHours(Math.abs(previousOverflow))}` : ""}
                   </p>
                 </div>
               </div>

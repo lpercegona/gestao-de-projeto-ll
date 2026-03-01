@@ -321,9 +321,11 @@ export const Dashboard: React.FC = () => {
         extra:
           clientStats?.isMonthly && clientStats.previousMonthOverflow > 0
             ? `${formatHours(clientStats.contractedHours)} - ${formatHours(clientStats.previousMonthOverflow)} saldo ant.`
-            : clientStats?.contractedHours && clientStats.contractedHours > 0
-              ? `de ${formatHours(clientStats.contractedHours)}`
-              : undefined,
+            : clientStats?.isMonthly && clientStats.previousMonthOverflow < 0
+              ? `${formatHours(clientStats.contractedHours)} + ${formatHours(Math.abs(clientStats.previousMonthOverflow))} crédito`
+              : clientStats?.contractedHours && clientStats.contractedHours > 0
+                ? `de ${formatHours(clientStats.contractedHours)}`
+                : undefined,
       },
     ];
 
@@ -381,6 +383,19 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Horas excedentes do mês anterior descontadas do limite deste mês
+                  </p>
+                </div>
+              )}
+              {clientStats.isMonthly && clientStats.previousMonthOverflow < 0 && (
+                <div className="mb-3 p-2 rounded-md bg-green-500/10 border border-green-500/30">
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span className="text-sm font-medium min-w-0 break-words">
+                      Crédito: {formatHours(Math.abs(clientStats.previousMonthOverflow))}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Horas remanescentes do mês anterior somadas ao limite deste mês
                   </p>
                 </div>
               )}
