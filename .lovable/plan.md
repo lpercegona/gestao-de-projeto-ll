@@ -1,73 +1,133 @@
 
 
-# Unificar test-smtp-connection com denomailer
+# Implementar Saldo Positivo de Horas Remanescentes em Contratos Mensais
 
 ## Contexto
 
-Atualmente, a funcao `test-smtp-connection` usa uma implementacao manual com `Deno.connect` / `Deno.connectTls` para evitar o crash do denomailer. As outras 3 funcoes de envio (proposal, contract, monthly-report) ja usam denomailer normalmente. O objetivo e unificar tudo no denomailer, mantendo a simplicidade e o padrao defensivo de fechamento.
+Atualmente, o sistema so transporta **horas excedentes** (saldo negativo) de um mes para o outro. Se um cliente usa menos horas do que o contratado, essas horas nao utilizadas sao perdidas. O objetivo e que horas remanescentes tambem sejam acumuladas como bonus para o proximo mes.
 
-## Estrategia
+**Exemplo atual** (10h contratadas/mes):
+- Janeiro: usou 12h -> overflow = 2h -> Fevereiro disponivel = 8h
+- Janeiro: usou 6h -> overflow = 0h -> Fevereiro disponivel = 10h (4h perdidas)
 
-Usar o denomailer no teste SMTP da mesma forma que nas funcoes de envio, porem com um `safeClose` defensivo e envio de um email de teste real (para o proprio remetente). Isso valida credenciais de forma concreta e elimina a implementacao manual de baixo nivel.
+**Comportamento desejado**:
+- Janeiro: usou 12h -> saldo = +2h -> Fevereiro disponivel = 8h
+- Janeiro: usou 6h -> saldo = -4h -> Fevereiro disponivel = 14h (4h extras)
 
-## Alteracoes
+## Alteracao Principal
 
-### 1. `supabase/functions/test-smtp-connection/index.ts`
+### 1. `src/contexts/DataContext.tsx` -- Funcao `getClientPreviousMonthOverflow`
 
-Reescrever para usar denomailer com o padrao:
+Renomear conceitualmente o calculo de "overflow" para "saldo liquido" (balance). A variavel `overflow` passara a aceitar valores negativos (representando horas remanescentes acumuladas):
 
 ```text
-+-----------------------------------------+
-| SMTPClient (denomailer)                 |
-| - Tenta porta preferida (587 default)   |
-| - send() email de teste para si mesmo   |
-| - safeClose() no finally                |
-| - Fallback para 465 se falhar           |
-+-----------------------------------------+
+Logica atual (linha 995):
+  overflow = Math.max(0, usedHours - availableHours)
+  // Descarta horas nao usadas
+
+Logica nova:
+  overflow = overflow + usedHours - client.contracted_hours
+  overflow = Math.max(0, overflow)  // Nunca permitir saldo negativo alem de zero
 ```
 
-- Importar `SMTPClient` de `denomailer` (mesma versao das outras funcoes)
-- Criar helper `safeClose(client)` que verifica se o cliente existe antes de chamar `.close()`
-- Tentar `client.send(...)` com `to: smtp_user`, `from: smtp_user`, assunto `[TESTE SMTP] Conexao validada`
-- No `catch`, tentar fallback 465 com mesmo padrao
-- No `finally`, sempre chamar `safeClose`
-- Retornar mensagens de erro limpas (sem stack trace)
+**Correcao**: Na verdade, para permitir acumulo positivo E negativo:
 
-### 2. `supabase/functions/send-proposal-email/index.ts`
+```text
+// availableHours = contracted + bonus (se overflow negativo)
+availableHours = client.contracted_hours + Math.max(0, -overflow)
+overflow = usedHours - availableHours
+// Se positivo: excedeu. Se negativo: sobrou.
+// Mas limitar o bonus acumulado para nao crescer infinitamente? 
+// Nao -- o usuario quer acumulo real.
+```
 
-- Adicionar helper `safeClose` no topo
-- Substituir `try { await client.close(); } catch (_) {}` por `await safeClose(client)` nos blocos catch e finally (3 ocorrencias)
+A logica simplificada sera:
 
-### 3. `supabase/functions/send-contract-email/index.ts`
+```text
+for each month from start to target-1:
+  available = contracted_hours + carryover  (carryover de horas sobrando)
+  balance = used - available
+  if balance > 0:  // usou mais que disponivel
+    carryover = 0
+    overflow = balance
+  else:            // sobrou horas
+    carryover = -balance  (horas que sobram)
+    overflow = 0
 
-- Mesmo ajuste: adicionar `safeClose` e substituir fechamentos diretos (3 ocorrencias)
+return overflow - carryover  
+// positivo = desconto, negativo = bonus
+```
 
-### 4. `supabase/functions/send-monthly-report/index.ts`
-
-- Mesmo ajuste: adicionar `safeClose` e substituir fechamentos diretos (3 ocorrencias)
-
-### 5. `src/components/settings/SmtpSettingsSection.tsx`
-
-- Sem alteracao necessaria -- o componente ja trata `result.success === false` com mensagens amigaveis e mapeia erros de auth/hostname/timeout.
-
-## Helper safeClose (padrao compartilhado)
+Na verdade, o mais limpo e unificar em uma unica variavel `balance`:
 
 ```typescript
-async function safeClose(client: SMTPClient | null) {
-  if (!client) return;
-  try { await client.close(); } catch (_) { /* ignore */ }
-}
+let balance = 0; // positivo = deve horas, negativo = tem credito
+for each month:
+  const available = Math.max(0, contracted_hours - balance);
+  balance = balance + usedHours - contracted_hours;
+  // Equivalente: balance += (usedHours - contracted_hours)
 ```
 
-## Riscos e mitigacao
+Espera -- a logica atual ja faz quase isso. O problema e so o `Math.max(0, ...)` na linha 995 que impede valores negativos. Removendo isso e ajustando os consumidores:
 
-- **Email de teste enviado a cada clique**: o assunto tera prefixo `[TESTE SMTP]` e corpo minimo, facilitando filtragem.
-- **Provedores que bloqueiam autoenvio**: erro sera capturado e retornado como `success: false` com mensagem clara.
-- **Denominaler crash no close**: o `safeClose` previne completamente esse cenario.
+**Mudanca real na linha 995:**
+```typescript
+// ANTES:
+overflow = Math.max(0, usedHours - availableHours);
 
-## Ordem de implementacao
+// DEPOIS:
+overflow = usedHours - availableHours;
+```
 
-1. Reescrever `test-smtp-connection` com denomailer + safeClose
-2. Adicionar `safeClose` nas 3 funcoes de envio
-3. Deploy automatico das edge functions
+Isso faz com que `overflow` fique negativo quando sobram horas (credito).
+
+A linha 994 (`availableHours = Math.max(0, contracted_hours - overflow)`) ja trata corretamente: se overflow e negativo (credito), available = contracted + credito.
+
+### 2. Ajustar Consumidores -- Apresentacao do Saldo
+
+Nos 6 arquivos que consomem `previousOverflow`, a logica `availableHours = Math.max(0, contracted - overflow)` ja funciona automaticamente para valores negativos (o resultado sera contracted + |credito|).
+
+As mudancas visuais necessarias sao nos indicadores de saldo, que hoje so mostram quando `previousOverflow > 0`. Precisam mostrar tambem quando `previousOverflow < 0` (credito):
+
+**Arquivos afetados:**
+
+- **`HorasPorClientePanel.tsx`** -- Badge "Saldo" deve mostrar tanto debito quanto credito
+- **`ClientDetail.tsx`** -- Indicador de saldo anterior
+- **`Dashboard.tsx`** -- Indicador de saldo para clientes
+- **`Reports.tsx`** -- Alerta de saldo anterior
+- **`ClientReports.tsx`** -- Saldo no relatorio do cliente
+- **`SharedReport.tsx`** -- Saldo no relatorio compartilhado
+
+Para cada um:
+- Onde hoje exibe `previousOverflow > 0` com icone de alerta (amber), adicionar condicao `previousOverflow < 0` com icone de bonus (verde), exibindo "Credito: Xh Ymin"
+- A formula `availableHours = Math.max(0, contracted - overflow)` permanece identica (ja funciona para ambos os cenarios)
+
+### 3. Resumo das Mudancas por Arquivo
+
+| Arquivo | Mudanca |
+|---|---|
+| `DataContext.tsx` | Remover `Math.max(0, ...)` da linha 995 |
+| `HorasPorClientePanel.tsx` | Badge verde para credito |
+| `ClientDetail.tsx` | Indicador verde de credito |
+| `Dashboard.tsx` | Indicador verde de credito |
+| `Reports.tsx` | Alerta verde de credito |
+| `ClientReports.tsx` | Indicador verde de credito |
+| `SharedReport.tsx` | Texto de credito no resumo |
+
+### Detalhes Tecnicos
+
+A unica mudanca de logica e na linha 995 do DataContext:
+```typescript
+// DE:
+overflow = Math.max(0, usedHours - availableHours);
+// PARA:
+overflow = usedHours - availableHours;
+```
+
+Isso permite que `overflow` fique negativo (credito acumulado). A linha 994 ja calcula `availableHours = Math.max(0, contracted - overflow)`, que com overflow negativo resulta em `contracted + credito` -- exatamente o comportamento desejado.
+
+Nos consumidores, o padrao visual sera:
+- `previousOverflow > 0`: Badge/alerta amber "Saldo Anterior: Xh" (debito, como hoje)
+- `previousOverflow < 0`: Badge/alerta verde "Credito: Xh" (horas bonus)
+- `previousOverflow === 0`: Nada exibido
 
