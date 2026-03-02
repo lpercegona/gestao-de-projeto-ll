@@ -1112,7 +1112,7 @@ export const ClientDetail: React.FC = () => {
                 </p>
               )}
               {isMonthly && previousOverflow < 0 && (
-                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                   {formatHours(client.contracted_hours)} + {formatHours(Math.abs(previousOverflow))} crédito
                 </p>
               )}
@@ -1161,8 +1161,8 @@ export const ClientDetail: React.FC = () => {
               </div>
             )}
             {isMonthly && previousOverflow < 0 && (
-              <div className="mb-3 p-2 rounded-md bg-green-500/10 border border-green-500/30">
-                <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+              <div className="mb-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
                   Crédito: {formatHours(Math.abs(previousOverflow))}
                 </p>
                 <p className="text-xs text-muted-foreground">

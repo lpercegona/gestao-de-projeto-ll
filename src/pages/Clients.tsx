@@ -41,7 +41,6 @@ import {
   AlertCircle,
   FolderOpen,
   Users,
-  CheckCircle2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -373,8 +372,8 @@ export const Clients: React.FC = () => {
                         </div>
                       )}
                       {isMonthly && previousOverflow < 0 && (
-                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 mb-2">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-2">
+                          <AlertCircle className="w-3 h-3" />
                           <span className="text-xs font-medium">Crédito: {formatHours(Math.abs(previousOverflow))}</span>
                         </div>
                       )}
@@ -398,7 +397,7 @@ export const Clients: React.FC = () => {
                           </div>
                         )}
                         {isMonthly && previousOverflow < 0 && (
-                          <div className="text-xs text-green-600 dark:text-green-400">
+                          <div className="text-xs text-amber-600 dark:text-amber-400">
                             Disponível: {formatHours(client.contracted_hours)} + {formatHours(Math.abs(previousOverflow))} crédito
                           </div>
                         )}

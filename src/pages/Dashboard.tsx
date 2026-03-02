@@ -21,7 +21,6 @@ import {
   FileText,
   ChevronDown,
   AlertCircle,
-  CheckCircle2,
   XCircle,
   Loader2,
   Users,
@@ -387,9 +386,9 @@ export const Dashboard: React.FC = () => {
                 </div>
               )}
               {clientStats.isMonthly && clientStats.previousMonthOverflow < 0 && (
-                <div className="mb-3 p-2 rounded-md bg-green-500/10 border border-green-500/30">
-                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <div className="mb-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
                     <span className="text-sm font-medium min-w-0 break-words">
                       Crédito: {formatHours(Math.abs(clientStats.previousMonthOverflow))}
                     </span>
