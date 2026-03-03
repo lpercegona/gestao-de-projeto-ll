@@ -1,133 +1,92 @@
 
 
-# Implementar Saldo Positivo de Horas Remanescentes em Contratos Mensais
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-## Contexto
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
 
-Atualmente, o sistema so transporta **horas excedentes** (saldo negativo) de um mes para o outro. Se um cliente usa menos horas do que o contratado, essas horas nao utilizadas sao perdidas. O objetivo e que horas remanescentes tambem sejam acumuladas como bonus para o proximo mes.
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
 
-**Exemplo atual** (10h contratadas/mes):
-- Janeiro: usou 12h -> overflow = 2h -> Fevereiro disponivel = 8h
-- Janeiro: usou 6h -> overflow = 0h -> Fevereiro disponivel = 10h (4h perdidas)
+## Problema 2: Refresh destrói dados em diálogos abertos
 
-**Comportamento desejado**:
-- Janeiro: usou 12h -> saldo = +2h -> Fevereiro disponivel = 8h
-- Janeiro: usou 6h -> saldo = -4h -> Fevereiro disponivel = 14h (4h extras)
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
 
-## Alteracao Principal
+**Estratégia**: Duas camadas de proteção.
 
-### 1. `src/contexts/DataContext.tsx` -- Funcao `getClientPreviousMonthOverflow`
+### Camada 1: Estabilizar referência do `user` no AuthContext
 
-Renomear conceitualmente o calculo de "overflow" para "saldo liquido" (balance). A variavel `overflow` passara a aceitar valores negativos (representando horas remanescentes acumuladas):
-
-```text
-Logica atual (linha 995):
-  overflow = Math.max(0, usedHours - availableHours)
-  // Descarta horas nao usadas
-
-Logica nova:
-  overflow = overflow + usedHours - client.contracted_hours
-  overflow = Math.max(0, overflow)  // Nunca permitir saldo negativo alem de zero
-```
-
-**Correcao**: Na verdade, para permitir acumulo positivo E negativo:
-
-```text
-// availableHours = contracted + bonus (se overflow negativo)
-availableHours = client.contracted_hours + Math.max(0, -overflow)
-overflow = usedHours - availableHours
-// Se positivo: excedeu. Se negativo: sobrou.
-// Mas limitar o bonus acumulado para nao crescer infinitamente? 
-// Nao -- o usuario quer acumulo real.
-```
-
-A logica simplificada sera:
-
-```text
-for each month from start to target-1:
-  available = contracted_hours + carryover  (carryover de horas sobrando)
-  balance = used - available
-  if balance > 0:  // usou mais que disponivel
-    carryover = 0
-    overflow = balance
-  else:            // sobrou horas
-    carryover = -balance  (horas que sobram)
-    overflow = 0
-
-return overflow - carryover  
-// positivo = desconto, negativo = bonus
-```
-
-Na verdade, o mais limpo e unificar em uma unica variavel `balance`:
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
 
 ```typescript
-let balance = 0; // positivo = deve horas, negativo = tem credito
-for each month:
-  const available = Math.max(0, contracted_hours - balance);
-  balance = balance + usedHours - contracted_hours;
-  // Equivalente: balance += (usedHours - contracted_hours)
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
 ```
 
-Espera -- a logica atual ja faz quase isso. O problema e so o `Math.max(0, ...)` na linha 995 que impede valores negativos. Removendo isso e ajustando os consumidores:
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
 
-**Mudanca real na linha 995:**
+### Camada 2: Lock de edição global no DataContext
+
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+
 ```typescript
-// ANTES:
-overflow = Math.max(0, usedHours - availableHours);
+// DataContext.tsx
+const editingLockRef = useRef(0);
 
-// DEPOIS:
-overflow = usedHours - availableHours;
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
+
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
+
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
 ```
 
-Isso faz com que `overflow` fique negativo quando sobram horas (credito).
+Expor `lockEditing` e `unlockEditing` no contexto.
 
-A linha 994 (`availableHours = Math.max(0, contracted_hours - overflow)`) ja trata corretamente: se overflow e negativo (credito), available = contracted + credito.
+### Camada 3: Aplicar o lock nos diálogos
 
-### 2. Ajustar Consumidores -- Apresentacao do Saldo
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
 
-Nos 6 arquivos que consomem `previousOverflow`, a logica `availableHours = Math.max(0, contracted - overflow)` ja funciona automaticamente para valores negativos (o resultado sera contracted + |credito|).
-
-As mudancas visuais necessarias sao nos indicadores de saldo, que hoje so mostram quando `previousOverflow > 0`. Precisam mostrar tambem quando `previousOverflow < 0` (credito):
-
-**Arquivos afetados:**
-
-- **`HorasPorClientePanel.tsx`** -- Badge "Saldo" deve mostrar tanto debito quanto credito
-- **`ClientDetail.tsx`** -- Indicador de saldo anterior
-- **`Dashboard.tsx`** -- Indicador de saldo para clientes
-- **`Reports.tsx`** -- Alerta de saldo anterior
-- **`ClientReports.tsx`** -- Saldo no relatorio do cliente
-- **`SharedReport.tsx`** -- Saldo no relatorio compartilhado
-
-Para cada um:
-- Onde hoje exibe `previousOverflow > 0` com icone de alerta (amber), adicionar condicao `previousOverflow < 0` com icone de bonus (verde), exibindo "Credito: Xh Ymin"
-- A formula `availableHours = Math.max(0, contracted - overflow)` permanece identica (ja funciona para ambos os cenarios)
-
-### 3. Resumo das Mudancas por Arquivo
-
-| Arquivo | Mudanca |
+| Arquivo | Diálogo |
 |---|---|
-| `DataContext.tsx` | Remover `Math.max(0, ...)` da linha 995 |
-| `HorasPorClientePanel.tsx` | Badge verde para credito |
-| `ClientDetail.tsx` | Indicador verde de credito |
-| `Dashboard.tsx` | Indicador verde de credito |
-| `Reports.tsx` | Alerta verde de credito |
-| `ClientReports.tsx` | Indicador verde de credito |
-| `SharedReport.tsx` | Texto de credito no resumo |
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
 
-### Detalhes Tecnicos
+Padrão de uso via `useEffect`:
 
-A unica mudanca de logica e na linha 995 do DataContext:
 ```typescript
-// DE:
-overflow = Math.max(0, usedHours - availableHours);
-// PARA:
-overflow = usedHours - availableHours;
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
 ```
 
-Isso permite que `overflow` fique negativo (credito acumulado). A linha 994 ja calcula `availableHours = Math.max(0, contracted - overflow)`, que com overflow negativo resulta em `contracted + credito` -- exatamente o comportamento desejado.
+## Arquivos alterados
 
-Nos consumidores, o padrao visual sera:
-- `previousOverflow > 0`: Badge/alerta amber "Saldo Anterior: Xh" (debito, como hoje)
-- `previousOverflow < 0`: Badge/alerta verde "Credito: Xh" (horas bonus)
-- `previousOverflow === 0`: Nada exibido
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 
