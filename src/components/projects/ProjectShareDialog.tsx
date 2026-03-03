@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trash2, Plus, Loader2, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useEditingLock } from "@/hooks/useEditingLock";
 
 interface ProfileSummary {
   user_id: string;
@@ -43,6 +44,7 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   const [email, setEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  useEditingLock(isOpen);
 
   const getMemberName = (member: Pick<Member, "full_name" | "email">) => {
     const fullName = member.full_name?.trim();

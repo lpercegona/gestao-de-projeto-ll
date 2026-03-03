@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -94,6 +95,7 @@ export const Services: React.FC = () => {
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [manualItems, setManualItems] = useState<ServiceRow[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  useEditingLock(createItemOpen || editingItemId !== null);
   const [newItem, setNewItem] = useState({
     service: '',
     description: '',

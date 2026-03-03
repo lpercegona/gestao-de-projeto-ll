@@ -12,6 +12,7 @@ import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import fundoTimer from '@/assets/fundo-timer.webp';
 import { toast } from 'sonner';
 import { getWysiwygPlainText } from '@/lib/wysiwyg';
+import { useEditingLock } from '@/hooks/useEditingLock';
 
 interface ExpandedTimerModalProps {
   open: boolean;
@@ -25,6 +26,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
   const [imageLoaded, setImageLoaded] = useState(false);
   const [modalReady, setModalReady] = useState(false);
   const { data, completeTask } = useData();
+  useEditingLock(open);
   const {
     timerState,
     startGlobalTimer,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ export const KanbanStagesDialog: React.FC<KanbanStagesDialogProps> = ({
 }) => {
   const [localStages, setLocalStages] = useState<Omit<KanbanStage, 'id' | 'is_default'>[]>([]);
   const [saving, setSaving] = useState(false);
+  useEditingLock(open);
 
   useEffect(() => {
     if (open) {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
@@ -133,6 +133,8 @@ interface DataContextType {
   data: AppData;
   loading: boolean;
   refreshData: () => Promise<void>;
+  lockEditing: () => void;
+  unlockEditing: () => void;
   // Clients
   createClient: (client: Pick<Client, 'name' | 'email' | 'contracted_hours'> & Partial<Pick<Client, 'pipeline_status' | 'company' | 'phone' | 'source' | 'notes'>>) => Promise<Client | null>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<Client | null>;
@@ -194,8 +196,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [data, setData] = useState<AppData>(emptyData);
   const [loading, setLoading] = useState(true);
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
+  const editingLockRef = useRef(0);
+
+  const lockEditing = useCallback(() => {
+    editingLockRef.current += 1;
+  }, []);
+
+  const unlockEditing = useCallback(() => {
+    editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+  }, []);
 
   const refreshData = useCallback(async (showLoading = true) => {
+    if (editingLockRef.current > 0) return;
     if (!user) {
       setData(emptyData);
       setLoading(false);
@@ -1043,6 +1055,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         data,
         loading,
         refreshData,
+        lockEditing,
+        unlockEditing,
         createClient,
         updateClient,
         deleteClient,

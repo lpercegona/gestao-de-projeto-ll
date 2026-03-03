@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   onSubmit,
 }) => {
   const { user } = useAuth();
+  useEditingLock(open);
 
   const [title, setTitle] = useState('');
   const [briefing, setBriefing] = useState('');

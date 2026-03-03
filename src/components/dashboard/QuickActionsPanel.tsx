@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { GlobalTimerCompleteDialog } from "@/components/timer/GlobalTimerCompleteDialog";
 import { ExpandedTimerModal } from "@/components/timer/ExpandedTimerModal";
+import { useEditingLock } from "@/hooks/useEditingLock";
 
 export const QuickActionsPanel: React.FC = () => {
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
@@ -32,6 +33,7 @@ export const QuickActionsPanel: React.FC = () => {
   } = useGlobalTimer();
   const { toast } = useToast();
   const navigate = useNavigate();
+  useEditingLock(clientDialogOpen);
 
   const formatTime = useCallback((totalSeconds: number): string => {
     const hours = Math.floor(totalSeconds / 3600);

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,7 @@ export const ClientEditRequestForm: React.FC<ClientEditRequestFormProps> = ({
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  useEditingLock(open);
   
   // Form state based on entity type
   const [formData, setFormData] = useState({
