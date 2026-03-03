@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,7 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   const { isMasterAdmin, isAdmin, user: currentUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  useEditingLock(open);
   
   // Profile form
   const [fullName, setFullName] = useState('');

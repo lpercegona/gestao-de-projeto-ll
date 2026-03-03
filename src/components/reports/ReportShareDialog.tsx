@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,7 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
 
   const isOpen = open !== undefined ? open : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;
+  useEditingLock(isOpen);
 
   const handleCreateShare = async (password: string) => {
     if (!password || password.length < 4) {

@@ -85,7 +85,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        const newUser = session?.user ?? null;
+        setUser(prev => {
+          if (prev?.id === newUser?.id) return prev;
+          return newUser;
+        });
         
         if (session?.user) {
           // Defer role fetch to avoid blocking

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
   description = 'Crie um novo usuário preenchendo as informações abaixo.',
 }) => {
   const { isMasterAdmin } = useAuth();
+  useEditingLock(open);
   const [creating, setCreating] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');

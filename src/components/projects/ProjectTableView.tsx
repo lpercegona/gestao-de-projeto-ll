@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useEditingLock } from "@/hooks/useEditingLock";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -207,6 +208,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [detailDialog, setDetailDialog] = useState<{ type: 'project' | 'task'; data: Project | Task } | null>(null);
+  useEditingLock(detailDialog !== null);
 
   // Local state for instant UI updates
   const [localProjectStatuses, setLocalProjectStatuses] = useState<Record<string, string>>({});

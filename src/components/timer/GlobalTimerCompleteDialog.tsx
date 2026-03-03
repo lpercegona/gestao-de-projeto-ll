@@ -24,6 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { format } from 'date-fns';
 import { formatHours } from '@/lib/formatHours';
 import { reconcileTaskBinding, resolveSubmitTaskId } from '@/lib/taskBinding';
@@ -47,6 +48,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
     cancelCompleteDialog,
   } = useGlobalTimer();
   const { data, createTimeEntry, createTask, createProject, cancelTaskTimer } = useData();
+  useEditingLock(open);
 
   const [linkMode, setLinkMode] = useState<'existing' | 'new'>('existing');
   const [selectedTaskId, setSelectedTaskId] = useState('');
