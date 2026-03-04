@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +14,8 @@ import { toast } from 'sonner';
 
 export const Profile: React.FC = () => {
   const { user, userRole, isMasterAdmin, isAdmin } = useAuth();
+  // Always lock editing on Profile page to prevent background refresh from resetting form data
+  useEditingLock(true);
   const [loading, setLoading] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);

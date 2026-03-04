@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
+import { useEditingLock } from '@/hooks/useEditingLock';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,8 @@ interface CompanyDraft {
 export const ProfileEditTab: React.FC = () => {
   const { user, isClient } = useAuth();
   const { data } = useData();
+  // Lock editing to prevent background refresh from resetting form data
+  useEditingLock(true);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
 
