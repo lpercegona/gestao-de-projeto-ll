@@ -4,7 +4,6 @@ import { Switch } from '@/components/ui/switch';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
-import { useEditingLock } from '@/hooks/useEditingLock';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -236,9 +235,6 @@ export const ClientDetail: React.FC = () => {
   const availableHours = isMonthly ? Math.max(0, (client?.contracted_hours || 0) - previousOverflow) : (client?.contracted_hours || 0);
   const displayedHours = isMonthly ? monthlyUsedHours : usedHours;
 
-  // Lock editing to prevent background refresh while any dialog/edit is active
-  const isAnyEditActive = isEditingNotes || isProjectDialogOpen || isEditDialogOpen || isCreateUserDialogOpen || isEditUserDialogOpen || isAddCollaboratorDialogOpen || isCreateCollaboratorDialogOpen;
-  useEditingLock(isAnyEditActive);
 
   const getCurrentUserActiveTimer = useCallback((taskId: string) => {
     const timer = getActiveTimer(taskId);
