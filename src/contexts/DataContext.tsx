@@ -371,16 +371,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateClient = async (id: string, updates: Partial<Client>) => {
+    // Filter out fields that don't exist in the clients table
+    const validClientFields = [
+      'name', 'email', 'company', 'phone', 'contracted_hours', 'pipeline_status',
+      'source', 'notes', 'logo_url', 'contract_type', 'contract_start_date',
+      'contract_end_date', 'contract_months', 'identity_guidelines', 'identity_attachments',
+      'auto_report_enabled', 'auto_report_day', 'auto_report_hour', 'auto_report_minute',
+      'auto_report_last_sent', 'password_set', 'converted_at', 'owner_id',
+    ];
+    const filteredUpdates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (validClientFields.includes(key)) {
+        filteredUpdates[key] = value;
+      }
+    }
+
     const { data: updated, error } = await supabase
       .from('clients')
-      .update(updates)
+      .update(filteredUpdates)
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
       console.error('Error updating client:', error);
-      return null;
+      throw new Error(error.message);
     }
 
     const clientWithDefaults = {
