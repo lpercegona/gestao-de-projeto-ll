@@ -90,10 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (prev?.id === newUser?.id) return prev;
           return newUser;
         });
-        
+
         if (session?.user) {
-          // Defer role fetch to avoid blocking
-          setTimeout(() => fetchUserRole(session.user.id), 0);
+          // Evita revalidação de papel em TOKEN_REFRESHED para não causar reload visual desnecessário.
+          const shouldRefreshRole = event !== 'TOKEN_REFRESHED';
+          if (shouldRefreshRole) {
+            setTimeout(() => fetchUserRole(session.user.id), 0);
+          }
         } else {
           setUserRole(null);
           setOwnerId(null);
