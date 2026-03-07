@@ -79,6 +79,7 @@ interface ProjectRequest {
   created_at: string;
   updated_at?: string;
   converted_project_id?: string | null;
+  requested_tasks?: Array<{ title?: string; description?: string; dueDate?: string }> | null;
 }
 
 type UnifiedProject = Project & {
@@ -243,7 +244,7 @@ export const Projects: React.FC = () => {
 
       const { data: requestsData, error } = await supabase
         .from('project_requests')
-        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id, requested_tasks')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1352,12 +1353,46 @@ export const Projects: React.FC = () => {
                 <p className="font-medium">{selectedRequest.title}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Briefing</p>
-                <p className="text-sm whitespace-pre-wrap">{selectedRequest.briefing}</p>
+                <p className="text-sm text-muted-foreground mb-1">Briefing</p>
+                <WysiwygContent content={selectedRequest.briefing} className="text-sm" />
               </div>
+              {(() => {
+                const tasks = Array.isArray(selectedRequest.requested_tasks) ? selectedRequest.requested_tasks : [];
+                if (tasks.length === 0) return null;
+                return (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Tarefas solicitadas</p>
+                    <div className="space-y-2">
+                      {tasks.map((task, index) => {
+                        const t = task as Record<string, unknown>;
+                        const title = typeof t?.title === 'string' ? t.title : `Tarefa ${index + 1}`;
+                        const description = typeof t?.description === 'string' ? t.description : '';
+                        const dueDate = typeof t?.dueDate === 'string' ? t.dueDate : '';
+                        return (
+                          <div key={index} className="rounded-lg border border-border p-3 space-y-1">
+                            <p className="text-sm font-medium">{title}</p>
+                            {description && (
+                              <WysiwygContent content={description} className="text-xs text-muted-foreground" />
+                            )}
+                            {dueDate && (
+                              <p className="text-xs text-muted-foreground">
+                                Prazo: {format(parseISO(dueDate), "dd/MM/yyyy")}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
               <div>
                 <p className="text-sm text-muted-foreground">Prazo desejado</p>
-                <p className="text-sm font-medium">{selectedRequest.desired_deadline || 'Não informado'}</p>
+                <p className="text-sm font-medium">
+                  {selectedRequest.desired_deadline
+                    ? format(parseISO(selectedRequest.desired_deadline), "dd/MM/yyyy")
+                    : 'Não informado'}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status atual</p>
