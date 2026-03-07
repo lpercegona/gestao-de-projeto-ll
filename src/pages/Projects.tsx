@@ -1477,7 +1477,8 @@ export const Projects: React.FC = () => {
                 />
               </div>
             </div>
-          )}
+            );
+          })()}
 
           <DialogFooter className="gap-2">
             <Button variant="destructive" onClick={() => handleProcessEditRequest('rejected')} disabled={!selectedEditRequest || processingEditRequest}>
