@@ -479,6 +479,69 @@ export const Projects: React.FC = () => {
     setIsEditRequestDialogOpen(true);
   };
 
+  const normalizeRequestedTask = (task: unknown, index: number) => {
+    const entry = (task || {}) as Record<string, unknown>;
+    const title = typeof entry.title === 'string' && entry.title.trim()
+      ? entry.title.trim()
+      : typeof entry.name === 'string' && entry.name.trim()
+        ? entry.name.trim()
+        : typeof entry.task_name === 'string' && entry.task_name.trim()
+          ? entry.task_name.trim()
+          : `Tarefa ${index + 1}`;
+
+    const description = typeof entry.description === 'string'
+      ? entry.description
+      : typeof entry.task_description === 'string'
+        ? entry.task_description
+        : '';
+
+    const dueDate = typeof entry.dueDate === 'string' && entry.dueDate
+      ? entry.dueDate
+      : typeof entry.due_date === 'string' && entry.due_date
+        ? entry.due_date
+        : typeof entry.task_due_date === 'string' && entry.task_due_date
+          ? entry.task_due_date
+          : null;
+
+    return { title, description, dueDate };
+  };
+
+  const createTasksFromRequest = async (projectId: string, request: ProjectRequest) => {
+    let sourceTasks: unknown[] | null = Array.isArray(request.requested_tasks)
+      ? (request.requested_tasks as unknown[])
+      : null;
+
+    if (!sourceTasks) {
+      const { data: fullRequest, error: fullRequestError } = await supabase
+        .from('project_requests')
+        .select('requested_tasks')
+        .eq('id', request.id)
+        .single();
+
+      if (fullRequestError) throw fullRequestError;
+      sourceTasks = Array.isArray(fullRequest?.requested_tasks)
+        ? (fullRequest.requested_tasks as unknown[])
+        : [];
+    }
+
+    for (let index = 0; index < sourceTasks.length; index += 1) {
+      const normalized = normalizeRequestedTask(sourceTasks[index], index);
+      if (!normalized.title.trim()) continue;
+
+      const createdTask = await createTask({
+        project_id: projectId,
+        name: normalized.title,
+        description: normalized.description,
+        status: 'pending',
+        due_date: normalized.dueDate,
+      });
+
+      if (!createdTask) {
+        throw new Error(`Falha ao criar a tarefa ${index + 1} da solicitação`);
+      }
+    }
+  };
+
   const handleQuickApproveRequest = async (project: UnifiedProject) => {
     if (!project.is_request) return;
 
@@ -572,26 +635,7 @@ export const Projects: React.FC = () => {
 
       if (!createdProject?.id) throw new Error('Falha ao criar projeto a partir da solicitação');
 
-      // Fetch requested_tasks and create them
-      const { data: fullRequest } = await supabase
-        .from('project_requests')
-        .select('requested_tasks')
-        .eq('id', request.id)
-        .single();
-
-      const reqTasks = Array.isArray(fullRequest?.requested_tasks) ? fullRequest.requested_tasks : [];
-      for (const rt of reqTasks) {
-        const t = rt as Record<string, unknown>;
-        if (typeof t?.title === 'string' && t.title.trim()) {
-          await createTask({
-            project_id: createdProject.id,
-            name: t.title as string,
-            description: (typeof t.description === 'string' ? t.description : '') || '',
-            status: 'pending',
-            due_date: typeof t.dueDate === 'string' && t.dueDate ? t.dueDate : null,
-          });
-        }
-      }
+      await createTasksFromRequest(createdProject.id, request);
 
       const { error } = await supabase
         .from('project_requests')
@@ -749,26 +793,7 @@ export const Projects: React.FC = () => {
           throw new Error('Falha ao criar projeto a partir da solicitação');
         }
 
-        // Fetch requested_tasks and create them
-        const { data: fullReq } = await supabase
-          .from('project_requests')
-          .select('requested_tasks')
-          .eq('id', selectedRequest.id)
-          .single();
-
-        const reqTasks = Array.isArray(fullReq?.requested_tasks) ? fullReq.requested_tasks : [];
-        for (const rt of reqTasks) {
-          const t = rt as Record<string, unknown>;
-          if (typeof t?.title === 'string' && t.title.trim()) {
-            await createTask({
-              project_id: createdProject.id,
-              name: t.title as string,
-              description: (typeof t.description === 'string' ? t.description : '') || '',
-              status: 'pending',
-              due_date: typeof t.dueDate === 'string' && t.dueDate ? t.dueDate : null,
-            });
-          }
-        }
+        await createTasksFromRequest(createdProject.id, selectedRequest);
 
         convertedProjectId = createdProject.id;
         nextStatus = 'converted';
@@ -1364,22 +1389,21 @@ export const Projects: React.FC = () => {
                     <p className="text-sm text-muted-foreground mb-2">Tarefas solicitadas</p>
                     <div className="space-y-2">
                       {tasks.map((task, index) => {
-                        const t = task as Record<string, unknown>;
-                        const title = typeof t?.title === 'string' ? t.title : `Tarefa ${index + 1}`;
-                        const description = typeof t?.description === 'string' ? t.description : '';
-                        const dueDate = typeof t?.dueDate === 'string' ? t.dueDate : '';
+                        const normalized = normalizeRequestedTask(task, index);
                         return (
-                          <div key={index} className="rounded-lg border border-border p-3 space-y-1">
-                            <p className="text-sm font-medium">{title}</p>
-                            {description && (
-                              <WysiwygContent content={description} className="text-xs text-muted-foreground" />
-                            )}
-                            {dueDate && (
-                              <p className="text-xs text-muted-foreground">
-                                Prazo: {format(parseISO(dueDate), "dd/MM/yyyy")}
-                              </p>
-                            )}
-                          </div>
+                          <Card key={`${normalized.title}-${index}`} className="border border-border">
+                            <CardContent className="p-3 space-y-1">
+                              <p className="text-sm font-medium">{normalized.title}</p>
+                              {normalized.description && (
+                                <WysiwygContent content={normalized.description} className="text-xs text-muted-foreground" />
+                              )}
+                              {normalized.dueDate && (
+                                <p className="text-xs text-muted-foreground">
+                                  Prazo: {format(parseISO(normalized.dueDate), "dd/MM/yyyy")}
+                                </p>
+                              )}
+                            </CardContent>
+                          </Card>
                         );
                       })}
                     </div>
