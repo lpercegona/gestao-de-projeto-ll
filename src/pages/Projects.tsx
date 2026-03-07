@@ -1397,19 +1397,73 @@ export const Projects: React.FC = () => {
             <DialogTitle>Revisar solicitação de edição</DialogTitle>
           </DialogHeader>
 
-          {selectedEditRequest && (
+          {selectedEditRequest && (() => {
+            const proposed = selectedEditRequest.proposed_data || {};
+            const original = selectedEditRequest.original_data || {};
+            const isProject = selectedEditRequest.entity_type === 'project';
+            const requestType = typeof proposed.request_type === 'string' ? proposed.request_type : null;
+            const isNewTask = requestType === 'new_task';
+            const isEditTask = requestType === 'edit_task';
+
+            const fieldLabels: Record<string, string> = {
+              title: 'Título',
+              name: 'Nome',
+              task_name: 'Nome da tarefa',
+              description: 'Descrição',
+              task_description: 'Descrição da tarefa',
+              briefing: 'Briefing',
+              due_date: 'Prazo',
+              task_due_date: 'Prazo da tarefa',
+              desired_deadline: 'Prazo desejado',
+              status: 'Status',
+              request_type: '',
+            };
+
+            const formatValue = (value: unknown): string => {
+              if (value === null || value === undefined || value === '') return 'Não informado';
+              return String(value);
+            };
+
+            const typeLabel = isNewTask ? 'Nova tarefa' : isEditTask ? 'Edição de tarefa' : isProject ? 'Edição de projeto' : 'Edição de solicitação';
+
+            const fieldsToShow = Object.keys(proposed).filter(k => k !== 'request_type');
+
+            return (
             <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-              <div>
-                <p className="text-sm text-muted-foreground">Tipo</p>
-                <p className="font-medium">{selectedEditRequest.entity_type === 'project' ? 'Projeto' : 'Solicitação de projeto'}</p>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
+                <span className="text-xs text-muted-foreground">
+                  {selectedEditRequest.entity_type === 'project' ? 'Projeto' : 'Solicitação de projeto'}
+                </span>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Dados propostos</p>
-                <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto">{JSON.stringify(selectedEditRequest.proposed_data, null, 2)}</pre>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Dados atuais</p>
-                <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto">{JSON.stringify(selectedEditRequest.original_data, null, 2)}</pre>
+
+              <div className="space-y-3">
+                {fieldsToShow.map((key) => {
+                  const proposedVal = formatValue(proposed[key]);
+                  const originalVal = formatValue(original[key]);
+                  const hasChanged = proposedVal !== originalVal;
+                  const label = fieldLabels[key] || key;
+
+                  return (
+                    <div key={key} className="rounded-lg border border-border p-3 space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                      {hasChanged ? (
+                        <div className="space-y-1.5">
+                          <div className="flex items-start gap-2">
+                            <span className="shrink-0 mt-0.5 text-xs font-medium text-red-500 dark:text-red-400">Atual</span>
+                            <p className="text-sm text-muted-foreground line-through whitespace-pre-wrap break-words">{originalVal}</p>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="shrink-0 mt-0.5 text-xs font-medium text-green-600 dark:text-green-400">Novo</span>
+                            <p className="text-sm font-medium whitespace-pre-wrap break-words">{proposedVal}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap break-words">{proposedVal}</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-request-admin-notes">Observações do admin</Label>
