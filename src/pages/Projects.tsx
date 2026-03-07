@@ -507,7 +507,9 @@ export const Projects: React.FC = () => {
   };
 
   const createTasksFromRequest = async (projectId: string, request: ProjectRequest) => {
-    let sourceTasks = Array.isArray(request.requested_tasks) ? request.requested_tasks : null;
+    let sourceTasks: unknown[] | null = Array.isArray(request.requested_tasks)
+      ? (request.requested_tasks as unknown[])
+      : null;
 
     if (!sourceTasks) {
       const { data: fullRequest, error: fullRequestError } = await supabase
@@ -517,7 +519,9 @@ export const Projects: React.FC = () => {
         .single();
 
       if (fullRequestError) throw fullRequestError;
-      sourceTasks = Array.isArray(fullRequest?.requested_tasks) ? fullRequest.requested_tasks : [];
+      sourceTasks = Array.isArray(fullRequest?.requested_tasks)
+        ? (fullRequest.requested_tasks as unknown[])
+        : [];
     }
 
     for (let index = 0; index < sourceTasks.length; index += 1) {
