@@ -151,11 +151,6 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
         return;
       }
 
-      if (!description.trim()) {
-        toast.error('Preencha a descrição para finalizar o registro.');
-        setLoading(false);
-        return;
-      }
 
       let taskId = (hasLockedOriginTask ? bindingContext?.taskId : null) || selectedTaskId;
 
