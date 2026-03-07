@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [roleLoading, setRoleLoading] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const lastAccessTokenRef = useRef<string | null>(null);
 
   const fetchUserRole = async (userId: string) => {
     setRoleLoading(true);
@@ -84,7 +85,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session);
+        const incomingUserId = session?.user?.id ?? null;
+        const incomingAccessToken = session?.access_token ?? null;
+        const accessTokenChanged = lastAccessTokenRef.current !== incomingAccessToken;
+
+        if (event === 'TOKEN_REFRESHED') {
+          setSession(prevSession => {
+            if (prevSession?.user?.id === incomingUserId) {
+              return prevSession;
+            }
+
+            return session;
+          });
+        } else {
+          setSession(session);
+        }
+
+        if (accessTokenChanged) {
+          lastAccessTokenRef.current = incomingAccessToken;
+        }
+
         const newUser = session?.user ?? null;
         setUser(prev => {
           if (prev?.id === newUser?.id) return prev;
@@ -108,6 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      lastAccessTokenRef.current = session?.access_token ?? null;
       setSession(session);
       setUser(session?.user ?? null);
       
