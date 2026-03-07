@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
+import { WysiwygEditor, WysiwygContent } from '@/components/ui/wysiwyg-editor';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -22,7 +22,7 @@ import { Project, Task } from '@/types';
 import { toast } from 'sonner';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
 // New components
