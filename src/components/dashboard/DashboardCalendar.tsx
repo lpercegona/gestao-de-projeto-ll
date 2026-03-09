@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { useData } from '@/contexts/DataContext';
-import { isSameDay, parseISO } from 'date-fns';
+import { isSameDay, parseISO, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const DashboardCalendar: React.FC = () => {
