@@ -37,17 +37,19 @@ export const DashboardCalendar: React.FC = () => {
 
   // Items for selected date
   const selectedDateItems = useMemo(() => {
-    const items: { type: 'project' | 'task'; name: string; id: string }[] = [];
+    const items: { type: 'project' | 'task'; name: string; id: string; isOverdue: boolean }[] = [];
     
     data.projects.forEach(p => {
-      if (p.due_date && p.status !== 'completed' && isSameDay(parseISO(p.due_date), date)) {
-        items.push({ type: 'project', name: p.name, id: p.id });
+      if (p.due_date && p.status !== 'completed' && p.status !== 'archived' && isSameDay(parseISO(p.due_date), date)) {
+        const due = parseISO(p.due_date);
+        items.push({ type: 'project', name: p.name, id: p.id, isOverdue: isPast(due) && !isToday(due) });
       }
     });
     
     data.tasks.forEach(t => {
-      if (t.due_date && t.status !== 'completed' && t.status !== 'done' && isSameDay(parseISO(t.due_date), date)) {
-        items.push({ type: 'task', name: t.name, id: t.id });
+      if (t.due_date && t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived' && isSameDay(parseISO(t.due_date), date)) {
+        const due = parseISO(t.due_date);
+        items.push({ type: 'task', name: t.name, id: t.id, isOverdue: isPast(due) && !isToday(due) });
       }
     });
     
