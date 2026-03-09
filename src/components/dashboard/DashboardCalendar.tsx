@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { useData } from '@/contexts/DataContext';
-import { isSameDay, parseISO } from 'date-fns';
+import { isSameDay, parseISO, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const DashboardCalendar: React.FC = () => {
@@ -20,14 +20,14 @@ export const DashboardCalendar: React.FC = () => {
     
     // Projects with due dates
     data.projects.forEach(p => {
-      if (p.due_date && p.status !== 'completed') {
+      if (p.due_date && p.status !== 'completed' && p.status !== 'archived') {
         dates.push(parseISO(p.due_date));
       }
     });
     
     // Tasks with due dates
     data.tasks.forEach(t => {
-      if (t.due_date && t.status !== 'completed' && t.status !== 'done') {
+      if (t.due_date && t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived') {
         dates.push(parseISO(t.due_date));
       }
     });
@@ -37,17 +37,19 @@ export const DashboardCalendar: React.FC = () => {
 
   // Items for selected date
   const selectedDateItems = useMemo(() => {
-    const items: { type: 'project' | 'task'; name: string; id: string }[] = [];
+    const items: { type: 'project' | 'task'; name: string; id: string; isOverdue: boolean }[] = [];
     
     data.projects.forEach(p => {
-      if (p.due_date && p.status !== 'completed' && isSameDay(parseISO(p.due_date), date)) {
-        items.push({ type: 'project', name: p.name, id: p.id });
+      if (p.due_date && p.status !== 'completed' && p.status !== 'archived' && isSameDay(parseISO(p.due_date), date)) {
+        const due = parseISO(p.due_date);
+        items.push({ type: 'project', name: p.name, id: p.id, isOverdue: isPast(due) && !isToday(due) });
       }
     });
     
     data.tasks.forEach(t => {
-      if (t.due_date && t.status !== 'completed' && t.status !== 'done' && isSameDay(parseISO(t.due_date), date)) {
-        items.push({ type: 'task', name: t.name, id: t.id });
+      if (t.due_date && t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived' && isSameDay(parseISO(t.due_date), date)) {
+        const due = parseISO(t.due_date);
+        items.push({ type: 'task', name: t.name, id: t.id, isOverdue: isPast(due) && !isToday(due) });
       }
     });
     
@@ -117,7 +119,7 @@ export const DashboardCalendar: React.FC = () => {
               {selectedDateItems.slice(0, 3).map(item => (
                 <div 
                   key={`${item.type}-${item.id}`}
-                  className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded-md p-1.5 -mx-1.5"
+                  className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded-md p-1.5 -mx-1.5 overflow-hidden"
                   onClick={() => {
                     if (item.type === 'project') {
                       navigate(`/projects/${item.id}`);
@@ -127,10 +129,15 @@ export const DashboardCalendar: React.FC = () => {
                     }
                   }}
                 >
-                  <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-[10px] px-1.5">
+                  <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-[10px] px-1.5 shrink-0">
                     {item.type === 'project' ? 'Projeto' : 'Tarefa'}
                   </Badge>
-                  <span className="truncate">{item.name}</span>
+                  {item.isOverdue && (
+                    <Badge variant="destructive" className="text-[10px] px-1.5 shrink-0">
+                      Atrasado
+                    </Badge>
+                  )}
+                  <span className="break-words line-clamp-1 min-w-0">{item.name}</span>
                 </div>
               ))}
               {selectedDateItems.length > 3 && (
