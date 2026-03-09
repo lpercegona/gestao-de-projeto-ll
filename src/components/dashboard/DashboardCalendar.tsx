@@ -119,7 +119,7 @@ export const DashboardCalendar: React.FC = () => {
               {selectedDateItems.slice(0, 3).map(item => (
                 <div 
                   key={`${item.type}-${item.id}`}
-                  className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded-md p-1.5 -mx-1.5"
+                  className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded-md p-1.5 -mx-1.5 overflow-hidden"
                   onClick={() => {
                     if (item.type === 'project') {
                       navigate(`/projects/${item.id}`);
@@ -129,10 +129,15 @@ export const DashboardCalendar: React.FC = () => {
                     }
                   }}
                 >
-                  <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-[10px] px-1.5">
+                  <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-[10px] px-1.5 shrink-0">
                     {item.type === 'project' ? 'Projeto' : 'Tarefa'}
                   </Badge>
-                  <span className="truncate">{item.name}</span>
+                  {item.isOverdue && (
+                    <Badge variant="destructive" className="text-[10px] px-1.5 shrink-0">
+                      Atrasado
+                    </Badge>
+                  )}
+                  <span className="break-words line-clamp-1 min-w-0">{item.name}</span>
                 </div>
               ))}
               {selectedDateItems.length > 3 && (
