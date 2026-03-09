@@ -90,7 +90,7 @@ export const CalendarPage: React.FC = () => {
       });
     
     data.tasks
-      .filter(t => t.due_date && t.status !== 'comple && t.status !== 'archived'ted' && t.status !== 'done')
+      .filter(t => t.due_date && t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived')
       .forEach(t => {
         const project = data.projects.find(p => p.id === t.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;

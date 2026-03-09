@@ -53,7 +53,7 @@ export const CollaboratorDashboard: React.FC = () => {
     
     // Add tasks (only non-completed ones)
     data.tasks
-      .filter(t => t.status !== 'completed' && t.status !== 'done')
+      .filter(t => t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived')
       .forEach(t => {
         const project = data.projects.find(p => p.id === t.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;
