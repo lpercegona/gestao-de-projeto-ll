@@ -74,7 +74,7 @@ export const CalendarPage: React.FC = () => {
     const items: CalendarItem[] = [];
     
     data.projects
-      .filter(p => p.due_date && p.status !== 'completed' && p.status !== 'archived')
+      .filter(p => p.due_date && p.status !== 'completed' && p.status !== 'archived' && p.status !== 'archived')
       .forEach(p => {
         const client = data.clients.find(c => c.id === p.client_id);
         const status = getDeadlineStatus(p.due_date!);
@@ -90,7 +90,7 @@ export const CalendarPage: React.FC = () => {
       });
     
     data.tasks
-      .filter(t => t.due_date && t.status !== 'completed' && t.status !== 'done')
+      .filter(t => t.due_date && t.status !== 'comple && t.status !== 'archived'ted' && t.status !== 'done')
       .forEach(t => {
         const project = data.projects.find(p => p.id === t.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;
