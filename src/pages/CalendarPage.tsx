@@ -74,7 +74,7 @@ export const CalendarPage: React.FC = () => {
     const items: CalendarItem[] = [];
     
     data.projects
-      .filter(p => p.due_date && p.status !== 'completed')
+      .filter(p => p.due_date && p.status !== 'completed' && p.status !== 'archived')
       .forEach(p => {
         const client = data.clients.find(c => c.id === p.client_id);
         const status = getDeadlineStatus(p.due_date!);
