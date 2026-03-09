@@ -40,8 +40,8 @@ export const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({
             to={item.type === 'project' ? `/projects/${item.id}` : `/projects/${item.projectId}`}
             className="block hover:bg-muted/50 rounded-md px-2 py-1 transition-colors min-w-0"
           >
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
-              <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0 overflow-hidden">
+              <div className="flex items-start gap-3 min-w-0 flex-1 overflow-hidden">
                 <div className={cn(
                   "mt-0.5 p-1.5 rounded-md flex-shrink-0",
                   getDeadlineClasses(item.status)
@@ -54,10 +54,10 @@ export const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({
                 </div>
                 
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-foreground truncate text-sm">
+                  <p className="font-medium text-foreground text-sm break-words line-clamp-2">
                     {item.name}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  <p className="text-xs text-muted-foreground break-words line-clamp-1 mt-0.5">
                     {item.type === 'task' && item.projectName && (
                       <>{item.projectName}</>
                     )}
@@ -67,10 +67,15 @@ export const UpcomingDeadlines: React.FC<UpcomingDeadlinesProps> = ({
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
+                {item.status === 'overdue' && (
+                  <Badge variant="destructive" className="text-xs shrink-0">
+                    Atrasado
+                  </Badge>
+                )}
                 {item.due_date ? (
                   <div className={cn(
-                    "flex items-center gap-1 text-xs px-2 py-1 rounded-full",
+                    "flex items-center gap-1 text-xs px-2 py-1 rounded-full whitespace-nowrap",
                     getDeadlineClasses(item.status)
                   )}>
                     <Calendar className="h-3 w-3" />
