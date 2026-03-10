@@ -1338,6 +1338,8 @@ export const Projects: React.FC = () => {
           onStartTimer={handleStartTimer}
           onStopTimer={handleStopTimer}
           onCompleteTask={handleCompleteTask}
+          onUpdateProjectStatus={async (id, status) => { await updateProject(id, { status }); }}
+          onUpdateTaskStatus={async (id, status) => { await updateTask(id, { status }); }}
         />
       ) : (
         <ProjectKanbanView
