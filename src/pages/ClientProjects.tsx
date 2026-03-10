@@ -960,6 +960,8 @@ export const ClientProjects: React.FC = () => {
           onStartTimer={(taskId) => handleStartTimer(taskId)}
           onStopTimer={(taskId) => handleStopTimer(taskId)}
           onCompleteTask={(taskId) => handleCompleteTask(taskId)}
+          onUpdateProjectStatus={async (id, status) => { await updateProject(id, { status }); }}
+          onUpdateTaskStatus={async (id, status) => { await updateTask(id, { status }); }}
           onRequestTaskEdit={(task) => {
             const t = task as ClientTask;
             if (!isOwnTask(t)) {
