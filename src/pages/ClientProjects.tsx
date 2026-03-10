@@ -560,18 +560,15 @@ export const ClientProjects: React.FC = () => {
     }
     setTaskCreateSubmitting(true);
     try {
-      const { error } = await supabase.from('tasks').insert({
+      await createTask({
         project_id: taskCreateProjectId,
         name: taskCreateForm.name.trim(),
         description: getWysiwygPlainText(taskCreateForm.description) ? taskCreateForm.description : null,
         due_date: taskCreateForm.due_date || null,
         status: taskCreateStatus,
-        created_by: user.id,
       });
-      if (error) throw error;
       toast.success('Tarefa criada com sucesso!');
       setTaskCreateDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error creating task:', error);
       toast.error('Erro ao criar tarefa.');
