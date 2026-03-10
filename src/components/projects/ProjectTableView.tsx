@@ -132,6 +132,8 @@ interface ProjectTableViewProps {
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;
   onCompleteTask?: (taskId: string) => Promise<void>;
+  onUpdateProjectStatus?: (projectId: string, newStatus: string) => Promise<void>;
+  onUpdateTaskStatus?: (taskId: string, newStatus: string) => Promise<void>;
   onRequestTaskEdit?: (task: Task) => void;
   onEditRequest?: (project: Project) => void;
   onDeleteRequest?: (project: Project) => void;
