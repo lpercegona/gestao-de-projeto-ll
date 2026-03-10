@@ -429,18 +429,13 @@ export const ClientProjects: React.FC = () => {
     }
     setProjectEditSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({
-          name: projectEditForm.name.trim(),
-          description: getWysiwygPlainText(projectEditForm.description) ? projectEditForm.description : null,
-          due_date: projectEditForm.due_date || null,
-        })
-        .eq('id', projectEditForm.id);
-      if (error) throw error;
+      await updateProject(projectEditForm.id, {
+        name: projectEditForm.name.trim(),
+        description: getWysiwygPlainText(projectEditForm.description) ? projectEditForm.description : null,
+        due_date: projectEditForm.due_date || null,
+      });
       toast.success('Projeto atualizado com sucesso!');
       setProjectEditDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error updating project:', error);
       toast.error('Erro ao atualizar projeto.');
