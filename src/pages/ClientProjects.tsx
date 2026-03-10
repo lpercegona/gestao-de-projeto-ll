@@ -694,34 +694,14 @@ export const ClientProjects: React.FC = () => {
 
   const handleConfirmPause = async () => {
     if (!user || !pausingTaskId) return;
-    const timer = getCurrentUserActiveTimer(pausingTaskId);
-    if (!timer) return;
-    const startedAt = new Date(timer.started_at);
-    const now = new Date();
-    const elapsedMs = now.getTime() - startedAt.getTime() - (timer.paused_elapsed_seconds * 1000);
-    const hours = Math.max(0.01, parseFloat((elapsedMs / 3600000).toFixed(2)));
-
-    const { error: entryError } = await supabase.from('time_entries').insert({
-      task_id: pausingTaskId,
-      hours,
-      description: pauseDescription || 'Registro via timer',
-      date: new Date().toISOString().split('T')[0],
-      created_by: user.id,
-      entry_type: pauseEntryType,
-    });
-    if (entryError) {
-      console.error('Error creating time entry:', entryError);
+    const result = await stopTaskTimer(pausingTaskId, pauseDescription || 'Registro via timer', pauseEntryType);
+    if (result) {
+      toast.success(`Timer parado. ${result.hours}h registradas.`);
+    } else {
       toast.error('Erro ao registrar horas.');
-      return;
     }
-
-    const { error: deleteError } = await supabase.from('task_timers').delete().eq('id', timer.id);
-    if (deleteError) console.error('Error deleting timer:', deleteError);
-
-    toast.success(`Timer parado. ${hours}h registradas.`);
     setIsPauseDialogOpen(false);
     setPausingTaskId(null);
-    refreshData();
   };
 
   const handleDiscardTimer = async () => {
