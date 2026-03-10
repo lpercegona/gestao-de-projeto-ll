@@ -596,18 +596,13 @@ export const ClientProjects: React.FC = () => {
     }
     setTaskEditSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          name: taskEditForm.name.trim(),
-          description: getWysiwygPlainText(taskEditForm.description) ? taskEditForm.description : null,
-          due_date: taskEditForm.due_date || null,
-        })
-        .eq('id', taskEditForm.taskId);
-      if (error) throw error;
+      await updateTask(taskEditForm.taskId, {
+        name: taskEditForm.name.trim(),
+        description: getWysiwygPlainText(taskEditForm.description) ? taskEditForm.description : null,
+        due_date: taskEditForm.due_date || null,
+      });
       toast.success('Tarefa atualizada com sucesso!');
       setTaskEditDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error updating task:', error);
       toast.error('Erro ao atualizar tarefa.');
