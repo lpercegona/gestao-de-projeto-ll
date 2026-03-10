@@ -669,12 +669,10 @@ export const ClientProjects: React.FC = () => {
   const handleConfirmTaskDelete = async () => {
     if (!taskToDelete) return;
     try {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskToDelete.id);
-      if (error) throw error;
+      await deleteTask(taskToDelete.id);
       toast.success('Tarefa excluída com sucesso!');
       setTaskDeleteDialogOpen(false);
       setTaskToDelete(null);
-      refreshData();
     } catch (error) {
       console.error('Error deleting task:', error);
       toast.error('Erro ao excluir tarefa.');
