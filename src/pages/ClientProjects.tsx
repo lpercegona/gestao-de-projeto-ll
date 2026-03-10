@@ -706,15 +706,11 @@ export const ClientProjects: React.FC = () => {
 
   const handleDiscardTimer = async () => {
     if (!pausingTaskId) return;
-    const timer = getCurrentUserActiveTimer(pausingTaskId);
-    if (timer) {
-      await supabase.from('task_timers').delete().eq('id', timer.id);
-    }
+    await cancelTaskTimer(pausingTaskId);
     setIsPauseDialogOpen(false);
     setPausingTaskId(null);
     setPauseDescription('');
     toast.info('Timer descartado');
-    refreshData();
   };
 
   const handleCompleteTask = async (taskId: string) => {
