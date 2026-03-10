@@ -453,12 +453,10 @@ export const ClientProjects: React.FC = () => {
   const handleConfirmDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', projectToDelete.id);
-      if (error) throw error;
+      await deleteProject(projectToDelete.id);
       toast.success('Projeto excluído com sucesso!');
       setProjectDeleteDialogOpen(false);
       setProjectToDelete(null);
-      refreshData();
     } catch (error) {
       console.error('Error deleting project:', error);
       toast.error('Erro ao excluir projeto.');
