@@ -757,41 +757,38 @@ export const ClientProjects: React.FC = () => {
     if (totalHours <= 0) { toast.error('Insira um tempo válido maior que zero.'); return; }
     setSubmitting(true);
     if (editingTimeEntryId) {
-      const { error } = await supabase.from('time_entries').update({
+      const result = await updateTimeEntry(editingTimeEntryId, {
         hours: totalHours,
         description: timeForm.description,
         date: timeForm.date,
         entry_type: timeForm.entry_type,
-      }).eq('id', editingTimeEntryId);
-      if (error) { console.error(error); toast.error('Erro ao atualizar registro.'); }
+      });
+      if (!result) toast.error('Erro ao atualizar registro.');
       else toast.success('Registro atualizado!');
     } else {
-      const { error } = await supabase.from('time_entries').insert({
+      const result = await createTimeEntry({
         task_id: selectedTaskId,
         hours: totalHours,
         description: timeForm.description,
         date: timeForm.date,
         entry_type: timeForm.entry_type,
-        created_by: user?.id,
       });
-      if (error) { console.error(error); toast.error('Erro ao registrar horas.'); }
+      if (!result) toast.error('Erro ao registrar horas.');
       else toast.success('Horas registradas!');
     }
     setSubmitting(false);
     setIsTimeDialogOpen(false);
     setEditingTimeEntryId(null);
-    refreshData();
   };
 
   const handleDeleteTimeEntry = async () => {
     if (editingTimeEntryId) {
-      const { error } = await supabase.from('time_entries').delete().eq('id', editingTimeEntryId);
-      if (error) { console.error(error); toast.error('Erro ao excluir registro.'); }
+      const success = await deleteTimeEntry(editingTimeEntryId);
+      if (!success) toast.error('Erro ao excluir registro.');
       else toast.success('Registro excluído!');
       setIsDeleteTimeEntryDialogOpen(false);
       setIsTimeDialogOpen(false);
       setEditingTimeEntryId(null);
-      refreshData();
     }
   };
 
