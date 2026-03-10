@@ -76,7 +76,7 @@ type ClientTask = {
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
-  const { data, refreshData, createProject, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
+  const { data, refreshData, createProject, updateProject, deleteProject, createTask, updateTask, deleteTask, createTimeEntry, updateTimeEntry, deleteTimeEntry, startTaskTimer, stopTaskTimer, cancelTaskTimer, completeTask, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [pendingTaskRequests, setPendingTaskRequests] = useState<PendingTaskRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
