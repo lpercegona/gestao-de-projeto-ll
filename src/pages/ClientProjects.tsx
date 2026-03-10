@@ -373,44 +373,34 @@ export const ClientProjects: React.FC = () => {
 
     setProjectCreateSubmitting(true);
     try {
-      const { data: newProject, error: projectError } = await supabase
-        .from('projects')
-        .insert({
-          client_id: clientId,
-          name: projectCreateForm.name.trim(),
-          description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
-          due_date: projectCreateForm.due_date || null,
-          custom_fields: {},
-          created_by: user?.id || null,
-        })
-        .select('id')
-        .single();
+      const newProject = await createProject({
+        client_id: clientId,
+        name: projectCreateForm.name.trim(),
+        description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
+        due_date: projectCreateForm.due_date || null,
+        custom_fields: {},
+        status: 'active',
+      });
 
-      if (projectError || !newProject) {
-        console.error('Error creating direct project:', projectError);
+      if (!newProject) {
         toast.error('Erro ao criar projeto.');
         return;
       }
 
       if (projectTasks.length > 0) {
-        const tasksToInsert = projectTasks.map((task) => ({
-          project_id: newProject.id,
-          name: task.name,
-          description: getWysiwygPlainText(task.description) ? task.description : null,
-          due_date: task.due_date || null,
-          status: 'pending',
-          created_by: user?.id || null,
-        }));
-        const { error: tasksError } = await supabase.from('tasks').insert(tasksToInsert);
-        if (tasksError) {
-          console.error('Error creating tasks:', tasksError);
-          toast.error('Projeto criado, mas houve erro ao criar tarefas.');
+        for (const task of projectTasks) {
+          await createTask({
+            project_id: newProject.id,
+            name: task.name,
+            description: getWysiwygPlainText(task.description) ? task.description : null,
+            due_date: task.due_date || null,
+            status: 'pending',
+          });
         }
       }
 
       toast.success('Projeto criado com sucesso!');
       setIsDirectProjectDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error creating direct project:', error);
       toast.error('Erro ao criar projeto.');
