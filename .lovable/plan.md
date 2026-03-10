@@ -1,53 +1,92 @@
 
 
-## Plano: Sincronização instantânea de estado entre visualizações
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-### Problema
-Três locais fazem chamadas diretas ao banco (`supabase.from(...).update/insert/delete`) sem atualizar o estado local do `DataContext`, causando descompasso entre visualizações até que `refreshData()` complete o re-fetch completo:
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
 
-1. **`ProjectTableView.tsx`** — `handleProjectStatusChange` e `handleTaskStatusChange` mantêm estado local (`localProjectStatuses`, `localTaskStatuses`) e chamam `supabase` diretamente, sem propagar a mudança ao `DataContext`
-2. **`ClientProjects.tsx`** — Todas as operações CRUD (criar/editar/excluir projeto, criar/editar tarefa, atualizar status, timers, time entries) usam `supabase` diretamente + `refreshData()` em vez dos métodos do `DataContext`
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
 
-### Solução
+## Problema 2: Refresh destrói dados em diálogos abertos
 
-Substituir chamadas diretas ao banco pelos métodos do `DataContext` (`updateTask`, `updateProject`, `createTask`, `createProject`, `deleteProject`, `deleteTask`, `createTimeEntry`, etc.) que já fazem atualização otimista do estado local.
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
 
-#### 1. `src/components/projects/ProjectTableView.tsx`
-- `handleProjectStatusChange`: chamar `onUpdateProjectStatus(project.id, next)` (já recebido como prop) ou adicionar um callback prop que use `updateProject` do DataContext
-- `handleTaskStatusChange`: chamar `onUpdateTaskStatus(task.id, next)` (já recebido como prop)
-- Manter `localProjectStatuses`/`localTaskStatuses` para feedback visual imediato, mas garantir que o callback prop propague ao DataContext
+**Estratégia**: Duas camadas de proteção.
 
-Verificar se as props `onUpdateTaskStatus` e equivalente para projeto já existem e se chamam os métodos do DataContext.
+### Camada 1: Estabilizar referência do `user` no AuthContext
 
-#### 2. `src/pages/ClientProjects.tsx` (~15 operações)
-Substituir cada chamada direta por método equivalente do `DataContext`:
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
 
-| Operação | Atual | Substituir por |
-|---|---|---|
-| Criar projeto | `supabase.from('projects').insert(...)` + `refreshData()` | `createProject(...)` |
-| Editar projeto | `supabase.from('projects').update(...)` + `refreshData()` | `updateProject(id, ...)` |
-| Excluir projeto | `supabase.from('projects').delete(...)` + `refreshData()` | `deleteProject(id)` |
-| Criar tarefa | `supabase.from('tasks').insert(...)` + `refreshData()` | `createTask(...)` |
-| Editar tarefa | `supabase.from('tasks').update(...)` + `refreshData()` | `updateTask(id, ...)` |
-| Excluir tarefa | `supabase.from('tasks').delete(...)` + `refreshData()` | `deleteTask(id)` |
-| Completar tarefa | `supabase.from('tasks').update({status:'completed'})` + `refreshData()` | `completeTask(id)` |
-| Atualizar status tarefa | `supabase.from('tasks').update({status})` + `refreshData()` | `updateTask(id, {status})` |
-| Registrar horas | `supabase.from('time_entries').insert(...)` + `refreshData()` | `createTimeEntry(...)` |
-| Timer start | `supabase.from('task_timers').insert(...)` + `refreshData()` | `startTaskTimer(id)` |
-| Timer stop | `supabase.from('task_timers').delete(...)` + `refreshData()` | `stopTaskTimer(id, desc, type)` |
-| Timer discard | `supabase.from('task_timers').delete(...)` + `refreshData()` | `cancelTaskTimer(id)` |
+```typescript
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
+```
 
-Remover `import { supabase }` se não for mais necessário (manter se usado para queries de leitura como project_requests/edit_requests).
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
 
-#### 3. `src/pages/Projects.tsx` — Chamadas `refreshData()` restantes
-As chamadas a `refreshData()` em operações de solicitações (project_requests, edit_requests) são aceitáveis pois essas entidades não estão no DataContext. Sem alteração necessária aqui.
+### Camada 2: Lock de edição global no DataContext
 
-### Resultado esperado
-- Marcar tarefa como concluída na tabela reflete instantaneamente no kanban, lista e calendário
-- Criar/editar/excluir projeto ou tarefa na área do cliente reflete em todas as views
-- Eliminar re-fetches desnecessários melhora a performance
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
 
-### Arquivos alterados
-1. `src/components/projects/ProjectTableView.tsx` — Usar callbacks que propagam ao DataContext
-2. `src/pages/ClientProjects.tsx` — Substituir ~15 chamadas diretas por métodos do DataContext
+```typescript
+// DataContext.tsx
+const editingLockRef = useRef(0);
+
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
+
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
+
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
+```
+
+Expor `lockEditing` e `unlockEditing` no contexto.
+
+### Camada 3: Aplicar o lock nos diálogos
+
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
+
+| Arquivo | Diálogo |
+|---|---|
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
+
+Padrão de uso via `useEffect`:
+
+```typescript
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
+```
+
+## Arquivos alterados
+
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 

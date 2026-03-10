@@ -76,7 +76,7 @@ type ClientTask = {
 
 export const ClientProjects: React.FC = () => {
   const { user } = useAuth();
-  const { data, refreshData, createProject, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
+  const { data, refreshData, createProject, updateProject, deleteProject, createTask, updateTask, deleteTask, createTimeEntry, updateTimeEntry, deleteTimeEntry, startTaskTimer, stopTaskTimer, cancelTaskTimer, completeTask, getProjectHours, getTaskHours, getCreatorName, getActiveTimer, getClientColumns } = useData();
   const [requests, setRequests] = useState<ProjectRequest[]>([]);
   const [pendingTaskRequests, setPendingTaskRequests] = useState<PendingTaskRequest[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -373,44 +373,34 @@ export const ClientProjects: React.FC = () => {
 
     setProjectCreateSubmitting(true);
     try {
-      const { data: newProject, error: projectError } = await supabase
-        .from('projects')
-        .insert({
-          client_id: clientId,
-          name: projectCreateForm.name.trim(),
-          description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
-          due_date: projectCreateForm.due_date || null,
-          custom_fields: {},
-          created_by: user?.id || null,
-        })
-        .select('id')
-        .single();
+      const newProject = await createProject({
+        client_id: clientId,
+        name: projectCreateForm.name.trim(),
+        description: getWysiwygPlainText(projectCreateForm.description) ? projectCreateForm.description : null,
+        due_date: projectCreateForm.due_date || null,
+        custom_fields: {},
+        status: 'active',
+      });
 
-      if (projectError || !newProject) {
-        console.error('Error creating direct project:', projectError);
+      if (!newProject) {
         toast.error('Erro ao criar projeto.');
         return;
       }
 
       if (projectTasks.length > 0) {
-        const tasksToInsert = projectTasks.map((task) => ({
-          project_id: newProject.id,
-          name: task.name,
-          description: getWysiwygPlainText(task.description) ? task.description : null,
-          due_date: task.due_date || null,
-          status: 'pending',
-          created_by: user?.id || null,
-        }));
-        const { error: tasksError } = await supabase.from('tasks').insert(tasksToInsert);
-        if (tasksError) {
-          console.error('Error creating tasks:', tasksError);
-          toast.error('Projeto criado, mas houve erro ao criar tarefas.');
+        for (const task of projectTasks) {
+          await createTask({
+            project_id: newProject.id,
+            name: task.name,
+            description: getWysiwygPlainText(task.description) ? task.description : null,
+            due_date: task.due_date || null,
+            status: 'pending',
+          });
         }
       }
 
       toast.success('Projeto criado com sucesso!');
       setIsDirectProjectDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error creating direct project:', error);
       toast.error('Erro ao criar projeto.');
@@ -439,18 +429,13 @@ export const ClientProjects: React.FC = () => {
     }
     setProjectEditSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({
-          name: projectEditForm.name.trim(),
-          description: getWysiwygPlainText(projectEditForm.description) ? projectEditForm.description : null,
-          due_date: projectEditForm.due_date || null,
-        })
-        .eq('id', projectEditForm.id);
-      if (error) throw error;
+      await updateProject(projectEditForm.id, {
+        name: projectEditForm.name.trim(),
+        description: getWysiwygPlainText(projectEditForm.description) ? projectEditForm.description : null,
+        due_date: projectEditForm.due_date || null,
+      });
       toast.success('Projeto atualizado com sucesso!');
       setProjectEditDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error updating project:', error);
       toast.error('Erro ao atualizar projeto.');
@@ -468,12 +453,10 @@ export const ClientProjects: React.FC = () => {
   const handleConfirmDeleteProject = async () => {
     if (!projectToDelete) return;
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', projectToDelete.id);
-      if (error) throw error;
+      await deleteProject(projectToDelete.id);
       toast.success('Projeto excluído com sucesso!');
       setProjectDeleteDialogOpen(false);
       setProjectToDelete(null);
-      refreshData();
     } catch (error) {
       console.error('Error deleting project:', error);
       toast.error('Erro ao excluir projeto.');
@@ -577,18 +560,15 @@ export const ClientProjects: React.FC = () => {
     }
     setTaskCreateSubmitting(true);
     try {
-      const { error } = await supabase.from('tasks').insert({
+      await createTask({
         project_id: taskCreateProjectId,
         name: taskCreateForm.name.trim(),
         description: getWysiwygPlainText(taskCreateForm.description) ? taskCreateForm.description : null,
         due_date: taskCreateForm.due_date || null,
         status: taskCreateStatus,
-        created_by: user.id,
       });
-      if (error) throw error;
       toast.success('Tarefa criada com sucesso!');
       setTaskCreateDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error creating task:', error);
       toast.error('Erro ao criar tarefa.');
@@ -616,18 +596,13 @@ export const ClientProjects: React.FC = () => {
     }
     setTaskEditSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          name: taskEditForm.name.trim(),
-          description: getWysiwygPlainText(taskEditForm.description) ? taskEditForm.description : null,
-          due_date: taskEditForm.due_date || null,
-        })
-        .eq('id', taskEditForm.taskId);
-      if (error) throw error;
+      await updateTask(taskEditForm.taskId, {
+        name: taskEditForm.name.trim(),
+        description: getWysiwygPlainText(taskEditForm.description) ? taskEditForm.description : null,
+        due_date: taskEditForm.due_date || null,
+      });
       toast.success('Tarefa atualizada com sucesso!');
       setTaskEditDialogOpen(false);
-      refreshData();
     } catch (error) {
       console.error('Error updating task:', error);
       toast.error('Erro ao atualizar tarefa.');
@@ -694,12 +669,10 @@ export const ClientProjects: React.FC = () => {
   const handleConfirmTaskDelete = async () => {
     if (!taskToDelete) return;
     try {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskToDelete.id);
-      if (error) throw error;
+      await deleteTask(taskToDelete.id);
       toast.success('Tarefa excluída com sucesso!');
       setTaskDeleteDialogOpen(false);
       setTaskToDelete(null);
-      refreshData();
     } catch (error) {
       console.error('Error deleting task:', error);
       toast.error('Erro ao excluir tarefa.');
@@ -709,25 +682,7 @@ export const ClientProjects: React.FC = () => {
   // ---- Timer handlers for own tasks ----
   const handleStartTimer = async (taskId: string) => {
     if (!user) return;
-    const task = data.tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const project = data.projects.find((p) => p.id === task.project_id);
-    const client = project ? data.clients.find((c) => c.id === project.client_id) : null;
-
-    const { error } = await supabase.from('task_timers').insert({
-      task_id: taskId,
-      user_id: user.id,
-      task_title_snapshot: task.name,
-      task_description_snapshot: task.description,
-      project_name_snapshot: project?.name || null,
-      client_name_snapshot: client?.name || null,
-    });
-    if (error) {
-      console.error('Error starting timer:', error);
-      toast.error('Erro ao iniciar timer.');
-      return;
-    }
-    refreshData();
+    await startTaskTimer(taskId);
   };
 
   const handleStopTimer = async (taskId: string) => {
@@ -739,68 +694,36 @@ export const ClientProjects: React.FC = () => {
 
   const handleConfirmPause = async () => {
     if (!user || !pausingTaskId) return;
-    const timer = getCurrentUserActiveTimer(pausingTaskId);
-    if (!timer) return;
-    const startedAt = new Date(timer.started_at);
-    const now = new Date();
-    const elapsedMs = now.getTime() - startedAt.getTime() - (timer.paused_elapsed_seconds * 1000);
-    const hours = Math.max(0.01, parseFloat((elapsedMs / 3600000).toFixed(2)));
-
-    const { error: entryError } = await supabase.from('time_entries').insert({
-      task_id: pausingTaskId,
-      hours,
-      description: pauseDescription || 'Registro via timer',
-      date: new Date().toISOString().split('T')[0],
-      created_by: user.id,
-      entry_type: pauseEntryType,
-    });
-    if (entryError) {
-      console.error('Error creating time entry:', entryError);
+    const result = await stopTaskTimer(pausingTaskId, pauseDescription || 'Registro via timer', pauseEntryType);
+    if (result) {
+      toast.success(`Timer parado. ${result.hours}h registradas.`);
+    } else {
       toast.error('Erro ao registrar horas.');
-      return;
     }
-
-    const { error: deleteError } = await supabase.from('task_timers').delete().eq('id', timer.id);
-    if (deleteError) console.error('Error deleting timer:', deleteError);
-
-    toast.success(`Timer parado. ${hours}h registradas.`);
     setIsPauseDialogOpen(false);
     setPausingTaskId(null);
-    refreshData();
   };
 
   const handleDiscardTimer = async () => {
     if (!pausingTaskId) return;
-    const timer = getCurrentUserActiveTimer(pausingTaskId);
-    if (timer) {
-      await supabase.from('task_timers').delete().eq('id', timer.id);
-    }
+    await cancelTaskTimer(pausingTaskId);
     setIsPauseDialogOpen(false);
     setPausingTaskId(null);
     setPauseDescription('');
     toast.info('Timer descartado');
-    refreshData();
   };
 
   const handleCompleteTask = async (taskId: string) => {
-    const { error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId);
-    if (error) {
-      console.error('Error completing task:', error);
+    const success = await completeTask(taskId);
+    if (success) {
+      toast.success('Tarefa concluída!');
+    } else {
       toast.error('Erro ao concluir tarefa.');
-      return;
     }
-    toast.success('Tarefa concluída!');
-    refreshData();
   };
 
   const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-    if (error) {
-      console.error('Error updating task status:', error);
-      toast.error('Erro ao atualizar status da tarefa.');
-      return;
-    }
-    refreshData();
+    await updateTask(taskId, { status: newStatus });
   };
 
   // Helper functions for time conversion
@@ -834,41 +757,38 @@ export const ClientProjects: React.FC = () => {
     if (totalHours <= 0) { toast.error('Insira um tempo válido maior que zero.'); return; }
     setSubmitting(true);
     if (editingTimeEntryId) {
-      const { error } = await supabase.from('time_entries').update({
+      const result = await updateTimeEntry(editingTimeEntryId, {
         hours: totalHours,
         description: timeForm.description,
         date: timeForm.date,
         entry_type: timeForm.entry_type,
-      }).eq('id', editingTimeEntryId);
-      if (error) { console.error(error); toast.error('Erro ao atualizar registro.'); }
+      });
+      if (!result) toast.error('Erro ao atualizar registro.');
       else toast.success('Registro atualizado!');
     } else {
-      const { error } = await supabase.from('time_entries').insert({
+      const result = await createTimeEntry({
         task_id: selectedTaskId,
         hours: totalHours,
         description: timeForm.description,
         date: timeForm.date,
         entry_type: timeForm.entry_type,
-        created_by: user?.id,
       });
-      if (error) { console.error(error); toast.error('Erro ao registrar horas.'); }
+      if (!result) toast.error('Erro ao registrar horas.');
       else toast.success('Horas registradas!');
     }
     setSubmitting(false);
     setIsTimeDialogOpen(false);
     setEditingTimeEntryId(null);
-    refreshData();
   };
 
   const handleDeleteTimeEntry = async () => {
     if (editingTimeEntryId) {
-      const { error } = await supabase.from('time_entries').delete().eq('id', editingTimeEntryId);
-      if (error) { console.error(error); toast.error('Erro ao excluir registro.'); }
+      const success = await deleteTimeEntry(editingTimeEntryId);
+      if (!success) toast.error('Erro ao excluir registro.');
       else toast.success('Registro excluído!');
       setIsDeleteTimeEntryDialogOpen(false);
       setIsTimeDialogOpen(false);
       setEditingTimeEntryId(null);
-      refreshData();
     }
   };
 
@@ -1040,6 +960,8 @@ export const ClientProjects: React.FC = () => {
           onStartTimer={(taskId) => handleStartTimer(taskId)}
           onStopTimer={(taskId) => handleStopTimer(taskId)}
           onCompleteTask={(taskId) => handleCompleteTask(taskId)}
+          onUpdateProjectStatus={async (id, status) => { await updateProject(id, { status }); }}
+          onUpdateTaskStatus={async (id, status) => { await updateTask(id, { status }); }}
           onRequestTaskEdit={(task) => {
             const t = task as ClientTask;
             if (!isOwnTask(t)) {

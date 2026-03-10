@@ -132,6 +132,8 @@ interface ProjectTableViewProps {
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;
   onCompleteTask?: (taskId: string) => Promise<void>;
+  onUpdateProjectStatus?: (projectId: string, newStatus: string) => Promise<void>;
+  onUpdateTaskStatus?: (taskId: string, newStatus: string) => Promise<void>;
   onRequestTaskEdit?: (task: Task) => void;
   onEditRequest?: (project: Project) => void;
   onDeleteRequest?: (project: Project) => void;
@@ -202,6 +204,8 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   onStartTimer,
   onStopTimer,
   onCompleteTask,
+  onUpdateProjectStatus,
+  onUpdateTaskStatus,
   onRequestTaskEdit,
   onEditRequest,
   onDeleteRequest,
@@ -330,16 +334,20 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     const currentStatus = localProjectStatuses[project.id] || project.status;
     const next = getNextProjectStatus(currentStatus);
     setLocalProjectStatuses(prev => ({ ...prev, [project.id]: next }));
-    await supabase.from('projects').update({ status: next }).eq('id', project.id);
-  }, [localProjectStatuses]);
+    if (onUpdateProjectStatus) {
+      await onUpdateProjectStatus(project.id, next);
+    }
+  }, [localProjectStatuses, onUpdateProjectStatus]);
 
   const handleTaskStatusChange = useCallback(async (task: Task) => {
     if (task.is_pending_approval) return;
     const currentStatus = localTaskStatuses[task.id] || task.status;
     const next = getNextTaskStatus(currentStatus);
     setLocalTaskStatuses(prev => ({ ...prev, [task.id]: next }));
-    await supabase.from('tasks').update({ status: next }).eq('id', task.id);
-  }, [localTaskStatuses, sortedStages]);
+    if (onUpdateTaskStatus) {
+      await onUpdateTaskStatus(task.id, next);
+    }
+  }, [localTaskStatuses, sortedStages, onUpdateTaskStatus]);
 
   const getProjectCheckState = (status: string): boolean | 'indeterminate' => {
     if (status === 'completed') return true;
