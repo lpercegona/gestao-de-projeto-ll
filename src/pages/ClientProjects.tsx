@@ -714,24 +714,16 @@ export const ClientProjects: React.FC = () => {
   };
 
   const handleCompleteTask = async (taskId: string) => {
-    const { error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId);
-    if (error) {
-      console.error('Error completing task:', error);
+    const success = await completeTask(taskId);
+    if (success) {
+      toast.success('Tarefa concluída!');
+    } else {
       toast.error('Erro ao concluir tarefa.');
-      return;
     }
-    toast.success('Tarefa concluída!');
-    refreshData();
   };
 
   const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-    if (error) {
-      console.error('Error updating task status:', error);
-      toast.error('Erro ao atualizar status da tarefa.');
-      return;
-    }
-    refreshData();
+    await updateTask(taskId, { status: newStatus });
   };
 
   // Helper functions for time conversion
