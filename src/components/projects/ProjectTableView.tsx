@@ -204,6 +204,8 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   onStartTimer,
   onStopTimer,
   onCompleteTask,
+  onUpdateProjectStatus,
+  onUpdateTaskStatus,
   onRequestTaskEdit,
   onEditRequest,
   onDeleteRequest,
