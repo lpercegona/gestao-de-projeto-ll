@@ -682,25 +682,7 @@ export const ClientProjects: React.FC = () => {
   // ---- Timer handlers for own tasks ----
   const handleStartTimer = async (taskId: string) => {
     if (!user) return;
-    const task = data.tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const project = data.projects.find((p) => p.id === task.project_id);
-    const client = project ? data.clients.find((c) => c.id === project.client_id) : null;
-
-    const { error } = await supabase.from('task_timers').insert({
-      task_id: taskId,
-      user_id: user.id,
-      task_title_snapshot: task.name,
-      task_description_snapshot: task.description,
-      project_name_snapshot: project?.name || null,
-      client_name_snapshot: client?.name || null,
-    });
-    if (error) {
-      console.error('Error starting timer:', error);
-      toast.error('Erro ao iniciar timer.');
-      return;
-    }
-    refreshData();
+    await startTaskTimer(taskId);
   };
 
   const handleStopTimer = async (taskId: string) => {
