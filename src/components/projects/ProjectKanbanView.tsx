@@ -365,7 +365,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
     e.preventDefault();
     const taskId = e.dataTransfer.getData("taskId");
     if (taskId) {
-      const newStatus = getStatusFromStageKey(stageName);
+      const newStatus = getStatusFromStageKey(stageName, stages);
       await onUpdateTaskStatus(taskId, newStatus);
     }
   };
