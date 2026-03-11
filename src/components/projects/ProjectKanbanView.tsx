@@ -333,7 +333,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
     });
 
     relevantTasks.forEach((task) => {
-      const stageName = getStageKeyFromStatus(task.status);
+      const stageName = getStageKeyFromStatus(task.status, stages);
       if (grouped[stageName]) {
         grouped[stageName].push(task);
       } else {
