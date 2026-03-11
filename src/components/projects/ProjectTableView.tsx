@@ -20,6 +20,11 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  getStageKeyFromStatus,
+  stageToDbStatus,
+  LEGACY_STATUS_TO_NAME,
+} from "@/lib/kanbanStageMapping";
 
 interface Project {
   id: string;
@@ -141,15 +146,8 @@ interface ProjectTableViewProps {
 
 const PROJECT_STATUSES = ['active', 'paused', 'completed', 'archived'];
 
-// Map legacy status values to kanban stage names
-const STATUS_TO_STAGE_NAME: Record<string, string> = {
-  pending: 'Pendente',
-  in_progress: 'Em Andamento',
-  completed: 'Concluída',
-};
-
-const mapStatusToStageName = (status: string): string => {
-  return STATUS_TO_STAGE_NAME[status] || status;
+const mapStatusToStageName = (status: string, stages: { id: string; name: string; color: string | null; order_position: number }[]): string => {
+  return getStageKeyFromStatus(status, stages);
 };
 
 // Convert tailwind bg class to a saturated hex color for checkbox styling
@@ -316,22 +314,13 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     return PROJECT_STATUSES[idx + 1];
   };
 
-  const stageToDbStatus = (stage: KanbanStage): string => {
-    const STAGE_NAME_TO_DB: Record<string, string> = {
-      'Pendente': 'pending',
-      'Em Andamento': 'in_progress',
-      'Concluída': 'completed',
-    };
-    return STAGE_NAME_TO_DB[stage.name] || stage.id;
-  };
-
   const getNextTaskStatus = (current: string): string => {
     if (sortedStages.length === 0) {
       if (current === 'pending') return 'in_progress';
       if (current === 'in_progress') return 'completed';
       return 'pending';
     }
-    const mappedName = mapStatusToStageName(current);
+    const mappedName = mapStatusToStageName(current, sortedStages);
     const idx = sortedStages.findIndex((s) => s.name === mappedName || s.id === current);
     if (idx === -1) return stageToDbStatus(sortedStages[0]);
     const next = (idx + 1) % sortedStages.length;
@@ -365,7 +354,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   };
 
   const getTaskCheckState = (status: string): boolean | 'indeterminate' => {
-    const mappedName = mapStatusToStageName(status);
+    const mappedName = mapStatusToStageName(status, sortedStages);
     const lastStage = sortedStages.length > 0 ? sortedStages[sortedStages.length - 1] : null;
     const firstStage = sortedStages.length > 0 ? sortedStages[0] : null;
     if (status === 'completed' || (lastStage && mappedName === lastStage.name)) return true;
@@ -374,7 +363,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   };
 
   const getTaskStageColor = (status: string): string | null => {
-    const mappedName = mapStatusToStageName(status);
+    const mappedName = mapStatusToStageName(status, sortedStages);
     const stage = sortedStages.find(s => s.name === mappedName || s.id === status);
     return stage ? tailwindColorToHex(stage.color) : null;
   };
@@ -392,7 +381,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
           : "bg-muted text-muted-foreground";
 
   const getTaskStatusLabel = (status: string): string => {
-    const mappedName = mapStatusToStageName(status);
+    const mappedName = mapStatusToStageName(status, sortedStages);
     const stage = sortedStages.find(s => s.name === mappedName || s.id === status);
     if (stage) return stage.name;
     return mappedName;

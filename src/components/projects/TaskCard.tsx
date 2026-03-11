@@ -16,6 +16,7 @@ import { formatHours } from '@/lib/formatHours';
 import { cn } from '@/lib/utils';
 import { ExpandableDescription } from './ExpandableDescription';
 import { Badge } from '@/components/ui/badge';
+import { getStageInfoFromStatus, isCompletedStatus, type KanbanStageBase } from '@/lib/kanbanStageMapping';
 
 interface TimeEntry {
   id: string;
@@ -125,23 +126,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const dueDateStatus = getDueDateStatus();
 
-  // Find the kanban stage for this task's status
-  const getStageInfo = (status: string) => {
-    const stage = kanbanStages.find(s => s.name === status);
-    if (stage) {
-      return { name: stage.name, color: stage.color };
-    }
-    // Fallback for legacy status values
-    switch (status) {
-      case 'pending': return { name: 'Pendente', color: '#eab308' };
-      case 'in_progress': return { name: 'Em Andamento', color: '#3b82f6' };
-      case 'completed': return { name: 'Concluída', color: '#22c55e' };
-      case 'archived': return { name: 'Arquivo', color: '#64748b' };
-      default: return { name: status, color: null };
-    }
-  };
-
-  const stageInfo = getStageInfo(task.status);
+  const stageInfo = getStageInfoFromStatus(task.status, kanbanStages);
   const isPendingApproval = Boolean(task.is_pending_approval);
 
   return (
@@ -256,7 +241,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-foreground">{formatHours(taskHours)}</span>
           <span>por {getCreatorName(task.created_by)}</span>
-          {task.due_date && task.status !== 'completed' && task.status !== 'done' && task.status !== 'archived' && (
+          {task.due_date && !isCompletedStatus(task.status, kanbanStages) && task.status !== 'archived' && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className={cn(

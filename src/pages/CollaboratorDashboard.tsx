@@ -53,7 +53,7 @@ export const CollaboratorDashboard: React.FC = () => {
     
     // Add tasks (only non-completed ones)
     data.tasks
-      .filter(t => t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived')
+      .filter(t => t.status !== 'completed' && t.status !== 'archived')
       .forEach(t => {
         const project = data.projects.find(p => p.id === t.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;
@@ -106,7 +106,7 @@ export const CollaboratorDashboard: React.FC = () => {
 
   // Stats for collaborator
   const activeProjects = data.projects.filter(p => p.status === 'active').length;
-  const pendingTasks = data.tasks.filter(t => t.status !== 'completed' && t.status !== 'done').length;
+  const pendingTasks = data.tasks.filter(t => t.status !== 'completed').length;
   const overdueCount = upcomingDeadlines.filter(d => d.status === 'overdue').length;
 
   const stats = [
