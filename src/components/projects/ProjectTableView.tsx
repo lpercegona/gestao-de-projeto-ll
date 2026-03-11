@@ -381,7 +381,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
           : "bg-muted text-muted-foreground";
 
   const getTaskStatusLabel = (status: string): string => {
-    const mappedName = mapStatusToStageName(status);
+    const mappedName = mapStatusToStageName(status, sortedStages);
     const stage = sortedStages.find(s => s.name === mappedName || s.id === status);
     if (stage) return stage.name;
     return mappedName;

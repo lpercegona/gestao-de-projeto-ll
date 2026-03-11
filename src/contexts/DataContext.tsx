@@ -922,8 +922,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await stopTaskTimer(taskId);
     }
 
-    // Update task status to completed
-    const updated = await updateTask(taskId, { status: 'completed' });
+    // Update task status to the last kanban stage (dynamic completed)
+    const completedStatus = getCompletedDbStatus(data.kanbanStages);
+    const updated = await updateTask(taskId, { status: completedStatus });
     return !!updated;
   };
 

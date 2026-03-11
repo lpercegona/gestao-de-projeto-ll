@@ -47,7 +47,7 @@ export const DashboardCalendar: React.FC = () => {
     });
     
     data.tasks.forEach(t => {
-      if (t.due_date && t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived' && isSameDay(parseISO(t.due_date), date)) {
+      if (t.due_date && t.status !== 'completed' && t.status !== 'archived' && isSameDay(parseISO(t.due_date), date)) {
         const due = parseISO(t.due_date);
         items.push({ type: 'task', name: t.name, id: t.id, isOverdue: isPast(due) && !isToday(due) });
       }

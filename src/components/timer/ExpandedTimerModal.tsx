@@ -107,7 +107,7 @@ export const ExpandedTimerModal: React.FC<ExpandedTimerModalProps> = ({ open, on
 
   const upcomingTasks = useMemo(() => {
     return [...data.tasks]
-      .filter((task) => task.status !== 'completed' && task.status !== 'done')
+      .filter((task) => task.status !== 'completed')
       .sort((a, b) => {
         if (a.due_date && b.due_date) {
           return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();

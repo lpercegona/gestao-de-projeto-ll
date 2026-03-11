@@ -106,7 +106,7 @@ export const CollaboratorDashboard: React.FC = () => {
 
   // Stats for collaborator
   const activeProjects = data.projects.filter(p => p.status === 'active').length;
-  const pendingTasks = data.tasks.filter(t => t.status !== 'completed' && t.status !== 'done').length;
+  const pendingTasks = data.tasks.filter(t => t.status !== 'completed').length;
   const overdueCount = upcomingDeadlines.filter(d => d.status === 'overdue').length;
 
   const stats = [
