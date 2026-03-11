@@ -622,7 +622,7 @@ export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
                           if (firstProject) {
                             onCreateTask(
                               firstProject.id,
-                              getStatusFromStageKey(stage.name),
+                              getStatusFromStageKey(stage.name, stages),
                             );
                           }
                         }}
