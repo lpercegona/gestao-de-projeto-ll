@@ -126,23 +126,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const dueDateStatus = getDueDateStatus();
 
-  // Find the kanban stage for this task's status
-  const getStageInfo = (status: string) => {
-    const stage = kanbanStages.find(s => s.name === status);
-    if (stage) {
-      return { name: stage.name, color: stage.color };
-    }
-    // Fallback for legacy status values
-    switch (status) {
-      case 'pending': return { name: 'Pendente', color: '#eab308' };
-      case 'in_progress': return { name: 'Em Andamento', color: '#3b82f6' };
-      case 'completed': return { name: 'Concluída', color: '#22c55e' };
-      case 'archived': return { name: 'Arquivo', color: '#64748b' };
-      default: return { name: status, color: null };
-    }
-  };
-
-  const stageInfo = getStageInfo(task.status);
+  const stageInfo = getStageInfoFromStatus(task.status, kanbanStages);
   const isPendingApproval = Boolean(task.is_pending_approval);
 
   return (
