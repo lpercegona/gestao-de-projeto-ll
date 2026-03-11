@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import { getCompletedDbStatus } from '@/lib/kanbanStageMapping';
 
 interface Client {
   id: string;
