@@ -354,7 +354,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   };
 
   const getTaskCheckState = (status: string): boolean | 'indeterminate' => {
-    const mappedName = mapStatusToStageName(status);
+    const mappedName = mapStatusToStageName(status, sortedStages);
     const lastStage = sortedStages.length > 0 ? sortedStages[sortedStages.length - 1] : null;
     const firstStage = sortedStages.length > 0 ? sortedStages[0] : null;
     if (status === 'completed' || (lastStage && mappedName === lastStage.name)) return true;
@@ -363,7 +363,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   };
 
   const getTaskStageColor = (status: string): string | null => {
-    const mappedName = mapStatusToStageName(status);
+    const mappedName = mapStatusToStageName(status, sortedStages);
     const stage = sortedStages.find(s => s.name === mappedName || s.id === status);
     return stage ? tailwindColorToHex(stage.color) : null;
   };
