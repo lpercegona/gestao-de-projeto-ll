@@ -27,7 +27,7 @@ export const DashboardCalendar: React.FC = () => {
     
     // Tasks with due dates
     data.tasks.forEach(t => {
-      if (t.due_date && t.status !== 'completed' && t.status !== 'done' && t.status !== 'archived') {
+      if (t.due_date && t.status !== 'completed' && t.status !== 'archived') {
         dates.push(parseISO(t.due_date));
       }
     });
