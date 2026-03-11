@@ -314,22 +314,13 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
     return PROJECT_STATUSES[idx + 1];
   };
 
-  const stageToDbStatus = (stage: KanbanStage): string => {
-    const STAGE_NAME_TO_DB: Record<string, string> = {
-      'Pendente': 'pending',
-      'Em Andamento': 'in_progress',
-      'Concluída': 'completed',
-    };
-    return STAGE_NAME_TO_DB[stage.name] || stage.id;
-  };
-
   const getNextTaskStatus = (current: string): string => {
     if (sortedStages.length === 0) {
       if (current === 'pending') return 'in_progress';
       if (current === 'in_progress') return 'completed';
       return 'pending';
     }
-    const mappedName = mapStatusToStageName(current);
+    const mappedName = mapStatusToStageName(current, sortedStages);
     const idx = sortedStages.findIndex((s) => s.name === mappedName || s.id === current);
     if (idx === -1) return stageToDbStatus(sortedStages[0]);
     const next = (idx + 1) % sortedStages.length;
