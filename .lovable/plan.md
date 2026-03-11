@@ -1,92 +1,53 @@
 
 
-# Corrigir erro de build + Prevenir refresh durante edição em diálogos
+## Plano: Corrigir inconsistências de mapeamento de status entre visualizações
 
-## Problema 1: Erro de build
-`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
+### Problemas identificados
 
-**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
+1. **Mapeamento duplicado e divergente** — As funções de mapeamento status↔etapa existem em dois arquivos separados (`ProjectTableView.tsx` e `ProjectKanbanView.tsx`) com nomes diferentes mas lógica similar. Qualquer alteração futura precisa ser feita em ambos, gerando risco de divergência.
 
-## Problema 2: Refresh destrói dados em diálogos abertos
+2. **`completeTask` no DataContext usa `'completed'` hardcoded** — Quando o usuário renomeia a última etapa do Kanban (ex: "Finalizado" em vez de "Concluída"), `completeTask()` salva `status: 'completed'` no banco, que não corresponde a nenhuma etapa customizada — a tarefa "desaparece" para a primeira coluna do Kanban.
 
-**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
+3. **`TaskCard` tem fallback hardcoded para status legacy** — A função `getStageInfo` no `TaskCard.tsx` mapeia `pending/in_progress/completed/archived` com nomes e cores fixos, ignorando completamente as etapas customizadas do Kanban quando recebidas via prop `kanbanStages`.
 
-**Estratégia**: Duas camadas de proteção.
+4. **Filtros de `'done'` espalhados pelo código** — Vários componentes filtram `task.status !== 'done'` (CalendarPage, DashboardCalendar, CollaboratorDashboard, TaskCard, ExpandedTimerModal), mas `'done'` nunca é gravado no banco — é um valor fantasma que nunca faz match, poluindo as condições sem efeito.
 
-### Camada 1: Estabilizar referência do `user` no AuthContext
+5. **`getNextTaskStatus` na Tabela cicla para a primeira etapa após a última** — Se a última etapa é "Concluída" e o usuário clica novamente, o status volta para "Pendente". Isso pode ser intencional, mas se o usuário renomeou etapas, o ciclo pode passar por um stage.id (UUID) que não é reconhecido por filtros legacy.
 
-No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
+### Solução
 
-```typescript
-// AuthContext.tsx, dentro do onAuthStateChange
-const newUser = session?.user ?? null;
-setSession(session);
-setUser(prev => {
-  if (prev?.id === newUser?.id) return prev; // manter referência estável
-  return newUser;
-});
-```
+#### 1. Extrair mapeamento para módulo compartilhado `src/lib/kanbanStageMapping.ts`
+Centralizar todas as funções de mapeamento bidirecional (status DB ↔ nome de etapa) em um único arquivo, eliminando duplicação:
+- `getStageKeyFromStatus(status, stages)` — DB status → stage name
+- `getStatusFromStageKey(stageName, stages)` — stage name → DB status
+- `getStageInfoFromStatus(status, stages)` — retorna `{ name, color, dbStatus }` para um dado status
+- `isCompletedStatus(status, stages)` — verifica se o status corresponde à última etapa
+- `LEGACY_STATUS_TO_NAME` e `STAGE_NAME_TO_LEGACY` — constantes exportadas
 
-Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
+#### 2. Atualizar `ProjectTableView.tsx` e `ProjectKanbanView.tsx`
+- Remover funções locais de mapeamento
+- Importar do módulo compartilhado
 
-### Camada 2: Lock de edição global no DataContext
+#### 3. Atualizar `TaskCard.tsx`
+- Substituir `getStageInfo` hardcoded por chamada ao módulo compartilhado (`getStageInfoFromStatus`)
+- A prop `kanbanStages` já é passada — usar efetivamente
 
-Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+#### 4. Atualizar `completeTask` no `DataContext.tsx`
+- Em vez de `{ status: 'completed' }`, determinar o status correto da última etapa do Kanban usando `getStatusFromStageKey(lastStage.name, stages)`
+- Requer que `DataContext` tenha acesso às `kanbanStages` (já armazenadas em `data.kanbanStages`)
 
-```typescript
-// DataContext.tsx
-const editingLockRef = useRef(0);
+#### 5. Remover referências a `'done'`
+- Nos 5 arquivos que filtram `status !== 'done'`, remover essa condição — `'done'` nunca é usado como valor de status no banco
+- Arquivos: `CalendarPage.tsx`, `DashboardCalendar.tsx`, `CollaboratorDashboard.tsx`, `TaskCard.tsx`, `ExpandedTimerModal.tsx`
 
-const lockEditing = useCallback(() => {
-  editingLockRef.current += 1;
-}, []);
-
-const unlockEditing = useCallback(() => {
-  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
-}, []);
-
-// No refreshData:
-const refreshData = useCallback(async (showLoading = true) => {
-  if (editingLockRef.current > 0) return; // não recarregar se em edição
-  // ... resto da lógica
-}, [user]);
-```
-
-Expor `lockEditing` e `unlockEditing` no contexto.
-
-### Camada 3: Aplicar o lock nos diálogos
-
-Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
-
-| Arquivo | Diálogo |
-|---|---|
-| `QuickActionsPanel.tsx` | Criação rápida de cliente |
-| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
-| `UserCreateDialog.tsx` | Criação de usuário |
-| `UserEditDialog.tsx` | Edição de usuário |
-| `ClientEditRequestForm.tsx` | Edição de cliente |
-| `ProjectRequestForm.tsx` | Solicitação de projeto |
-| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
-| `ReportShareDialog.tsx` | Compartilhamento de relatório |
-| `ProjectTableView.tsx` | Diálogo de detalhes |
-| `Services.tsx` | Criação/edição de itens de serviço |
-| `ExpandedTimerModal.tsx` | Timer expandido |
-| `GlobalTimerCompleteDialog.tsx` | Completar timer |
-
-Padrão de uso via `useEffect`:
-
-```typescript
-const { lockEditing, unlockEditing } = useData();
-useEffect(() => {
-  if (open) { lockEditing(); } else { unlockEditing(); }
-  return () => unlockEditing();
-}, [open]);
-```
-
-## Arquivos alterados
-
-1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
-2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
-3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
-4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
+### Arquivos alterados
+1. `src/lib/kanbanStageMapping.ts` — **novo** — módulo centralizado
+2. `src/components/projects/ProjectTableView.tsx` — importar do módulo
+3. `src/components/projects/ProjectKanbanView.tsx` — importar do módulo
+4. `src/components/projects/TaskCard.tsx` — usar mapeamento dinâmico
+5. `src/contexts/DataContext.tsx` — `completeTask` usa última etapa dinâmica
+6. `src/pages/CalendarPage.tsx` — remover `'done'`
+7. `src/components/dashboard/DashboardCalendar.tsx` — remover `'done'`
+8. `src/pages/CollaboratorDashboard.tsx` — remover `'done'`
+9. `src/components/timer/ExpandedTimerModal.tsx` — remover `'done'`
 
