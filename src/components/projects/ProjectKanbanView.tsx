@@ -123,31 +123,51 @@ interface ProjectKanbanViewProps {
   onRequestTaskEdit?: (task: Task) => void;
 }
 
-// Map task status to kanban stage
-const getStageKeyFromStatus = (status: string): string => {
-  switch (status) {
-    case "pending":
-      return "Pendente";
-    case "in_progress":
-      return "Em Andamento";
-    case "completed":
-      return "Concluída";
-    default:
-      return "Pendente";
-  }
+// Legacy status ↔ default stage name mapping
+const LEGACY_STATUS_TO_NAME: Record<string, string> = {
+  pending: "Pendente",
+  in_progress: "Em Andamento",
+  completed: "Concluída",
 };
 
-const getStatusFromStageKey = (stageName: string): string => {
-  switch (stageName) {
-    case "Pendente":
-      return "pending";
-    case "Em Andamento":
-      return "in_progress";
-    case "Concluída":
-      return "completed";
-    default:
-      return "pending";
+const STAGE_NAME_TO_LEGACY: Record<string, string> = {
+  Pendente: "pending",
+  "Em Andamento": "in_progress",
+  Concluída: "completed",
+};
+
+// Map a DB status value to the kanban stage name it belongs to
+const getStageKeyFromStatus = (
+  status: string,
+  stages: KanbanStage[],
+): string => {
+  // 1. Legacy status (pending / in_progress / completed)
+  if (LEGACY_STATUS_TO_NAME[status]) {
+    return LEGACY_STATUS_TO_NAME[status];
   }
+  // 2. Custom stage stored by id
+  const byId = stages.find((s) => s.id === status);
+  if (byId) return byId.name;
+  // 3. Value is already a stage name
+  const byName = stages.find((s) => s.name === status);
+  if (byName) return byName.name;
+  // Fallback
+  return stages[0]?.name || "Pendente";
+};
+
+// Map a kanban stage name back to the DB status value
+const getStatusFromStageKey = (
+  stageName: string,
+  stages: KanbanStage[],
+): string => {
+  // 1. Default stage → legacy status key
+  if (STAGE_NAME_TO_LEGACY[stageName]) {
+    return STAGE_NAME_TO_LEGACY[stageName];
+  }
+  // 2. Custom stage → use its id
+  const stage = stages.find((s) => s.name === stageName);
+  if (stage) return stage.id;
+  return "pending";
 };
 
 export const ProjectKanbanView: React.FC<ProjectKanbanViewProps> = ({
