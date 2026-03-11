@@ -146,15 +146,8 @@ interface ProjectTableViewProps {
 
 const PROJECT_STATUSES = ['active', 'paused', 'completed', 'archived'];
 
-// Map legacy status values to kanban stage names
-const STATUS_TO_STAGE_NAME: Record<string, string> = {
-  pending: 'Pendente',
-  in_progress: 'Em Andamento',
-  completed: 'Concluída',
-};
-
-const mapStatusToStageName = (status: string): string => {
-  return STATUS_TO_STAGE_NAME[status] || status;
+const mapStatusToStageName = (status: string, stages: { id: string; name: string; color: string | null; order_position: number }[]): string => {
+  return getStageKeyFromStatus(status, stages);
 };
 
 // Convert tailwind bg class to a saturated hex color for checkbox styling
