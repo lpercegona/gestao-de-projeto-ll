@@ -16,6 +16,7 @@ import { formatHours } from '@/lib/formatHours';
 import { cn } from '@/lib/utils';
 import { ExpandableDescription } from './ExpandableDescription';
 import { Badge } from '@/components/ui/badge';
+import { getStageInfoFromStatus, isCompletedStatus, type KanbanStageBase } from '@/lib/kanbanStageMapping';
 
 interface TimeEntry {
   id: string;
