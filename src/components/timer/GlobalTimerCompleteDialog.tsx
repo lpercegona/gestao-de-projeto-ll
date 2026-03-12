@@ -311,7 +311,7 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 max-h-[50vh] overflow-y-auto pr-1">
           {/* Entry type toggle */}
           <div className="space-y-2">
             <Label>Tipo de registro</Label>
