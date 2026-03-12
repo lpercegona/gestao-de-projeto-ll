@@ -1663,7 +1663,7 @@ export const Projects: React.FC = () => {
         <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTime}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
               <div className="space-y-2"><Label>Tempo (HH:mm)</Label><Input type="time" value={timeForm.time} onChange={(e) => setTimeForm({ ...timeForm, time: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Data</Label><Input type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2">
@@ -1698,7 +1698,7 @@ export const Projects: React.FC = () => {
       <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
         <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label>Tipo de Registro</Label>
               <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
@@ -1729,7 +1729,7 @@ export const Projects: React.FC = () => {
         <DialogContent className="max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitColumn}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
               <div className="space-y-2"><Label>Nome do Campo</Label><Input value={columnFormData.name} onChange={(e) => setColumnFormData({ ...columnFormData, name: e.target.value })} placeholder="Ex: Categoria" required disabled={submittingColumn} /></div>
               <div className="space-y-2"><Label>Tipo</Label><Select value={columnFormData.type} onValueChange={(v: 'text' | 'select') => setColumnFormData({ ...columnFormData, type: v })} disabled={submittingColumn}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="text">Texto livre</SelectItem><SelectItem value="select">Lista de opções</SelectItem></SelectContent></Select></div>
               {columnFormData.type === 'select' && (
