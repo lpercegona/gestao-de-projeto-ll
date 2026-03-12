@@ -493,7 +493,7 @@ export const ProjectDetail: React.FC = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTime}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[50vh] overflow-y-auto pr-1">
               <div className="space-y-2">
                 <Label htmlFor="time">Tempo (HH:mm)</Label>
                 <Input 
