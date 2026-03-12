@@ -581,7 +581,7 @@ export const ProjectDetail: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Concluir Registro</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[50vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="pauseDescription">O que foi feito? (opcional)</Label>
               <Textarea
