@@ -239,7 +239,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const clientsQuery = isCollaborator && !isAdminOrMaster
         ? supabase.from('clients_limited' as any).select('*').order('created_at', { ascending: false })
         : supabase.from('clients').select('*').order('created_at', { ascending: false });
-      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes] = await Promise.all([
+      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes, remindersRes] = await Promise.all([
         clientsQuery,
         supabase.from('projects').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
@@ -249,6 +249,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('profiles').select('user_id, full_name'),
         supabase.from('task_timers').select('*'),
         supabase.from('kanban_stages').select('*').order('order_position', { ascending: true }),
+        supabase.from('reminders').select('*').order('reminder_date', { ascending: true }),
       ]);
 
       // Build profiles map for creator names
@@ -289,6 +290,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           client_name_snapshot: (timer as any).client_name_snapshot || null,
         })) as TaskTimer[],
         kanbanStages: getEffectiveKanbanStages(allStages, user.id),
+        reminders: (remindersRes.data || []) as Reminder[],
       });
     } catch (error) {
       console.error('Error fetching data:', error);
