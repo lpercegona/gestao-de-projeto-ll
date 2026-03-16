@@ -113,6 +113,7 @@ export interface Reminder {
   client_id: string | null;
   owner_id: string;
   created_at: string;
+  recurrence: 'none' | 'monthly' | 'yearly';
 }
 
 interface AppData {
