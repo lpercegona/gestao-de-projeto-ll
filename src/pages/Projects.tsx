@@ -1642,7 +1642,7 @@ export const Projects: React.FC = () => {
 
       {/* Task Dialog */}
       <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTask}>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
