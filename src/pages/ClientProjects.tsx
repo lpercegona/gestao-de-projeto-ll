@@ -1319,7 +1319,7 @@ export const ClientProjects: React.FC = () => {
 
       {/* Edit own task dialog */}
       <Dialog open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Tarefa</DialogTitle>
           </DialogHeader>

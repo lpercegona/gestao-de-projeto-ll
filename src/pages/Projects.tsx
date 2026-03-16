@@ -452,8 +452,17 @@ export const Projects: React.FC = () => {
   }, [visibleProjects, visibleRequestProjects, visibleEditRequests, showOnlyRequests]);
 
   const pendingRequestsCount = useMemo(() => {
-    return requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')).length + editRequests.filter((request) => request.status === 'pending').length;
-  }, [requestProjects, editRequests]);
+    const pendingProjectRequests = requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')).length;
+    const requestIds = new Set(requestProjects.map(r => r.id));
+    const projectIds = new Set(data.projects.map(p => p.id));
+    const taskIds = new Set(data.tasks.map(t => t.id));
+    const pendingEditRequests = editRequests.filter((request) => {
+      if (request.status !== 'pending') return false;
+      const entityId = request.entity_id;
+      return requestIds.has(entityId) || projectIds.has(entityId) || taskIds.has(entityId);
+    }).length;
+    return pendingProjectRequests + pendingEditRequests;
+  }, [requestProjects, editRequests, data.projects, data.tasks]);
 
 
   const handleOpenRequestDialog = (project: UnifiedProject) => {
