@@ -745,6 +745,8 @@ export const Projects: React.FC = () => {
       }
 
       if (project.request_id) {
+        // Delete related edit_requests first to avoid orphans
+        await supabase.from('edit_requests').delete().eq('entity_id', project.request_id);
         const { error } = await supabase.from('project_requests').delete().eq('id', project.request_id);
         if (error) throw error;
         setRequestProjects((prev) => prev.filter((item) => item.id !== project.request_id));
