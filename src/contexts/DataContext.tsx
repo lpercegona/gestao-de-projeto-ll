@@ -105,6 +105,16 @@ interface KanbanStage {
   owner_id: string | null;
 }
 
+export interface Reminder {
+  id: string;
+  title: string;
+  reminder_date: string;
+  description: string | null;
+  client_id: string | null;
+  owner_id: string;
+  created_at: string;
+}
+
 interface AppData {
   clients: Client[];
   projects: Project[];
@@ -114,6 +124,7 @@ interface AppData {
   projectAccess: UserProjectAccess[];
   taskTimers: TaskTimer[];
   kanbanStages: KanbanStage[];
+  reminders: Reminder[];
 }
 
 const getEffectiveKanbanStages = (stages: KanbanStage[], userId: string): KanbanStage[] => {
