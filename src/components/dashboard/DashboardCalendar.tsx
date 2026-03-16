@@ -26,7 +26,10 @@ export const DashboardCalendar: React.FC = () => {
     
     data.tasks.forEach(t => {
       if (t.due_date && t.status !== 'completed' && t.status !== 'archived') {
-        dates.push(parseISO(t.due_date));
+        const project = data.projects.find(p => p.id === t.project_id);
+        if (project && project.status !== 'archived') {
+          dates.push(parseISO(t.due_date));
+        }
       }
     });
 
