@@ -980,6 +980,7 @@ export type Database = {
           description: string | null
           id: string
           owner_id: string
+          recurrence: string
           reminder_date: string
           title: string
         }
@@ -989,6 +990,7 @@ export type Database = {
           description?: string | null
           id?: string
           owner_id: string
+          recurrence?: string
           reminder_date: string
           title: string
         }
@@ -998,6 +1000,7 @@ export type Database = {
           description?: string | null
           id?: string
           owner_id?: string
+          recurrence?: string
           reminder_date?: string
           title?: string
         }
