@@ -3,12 +3,19 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus, Bell, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
@@ -17,7 +24,7 @@ import { toast } from 'sonner';
 
 interface CalendarItem {
   id: string;
-  type: 'project' | 'task';
+  type: 'project' | 'task' | 'reminder';
   name: string;
   due_date: string;
   projectId?: string;
@@ -27,12 +34,17 @@ interface CalendarItem {
 }
 
 export const CalendarPage: React.FC = () => {
-  const { data } = useData();
-  const { isClient, user } = useAuth();
+  const { data, createReminder } = useData();
+  const { isClient, isAdminOrMaster, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [reminderTitle, setReminderTitle] = useState('');
+  const [reminderDate, setReminderDate] = useState<Date | undefined>();
+  const [reminderDescription, setReminderDescription] = useState('');
+  const [reminderClientId, setReminderClientId] = useState<string>('');
 
   // Handle project request submission for clients
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
@@ -69,12 +81,41 @@ export const CalendarPage: React.FC = () => {
     toast.success('Solicitação enviada com sucesso!');
   };
 
+  const handleOpenReminderDialog = () => {
+    setReminderTitle('');
+    setReminderDate(selectedDate);
+    setReminderDescription('');
+    setReminderClientId('');
+    setShowReminderDialog(true);
+  };
+
+  const handleCreateReminder = async () => {
+    if (!reminderTitle.trim() || !reminderDate) {
+      toast.error('Preencha o título e a data');
+      return;
+    }
+
+    const result = await createReminder({
+      title: reminderTitle.trim(),
+      reminder_date: format(reminderDate, 'yyyy-MM-dd'),
+      description: reminderDescription.trim() || null,
+      client_id: (reminderClientId && reminderClientId !== 'none') ? reminderClientId : null,
+    });
+
+    if (result) {
+      toast.success('Lembrete criado com sucesso!');
+      setShowReminderDialog(false);
+    } else {
+      toast.error('Erro ao criar lembrete');
+    }
+  };
+
   // Get all items with deadlines
   const allItems = useMemo((): CalendarItem[] => {
     const items: CalendarItem[] = [];
     
     data.projects
-      .filter(p => p.due_date && p.status !== 'completed' && p.status !== 'archived' && p.status !== 'archived')
+      .filter(p => p.due_date && p.status !== 'completed' && p.status !== 'archived')
       .forEach(p => {
         const client = data.clients.find(c => c.id === p.client_id);
         const status = getDeadlineStatus(p.due_date!);
@@ -83,7 +124,6 @@ export const CalendarPage: React.FC = () => {
           type: 'project',
           name: p.name,
           due_date: p.due_date!,
-          // Only show client name for non-client users
           clientName: isClient ? undefined : ((client as any)?.company || client?.name),
           status: status || 'normal',
         });
@@ -102,24 +142,34 @@ export const CalendarPage: React.FC = () => {
           due_date: t.due_date!,
           projectId: t.project_id,
           projectName: project?.name,
-          // Only show client name for non-client users
           clientName: isClient ? undefined : ((client as any)?.company || client?.name),
           status: status || 'normal',
         });
       });
+
+    // Add reminders (only for admin/master_admin)
+    if (!isClient) {
+      data.reminders.forEach(r => {
+        const client = r.client_id ? data.clients.find(c => c.id === r.client_id) : null;
+        const status = getDeadlineStatus(r.reminder_date);
+        items.push({
+          id: r.id,
+          type: 'reminder',
+          name: r.title,
+          due_date: r.reminder_date,
+          clientName: client ? ((client as any)?.company || client?.name) : undefined,
+          status: status || 'normal',
+        });
+      });
+    }
     
     return items.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
-  }, [data.projects, data.tasks, data.clients]);
+  }, [data.projects, data.tasks, data.clients, data.reminders, isClient]);
 
   // Items for selected date
   const selectedDateItems = useMemo(() => {
     return allItems.filter(item => isSameDay(parseISO(item.due_date), selectedDate));
   }, [allItems, selectedDate]);
-
-  // Get dates with deadlines for the calendar
-  const datesWithDeadlines = useMemo(() => {
-    return allItems.map(item => parseISO(item.due_date));
-  }, [allItems]);
 
   // Calendar days for the month view
   const monthDays = useMemo(() => {
@@ -129,7 +179,7 @@ export const CalendarPage: React.FC = () => {
   }, [currentMonth]);
 
   const handleNavigate = (item: CalendarItem) => {
-    // For clients, navigate to /my-projects instead of /projects
+    if (item.type === 'reminder') return; // Reminders are not navigable
     const basePath = isClient ? '/my-projects' : '/projects';
     
     if (item.type === 'project') {
@@ -149,6 +199,56 @@ export const CalendarPage: React.FC = () => {
         return 'bg-[hsl(var(--primary)/0.65)] text-primary-foreground';
     }
   };
+
+  const getItemIcon = (type: CalendarItem['type']) => {
+    switch (type) {
+      case 'project': return <FolderKanban className="h-3.5 w-3.5" />;
+      case 'task': return <ListTodo className="h-3.5 w-3.5" />;
+      case 'reminder': return <Bell className="h-3.5 w-3.5" />;
+    }
+  };
+
+  const getItemBadge = (type: CalendarItem['type']) => {
+    switch (type) {
+      case 'project': return <Badge variant="default" className="text-xs">Projeto</Badge>;
+      case 'task': return <Badge variant="secondary" className="text-xs">Tarefa</Badge>;
+      case 'reminder': return <Badge variant="outline" className="text-xs">Lembrete</Badge>;
+    }
+  };
+
+  const renderItemCard = (item: CalendarItem, showDate = false) => (
+    <div
+      key={`${item.type}-${item.id}`}
+      className={cn(
+        "flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
+        item.type !== 'reminder' && !isClient && "cursor-pointer hover:bg-accent/50"
+      )}
+      onClick={() => item.type !== 'reminder' && !isClient && handleNavigate(item)}
+    >
+      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
+        <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
+          {getItemIcon(item.type)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
+          <p className="text-xs text-muted-foreground break-words line-clamp-1">
+            {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
+          </p>
+        </div>
+      </div>
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end sm:shrink-0">
+        {item.status === 'overdue' && (
+          <Badge variant="destructive" className="text-xs shrink-0">Atrasado</Badge>
+        )}
+        {showDate && (
+          <span className="text-xs text-muted-foreground">
+            {format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}
+          </span>
+        )}
+        {getItemBadge(item.type)}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -251,14 +351,24 @@ export const CalendarPage: React.FC = () => {
                 {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
               </CardTitle>
               {isClient && (
-                <Button
-                  variant="default"
-                  size="icon"
-                  onClick={() => setShowRequestForm(true)}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-      
+                <Button variant="default" size="icon" onClick={() => setShowRequestForm(true)}>
+                  <Plus className="h-4 w-4" />
                 </Button>
+              )}
+              {isAdminOrMaster && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="default" size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleOpenReminderDialog}>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Novo Lembrete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </CardHeader>
@@ -269,42 +379,7 @@ export const CalendarPage: React.FC = () => {
               </p>
             ) : (
               <div className="space-y-3">
-                {selectedDateItems.map(item => (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    className={cn(
-                      "flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
-                      !isClient && "cursor-pointer hover:bg-accent/50"
-                    )}
-                    onClick={() => !isClient && handleNavigate(item)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
-                      <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
-                        {item.type === 'project' ? (
-                          <FolderKanban className="h-3.5 w-3.5" />
-                        ) : (
-                          <ListTodo className="h-3.5 w-3.5" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
-                        <p className="text-xs text-muted-foreground break-words line-clamp-1">
-                          {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-end sm:shrink-0">
-                      {item.status === 'overdue' && (
-                        <Badge variant="destructive" className="text-xs shrink-0">
-                          Atrasado
-                        </Badge>
-                      )}
-                      <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-xs">
-                        {item.type === 'project' ? 'Projeto' : 'Tarefa'}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+                {selectedDateItems.map(item => renderItemCard(item))}
               </div>
             )}
           </CardContent>
@@ -318,45 +393,7 @@ export const CalendarPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">
-            {allItems.slice(0, 10).map(item => (
-              <div
-                key={`${item.type}-${item.id}`}
-                className={cn(
-                  "flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
-                  !isClient && "cursor-pointer hover:bg-accent/50"
-                )}
-                onClick={() => !isClient && handleNavigate(item)}
-              >
-                <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
-                  <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
-                    {item.type === 'project' ? (
-                      <FolderKanban className="h-3.5 w-3.5" />
-                    ) : (
-                      <ListTodo className="h-3.5 w-3.5" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
-                    <p className="text-xs text-muted-foreground break-words line-clamp-1">
-                      {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end sm:shrink-0">
-                  {item.status === 'overdue' && (
-                    <Badge variant="destructive" className="text-xs shrink-0">
-                      Atrasado
-                    </Badge>
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}
-                  </span>
-                  <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-xs">
-                    {item.type === 'project' ? 'Projeto' : 'Tarefa'}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+            {allItems.slice(0, 10).map(item => renderItemCard(item, true))}
             {allItems.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-8">
                 Nenhuma entrega programada
@@ -374,6 +411,83 @@ export const CalendarPage: React.FC = () => {
           onSubmit={handleSubmitRequest}
         />
       )}
+
+      {/* Reminder Dialog for admins */}
+      <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Lembrete</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reminder-title">Título *</Label>
+              <Input
+                id="reminder-title"
+                value={reminderTitle}
+                onChange={(e) => setReminderTitle(e.target.value)}
+                placeholder="Título do lembrete"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !reminderDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {reminderDate ? format(reminderDate, "dd/MM/yyyy") : "Selecione a data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={reminderDate}
+                    onSelect={setReminderDate}
+                    initialFocus
+                    locale={ptBR}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reminder-description">Descrição</Label>
+              <Textarea
+                id="reminder-description"
+                value={reminderDescription}
+                onChange={(e) => setReminderDescription(e.target.value)}
+                placeholder="Descrição opcional"
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente (opcional)</Label>
+              <Select value={reminderClientId} onValueChange={setReminderClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum cliente vinculado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {data.clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {(client as any).company || client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReminderDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreateReminder}>Criar Lembrete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

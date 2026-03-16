@@ -105,6 +105,16 @@ interface KanbanStage {
   owner_id: string | null;
 }
 
+export interface Reminder {
+  id: string;
+  title: string;
+  reminder_date: string;
+  description: string | null;
+  client_id: string | null;
+  owner_id: string;
+  created_at: string;
+}
+
 interface AppData {
   clients: Client[];
   projects: Project[];
@@ -114,6 +124,7 @@ interface AppData {
   projectAccess: UserProjectAccess[];
   taskTimers: TaskTimer[];
   kanbanStages: KanbanStage[];
+  reminders: Reminder[];
 }
 
 const getEffectiveKanbanStages = (stages: KanbanStage[], userId: string): KanbanStage[] => {
@@ -170,6 +181,10 @@ interface DataContextType {
   completeTask: (taskId: string) => Promise<boolean>;
   // Kanban stages
   saveKanbanStages: (stages: Omit<KanbanStage, 'id' | 'is_default' | 'owner_id'>[]) => Promise<void>;
+  // Reminders
+  createReminder: (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => Promise<Reminder | null>;
+  updateReminder: (id: string, updates: Partial<Reminder>) => Promise<Reminder | null>;
+  deleteReminder: (id: string) => Promise<boolean>;
   // Utilities
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
@@ -190,6 +205,7 @@ const emptyData: AppData = {
   projectAccess: [],
   taskTimers: [],
   kanbanStages: [],
+  reminders: [],
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -223,7 +239,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const clientsQuery = isCollaborator && !isAdminOrMaster
         ? supabase.from('clients_limited' as any).select('*').order('created_at', { ascending: false })
         : supabase.from('clients').select('*').order('created_at', { ascending: false });
-      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes] = await Promise.all([
+      const [clientsRes, projectsRes, tasksRes, entriesRes, columnsRes, accessRes, profilesRes, timersRes, stagesRes, remindersRes] = await Promise.all([
         clientsQuery,
         supabase.from('projects').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false }),
@@ -233,6 +249,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('profiles').select('user_id, full_name'),
         supabase.from('task_timers').select('*'),
         supabase.from('kanban_stages').select('*').order('order_position', { ascending: true }),
+        supabase.from('reminders').select('*').order('reminder_date', { ascending: true }),
       ]);
 
       // Build profiles map for creator names
@@ -273,6 +290,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           client_name_snapshot: (timer as any).client_name_snapshot || null,
         })) as TaskTimer[],
         kanbanStages: getEffectiveKanbanStages(allStages, user.id),
+        reminders: (remindersRes.data || []) as Reminder[],
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -1051,6 +1069,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Reminder operations
+  const createReminder = async (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => {
+    if (!user) return null;
+    const { data: newReminder, error } = await supabase
+      .from('reminders')
+      .insert([{ ...reminder, owner_id: user.id }])
+      .select()
+      .single();
+    if (error) { console.error('Error creating reminder:', error); return null; }
+    const r = newReminder as unknown as Reminder;
+    setData(prev => ({ ...prev, reminders: [...prev.reminders, r].sort((a, b) => new Date(a.reminder_date).getTime() - new Date(b.reminder_date).getTime()) }));
+    return r;
+  };
+
+  const updateReminder = async (id: string, updates: Partial<Reminder>) => {
+    const { data: updated, error } = await supabase.from('reminders').update(updates).eq('id', id).select().single();
+    if (error) { console.error('Error updating reminder:', error); return null; }
+    const r = updated as unknown as Reminder;
+    setData(prev => ({ ...prev, reminders: prev.reminders.map(rem => rem.id === id ? r : rem) }));
+    return r;
+  };
+
+  const deleteReminder = async (id: string) => {
+    const { error } = await supabase.from('reminders').delete().eq('id', id);
+    if (error) { console.error('Error deleting reminder:', error); return false; }
+    setData(prev => ({ ...prev, reminders: prev.reminders.filter(r => r.id !== id) }));
+    return true;
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -1085,6 +1132,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getActiveTimer,
         completeTask,
         saveKanbanStages,
+        createReminder,
+        updateReminder,
+        deleteReminder,
         getProjectHours,
         getClientHours,
         getClientMonthlyHours,

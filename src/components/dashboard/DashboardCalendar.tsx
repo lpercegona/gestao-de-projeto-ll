@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Maximize2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Maximize2, Bell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -18,26 +18,28 @@ export const DashboardCalendar: React.FC = () => {
   const datesWithDeadlines = useMemo(() => {
     const dates: Date[] = [];
     
-    // Projects with due dates
     data.projects.forEach(p => {
       if (p.due_date && p.status !== 'completed' && p.status !== 'archived') {
         dates.push(parseISO(p.due_date));
       }
     });
     
-    // Tasks with due dates
     data.tasks.forEach(t => {
       if (t.due_date && t.status !== 'completed' && t.status !== 'archived') {
         dates.push(parseISO(t.due_date));
       }
     });
+
+    data.reminders.forEach(r => {
+      dates.push(parseISO(r.reminder_date));
+    });
     
     return dates;
-  }, [data.projects, data.tasks]);
+  }, [data.projects, data.tasks, data.reminders]);
 
   // Items for selected date
   const selectedDateItems = useMemo(() => {
-    const items: { type: 'project' | 'task'; name: string; id: string; isOverdue: boolean }[] = [];
+    const items: { type: 'project' | 'task' | 'reminder'; name: string; id: string; isOverdue: boolean; projectId?: string }[] = [];
     
     data.projects.forEach(p => {
       if (p.due_date && p.status !== 'completed' && p.status !== 'archived' && isSameDay(parseISO(p.due_date), date)) {
@@ -49,12 +51,19 @@ export const DashboardCalendar: React.FC = () => {
     data.tasks.forEach(t => {
       if (t.due_date && t.status !== 'completed' && t.status !== 'archived' && isSameDay(parseISO(t.due_date), date)) {
         const due = parseISO(t.due_date);
-        items.push({ type: 'task', name: t.name, id: t.id, isOverdue: isPast(due) && !isToday(due) });
+        items.push({ type: 'task', name: t.name, id: t.id, isOverdue: isPast(due) && !isToday(due), projectId: t.project_id });
+      }
+    });
+
+    data.reminders.forEach(r => {
+      if (isSameDay(parseISO(r.reminder_date), date)) {
+        const due = parseISO(r.reminder_date);
+        items.push({ type: 'reminder', name: r.title, id: r.id, isOverdue: isPast(due) && !isToday(due) });
       }
     });
     
     return items;
-  }, [data.projects, data.tasks, date]);
+  }, [data.projects, data.tasks, data.reminders, date]);
 
   // Custom day renderer to show dots
   const modifiers = {
@@ -119,18 +128,20 @@ export const DashboardCalendar: React.FC = () => {
               {selectedDateItems.slice(0, 3).map(item => (
                 <div 
                   key={`${item.type}-${item.id}`}
-                  className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded-md p-1.5 -mx-1.5 overflow-hidden"
+                  className={`flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 overflow-hidden ${item.type !== 'reminder' ? 'cursor-pointer hover:bg-accent/50' : ''}`}
                   onClick={() => {
                     if (item.type === 'project') {
                       navigate(`/projects/${item.id}`);
-                    } else {
-                      const task = data.tasks.find(t => t.id === item.id);
-                      if (task) navigate(`/projects/${task.project_id}`);
+                    } else if (item.type === 'task' && item.projectId) {
+                      navigate(`/projects/${item.projectId}`);
                     }
                   }}
                 >
-                  <Badge variant={item.type === 'project' ? 'default' : 'secondary'} className="text-[10px] px-1.5 shrink-0">
-                    {item.type === 'project' ? 'Projeto' : 'Tarefa'}
+                  <Badge 
+                    variant={item.type === 'project' ? 'default' : item.type === 'task' ? 'secondary' : 'outline'} 
+                    className="text-[10px] px-1.5 shrink-0"
+                  >
+                    {item.type === 'project' ? 'Projeto' : item.type === 'task' ? 'Tarefa' : 'Lembrete'}
                   </Badge>
                   {item.isOverdue && (
                     <Badge variant="destructive" className="text-[10px] px-1.5 shrink-0">
