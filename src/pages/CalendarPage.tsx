@@ -512,8 +512,8 @@ export const CalendarPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">
-            {allItems.slice(0, 10).map(item => renderItemCard(item, true))}
-            {allItems.length === 0 && (
+            {allItems.filter(i => i.type !== 'reminder').slice(0, 10).map(item => renderItemCard(item, true))}
+            {allItems.filter(i => i.type !== 'reminder').length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-8">
                 Nenhuma entrega programada
               </p>
