@@ -181,6 +181,10 @@ interface DataContextType {
   completeTask: (taskId: string) => Promise<boolean>;
   // Kanban stages
   saveKanbanStages: (stages: Omit<KanbanStage, 'id' | 'is_default' | 'owner_id'>[]) => Promise<void>;
+  // Reminders
+  createReminder: (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => Promise<Reminder | null>;
+  updateReminder: (id: string, updates: Partial<Reminder>) => Promise<Reminder | null>;
+  deleteReminder: (id: string) => Promise<boolean>;
   // Utilities
   getProjectHours: (projectId: string) => number;
   getClientHours: (clientId: string) => number;
