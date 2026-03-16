@@ -1069,6 +1069,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Reminder operations
+  const createReminder = async (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => {
+    if (!user) return null;
+    const { data: newReminder, error } = await supabase
+      .from('reminders')
+      .insert([{ ...reminder, owner_id: user.id }])
+      .select()
+      .single();
+    if (error) { console.error('Error creating reminder:', error); return null; }
+    const r = newReminder as unknown as Reminder;
+    setData(prev => ({ ...prev, reminders: [...prev.reminders, r].sort((a, b) => new Date(a.reminder_date).getTime() - new Date(b.reminder_date).getTime()) }));
+    return r;
+  };
+
+  const updateReminder = async (id: string, updates: Partial<Reminder>) => {
+    const { data: updated, error } = await supabase.from('reminders').update(updates).eq('id', id).select().single();
+    if (error) { console.error('Error updating reminder:', error); return null; }
+    const r = updated as unknown as Reminder;
+    setData(prev => ({ ...prev, reminders: prev.reminders.map(rem => rem.id === id ? r : rem) }));
+    return r;
+  };
+
+  const deleteReminder = async (id: string) => {
+    const { error } = await supabase.from('reminders').delete().eq('id', id);
+    if (error) { console.error('Error deleting reminder:', error); return false; }
+    setData(prev => ({ ...prev, reminders: prev.reminders.filter(r => r.id !== id) }));
+    return true;
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -1103,6 +1132,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getActiveTimer,
         completeTask,
         saveKanbanStages,
+        createReminder,
+        updateReminder,
+        deleteReminder,
         getProjectHours,
         getClientHours,
         getClientMonthlyHours,
