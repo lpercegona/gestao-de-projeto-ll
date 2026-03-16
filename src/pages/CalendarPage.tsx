@@ -99,7 +99,7 @@ export const CalendarPage: React.FC = () => {
       title: reminderTitle.trim(),
       reminder_date: format(reminderDate, 'yyyy-MM-dd'),
       description: reminderDescription.trim() || null,
-      client_id: reminderClientId || null,
+      client_id: (reminderClientId && reminderClientId !== 'none') ? reminderClientId : null,
     });
 
     if (result) {
