@@ -201,6 +201,7 @@ const emptyData: AppData = {
   projectAccess: [],
   taskTimers: [],
   kanbanStages: [],
+  reminders: [],
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
