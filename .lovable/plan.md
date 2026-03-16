@@ -1,59 +1,92 @@
-## Plano: Recorrência de lembretes, edição/exclusão no card e novas opções no dropdown admin
 
-### 1. Adicionar coluna `recurrence` na tabela `reminders`
 
-Migration para adicionar campo de recorrência:
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-```sql
-ALTER TABLE public.reminders ADD COLUMN recurrence text DEFAULT 'none';
--- Valores: 'none', 'monthly', 'yearly'
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
+
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
+
+## Problema 2: Refresh destrói dados em diálogos abertos
+
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
+
+**Estratégia**: Duas camadas de proteção.
+
+### Camada 1: Estabilizar referência do `user` no AuthContext
+
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
+
+```typescript
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
 ```
 
-### 2. Atualizar interface `Reminder` no DataContext
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
 
-Adicionar campo `recurrence: 'none' | 'monthly' | 'yearly'` à interface `Reminder`.
+### Camada 2: Lock de edição global no DataContext
 
-### 3. Expandir lembretes recorrentes no CalendarPage
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
 
-No `allItems` (useMemo), ao processar lembretes com recorrência:
+```typescript
+// DataContext.tsx
+const editingLockRef = useRef(0);
 
-- **Mensal**: gerar uma instância virtual do lembrete para cada mês (mesmo dia) dentro de um intervalo razoável (ex: 12 meses à frente)
-- **Anual**: gerar instância para o mesmo dia/mês nos próximos anos (ex: 2 anos à frente)
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
 
-Os itens virtuais compartilham o mesmo `id` original mas com `due_date` ajustada, usando um sufixo no key para evitar duplicatas.
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
 
-### 4. Adicionar campo de recorrência no diálogo de lembrete
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
+```
 
-No diálogo de criação/edição, adicionar um `Select` com as opções:
+Expor `lockEditing` e `unlockEditing` no contexto.
 
-- Sem recorrência
-- Mensal (mesmo dia, todo mês)
-- Anual (mesmo dia e mês, todo ano)
+### Camada 3: Aplicar o lock nos diálogos
 
-### 5. Botões de edição e exclusão no card do lembrete
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
 
-No `renderItemCard`, quando `item.type === 'reminder'` e `isAdminOrMaster`:
+| Arquivo | Diálogo |
+|---|---|
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
 
-- Adicionar um `DropdownMenu` com ícone `MoreVertical` visível apenas com mousehover no card
-- Opções: "Editar" (abre diálogo preenchido) e "Excluir" (com confirmação via toast ou dialog)
-- O clique no dropdown deve usar `e.stopPropagation()` para não interferir com o card
+Padrão de uso via `useEffect`:
 
-### 6. Diálogo de edição de lembrete
+```typescript
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
+```
 
-Reutilizar o mesmo diálogo de criação, adicionando estado `editingReminderId` para distinguir criação vs edição. Ao salvar, chamar `updateReminder` em vez de `createReminder`.
+## Arquivos alterados
 
-### 7. Novas opções no dropdown "+" para admin
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 
-Adicionar ao `DropdownMenuContent` do botão "+" no painel da data:
-
-- **Novo Projeto** → `navigate('/projects?new=true')` ou abrir diálogo inline
-- **Nova Tarefa** → `navigate('/projects?newTask=true')` ou abrir diálogo inline
-- **Novo Lembrete** (já existente)
-
-Como os diálogos de projeto e tarefa já existem em `Projects.tsx` com lógica complexa, a abordagem mais prática é navegar para a página de projetos com query param para acionar a criação.
-
-### Arquivos alterados
-
-- `supabase/migrations/` — nova migration (coluna `recurrence`)
-- `src/contexts/DataContext.tsx` — atualizar interface `Reminder`
-- `src/pages/CalendarPage.tsx` — recorrência no diálogo, expansão virtual de lembretes, dropdown editar/excluir no card, opções projeto/tarefa no "+"

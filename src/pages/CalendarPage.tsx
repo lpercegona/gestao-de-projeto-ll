@@ -8,19 +8,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
+import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, addYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus, Bell, CalendarIcon } from 'lucide-react';
+import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus, Bell, CalendarIcon, MoreVertical, Pencil, Trash2, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Reminder } from '@/contexts/DataContext';
 
 interface CalendarItem {
   id: string;
@@ -31,20 +33,25 @@ interface CalendarItem {
   projectName?: string;
   clientName?: string;
   status: 'overdue' | 'near' | 'normal';
+  originalReminderId?: string;
+  recurrence?: 'none' | 'monthly' | 'yearly';
 }
 
 export const CalendarPage: React.FC = () => {
-  const { data, createReminder } = useData();
+  const { data, createReminder, updateReminder, deleteReminder } = useData();
   const { isClient, isAdminOrMaster, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
   const [reminderTitle, setReminderTitle] = useState('');
   const [reminderDate, setReminderDate] = useState<Date | undefined>();
   const [reminderDescription, setReminderDescription] = useState('');
   const [reminderClientId, setReminderClientId] = useState<string>('');
+  const [reminderRecurrence, setReminderRecurrence] = useState<'none' | 'monthly' | 'yearly'>('none');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Handle project request submission for clients
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
@@ -81,36 +88,70 @@ export const CalendarPage: React.FC = () => {
     toast.success('Solicitação enviada com sucesso!');
   };
 
-  const handleOpenReminderDialog = () => {
-    setReminderTitle('');
-    setReminderDate(selectedDate);
-    setReminderDescription('');
-    setReminderClientId('');
+  const handleOpenReminderDialog = (reminder?: Reminder) => {
+    if (reminder) {
+      setEditingReminderId(reminder.id);
+      setReminderTitle(reminder.title);
+      setReminderDate(parseISO(reminder.reminder_date));
+      setReminderDescription(reminder.description || '');
+      setReminderClientId(reminder.client_id || 'none');
+      setReminderRecurrence(reminder.recurrence || 'none');
+    } else {
+      setEditingReminderId(null);
+      setReminderTitle('');
+      setReminderDate(selectedDate);
+      setReminderDescription('');
+      setReminderClientId('');
+      setReminderRecurrence('none');
+    }
     setShowReminderDialog(true);
   };
 
-  const handleCreateReminder = async () => {
+  const handleSaveReminder = async () => {
     if (!reminderTitle.trim() || !reminderDate) {
       toast.error('Preencha o título e a data');
       return;
     }
 
-    const result = await createReminder({
+    const payload = {
       title: reminderTitle.trim(),
       reminder_date: format(reminderDate, 'yyyy-MM-dd'),
       description: reminderDescription.trim() || null,
       client_id: (reminderClientId && reminderClientId !== 'none') ? reminderClientId : null,
-    });
+      recurrence: reminderRecurrence,
+    };
 
-    if (result) {
-      toast.success('Lembrete criado com sucesso!');
-      setShowReminderDialog(false);
+    if (editingReminderId) {
+      const result = await updateReminder(editingReminderId, payload);
+      if (result) {
+        toast.success('Lembrete atualizado!');
+        setShowReminderDialog(false);
+      } else {
+        toast.error('Erro ao atualizar lembrete');
+      }
     } else {
-      toast.error('Erro ao criar lembrete');
+      const result = await createReminder(payload);
+      if (result) {
+        toast.success('Lembrete criado com sucesso!');
+        setShowReminderDialog(false);
+      } else {
+        toast.error('Erro ao criar lembrete');
+      }
     }
   };
 
-  // Get all items with deadlines
+  const handleDeleteReminder = async () => {
+    if (!deleteConfirmId) return;
+    const success = await deleteReminder(deleteConfirmId);
+    if (success) {
+      toast.success('Lembrete excluído');
+    } else {
+      toast.error('Erro ao excluir lembrete');
+    }
+    setDeleteConfirmId(null);
+  };
+
+  // Get all items with deadlines, expanding recurring reminders
   const allItems = useMemo((): CalendarItem[] => {
     const items: CalendarItem[] = [];
     
@@ -147,19 +188,43 @@ export const CalendarPage: React.FC = () => {
         });
       });
 
-    // Add reminders (only for admin/master_admin)
+    // Add reminders with recurrence expansion (only for admin/master_admin)
     if (!isClient) {
       data.reminders.forEach(r => {
         const client = r.client_id ? data.clients.find(c => c.id === r.client_id) : null;
-        const status = getDeadlineStatus(r.reminder_date);
-        items.push({
-          id: r.id,
-          type: 'reminder',
-          name: r.title,
-          due_date: r.reminder_date,
-          clientName: client ? ((client as any)?.company || client?.name) : undefined,
-          status: status || 'normal',
-        });
+        const clientName = client ? ((client as any)?.company || client?.name) : undefined;
+        const baseDate = parseISO(r.reminder_date);
+        const recurrence = r.recurrence || 'none';
+
+        const addReminderItem = (dateStr: string, keySuffix: string) => {
+          const status = getDeadlineStatus(dateStr);
+          items.push({
+            id: `${r.id}${keySuffix}`,
+            type: 'reminder',
+            name: r.title,
+            due_date: dateStr,
+            clientName,
+            status: status || 'normal',
+            originalReminderId: r.id,
+            recurrence,
+          });
+        };
+
+        if (recurrence === 'monthly') {
+          // Original + 12 months ahead
+          for (let i = 0; i < 13; i++) {
+            const d = addMonths(baseDate, i);
+            addReminderItem(format(d, 'yyyy-MM-dd'), i === 0 ? '' : `-m${i}`);
+          }
+        } else if (recurrence === 'yearly') {
+          // Original + 2 years ahead
+          for (let i = 0; i < 3; i++) {
+            const d = addYears(baseDate, i);
+            addReminderItem(format(d, 'yyyy-MM-dd'), i === 0 ? '' : `-y${i}`);
+          }
+        } else {
+          addReminderItem(r.reminder_date, '');
+        }
       });
     }
     
@@ -179,7 +244,7 @@ export const CalendarPage: React.FC = () => {
   }, [currentMonth]);
 
   const handleNavigate = (item: CalendarItem) => {
-    if (item.type === 'reminder') return; // Reminders are not navigable
+    if (item.type === 'reminder') return;
     const basePath = isClient ? '/my-projects' : '/projects';
     
     if (item.type === 'project') {
@@ -216,12 +281,17 @@ export const CalendarPage: React.FC = () => {
     }
   };
 
+  const getReminderById = (id: string): Reminder | undefined => {
+    return data.reminders.find(r => r.id === id);
+  };
+
   const renderItemCard = (item: CalendarItem, showDate = false) => (
     <div
       key={`${item.type}-${item.id}`}
       className={cn(
-        "flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
-        item.type !== 'reminder' && !isClient && "cursor-pointer hover:bg-accent/50"
+        "group flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
+        item.type !== 'reminder' && !isClient && "cursor-pointer hover:bg-accent/50",
+        item.type === 'reminder' && "hover:bg-accent/50"
       )}
       onClick={() => item.type !== 'reminder' && !isClient && handleNavigate(item)}
     >
@@ -230,7 +300,12 @@ export const CalendarPage: React.FC = () => {
           {getItemIcon(item.type)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
+            {item.recurrence && item.recurrence !== 'none' && (
+              <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
+            )}
+          </div>
           <p className="text-xs text-muted-foreground break-words line-clamp-1">
             {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
           </p>
@@ -246,6 +321,37 @@ export const CalendarPage: React.FC = () => {
           </span>
         )}
         {getItemBadge(item.type)}
+        {item.type === 'reminder' && isAdminOrMaster && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => {
+                const reminder = getReminderById(item.originalReminderId || item.id);
+                if (reminder) handleOpenReminderDialog(reminder);
+              }}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => setDeleteConfirmId(item.originalReminderId || item.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );
@@ -363,7 +469,16 @@ export const CalendarPage: React.FC = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleOpenReminderDialog}>
+                    <DropdownMenuItem onClick={() => navigate('/projects?new=true')}>
+                      <FolderKanban className="h-4 w-4 mr-2" />
+                      Novo Projeto
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/projects?newTask=true')}>
+                      <ListTodo className="h-4 w-4 mr-2" />
+                      Nova Tarefa
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleOpenReminderDialog()}>
                       <Bell className="h-4 w-4 mr-2" />
                       Novo Lembrete
                     </DropdownMenuItem>
@@ -412,11 +527,11 @@ export const CalendarPage: React.FC = () => {
         />
       )}
 
-      {/* Reminder Dialog for admins */}
+      {/* Reminder Dialog for admins (create/edit) */}
       <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Lembrete</DialogTitle>
+            <DialogTitle>{editingReminderId ? 'Editar Lembrete' : 'Novo Lembrete'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -456,6 +571,19 @@ export const CalendarPage: React.FC = () => {
               </Popover>
             </div>
             <div className="space-y-2">
+              <Label>Recorrência</Label>
+              <Select value={reminderRecurrence} onValueChange={(v) => setReminderRecurrence(v as 'none' | 'monthly' | 'yearly')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem recorrência</SelectItem>
+                  <SelectItem value="monthly">Mensal (mesmo dia, todo mês)</SelectItem>
+                  <SelectItem value="yearly">Anual (mesmo dia e mês, todo ano)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="reminder-description">Descrição</Label>
               <Textarea
                 id="reminder-description"
@@ -484,10 +612,28 @@ export const CalendarPage: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowReminderDialog(false)}>Cancelar</Button>
-            <Button onClick={handleCreateReminder}>Criar Lembrete</Button>
+            <Button onClick={handleSaveReminder}>
+              {editingReminderId ? 'Salvar' : 'Criar Lembrete'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lembrete?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O lembrete será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteReminder}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
