@@ -452,8 +452,17 @@ export const Projects: React.FC = () => {
   }, [visibleProjects, visibleRequestProjects, visibleEditRequests, showOnlyRequests]);
 
   const pendingRequestsCount = useMemo(() => {
-    return requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')).length + editRequests.filter((request) => request.status === 'pending').length;
-  }, [requestProjects, editRequests]);
+    const pendingProjectRequests = requestProjects.filter((request) => !request.converted_project_id && (request.status === 'pending' || request.status === 'analyzing' || request.status === 'in_review')).length;
+    const requestIds = new Set(requestProjects.map(r => r.id));
+    const projectIds = new Set(data.projects.map(p => p.id));
+    const taskIds = new Set(data.tasks.map(t => t.id));
+    const pendingEditRequests = editRequests.filter((request) => {
+      if (request.status !== 'pending') return false;
+      const entityId = request.entity_id;
+      return requestIds.has(entityId) || projectIds.has(entityId) || taskIds.has(entityId);
+    }).length;
+    return pendingProjectRequests + pendingEditRequests;
+  }, [requestProjects, editRequests, data.projects, data.tasks]);
 
 
   const handleOpenRequestDialog = (project: UnifiedProject) => {
@@ -745,6 +754,8 @@ export const Projects: React.FC = () => {
       }
 
       if (project.request_id) {
+        // Delete related edit_requests first to avoid orphans
+        await supabase.from('edit_requests').delete().eq('entity_id', project.request_id);
         const { error } = await supabase.from('project_requests').delete().eq('id', project.request_id);
         if (error) throw error;
         setRequestProjects((prev) => prev.filter((item) => item.id !== project.request_id));
@@ -1642,7 +1653,7 @@ export const Projects: React.FC = () => {
 
       {/* Task Dialog */}
       <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[85vh] overflow-hidden">
           <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitTask}>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">

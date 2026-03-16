@@ -686,20 +686,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_project_requests_client"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_project_requests_client"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients_limited"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "project_requests_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false

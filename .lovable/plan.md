@@ -1,64 +1,92 @@
 
 
-## Plano: 4 correções (exclusão de clientes, diálogo mobile, solicitações órfãs, calendário)
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-### 1. Corrigir exclusão de clientes (Database)
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
 
-**Causa**: A tabela `project_requests` possui **duas** foreign keys na coluna `client_id`:
-- `project_requests_client_id_fkey` → ON DELETE CASCADE (correto)
-- `fk_project_requests_client` → NO ACTION (bloqueia a exclusão)
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
 
-**Solução**: Migration para remover a FK duplicada `fk_project_requests_client`.
+## Problema 2: Refresh destrói dados em diálogos abertos
 
-```sql
-ALTER TABLE public.project_requests DROP CONSTRAINT fk_project_requests_client;
-```
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
 
-### 2. Corrigir diálogo de edição de tarefas no mobile
+**Estratégia**: Duas camadas de proteção.
 
-**Causa**: O `DialogContent` em `Projects.tsx` (linha 1645) e `ProjectDetail.tsx` (linha 459) não possuem classes de largura responsiva. Em tela de 360px, o diálogo pode extravasar.
+### Camada 1: Estabilizar referência do `user` no AuthContext
 
-**Solução**: Adicionar `max-w-[95vw] sm:max-w-lg` ao `DialogContent` dos diálogos de tarefa em:
-- `src/pages/Projects.tsx` (linha 1645)
-- `src/pages/ProjectDetail.tsx` (linha 459)
-- `src/pages/ClientProjects.tsx` (linha 1322)
-
-### 3. Corrigir solicitações órfãs e label de pendentes
-
-**Causa**: Ao excluir uma `project_request`, os `edit_requests` relacionados (onde `entity_type = 'project_request'` e `entity_id` = ID da solicitação) não são excluídos. Esses registros órfãos permanecem com status `pending` e inflam o contador.
-
-**Solução** (duas frentes):
-- **No código** (`src/pages/Projects.tsx`, ~linha 748): Antes de deletar a `project_request`, deletar também os `edit_requests` relacionados:
-  ```typescript
-  await supabase.from('edit_requests').delete()
-    .eq('entity_type', 'project_request')
-    .eq('entity_id', project.request_id);
-  ```
-- **No `pendingRequestsCount`** (linha 454-455): Filtrar `edit_requests` para excluir registros cujo `entity_id` não corresponde a nenhum projeto ou project_request existente (validação defensiva contra órfãos já existentes).
-
-### 4. Desconsiderar projetos/tarefas arquivados no calendário
-
-**Causa**: CalendarPage e DashboardCalendar filtram tarefas pelo próprio `status`, mas não verificam se o **projeto pai** está arquivado. Uma tarefa "pending" de um projeto "archived" ainda aparece no calendário.
-
-**Solução**: Nos dois componentes, adicionar filtro para excluir tarefas cujo projeto está em status `archived`:
-- `src/pages/CalendarPage.tsx` (linha 174): adicionar verificação do status do projeto pai
-- `src/components/dashboard/DashboardCalendar.tsx` (linha 51): mesma verificação
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
 
 ```typescript
-// Exemplo do filtro adicional para tasks
-data.tasks
-  .filter(t => {
-    if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
-    const project = data.projects.find(p => p.id === t.project_id);
-    return project && project.status !== 'archived';
-  })
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
 ```
 
-### Arquivos alterados
-- `supabase/migrations/` — nova migration (remover FK duplicada)
-- `src/pages/Projects.tsx` — diálogo mobile, exclusão de edit_requests órfãs, pendingRequestsCount defensivo
-- `src/pages/ProjectDetail.tsx` — diálogo mobile
-- `src/pages/ClientProjects.tsx` — diálogo mobile
-- `src/pages/CalendarPage.tsx` — filtro de tarefas com projeto arquivado
-- `src/components/dashboard/DashboardCalendar.tsx` — filtro de tarefas com projeto arquivado
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
+
+### Camada 2: Lock de edição global no DataContext
+
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+
+```typescript
+// DataContext.tsx
+const editingLockRef = useRef(0);
+
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
+
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
+
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
+```
+
+Expor `lockEditing` e `unlockEditing` no contexto.
+
+### Camada 3: Aplicar o lock nos diálogos
+
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
+
+| Arquivo | Diálogo |
+|---|---|
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
+
+Padrão de uso via `useEffect`:
+
+```typescript
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
+```
+
+## Arquivos alterados
+
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 

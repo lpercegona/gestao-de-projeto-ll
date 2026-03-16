@@ -171,7 +171,11 @@ export const CalendarPage: React.FC = () => {
       });
     
     data.tasks
-      .filter(t => t.due_date && t.status !== 'completed' && t.status !== 'archived')
+      .filter(t => {
+        if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
+        const parentProject = data.projects.find(p => p.id === t.project_id);
+        return parentProject && parentProject.status !== 'archived';
+      })
       .forEach(t => {
         const project = data.projects.find(p => p.id === t.project_id);
         const client = project ? data.clients.find(c => c.id === project.client_id) : null;

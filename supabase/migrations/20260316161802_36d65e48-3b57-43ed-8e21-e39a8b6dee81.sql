@@ -1,0 +1,1 @@
+ALTER TABLE public.project_requests DROP CONSTRAINT IF EXISTS fk_project_requests_client;
