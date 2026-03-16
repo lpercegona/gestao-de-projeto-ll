@@ -973,6 +973,51 @@ export type Database = {
           },
         ]
       }
+      reminders: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          owner_id: string
+          reminder_date: string
+          title: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id: string
+          reminder_date: string
+          title: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id?: string
+          reminder_date?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_shares: {
         Row: {
           client_id: string
