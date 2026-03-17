@@ -254,7 +254,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[768px] h-[80vh] max-h-[95vh] m-2 p-0 gap-0 overflow-hidden rounded-xl [&>button]:sm:bg-transparent [&>button]:sm:rounded-sm [&>button]:bg-muted/60 [&>button]:rounded-full [&>button]:w-4 [&>button]:h-4 [&>button]:flex [&>button]:items-center [&>button]:justify-center">
+      <DialogContent className="max-w-[95vw] sm:max-w-[768px] h-[80vh] max-h-[95vh] p-0 gap-0 overflow-hidden rounded-xl [&>button]:sm:bg-transparent [&>button]:sm:rounded-sm [&>button]:bg-muted/60 [&>button]:rounded-full [&>button]:w-4 [&>button]:h-4 [&>button]:flex [&>button]:items-center [&>button]:justify-center">
         <DialogTitle className="sr-only">Configurações</DialogTitle>
         <div className="flex flex-col sm:flex-row h-full overflow-hidden">
           {/* Mobile: horizontal scroll nav */}
