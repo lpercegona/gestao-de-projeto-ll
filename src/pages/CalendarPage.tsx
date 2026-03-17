@@ -310,6 +310,9 @@ export const CalendarPage: React.FC = () => {
       }}
     >
       <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
+        <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
+          {getItemIcon(item.type)}
+        </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
@@ -331,7 +334,7 @@ export const CalendarPage: React.FC = () => {
             {format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}
           </span>
         )}
-        
+        {getItemBadge(item.type)}
         {item.type === 'reminder' && isAdminOrMaster && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
