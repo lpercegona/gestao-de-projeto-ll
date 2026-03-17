@@ -186,6 +186,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   });
   const [isHovering, setIsHovering] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [isMobileHeaderHidden, setIsMobileHeaderHidden] = useState(false);
   const [highContrastEnabled, setHighContrastEnabled] = useState(() => {
     return localStorage.getItem("high-contrast-enabled") === "true";
