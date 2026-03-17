@@ -61,9 +61,9 @@ export const CalendarPage: React.FC = () => {
     if (!user) return;
 
     const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
-      supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
-      supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
-    ]);
+    supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+    supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle()]
+    );
 
     const resolvedClientId = clientData?.id || clientUserData?.client_id;
 
@@ -72,15 +72,15 @@ export const CalendarPage: React.FC = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('project_requests')
-      .insert({
-        client_id: resolvedClientId,
-        title,
-        briefing,
-        desired_deadline: desiredDeadline || null,
-        created_by: user.id,
-      });
+    const { error } = await supabase.
+    from('project_requests').
+    insert({
+      client_id: resolvedClientId,
+      title,
+      briefing,
+      desired_deadline: desiredDeadline || null,
+      created_by: user.id
+    });
 
     if (error) {
       console.error('Error creating request:', error);
@@ -120,8 +120,8 @@ export const CalendarPage: React.FC = () => {
       title: reminderTitle.trim(),
       reminder_date: format(reminderDate, 'yyyy-MM-dd'),
       description: reminderDescription.trim() || null,
-      client_id: (reminderClientId && reminderClientId !== 'none') ? reminderClientId : null,
-      recurrence: reminderRecurrence,
+      client_id: reminderClientId && reminderClientId !== 'none' ? reminderClientId : null,
+      recurrence: reminderRecurrence
     };
 
     if (editingReminderId) {
@@ -157,49 +157,49 @@ export const CalendarPage: React.FC = () => {
   // Get all items with deadlines, expanding recurring reminders
   const allItems = useMemo((): CalendarItem[] => {
     const items: CalendarItem[] = [];
-    
-    data.projects
-      .filter(p => p.due_date && p.status !== 'completed' && p.status !== 'archived')
-      .forEach(p => {
-        const client = data.clients.find(c => c.id === p.client_id);
-        const status = getDeadlineStatus(p.due_date!);
-        items.push({
-          id: p.id,
-          type: 'project',
-          name: p.name,
-          due_date: p.due_date!,
-          clientName: isClient ? undefined : ((client as any)?.company || client?.name),
-          status: status || 'normal',
-        });
+
+    data.projects.
+    filter((p) => p.due_date && p.status !== 'completed' && p.status !== 'archived').
+    forEach((p) => {
+      const client = data.clients.find((c) => c.id === p.client_id);
+      const status = getDeadlineStatus(p.due_date!);
+      items.push({
+        id: p.id,
+        type: 'project',
+        name: p.name,
+        due_date: p.due_date!,
+        clientName: isClient ? undefined : (client as any)?.company || client?.name,
+        status: status || 'normal'
       });
-    
-    data.tasks
-      .filter(t => {
-        if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
-        const parentProject = data.projects.find(p => p.id === t.project_id);
-        return parentProject && parentProject.status !== 'archived';
-      })
-      .forEach(t => {
-        const project = data.projects.find(p => p.id === t.project_id);
-        const client = project ? data.clients.find(c => c.id === project.client_id) : null;
-        const status = getDeadlineStatus(t.due_date!);
-        items.push({
-          id: t.id,
-          type: 'task',
-          name: t.name,
-          due_date: t.due_date!,
-          projectId: t.project_id,
-          projectName: project?.name,
-          clientName: isClient ? undefined : ((client as any)?.company || client?.name),
-          status: status || 'normal',
-        });
+    });
+
+    data.tasks.
+    filter((t) => {
+      if (!t.due_date || t.status === 'completed' || t.status === 'archived') return false;
+      const parentProject = data.projects.find((p) => p.id === t.project_id);
+      return parentProject && parentProject.status !== 'archived';
+    }).
+    forEach((t) => {
+      const project = data.projects.find((p) => p.id === t.project_id);
+      const client = project ? data.clients.find((c) => c.id === project.client_id) : null;
+      const status = getDeadlineStatus(t.due_date!);
+      items.push({
+        id: t.id,
+        type: 'task',
+        name: t.name,
+        due_date: t.due_date!,
+        projectId: t.project_id,
+        projectName: project?.name,
+        clientName: isClient ? undefined : (client as any)?.company || client?.name,
+        status: status || 'normal'
       });
+    });
 
     // Add reminders with recurrence expansion (only for admin/master_admin)
     if (!isClient) {
-      data.reminders.forEach(r => {
-        const client = r.client_id ? data.clients.find(c => c.id === r.client_id) : null;
-        const clientName = client ? ((client as any)?.company || client?.name) : undefined;
+      data.reminders.forEach((r) => {
+        const client = r.client_id ? data.clients.find((c) => c.id === r.client_id) : null;
+        const clientName = client ? (client as any)?.company || client?.name : undefined;
         const baseDate = parseISO(r.reminder_date);
         const recurrence = r.recurrence || 'none';
 
@@ -213,7 +213,7 @@ export const CalendarPage: React.FC = () => {
             clientName,
             status: status || 'normal',
             originalReminderId: r.id,
-            recurrence,
+            recurrence
           });
         };
 
@@ -234,13 +234,13 @@ export const CalendarPage: React.FC = () => {
         }
       });
     }
-    
+
     return items.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
   }, [data.projects, data.tasks, data.clients, data.reminders, isClient]);
 
   // Items for selected date
   const selectedDateItems = useMemo(() => {
-    return allItems.filter(item => isSameDay(parseISO(item.due_date), selectedDate));
+    return allItems.filter((item) => isSameDay(parseISO(item.due_date), selectedDate));
   }, [allItems, selectedDate]);
 
   // Calendar days for the month view
@@ -253,7 +253,7 @@ export const CalendarPage: React.FC = () => {
   const handleNavigate = (item: CalendarItem) => {
     if (item.type === 'reminder') return;
     const basePath = isClient ? '/my-projects' : '/projects';
-    
+
     if (item.type === 'project') {
       navigate(`${basePath}/${item.id}`);
     } else if (item.projectId) {
@@ -274,41 +274,41 @@ export const CalendarPage: React.FC = () => {
 
   const getItemIcon = (type: CalendarItem['type']) => {
     switch (type) {
-      case 'project': return <FolderKanban className="h-3.5 w-3.5" />;
-      case 'task': return <ListTodo className="h-3.5 w-3.5" />;
-      case 'reminder': return <Bell className="h-3.5 w-3.5" />;
+      case 'project':return <FolderKanban className="h-3.5 w-3.5" />;
+      case 'task':return <ListTodo className="h-3.5 w-3.5" />;
+      case 'reminder':return <Bell className="h-3.5 w-3.5" />;
     }
   };
 
   const getItemBadge = (type: CalendarItem['type']) => {
     switch (type) {
-      case 'project': return <FolderKanban className="h-3.5 w-3.5 text-primary" />;
-      case 'task': return <ListTodo className="h-3.5 w-3.5 text-secondary-foreground" />;
-      case 'reminder': return <Bell className="h-3.5 w-3.5 text-amber-500" />;
+      case 'project':return <FolderKanban className="h-3.5 w-3.5 text-primary" />;
+      case 'task':return <ListTodo className="h-3.5 w-3.5 text-secondary-foreground" />;
+      case 'reminder':return <Bell className="h-3.5 w-3.5 text-amber-500" />;
     }
   };
 
   const getReminderById = (id: string): Reminder | undefined => {
-    return data.reminders.find(r => r.id === id);
+    return data.reminders.find((r) => r.id === id);
   };
 
-  const renderItemCard = (item: CalendarItem, showDate = false) => (
-    <div
-      key={`${item.type}-${item.id}`}
-      className={cn(
-        "group flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
-        item.type === 'reminder'
-          ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50"
-          : "cursor-pointer hover:bg-accent/50"
-      )}
-      onClick={() => {
-        if (item.type === 'project') {
-          setDetailDialogItem(item);
-        } else if (item.type === 'task') {
-          setDetailDialogItem(item);
-        }
-      }}
-    >
+  const renderItemCard = (item: CalendarItem, showDate = false) =>
+  <div
+    key={`${item.type}-${item.id}`}
+    className={cn(
+      "group flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
+      item.type === 'reminder' ?
+      "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50" :
+      "cursor-pointer hover:bg-accent/50"
+    )}
+    onClick={() => {
+      if (item.type === 'project') {
+        setDetailDialogItem(item);
+      } else if (item.type === 'task') {
+        setDetailDialogItem(item);
+      }
+    }}>
+    
       <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
         <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
           {getItemIcon(item.type)}
@@ -316,9 +316,9 @@ export const CalendarPage: React.FC = () => {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
-            {item.recurrence && item.recurrence !== 'none' && (
-              <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
-            )}
+            {item.recurrence && item.recurrence !== 'none' &&
+          <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
+          }
           </div>
           <p className="text-xs text-muted-foreground break-words line-clamp-1">
             {[item.clientName, item.projectName].filter(Boolean).join(' • ')}
@@ -326,49 +326,49 @@ export const CalendarPage: React.FC = () => {
         </div>
       </div>
       <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end sm:shrink-0">
-        {item.status === 'overdue' && (
-          <Badge variant="destructive" className="text-xs shrink-0">Atrasado</Badge>
-        )}
-        {showDate && (
-          <span className="text-xs text-muted-foreground">
+        {item.status === 'overdue' &&
+      <Badge variant="destructive" className="text-xs shrink-0">Atrasado</Badge>
+      }
+        {showDate &&
+      <span className="text-xs text-muted-foreground">
             {format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}
           </span>
-        )}
+      }
         
-        {item.type === 'reminder' && isAdminOrMaster && (
-          <DropdownMenu>
+        {item.type === 'reminder' && isAdminOrMaster &&
+      <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                onClick={(e) => e.stopPropagation()}
-              >
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            onClick={(e) => e.stopPropagation()}>
+            
                 <MoreVertical className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => {
-                const reminder = getReminderById(item.originalReminderId || item.id);
-                if (reminder) handleOpenReminderDialog(reminder);
-              }}>
+            const reminder = getReminderById(item.originalReminderId || item.id);
+            if (reminder) handleOpenReminderDialog(reminder);
+          }}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => setDeleteConfirmId(item.originalReminderId || item.id)}
-              >
+            className="text-destructive"
+            onClick={() => setDeleteConfirmId(item.originalReminderId || item.id)}>
+            
                 <Trash2 className="h-4 w-4 mr-2" />
                 Excluir
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
+      }
       </div>
-    </div>
-  );
+    </div>;
+
 
   return (
     <div className="space-y-6">
@@ -385,23 +385,23 @@ export const CalendarPage: React.FC = () => {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                >
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}>
+                  
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentMonth(new Date())}
-                >
+                  onClick={() => setCurrentMonth(new Date())}>
+                  
                   Hoje
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                >
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}>
+                  
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -424,42 +424,42 @@ export const CalendarPage: React.FC = () => {
                 head_cell: "text-muted-foreground rounded-md flex-1 font-normal text-[0.8rem]",
                 row: "flex w-full mt-2",
                 cell: "flex-1 h-12 text-center text-sm p-0 relative",
-                day: "h-12 w-full p-0 font-normal aria-selected:opacity-100",
+                day: "h-12 w-full p-0 font-normal aria-selected:opacity-100"
               }}
               components={{
                 DayContent: ({ date: dayDate }) => {
-                  const dayItems = allItems.filter(item => isSameDay(parseISO(item.due_date), dayDate));
+                  const dayItems = allItems.filter((item) => isSameDay(parseISO(item.due_date), dayDate));
                   const hasDeadlines = dayItems.length > 0;
                   const isSelected = isSameDay(dayDate, selectedDate);
                   const isCurrentMonth = isSameMonth(dayDate, currentMonth);
-                  
+
                   return (
                     <div className={cn(
                       "relative w-full h-full flex flex-col items-center justify-center rounded-md transition-colors cursor-pointer hover:bg-accent",
                       isSelected && "bg-primary text-primary-foreground hover:bg-primary",
                       !isCurrentMonth && "text-muted-foreground opacity-50"
                     )}>
-                      <span>{dayDate.getDate()}</span>
-                      {hasDeadlines && (
-                        <div className="absolute bottom-1 flex gap-0.5">
-                          {dayItems.slice(0, 3).map((item, i) => (
-                            <div 
-                              key={i}
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                item.status === 'overdue' ? "bg-[hsl(var(--primary)/1)]" :
-                                item.status === 'near' ? "bg-[hsl(var(--primary)/0.8)]" : 
-                                isSelected ? "bg-primary-foreground" : "bg-[hsl(var(--primary)/0.65)]"
-                              )}
-                            />
-                          ))}
+                      <span className="font-mono font-medium">{dayDate.getDate()}</span>
+                      {hasDeadlines &&
+                      <div className="absolute bottom-1 flex gap-0.5">
+                          {dayItems.slice(0, 3).map((item, i) =>
+                        <div
+                          key={i}
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            item.status === 'overdue' ? "bg-[hsl(var(--primary)/1)]" :
+                            item.status === 'near' ? "bg-[hsl(var(--primary)/0.8)]" :
+                            isSelected ? "bg-primary-foreground" : "bg-[hsl(var(--primary)/0.65)]"
+                          )} />
+
+                        )}
                         </div>
-                      )}
-                    </div>
-                  );
-                },
-              }}
-            />
+                      }
+                    </div>);
+
+                }
+              }} />
+            
           </CardContent>
         </Card>
 
@@ -470,8 +470,8 @@ export const CalendarPage: React.FC = () => {
               <CardTitle className="text-base">
                 {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
               </CardTitle>
-              {(isClient || isAdminOrMaster) && (
-                <DropdownMenu>
+              {(isClient || isAdminOrMaster) &&
+              <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="default" size="icon">
                       <Plus className="h-4 w-4" />
@@ -479,22 +479,22 @@ export const CalendarPage: React.FC = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => {
-                      if (isClient) {
-                        setShowRequestForm(true);
-                      } else {
-                        navigate('/projects?new=true');
-                      }
-                    }}>
+                    if (isClient) {
+                      setShowRequestForm(true);
+                    } else {
+                      navigate('/projects?new=true');
+                    }
+                  }}>
                       <FolderKanban className="h-4 w-4 mr-2" />
                       Projeto
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
-                      if (isClient) {
-                        setShowRequestForm(true);
-                      } else {
-                        navigate('/projects?newTask=true');
-                      }
-                    }}>
+                    if (isClient) {
+                      setShowRequestForm(true);
+                    } else {
+                      navigate('/projects?newTask=true');
+                    }
+                  }}>
                       <ListTodo className="h-4 w-4 mr-2" />
                       Tarefa
                     </DropdownMenuItem>
@@ -505,19 +505,19 @@ export const CalendarPage: React.FC = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              )}
+              }
             </div>
           </CardHeader>
           <CardContent>
-            {selectedDateItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
+            {selectedDateItems.length === 0 ?
+            <p className="text-sm text-muted-foreground text-center py-8">
                 Nenhuma entrega para esta data
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {selectedDateItems.map(item => renderItemCard(item))}
+              </p> :
+
+            <div className="space-y-3">
+                {selectedDateItems.map((item) => renderItemCard(item))}
               </div>
-            )}
+            }
           </CardContent>
         </Card>
       </div>
@@ -529,24 +529,24 @@ export const CalendarPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">
-            {allItems.filter(i => i.type !== 'reminder').slice(0, 10).map(item => renderItemCard(item, true))}
-            {allItems.filter(i => i.type !== 'reminder').length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">
+            {allItems.filter((i) => i.type !== 'reminder').slice(0, 10).map((item) => renderItemCard(item, true))}
+            {allItems.filter((i) => i.type !== 'reminder').length === 0 &&
+            <p className="text-sm text-muted-foreground text-center py-8">
                 Nenhuma entrega programada
               </p>
-            )}
+            }
           </div>
         </CardContent>
       </Card>
 
       {/* Project Request Form for clients */}
-      {isClient && (
-        <ProjectRequestForm 
-          open={showRequestForm} 
-          onOpenChange={setShowRequestForm}
-          onSubmit={handleSubmitRequest}
-        />
-      )}
+      {isClient &&
+      <ProjectRequestForm
+        open={showRequestForm}
+        onOpenChange={setShowRequestForm}
+        onSubmit={handleSubmitRequest} />
+
+      }
 
       {/* Reminder Dialog for admins (create/edit) */}
       <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
@@ -561,8 +561,8 @@ export const CalendarPage: React.FC = () => {
                 id="reminder-title"
                 value={reminderTitle}
                 onChange={(e) => setReminderTitle(e.target.value)}
-                placeholder="Título do lembrete"
-              />
+                placeholder="Título do lembrete" />
+              
             </div>
             <div className="space-y-2">
               <Label>Data *</Label>
@@ -573,8 +573,8 @@ export const CalendarPage: React.FC = () => {
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !reminderDate && "text-muted-foreground"
-                    )}
-                  >
+                    )}>
+                    
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {reminderDate ? format(reminderDate, "dd/MM/yyyy") : "Selecione a data"}
                   </Button>
@@ -586,8 +586,8 @@ export const CalendarPage: React.FC = () => {
                     onSelect={setReminderDate}
                     initialFocus
                     locale={ptBR}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
+                    className={cn("p-3 pointer-events-auto")} />
+                  
                 </PopoverContent>
               </Popover>
             </div>
@@ -611,8 +611,8 @@ export const CalendarPage: React.FC = () => {
                 value={reminderDescription}
                 onChange={(e) => setReminderDescription(e.target.value)}
                 placeholder="Descrição opcional"
-                rows={3}
-              />
+                rows={3} />
+              
             </div>
             <div className="space-y-2">
               <Label>Cliente (opcional)</Label>
@@ -622,11 +622,11 @@ export const CalendarPage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhum</SelectItem>
-                  {data.clients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>
+                  {data.clients.map((client) =>
+                  <SelectItem key={client.id} value={client.id}>
                       {(client as any).company || client.name}
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -660,11 +660,11 @@ export const CalendarPage: React.FC = () => {
       <Dialog open={!!detailDialogItem} onOpenChange={(open) => !open && setDetailDialogItem(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto max-w-[95vw] sm:max-w-2xl">
           {detailDialogItem?.type === 'project' && (() => {
-            const project = data.projects.find(p => p.id === detailDialogItem.id);
+            const project = data.projects.find((p) => p.id === detailDialogItem.id);
             if (!project) return null;
             const projectData = {
               ...project,
-              custom_fields: (project.custom_fields || {}) as Record<string, string>,
+              custom_fields: (project.custom_fields || {}) as Record<string, string>
             };
             return (
               <ProjectDetailDialogContent
@@ -688,17 +688,17 @@ export const CalendarPage: React.FC = () => {
                 getClientColumns={getClientColumns}
                 getStatusLabel={(s: string) => s === 'active' ? 'Ativo' : s === 'paused' ? 'Pausado' : s === 'archived' ? 'Arquivado' : s === 'completed' ? 'Concluído' : s}
                 getStatusColor={(s: string) => s === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : s === 'paused' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 'bg-muted text-muted-foreground'}
-                onEditProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
-                onDeleteProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
-                onArchiveProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
-                onEditTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
-                onDeleteTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
-                onClose={() => setDetailDialogItem(null)}
-              />
-            );
+                onEditProject={() => {setDetailDialogItem(null);navigate(`/projects/${detailDialogItem.id}`);}}
+                onDeleteProject={() => {setDetailDialogItem(null);navigate(`/projects/${detailDialogItem.id}`);}}
+                onArchiveProject={() => {setDetailDialogItem(null);navigate(`/projects/${detailDialogItem.id}`);}}
+                onEditTask={() => {setDetailDialogItem(null);navigate(`/projects/${detailDialogItem.id}`);}}
+                onDeleteTask={() => {setDetailDialogItem(null);navigate(`/projects/${detailDialogItem.id}`);}}
+                onClose={() => setDetailDialogItem(null)} />);
+
+
           })()}
           {detailDialogItem?.type === 'task' && (() => {
-            const task = data.tasks.find(t => t.id === detailDialogItem.id);
+            const task = data.tasks.find((t) => t.id === detailDialogItem.id);
             if (!task) return null;
             return (
               <TaskDetailDialogContent
@@ -710,14 +710,14 @@ export const CalendarPage: React.FC = () => {
                 currentUserId={user?.id}
                 getTaskHours={getTaskHours}
                 getCreatorName={getCreatorName}
-                onEditTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.projectId || task.project_id}`); }}
-                onDeleteTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.projectId || task.project_id}`); }}
-                onClose={() => setDetailDialogItem(null)}
-              />
-            );
+                onEditTask={() => {setDetailDialogItem(null);navigate(`/projects/${detailDialogItem.projectId || task.project_id}`);}}
+                onDeleteTask={() => {setDetailDialogItem(null);navigate(`/projects/${detailDialogItem.projectId || task.project_id}`);}}
+                onClose={() => setDetailDialogItem(null)} />);
+
+
           })()}
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>);
+
 };
