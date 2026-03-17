@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ProjectDetailDialogContent } from "./ProjectDetailDialogContent";
+import { TaskDetailDialogContent } from "./TaskDetailDialogContent";
 import { useEditingLock } from "@/hooks/useEditingLock";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
