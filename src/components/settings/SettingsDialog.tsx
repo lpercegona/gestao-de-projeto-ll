@@ -127,7 +127,10 @@ const GeneralSection: React.FC = () => {
 
   useEffect(() => {
     const fetchPreferences = async () => {
-      if (!user) { setLoading(false); return; }
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       const { data: prefs } = await supabase
         .from("user_preferences")
         .select("timezone")
@@ -151,7 +154,12 @@ const GeneralSection: React.FC = () => {
     setSavingTimezone(false);
   };
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Loader className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
 
   return (
     <div className="space-y-3">
@@ -160,7 +168,9 @@ const GeneralSection: React.FC = () => {
         <p className="text-xs text-muted-foreground mt-0.5">Configure seu fuso horário para registro de horas</p>
       </div>
       <div className="max-w-xs">
-        <Label htmlFor="timezone" className="text-xs">Fuso Horário</Label>
+        <Label htmlFor="timezone" className="text-xs">
+          Fuso Horário
+        </Label>
         <Select value={timezone} onValueChange={handleSaveTimezone} disabled={savingTimezone}>
           <SelectTrigger id="timezone" className="mt-1 h-8 text-xs">
             <SelectValue />
@@ -244,16 +254,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[768px] h-[80vh] max-h-[95vh] m-2 p-0 gap-0 overflow-hidden rounded-xl [&>button]:sm:bg-transparent [&>button]:sm:rounded-sm [&>button]:bg-muted/60 [&>button]:rounded-full [&>button]:w-7 [&>button]:h-7 [&>button]:flex [&>button]:items-center [&>button]:justify-center">
+      <DialogContent className="max-w-[95vw] sm:max-w-[768px] h-[80vh] max-h-[95vh] m-2 p-0 gap-0 overflow-hidden rounded-xl [&>button]:sm:bg-transparent [&>button]:sm:rounded-sm [&>button]:bg-muted/60 [&>button]:rounded-full [&>button]:w-4 [&>button]:h-4 [&>button]:flex [&>button]:items-center [&>button]:justify-center">
         <DialogTitle className="sr-only">Configurações</DialogTitle>
         <div className="flex flex-col sm:flex-row h-full overflow-hidden">
           {/* Mobile: horizontal scroll nav */}
           <div className="relative flex sm:hidden flex-shrink-0 border-b border-border bg-muted/30">
-            <nav
-              ref={navRef}
-              onScroll={handleNavScroll}
-              className="flex overflow-x-auto scrollbar-hide w-full"
-            >
+            <nav ref={navRef} onScroll={handleNavScroll} className="flex overflow-x-auto scrollbar-hide w-full">
               <div className="flex items-center gap-1 px-2 py-2 min-w-max pr-10">
                 {navSections.map((section) => (
                   <button
@@ -274,7 +280,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
             </nav>
             {/* Gradient fade overlay */}
             {showGradient && (
-              <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-muted/80 to-transparent pointer-events-none" />
+              <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-muted to-transparent pointer-events-none" />
             )}
           </div>
 
