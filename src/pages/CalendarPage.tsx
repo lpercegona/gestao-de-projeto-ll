@@ -40,7 +40,7 @@ interface CalendarItem {
 }
 
 export const CalendarPage: React.FC = () => {
-  const { data, createReminder, updateReminder, deleteReminder } = useData();
+  const { data, createReminder, updateReminder, deleteReminder, getProjectHours, getTaskHours, getCreatorName, getClientColumns } = useData();
   const { isClient, isAdminOrMaster, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
