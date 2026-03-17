@@ -22,7 +22,7 @@ import { ClientProjects } from "@/pages/ClientProjects";
 
 import { ClientPortal } from "@/pages/ClientPortal";
 import { SharedReport } from "@/pages/SharedReport";
-import { Preferences } from "@/pages/Preferences";
+
 import { ResetPassword } from "@/pages/ResetPassword";
 import { Landing } from "@/pages/Landing";
 import { FirstAccess } from "@/pages/FirstAccess";
