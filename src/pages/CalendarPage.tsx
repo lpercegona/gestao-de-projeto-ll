@@ -655,6 +655,69 @@ export const CalendarPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Project/Task Detail Dialog */}
+      <Dialog open={!!detailDialogItem} onOpenChange={(open) => !open && setDetailDialogItem(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto max-w-[95vw] sm:max-w-2xl">
+          {detailDialogItem?.type === 'project' && (() => {
+            const project = data.projects.find(p => p.id === detailDialogItem.id);
+            if (!project) return null;
+            const projectData = {
+              ...project,
+              custom_fields: (project.custom_fields || {}) as Record<string, string>,
+            };
+            return (
+              <ProjectDetailDialogContent
+                project={projectData}
+                clients={data.clients as any[]}
+                tasks={data.tasks as any[]}
+                timeEntries={data.timeEntries as any[]}
+                projectColumns={data.projectColumns as any[]}
+                kanbanStages={data.kanbanStages as any[]}
+                taskTimers={data.taskTimers as any[]}
+                projectAccess={data.projectAccess as any[]}
+                profilesByUserId={{}}
+                projectMembers={[]}
+                isAdminOrMaster={isAdminOrMaster}
+                isClientMode={isClient}
+                hasPerTaskPermissions={false}
+                currentUserId={user?.id}
+                getProjectHours={getProjectHours}
+                getTaskHours={getTaskHours}
+                getCreatorName={getCreatorName}
+                getClientColumns={getClientColumns}
+                getStatusLabel={(s: string) => s === 'active' ? 'Ativo' : s === 'paused' ? 'Pausado' : s === 'archived' ? 'Arquivado' : s === 'completed' ? 'Concluído' : s}
+                getStatusColor={(s: string) => s === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : s === 'paused' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 'bg-muted text-muted-foreground'}
+                onEditProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onDeleteProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onArchiveProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onEditTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onDeleteTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onClose={() => setDetailDialogItem(null)}
+              />
+            );
+          })()}
+          {detailDialogItem?.type === 'task' && (() => {
+            const task = data.tasks.find(t => t.id === detailDialogItem.id);
+            if (!task) return null;
+            return (
+              <TaskDetailDialogContent
+                task={task as any}
+                timeEntries={data.timeEntries as any[]}
+                kanbanStages={data.kanbanStages as any[]}
+                isAdminOrMaster={isAdminOrMaster}
+                isClientMode={isClient}
+                currentUserId={user?.id}
+                getTaskHours={getTaskHours}
+                getCreatorName={getCreatorName}
+                onEditTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.projectId || task.project_id}`); }}
+                onDeleteTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.projectId || task.project_id}`); }}
+                onClose={() => setDetailDialogItem(null)}
+              />
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
