@@ -228,11 +228,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[80vh] max-h-[95vh] max-w-[512px] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl h-[80vh] max-h-[95vh] max-w-[768px] p-0 gap-0 overflow-hidden">
         <DialogTitle className="sr-only">Configurações</DialogTitle>
         <div className="flex flex-col sm:flex-row h-full overflow-hidden">
           {/* Mobile: horizontal scroll nav */}
-          <nav className="flex sm:hidden flex-shrink-0 border-b border-border bg-muted/30 overflow-x-auto scrollbar-hide">
+          <nav className="flex sm:hidden flex-shrink-0 border-r border-border bg-muted/30 overflow-x-auto scrollbar-hide">
             <div className="flex items-center gap-1 px-2 py-2 min-w-max">
               {navSections.map((section) => (
                 <button
