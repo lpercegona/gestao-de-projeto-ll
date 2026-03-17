@@ -3,13 +3,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { User, Globe, Palette, Users, Bell } from "lucide-react";
+import { Globe, User, Lock, Users, Palette, Bell, Loader } from "lucide-react";
 import { ProfileEditTab } from "@/components/settings/ProfileEditTab";
+import { SecuritySection } from "@/components/settings/SecuritySection";
 import { PlatformCustomizationTab } from "@/components/settings/PlatformCustomizationTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { NotificationTemplatesTab } from "@/components/settings/NotificationTemplatesTab";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,7 +20,6 @@ import {
   SelectGroup,
   SelectLabel,
 } from "@/components/ui/select";
-import { Loader } from "lucide-react";
 import { toast } from "sonner";
 
 const WORLD_TIMEZONES = [
@@ -121,17 +120,14 @@ type NavSection = {
 };
 
 const GeneralSection: React.FC = () => {
-  const { user, isMasterAdmin } = useAuth();
+  const { user } = useAuth();
   const [timezone, setTimezone] = useState("America/Sao_Paulo");
   const [loading, setLoading] = useState(true);
   const [savingTimezone, setSavingTimezone] = useState(false);
 
   useEffect(() => {
     const fetchPreferences = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) { setLoading(false); return; }
       const { data: prefs } = await supabase
         .from("user_preferences")
         .select("timezone")
@@ -150,52 +146,39 @@ const GeneralSection: React.FC = () => {
     const { error } = await supabase
       .from("user_preferences")
       .upsert({ user_id: user.id, timezone: newTimezone }, { onConflict: "user_id" });
-    if (error) {
-      toast.error("Erro ao salvar fuso horário.");
-    } else {
-      toast.success("Fuso horário atualizado!");
-    }
+    if (error) toast.error("Erro ao salvar fuso horário.");
+    else toast.success("Fuso horário atualizado!");
     setSavingTimezone(false);
   };
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+  if (loading) return <div className="flex items-center justify-center h-full"><Loader className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
 
   return (
-    <div className="space-y-6">
-      {isMasterAdmin && <ThemeSettings />}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Fuso Horário</CardTitle>
-          <CardDescription>Configure seu fuso horário para registro de horas</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="max-w-sm">
-            <Label htmlFor="timezone">Fuso Horário</Label>
-            <Select value={timezone} onValueChange={handleSaveTimezone} disabled={savingTimezone}>
-              <SelectTrigger id="timezone" className="mt-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {WORLD_TIMEZONES.map((group) => (
-                  <SelectGroup key={group.region}>
-                    <SelectLabel>{group.region}</SelectLabel>
-                    {group.zones.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-sm font-medium text-foreground">Fuso Horário</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Configure seu fuso horário para registro de horas</p>
+      </div>
+      <div className="max-w-xs">
+        <Label htmlFor="timezone" className="text-xs">Fuso Horário</Label>
+        <Select value={timezone} onValueChange={handleSaveTimezone} disabled={savingTimezone}>
+          <SelectTrigger id="timezone" className="mt-1 h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {WORLD_TIMEZONES.map((group) => (
+              <SelectGroup key={group.region}>
+                <SelectLabel className="text-xs">{group.region}</SelectLabel>
+                {group.zones.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value} className="text-xs">
+                    {tz.label}
+                  </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 };
@@ -207,17 +190,18 @@ interface SettingsDialogProps {
 
 export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChange }) => {
   const { isMasterAdmin, isAdmin } = useAuth();
-  const [activeSection, setActiveSection] = useState("profile");
+  const [activeSection, setActiveSection] = useState("general");
 
   const showAdminSections = isMasterAdmin || isAdmin;
 
   const navSections: NavSection[] = [
-    { id: "profile", label: "Perfil", icon: User },
     { id: "general", label: "Geral", icon: Globe },
+    { id: "profile", label: "Perfil", icon: User },
+    { id: "security", label: "Segurança", icon: Lock },
     ...(showAdminSections
       ? [
-          { id: "platform", label: "Personalização", icon: Palette, adminOnly: true },
           { id: "users", label: "Usuários", icon: Users, adminOnly: true },
+          { id: "platform", label: "Personalização", icon: Palette, adminOnly: true },
           { id: "notifications", label: "Notificações", icon: Bell, adminOnly: true },
         ]
       : []),
@@ -225,18 +209,20 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
 
   const renderContent = () => {
     switch (activeSection) {
-      case "profile":
-        return <ProfileEditTab />;
       case "general":
         return <GeneralSection />;
-      case "platform":
-        return showAdminSections ? <PlatformCustomizationTab /> : null;
+      case "profile":
+        return <ProfileEditTab />;
+      case "security":
+        return <SecuritySection />;
       case "users":
         return showAdminSections ? <UserManagementTab /> : null;
+      case "platform":
+        return showAdminSections ? <ThemeSettings /> : null;
       case "notifications":
         return showAdminSections ? <NotificationTemplatesTab /> : null;
       default:
-        return <ProfileEditTab />;
+        return <GeneralSection />;
     }
   };
 
@@ -245,30 +231,28 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
       <DialogContent className="max-w-3xl h-[80vh] p-0 gap-0 overflow-hidden">
         <DialogTitle className="sr-only">Configurações</DialogTitle>
         <div className="flex h-full overflow-hidden">
-          {/* Left sidebar nav */}
-          <nav className="w-[200px] flex-shrink-0 border-r border-border bg-muted/30 p-4 space-y-1 overflow-y-auto">
-            <h2 className="text-sm font-semibold text-foreground mb-3 px-2">Configurações</h2>
+          <nav className="w-[180px] flex-shrink-0 border-r border-border bg-muted/30 p-3 space-y-0.5 overflow-y-auto">
+            <h2 className="text-xs font-semibold text-foreground mb-2 px-2">Configurações</h2>
             {navSections.map((section) => (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={cn(
-                  "w-full flex items-center gap-2.5 rounded-lg px-2.5  py-2 text-xs font-medium border border-transparent transition-colors text-left",
+                  "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium border border-transparent transition-colors text-left",
                   activeSection === section.id
-                    ? "bg-background text-foreground border border-border"
+                    ? "bg-background text-foreground border-border"
                     : "text-muted-foreground hover:bg-background hover:text-foreground",
                 )}
               >
-                <section.icon className="w-4 h-4 flex-shrink-0" />
+                <section.icon className="w-3.5 h-3.5 flex-shrink-0" />
                 {section.label}
               </button>
             ))}
           </nav>
 
-          {/* Right content area */}
           <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <header className="h-8 flex-shrink-0"></header>
-            <main className="flex-1 min-h-0 p-6 overflow-y-auto">{renderContent()}</main>
+            <header className="h-6 flex-shrink-0" />
+            <main className="flex-1 min-h-0 p-4 overflow-y-auto">{renderContent()}</main>
           </div>
         </div>
       </DialogContent>

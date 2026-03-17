@@ -1,46 +1,92 @@
 
 
-## Plan: Reorganize Settings Dialog Sections & Compact UI
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-### Changes Overview
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
 
-**Reorder sidebar navigation** to: Geral → Perfil → Segurança → Usuários → Personalização → Notificações
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
 
-**Restructure `SettingsDialog.tsx`:**
-- Reorder `navSections` array to match new order
-- Add "Segurança" (Lock icon) as its own sidebar item
-- Move ThemeSettings out of GeneralSection into "Personalização" section
-- GeneralSection: only timezone (compact, no Card wrapper — just label + select)
-- Add new `SecuritySection` that renders password change form (extracted from ProfileEditTab)
-- "Personalização" renders `ThemeSettings` directly (admin only)
+## Problema 2: Refresh destrói dados em diálogos abertos
 
-**Restructure `ProfileEditTab.tsx`:**
-- Remove the internal `Tabs` (profile/security/company) — the dialog sidebar now handles navigation
-- Profile section: avatar + name + email in compact form, then a visual separator, then "Informações Fiscais" sub-section (company name, CNPJ, CPF, address) in the same scrollable column
-- Remove password change form from this component (moved to SecuritySection)
-- Export password change logic as a separate `SecuritySection` component or inline it in SettingsDialog
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
 
-**Compact UI styling across all sections:**
-- Use `text-xs` for labels, `text-sm` for inputs
-- Remove Card wrappers inside dialog content — use simple `div` with `space-y-3` instead
-- Reduce padding: `p-4` on main content area instead of `p-6`
-- Use `gap-2` and `space-y-2` instead of `space-y-4`/`space-y-6`
-- Smaller section titles: `text-sm font-medium` instead of CardTitle
-- Compact button sizes: `size="sm"` where possible
+**Estratégia**: Duas camadas de proteção.
 
-### Files to Modify
+### Camada 1: Estabilizar referência do `user` no AuthContext
 
-1. **`src/components/settings/SettingsDialog.tsx`** — Reorder nav, add Segurança item, create SecuritySection (password form), update GeneralSection (timezone only, no theme), update Personalização to render ThemeSettings, compact all spacing/text sizes
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
 
-2. **`src/components/settings/ProfileEditTab.tsx`** — Remove Tabs wrapper, remove security tab, render only profile info + fiscal info section in a single scrollable column, compact styling
+```typescript
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
+```
 
-### Navigation Structure (sidebar)
-| Section | Icon | Content | Visibility |
-|---------|------|---------|------------|
-| Geral | Globe | Timezone only | All |
-| Perfil | User | Personal info + Fiscal info | All |
-| Segurança | Lock | Password change | All |
-| Usuários | Users | UserManagementTab | Admin only |
-| Personalização | Palette | ThemeSettings | Admin only |
-| Notificações | Bell | NotificationTemplatesTab | Admin only |
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
+
+### Camada 2: Lock de edição global no DataContext
+
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+
+```typescript
+// DataContext.tsx
+const editingLockRef = useRef(0);
+
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
+
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
+
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
+```
+
+Expor `lockEditing` e `unlockEditing` no contexto.
+
+### Camada 3: Aplicar o lock nos diálogos
+
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
+
+| Arquivo | Diálogo |
+|---|---|
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
+
+Padrão de uso via `useEffect`:
+
+```typescript
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
+```
+
+## Arquivos alterados
+
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 
