@@ -17,23 +17,23 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  DialogTitle } from
+'@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  DropdownMenuTrigger } from
+'@/components/ui/dropdown-menu';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  SelectValue } from
+'@/components/ui/select';
 
 type BillingType = 'unique' | 'monthly';
 
@@ -80,7 +80,7 @@ type ServicesTab = 'services' | 'proposals' | 'contracts';
 const tabByPath: Record<string, ServicesTab> = {
   '/services': 'services',
   '/proposals': 'proposals',
-  '/contracts': 'contracts',
+  '/contracts': 'contracts'
 };
 
 export const Services: React.FC = () => {
@@ -102,7 +102,7 @@ export const Services: React.FC = () => {
     hours: 0,
     pricePerHour: 0,
     imageUrl: '',
-    billingType: 'unique' as BillingType,
+    billingType: 'unique' as BillingType
   });
 
   const activeTab = tabByPath[location.pathname] || 'services';
@@ -131,18 +131,18 @@ export const Services: React.FC = () => {
     const fetchProposals = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('proposals')
-          .select('id, title, recipient_name, status, created_at, items')
-          .order('created_at', { ascending: false });
+        const { data, error } = await supabase.
+        from('proposals').
+        select('id, title, recipient_name, status, created_at, items').
+        order('created_at', { ascending: false });
 
         if (error) throw error;
 
         setProposals(
           (data || []).map((proposal) => ({
             ...proposal,
-            items: (proposal.items as unknown as ProposalItem[]) || [],
-          })),
+            items: proposal.items as unknown as ProposalItem[] || []
+          }))
         );
       } catch (error) {
         console.error('Erro ao carregar serviços/produtos das propostas:', error);
@@ -162,35 +162,35 @@ export const Services: React.FC = () => {
     });
 
     proposals.forEach((proposal) => {
-      proposal.items
-        .filter((item) => item.service?.trim() || item.description?.trim())
-        .forEach((item, index) => {
-          const catalogId = item.catalogItemId || item.id || `${proposal.id}-${index}`;
-          const existing = catalogMap.get(catalogId);
+      proposal.items.
+      filter((item) => item.service?.trim() || item.description?.trim()).
+      forEach((item, index) => {
+        const catalogId = item.catalogItemId || item.id || `${proposal.id}-${index}`;
+        const existing = catalogMap.get(catalogId);
 
-          if (existing) {
-            catalogMap.set(catalogId, {
-              ...existing,
-              source: existing.source === 'manual' ? 'mixed' : 'proposal',
-            });
-            return;
-          }
-
+        if (existing) {
           catalogMap.set(catalogId, {
-            id: catalogId,
-            source: 'proposal',
-            proposalId: proposal.id,
-            proposalTitle: proposal.title,
-            recipientName: proposal.recipient_name,
-            service: item.service || 'Sem título',
-            description: item.description || 'Sem descrição',
-            hours: Number(item.hours || 0),
-            pricePerHour: Number(item.pricePerHour || 0),
-            total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
-            imageUrl: item.imageUrl || item.image,
-            billingType: item.billingType || 'unique',
+            ...existing,
+            source: existing.source === 'manual' ? 'mixed' : 'proposal'
           });
+          return;
+        }
+
+        catalogMap.set(catalogId, {
+          id: catalogId,
+          source: 'proposal',
+          proposalId: proposal.id,
+          proposalTitle: proposal.title,
+          recipientName: proposal.recipient_name,
+          service: item.service || 'Sem título',
+          description: item.description || 'Sem descrição',
+          hours: Number(item.hours || 0),
+          pricePerHour: Number(item.pricePerHour || 0),
+          total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
+          imageUrl: item.imageUrl || item.image,
+          billingType: item.billingType || 'unique'
         });
+      });
     });
 
     return Array.from(catalogMap.values());
@@ -202,9 +202,9 @@ export const Services: React.FC = () => {
     if (!term) return serviceRows;
 
     return serviceRows.filter((row) =>
-      [row.service, row.description, row.proposalTitle, row.recipientName].some((value) =>
-        value.toLowerCase().includes(term),
-      ),
+    [row.service, row.description, row.proposalTitle, row.recipientName].some((value) =>
+    value.toLowerCase().includes(term)
+    )
     );
   }, [searchTerm, serviceRows]);
 
@@ -237,22 +237,22 @@ export const Services: React.FC = () => {
       pricePerHour: Number(newItem.pricePerHour || 0),
       total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
       imageUrl: newItem.imageUrl || undefined,
-      billingType: newItem.billingType,
+      billingType: newItem.billingType
     };
 
     if (editingItemId) {
       const hasManualItem = manualItems.some((existingItem) => existingItem.id === editingItemId);
 
       if (hasManualItem) {
-        setManualItems((prev) => prev.map((existingItem) => (existingItem.id === editingItemId ? item : existingItem)));
+        setManualItems((prev) => prev.map((existingItem) => existingItem.id === editingItemId ? item : existingItem));
       } else {
         setManualItems((prev) => [item, ...prev]);
       }
 
       const draftProposalsToUpdate = proposals.filter(
         (proposal) =>
-          proposal.status === 'draft' &&
-          proposal.items.some((proposalItem) => (proposalItem.catalogItemId || proposalItem.id) === editingItemId),
+        proposal.status === 'draft' &&
+        proposal.items.some((proposalItem) => (proposalItem.catalogItemId || proposalItem.id) === editingItemId)
       );
 
       try {
@@ -270,53 +270,53 @@ export const Services: React.FC = () => {
                 hours: item.hours,
                 pricePerHour: item.pricePerHour,
                 imageUrl: item.imageUrl,
-                billingType: item.billingType,
+                billingType: item.billingType
               };
             });
 
             const totalHours = updatedItems.reduce((sum, currentItem) => sum + Number(currentItem.hours || 0), 0);
             const totalValue = updatedItems.reduce(
               (sum, currentItem) => sum + Number(currentItem.hours || 0) * Number(currentItem.pricePerHour || 0),
-              0,
+              0
             );
 
-            const { error } = await supabase
-              .from('proposals')
-              .update({
-                items: updatedItems as unknown as Json,
-                total_hours: totalHours,
-                total_value: totalValue,
-              })
-              .eq('id', proposal.id)
-              .eq('status', 'draft');
+            const { error } = await supabase.
+            from('proposals').
+            update({
+              items: updatedItems as unknown as Json,
+              total_hours: totalHours,
+              total_value: totalValue
+            }).
+            eq('id', proposal.id).
+            eq('status', 'draft');
 
             if (error) throw error;
-          }),
+          })
         );
 
         setProposals((prev) =>
-          prev.map((proposal) => {
-            if (proposal.status !== 'draft') return proposal;
+        prev.map((proposal) => {
+          if (proposal.status !== 'draft') return proposal;
 
-            return {
-              ...proposal,
-              items: proposal.items.map((proposalItem) => {
-                const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
-                if (itemCatalogId !== editingItemId) return proposalItem;
+          return {
+            ...proposal,
+            items: proposal.items.map((proposalItem) => {
+              const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
+              if (itemCatalogId !== editingItemId) return proposalItem;
 
-                return {
-                  ...proposalItem,
-                  catalogItemId: editingItemId,
-                  service: item.service,
-                  description: item.description,
-                  hours: item.hours,
-                  pricePerHour: item.pricePerHour,
-                  imageUrl: item.imageUrl,
-                  billingType: item.billingType,
-                };
-              }),
-            };
-          }),
+              return {
+                ...proposalItem,
+                catalogItemId: editingItemId,
+                service: item.service,
+                description: item.description,
+                hours: item.hours,
+                pricePerHour: item.pricePerHour,
+                imageUrl: item.imageUrl,
+                billingType: item.billingType
+              };
+            })
+          };
+        })
         );
 
         toast.success('Item atualizado e sincronizado com propostas em rascunho');
@@ -359,7 +359,7 @@ export const Services: React.FC = () => {
       hours: item.hours,
       pricePerHour: item.pricePerHour,
       imageUrl: item.imageUrl || '',
-      billingType: item.billingType || 'unique',
+      billingType: item.billingType || 'unique'
     });
     setEditingItemId(item.id);
     setCreateItemOpen(true);
@@ -404,8 +404,8 @@ export const Services: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por serviço/produto, proposta ou destinatário"
-                className="pl-9"
-              />
+                className="pl-9" />
+              
             </div>
 
             <Button onClick={handleAddItem}>
@@ -416,26 +416,26 @@ export const Services: React.FC = () => {
 
           <Card className="border-0">
             <CardContent className="p-0 border-0">
-              {loading ? (
-                <p className="text-sm text-muted-foreground">Carregando serviços/produtos...</p>
-              ) : filteredRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p>
-              ) : (
-              <div className="grid gap-6">
-                {filteredRows.map((row) => (
-                  <div key={row.id} className="grid gap-4 overflow-hidden rounded-md border bg-card p-4 md:grid-cols-3">
+              {loading ?
+              <p className="text-sm text-muted-foreground">Carregando serviços/produtos...</p> :
+              filteredRows.length === 0 ?
+              <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p> :
+
+              <div className="grid gap-6 bg-secondary">
+                {filteredRows.map((row) =>
+                <div key={row.id} className="grid gap-4 overflow-hidden rounded-md border bg-card p-4 md:grid-cols-3">
                         <div className="md:col-span-2">
-                          {row.imageUrl ? (
-                            <img
-                              src={row.imageUrl}
-                              alt={`Imagem de ${row.service}`}
-                              className="aspect-square h-full max-h-[174px] w-full rounded-md border object-cover"
-                            />
-                          ) : (
-                            <div className="flex aspect-square h-full max-h-[174px] w-full items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
+                          {row.imageUrl ?
+                    <img
+                      src={row.imageUrl}
+                      alt={`Imagem de ${row.service}`}
+                      className="aspect-square h-full max-h-[174px] w-full rounded-md border object-cover" /> :
+
+
+                    <div className="flex aspect-square h-full max-h-[174px] w-full items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
                               Sem imagem
                             </div>
-                          )}
+                    }
                         </div>
 
                         <div className="space-y-3 md:col-span-2">
@@ -463,9 +463,9 @@ export const Services: React.FC = () => {
                                   Editar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => handleDeleteItem(row)}
-                                >
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => handleDeleteItem(row)}>
+                            
                                   Excluir
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -479,9 +479,9 @@ export const Services: React.FC = () => {
                         </div>
 
                   </div>
-                ))}
+                )}
               </div>
-			 )}
+              }
 			  
             </CardContent>
           </Card>
@@ -511,8 +511,8 @@ export const Services: React.FC = () => {
               <Input
                 value={newItem.service}
                 onChange={(e) => setNewItem((prev) => ({ ...prev, service: e.target.value }))}
-                placeholder="Ex: Consultoria mensal"
-              />
+                placeholder="Ex: Consultoria mensal" />
+              
             </div>
 
             <div className="space-y-2">
@@ -520,8 +520,8 @@ export const Services: React.FC = () => {
               <Input
                 value={newItem.description}
                 onChange={(e) => setNewItem((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Descrição resumida"
-              />
+                placeholder="Descrição resumida" />
+              
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -531,8 +531,8 @@ export const Services: React.FC = () => {
                   type="number"
                   min={0}
                   value={newItem.hours || ''}
-                  onChange={(e) => setNewItem((prev) => ({ ...prev, hours: Number(e.target.value) || 0 }))}
-                />
+                  onChange={(e) => setNewItem((prev) => ({ ...prev, hours: Number(e.target.value) || 0 }))} />
+                
               </div>
               <div className="space-y-2">
                 <Label>Preço/Hora (R$)</Label>
@@ -540,8 +540,8 @@ export const Services: React.FC = () => {
                   type="number"
                   min={0}
                   value={newItem.pricePerHour || ''}
-                  onChange={(e) => setNewItem((prev) => ({ ...prev, pricePerHour: Number(e.target.value) || 0 }))}
-                />
+                  onChange={(e) => setNewItem((prev) => ({ ...prev, pricePerHour: Number(e.target.value) || 0 }))} />
+                
               </div>
             </div>
 
@@ -549,8 +549,8 @@ export const Services: React.FC = () => {
               <Label>Tipo de cobrança</Label>
               <Select
                 value={newItem.billingType}
-                onValueChange={(value) => setNewItem((prev) => ({ ...prev, billingType: value as BillingType }))}
-              >
+                onValueChange={(value) => setNewItem((prev) => ({ ...prev, billingType: value as BillingType }))}>
+                
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
@@ -564,19 +564,19 @@ export const Services: React.FC = () => {
             <div className="space-y-2">
               <Label>Imagem do item</Label>
               <Input type="file" accept="image/*" onChange={handleImageChange} />
-              {newItem.imageUrl ? (
-                <div className="space-y-2">
+              {newItem.imageUrl ?
+              <div className="space-y-2">
                   <img src={newItem.imageUrl} alt="Pré-visualização da imagem do item" className="h-24 w-24 rounded-md border object-cover" />
                   <Button variant="outline" size="sm" onClick={() => setNewItem((prev) => ({ ...prev, imageUrl: '' }))}>
                     Remover imagem
                   </Button>
-                </div>
-              ) : null}
+                </div> :
+              null}
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setCreateItemOpen(false); resetNewItem(); }}>
+            <Button variant="outline" onClick={() => {setCreateItemOpen(false);resetNewItem();}}>
               Cancelar
             </Button>
             <Button onClick={handleSaveItem} disabled={!newItem.service.trim()}>
@@ -585,6 +585,6 @@ export const Services: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>);
+
 };
