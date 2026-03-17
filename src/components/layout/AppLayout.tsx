@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { HeaderTimerDisplay, HeaderTimerTaskInfo } from "@/components/timer/HeaderTimerDisplay";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { GlobalTimerCompleteDialog } from "@/components/timer/GlobalTimerCompleteDialog";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UniversalSearchBar } from "@/components/layout/UniversalSearchBar";
