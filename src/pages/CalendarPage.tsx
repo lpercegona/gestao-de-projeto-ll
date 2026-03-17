@@ -55,6 +55,7 @@ export const CalendarPage: React.FC = () => {
   const [reminderClientId, setReminderClientId] = useState<string>('');
   const [reminderRecurrence, setReminderRecurrence] = useState<'none' | 'monthly' | 'yearly'>('none');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [detailDialogItem, setDetailDialogItem] = useState<CalendarItem | null>(null);
 
   // Handle project request submission for clients
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
