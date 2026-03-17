@@ -18,64 +18,64 @@ export const DashboardCalendar: React.FC = () => {
   const { datesWithProjectsOrTasks, datesWithReminders } = useMemo(() => {
     const projTaskDates: Date[] = [];
     const reminderDates: Date[] = [];
-    
-    data.projects.forEach(p => {
+
+    data.projects.forEach((p) => {
       if (p.due_date && p.status !== 'completed' && p.status !== 'archived') {
         projTaskDates.push(parseISO(p.due_date));
       }
     });
-    
-    data.tasks.forEach(t => {
+
+    data.tasks.forEach((t) => {
       if (t.due_date && t.status !== 'completed' && t.status !== 'archived') {
-        const project = data.projects.find(p => p.id === t.project_id);
+        const project = data.projects.find((p) => p.id === t.project_id);
         if (project && project.status !== 'archived') {
           projTaskDates.push(parseISO(t.due_date));
         }
       }
     });
 
-    data.reminders.forEach(r => {
+    data.reminders.forEach((r) => {
       reminderDates.push(parseISO(r.reminder_date));
     });
-    
+
     return { datesWithProjectsOrTasks: projTaskDates, datesWithReminders: reminderDates };
   }, [data.projects, data.tasks, data.reminders]);
 
   // Items for selected date
   const selectedDateItems = useMemo(() => {
-    const items: { type: 'project' | 'task' | 'reminder'; name: string; id: string; isOverdue: boolean; projectId?: string }[] = [];
-    
-    data.projects.forEach(p => {
+    const items: {type: 'project' | 'task' | 'reminder';name: string;id: string;isOverdue: boolean;projectId?: string;}[] = [];
+
+    data.projects.forEach((p) => {
       if (p.due_date && p.status !== 'completed' && p.status !== 'archived' && isSameDay(parseISO(p.due_date), date)) {
         const due = parseISO(p.due_date);
         items.push({ type: 'project', name: p.name, id: p.id, isOverdue: isPast(due) && !isToday(due) });
       }
     });
-    
-    data.tasks.forEach(t => {
+
+    data.tasks.forEach((t) => {
       if (t.due_date && t.status !== 'completed' && t.status !== 'archived' && isSameDay(parseISO(t.due_date), date)) {
-        const project = data.projects.find(p => p.id === t.project_id);
+        const project = data.projects.find((p) => p.id === t.project_id);
         if (!project || project.status === 'archived') return;
         const due = parseISO(t.due_date);
         items.push({ type: 'task', name: t.name, id: t.id, isOverdue: isPast(due) && !isToday(due), projectId: t.project_id });
       }
     });
 
-    data.reminders.forEach(r => {
+    data.reminders.forEach((r) => {
       if (isSameDay(parseISO(r.reminder_date), date)) {
         const due = parseISO(r.reminder_date);
         items.push({ type: 'reminder', name: r.title, id: r.id, isOverdue: isPast(due) && !isToday(due) });
       }
     });
-    
+
     return items;
   }, [data.projects, data.tasks, data.reminders, date]);
 
   const getItemIcon = (type: 'project' | 'task' | 'reminder') => {
     switch (type) {
-      case 'project': return <FolderKanban className="h-3 w-3 text-primary" />;
-      case 'task': return <ListTodo className="h-3 w-3 text-secondary-foreground" />;
-      case 'reminder': return <Bell className="h-3 w-3 text-amber-500" />;
+      case 'project':return <FolderKanban className="h-3 w-3 text-primary" />;
+      case 'task':return <ListTodo className="h-3 w-3 text-secondary-foreground" />;
+      case 'reminder':return <Bell className="h-3 w-3 text-amber-500" />;
     }
   };
 
@@ -87,12 +87,12 @@ export const DashboardCalendar: React.FC = () => {
             <CalendarIcon className="h-4 w-4" />
             Calendário
           </CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-7 px-2"
-            onClick={() => navigate('/calendar')}
-          >
+            onClick={() => navigate('/calendar')}>
+            
             <Maximize2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -106,69 +106,69 @@ export const DashboardCalendar: React.FC = () => {
           className="rounded-md w-full"
           components={{
             DayContent: ({ date: dayDate }) => {
-              const hasProjTask = datesWithProjectsOrTasks.some(d => isSameDay(d, dayDate));
-              const hasReminder = datesWithReminders.some(d => isSameDay(d, dayDate));
+              const hasProjTask = datesWithProjectsOrTasks.some((d) => isSameDay(d, dayDate));
+              const hasReminder = datesWithReminders.some((d) => isSameDay(d, dayDate));
               return (
-                <div className="relative w-full h-full flex items-center justify-center">
+                <div className="relative w-full h-full flex items-center justify-center font-mono font-medium">
                   {dayDate.getDate()}
-                  {(hasProjTask || hasReminder) && (
-                    <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-                      {hasProjTask && (
-                        <div className="w-1 h-1 rounded-full bg-primary" />
-                      )}
-                      {hasReminder && (
-                        <div className="w-1 h-1 rounded-full bg-amber-500" />
-                      )}
+                  {(hasProjTask || hasReminder) &&
+                  <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+                      {hasProjTask &&
+                    <div className="w-1 h-1 rounded-full bg-primary" />
+                    }
+                      {hasReminder &&
+                    <div className="w-1 h-1 rounded-full bg-amber-500" />
+                    }
                     </div>
-                  )}
-                </div>
-              );
-            },
-          }}
-        />
+                  }
+                </div>);
+
+            }
+          }} />
+        
         
         {/* Selected date items */}
-        {selectedDateItems.length > 0 && (
-          <div className="mt-3 pt-3 border-t space-y-2">
+        {selectedDateItems.length > 0 &&
+        <div className="mt-3 pt-3 border-t space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
               Entregas nesta data:
             </p>
             <div className="space-y-1.5">
-              {selectedDateItems.slice(0, 3).map(item => (
-                <div 
-                  key={`${item.type}-${item.id}`}
-                  className={cn(
-                    "flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 overflow-hidden",
-                    item.type === 'reminder'
-                      ? "bg-amber-50 dark:bg-amber-950/30"
-                      : 'cursor-pointer hover:bg-accent/50'
-                  )}
-                  onClick={() => {
-                    if (item.type === 'project') {
-                      navigate(`/projects/${item.id}`);
-                    } else if (item.type === 'task' && item.projectId) {
-                      navigate(`/projects/${item.projectId}`);
-                    }
-                  }}
-                >
+              {selectedDateItems.slice(0, 3).map((item) =>
+            <div
+              key={`${item.type}-${item.id}`}
+              className={cn(
+                "flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 overflow-hidden",
+                item.type === 'reminder' ?
+                "bg-amber-50 dark:bg-amber-950/30" :
+                'cursor-pointer hover:bg-accent/50'
+              )}
+              onClick={() => {
+                if (item.type === 'project') {
+                  navigate(`/projects/${item.id}`);
+                } else if (item.type === 'task' && item.projectId) {
+                  navigate(`/projects/${item.projectId}`);
+                }
+              }}>
+              
                   {getItemIcon(item.type)}
-                  {item.isOverdue && (
-                    <span className="text-[10px] text-destructive font-medium shrink-0">
+                  {item.isOverdue &&
+              <span className="text-[10px] text-destructive font-medium shrink-0">
                       Atrasado
                     </span>
-                  )}
+              }
                   <span className="break-words line-clamp-1 min-w-0">{item.name}</span>
                 </div>
-              ))}
-              {selectedDateItems.length > 3 && (
-                <p className="text-xs text-muted-foreground">
+            )}
+              {selectedDateItems.length > 3 &&
+            <p className="text-xs text-muted-foreground">
                   +{selectedDateItems.length - 3} mais...
                 </p>
-              )}
+            }
             </div>
           </div>
-        )}
+        }
       </CardContent>
-    </Card>
-  );
+    </Card>);
+
 };
