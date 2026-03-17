@@ -331,7 +331,7 @@ export const CalendarPage: React.FC = () => {
             {format(parseISO(item.due_date), "dd/MM", { locale: ptBR })}
           </span>
         )}
-        {getItemBadge(item.type)}
+        
         {item.type === 'reminder' && isAdminOrMaster && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
