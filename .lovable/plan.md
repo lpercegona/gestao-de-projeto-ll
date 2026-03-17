@@ -1,36 +1,92 @@
 
 
-## Plan: Convert Settings Page to a Dialog
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-Transform the current `/preferences` full page into a modal dialog with a left sidebar navigation and right content panel, similar to the ChatGPT settings dialog shown in the reference image.
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
 
-### Architecture
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
 
-1. **Create `SettingsDialog` component** (`src/components/settings/SettingsDialog.tsx`)
-   - A `Dialog` with a two-panel layout: left nav sidebar (~220px) + right content area
-   - Left sidebar: vertical list of nav items with icons (Perfil, Personalização, Usuários, Notificações) — conditionally shown based on role
-   - Right panel: renders the selected section's content (existing tab components)
-   - Include Settings.tsx timezone/theme content as a "Geral" section
-   - Dialog size: `max-w-3xl` with fixed height `h-[80vh]`
-   - On mobile: stack vertically or use a simpler layout
+## Problema 2: Refresh destrói dados em diálogos abertos
 
-2. **Update `AppLayout.tsx` sidebar**
-   - Replace the `<Link to="/preferences">` with a `<button>` that opens the `SettingsDialog`
-   - Manage dialog open state in AppLayout
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
 
-3. **Update `App.tsx` routing**
-   - Remove the `/preferences` route (and its redirects from `/profile` and `/settings`)
-   - Or keep the route but redirect to home with dialog open via URL param
+**Estratégia**: Duas camadas de proteção.
 
-### Navigation Items (left sidebar)
-- **Perfil** (User icon) — `ProfileEditTab`
-- **Geral** (Globe icon) — Timezone settings from `Settings.tsx`
-- **Personalização** (Palette icon) — `PlatformCustomizationTab` (admin only)
-- **Usuários** (Users icon) — `UserManagementTab` (admin only)
-- **Notificações** (Bell icon) — `NotificationTemplatesTab` (admin only)
+### Camada 1: Estabilizar referência do `user` no AuthContext
 
-### Files to Create/Modify
-- **Create**: `src/components/settings/SettingsDialog.tsx` — new dialog component with sidebar + content layout
-- **Modify**: `src/components/layout/AppLayout.tsx` — replace Link with button that opens dialog
-- **Modify**: `src/App.tsx` — remove `/preferences` route and related redirects
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
+
+```typescript
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
+```
+
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
+
+### Camada 2: Lock de edição global no DataContext
+
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+
+```typescript
+// DataContext.tsx
+const editingLockRef = useRef(0);
+
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
+
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
+
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
+```
+
+Expor `lockEditing` e `unlockEditing` no contexto.
+
+### Camada 3: Aplicar o lock nos diálogos
+
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
+
+| Arquivo | Diálogo |
+|---|---|
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
+
+Padrão de uso via `useEffect`:
+
+```typescript
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
+```
+
+## Arquivos alterados
+
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 

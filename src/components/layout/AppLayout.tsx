@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { HeaderTimerDisplay, HeaderTimerTaskInfo } from "@/components/timer/HeaderTimerDisplay";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { GlobalTimerCompleteDialog } from "@/components/timer/GlobalTimerCompleteDialog";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UniversalSearchBar } from "@/components/layout/UniversalSearchBar";
@@ -185,6 +186,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   });
   const [isHovering, setIsHovering] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [isMobileHeaderHidden, setIsMobileHeaderHidden] = useState(false);
   const [highContrastEnabled, setHighContrastEnabled] = useState(() => {
     return localStorage.getItem("high-contrast-enabled") === "true";
@@ -532,52 +534,30 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </div>
             }
 
-            {/* Settings link */}
+            {/* Settings button */}
             {isCollapsed ?
             <Tooltip>
                 <TooltipTrigger asChild className="hidden lg:flex">
-                  <Link
-                  to="/preferences"
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    "mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-foreground transition-colors",
-                    location.pathname === "/preferences" ?
-                    "border border-slate-200 bg-background hover:text-foreground" :
-                    "hover:bg-background hover:text-foreground"
-                  )}>
-
+                  <button
+                  onClick={() => { setSidebarOpen(false); setSettingsOpen(true); }}
+                  className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium text-foreground transition-colors hover:bg-background hover:text-foreground">
                     <Settings className="w-3.5 h-3.5" />
-                  </Link>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Configurações</TooltipContent>
-                <Link
-                to="/preferences"
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors",
-                  location.pathname === "/preferences" ?
-                  "border border-slate-200 bg-background hover:text-foreground" :
-                  "hover:bg-background hover:text-foreground"
-                )}>
-
+                <button
+                onClick={() => { setSidebarOpen(false); setSettingsOpen(true); }}
+                className="lg:hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-foreground transition-colors hover:bg-background hover:text-foreground">
                   <Settings className="w-3.5 h-3.5" />
                   Configurações
-                </Link>
+                </button>
               </Tooltip> :
-
-            <Link
-              to="/preferences"
-              onClick={() => setSidebarOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-menu-foreground transition-colors",
-                location.pathname === "/preferences" ?
-                "border border-slate-200 bg-background hover:text-foreground" :
-                "hover:bg-background hover:text-foreground"
-              )}>
-
+            <button
+              onClick={() => { setSidebarOpen(false); setSettingsOpen(true); }}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-menu-foreground transition-colors hover:bg-background hover:text-foreground w-full text-left">
                 <Settings className="w-3.5 h-3.5" />
                 Configurações
-              </Link>
+              </button>
             }
 
             {/* Sign out button */}
@@ -650,6 +630,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </main>
       </div>
       <GlobalTimerCompleteDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </TooltipProvider>);
 
 };
