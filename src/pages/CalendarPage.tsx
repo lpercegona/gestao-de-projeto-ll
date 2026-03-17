@@ -315,7 +315,7 @@ export const CalendarPage: React.FC = () => {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="font-medium text-sm break-words line-clamp-2">{item.name}</p>
+            <p className="font-medium text-sm break-words line-clamp-2 pt-0">{item.name}</p>
             {item.recurrence && item.recurrence !== 'none' &&
           <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
           }
