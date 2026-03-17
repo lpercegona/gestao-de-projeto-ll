@@ -255,7 +255,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
                 className={cn(
                   "w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors text-left",
                   activeSection === section.id
-                    ? "bg-background text-foreground shadow-sm border border-border"
+                    ? "bg-background text-foreground border border-border"
                     : "text-muted-foreground hover:bg-background hover:text-foreground",
                 )}
               >
@@ -266,9 +266,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
           </nav>
 
           {/* Right content area */}
-          <div className="flex flex-col h-screen">
+          <div className="flex flex-col">
             <header className="h-8"></header>
-            <main className="flex-1 overflow-y-auto p-6">{renderContent()}</main>
+            <main className="p-6">{renderContent()}</main>
           </div>
         </div>
       </DialogContent>
