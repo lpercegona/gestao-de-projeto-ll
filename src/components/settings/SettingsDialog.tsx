@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -191,6 +191,8 @@ interface SettingsDialogProps {
 export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChange }) => {
   const { isMasterAdmin, isAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState("general");
+  const navRef = useRef<HTMLDivElement>(null);
+  const [showGradient, setShowGradient] = useState(true);
 
   const showAdminSections = isMasterAdmin || isAdmin;
 
@@ -206,6 +208,20 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
         ]
       : []),
   ];
+
+  const handleNavScroll = () => {
+    const el = navRef.current;
+    if (!el) return;
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    setShowGradient(!atEnd);
+  };
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    // Check initial state
+    handleNavScroll();
+  }, [open]);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -228,29 +244,39 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[80vh] max-h-[95vh] max-w-[768px] m-2 p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[95vw] sm:max-w-[768px] h-[80vh] max-h-[95vh] m-2 p-0 gap-0 overflow-hidden rounded-xl [&>button]:sm:bg-transparent [&>button]:sm:rounded-sm [&>button]:bg-muted/60 [&>button]:rounded-full [&>button]:w-7 [&>button]:h-7 [&>button]:flex [&>button]:items-center [&>button]:justify-center">
         <DialogTitle className="sr-only">Configurações</DialogTitle>
         <div className="flex flex-col sm:flex-row h-full overflow-hidden">
           {/* Mobile: horizontal scroll nav */}
-          <nav className="flex sm:hidden flex-shrink-0 border-r border-border bg-muted/30 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-1 px-2 py-2 min-w-max">
-              {navSections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium border border-transparent transition-colors whitespace-nowrap",
-                    activeSection === section.id
-                      ? "bg-background text-foreground border-border"
-                      : "text-muted-foreground hover:bg-background hover:text-foreground",
-                  )}
-                >
-                  <section.icon className="w-3.5 h-3.5 flex-shrink-0" />
-                  {section.label}
-                </button>
-              ))}
-            </div>
-          </nav>
+          <div className="relative flex sm:hidden flex-shrink-0 border-b border-border bg-muted/30">
+            <nav
+              ref={navRef}
+              onScroll={handleNavScroll}
+              className="flex overflow-x-auto scrollbar-hide w-full"
+            >
+              <div className="flex items-center gap-1 px-2 py-2 min-w-max pr-10">
+                {navSections.map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium border border-transparent transition-colors whitespace-nowrap",
+                      activeSection === section.id
+                        ? "bg-background text-foreground border-border"
+                        : "text-muted-foreground hover:bg-background hover:text-foreground",
+                    )}
+                  >
+                    <section.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                    {section.label}
+                  </button>
+                ))}
+              </div>
+            </nav>
+            {/* Gradient fade overlay */}
+            {showGradient && (
+              <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-muted/80 to-transparent pointer-events-none" />
+            )}
+          </div>
 
           {/* Desktop: vertical sidebar */}
           <nav className="hidden sm:block w-[180px] flex-shrink-0 border-r border-border bg-muted/30 p-3 space-y-0.5 overflow-y-auto">
