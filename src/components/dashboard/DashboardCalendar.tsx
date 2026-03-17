@@ -141,7 +141,7 @@ export const DashboardCalendar: React.FC = () => {
                     "flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 overflow-hidden",
                     item.type === 'reminder'
                       ? "bg-amber-50 dark:bg-amber-950/30"
-                      : item.type !== 'reminder' ? 'cursor-pointer hover:bg-accent/50' : ''
+                      : 'cursor-pointer hover:bg-accent/50'
                   )}
                   onClick={() => {
                     if (item.type === 'project') {
