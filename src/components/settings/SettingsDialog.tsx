@@ -160,8 +160,8 @@ const GeneralSection: React.FC = () => {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-32">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center h-full">
+        <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
 
@@ -253,7 +253,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={cn(
-                  "w-full flex items-center gap-2.5 rounded-lg px-2.5  py-2 text-sm font-medium border border-transparent transition-colors text-left",
+                  "w-full flex items-center gap-2.5 rounded-lg px-2.5  py-2 text-xs font-medium border border-transparent transition-colors text-left",
                   activeSection === section.id
                     ? "bg-background text-foreground border border-border"
                     : "text-muted-foreground hover:bg-background hover:text-foreground",
