@@ -279,9 +279,9 @@ export const CalendarPage: React.FC = () => {
 
   const getItemBadge = (type: CalendarItem['type']) => {
     switch (type) {
-      case 'project': return <Badge variant="default" className="text-xs">Projeto</Badge>;
-      case 'task': return <Badge variant="secondary" className="text-xs">Tarefa</Badge>;
-      case 'reminder': return <Badge variant="outline" className="text-xs">Lembrete</Badge>;
+      case 'project': return <FolderKanban className="h-3.5 w-3.5 text-primary" />;
+      case 'task': return <ListTodo className="h-3.5 w-3.5 text-secondary-foreground" />;
+      case 'reminder': return <Bell className="h-3.5 w-3.5 text-amber-500" />;
     }
   };
 
