@@ -266,9 +266,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
           </nav>
 
           {/* Right content area */}
-          <div className="flex flex-col h-full">
-            <header className="h-8"></header>
-            <main className="flex-1 p-6 overflow-y-auto">{renderContent()}</main>
+          <div className="flex flex-col flex-1 min-h-0">
+            <header className="h-8 flex-shrink-0"></header>
+            <main className="flex-1 min-h-0 p-6 overflow-y-auto">{renderContent()}</main>
           </div>
         </div>
       </DialogContent>
