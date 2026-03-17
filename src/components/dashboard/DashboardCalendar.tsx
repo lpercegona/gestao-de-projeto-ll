@@ -151,7 +151,7 @@ export const DashboardCalendar: React.FC = () => {
                     }
                   }}
                 >
-                  {getItemIcon(item.type)}
+                  
                   {item.isOverdue && (
                     <span className="text-[10px] text-destructive font-medium shrink-0">
                       Atrasado
