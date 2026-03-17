@@ -280,7 +280,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
             </nav>
             {/* Gradient fade overlay */}
             {showGradient && (
-              <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-muted to-transparent pointer-events-none" />
+              <div className="absolute right-0 top-0 bottom-0 w-24 pointer-events-none bg-[linear-gradient(to_left,hsl(var(--muted))_40%,transparent_100%)]" />
             )}
           </div>
 
