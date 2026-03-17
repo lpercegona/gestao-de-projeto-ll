@@ -294,10 +294,17 @@ export const CalendarPage: React.FC = () => {
       key={`${item.type}-${item.id}`}
       className={cn(
         "group flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
-        item.type !== 'reminder' && !isClient && "cursor-pointer hover:bg-accent/50",
-        item.type === 'reminder' && "hover:bg-accent/50"
+        item.type === 'reminder'
+          ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50"
+          : "cursor-pointer hover:bg-accent/50"
       )}
-      onClick={() => item.type !== 'reminder' && !isClient && handleNavigate(item)}
+      onClick={() => {
+        if (item.type === 'project') {
+          setDetailDialogItem(item);
+        } else if (item.type === 'task') {
+          setDetailDialogItem(item);
+        }
+      }}
     >
       <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
         <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
