@@ -309,7 +309,7 @@ export const CalendarPage: React.FC = () => {
       }
     }}>
     
-      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
+      <div className="gap-3 min-w-0 w-full sm:w-auto overflow-hidden flex items-start justify-start">
         <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
           {getItemIcon(item.type)}
         </div>
