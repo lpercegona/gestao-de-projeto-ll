@@ -228,10 +228,32 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[80vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl h-[80vh] max-h-[95vh] max-w-[95vw] p-0 gap-0 overflow-hidden">
         <DialogTitle className="sr-only">Configurações</DialogTitle>
-        <div className="flex h-full overflow-hidden">
-          <nav className="w-[180px] flex-shrink-0 border-r border-border bg-muted/30 p-3 space-y-0.5 overflow-y-auto">
+        <div className="flex flex-col sm:flex-row h-full overflow-hidden">
+          {/* Mobile: horizontal scroll nav */}
+          <nav className="flex sm:hidden flex-shrink-0 border-b border-border bg-muted/30 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-1 px-2 py-2 min-w-max">
+              {navSections.map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium border border-transparent transition-colors whitespace-nowrap",
+                    activeSection === section.id
+                      ? "bg-background text-foreground border-border"
+                      : "text-muted-foreground hover:bg-background hover:text-foreground",
+                  )}
+                >
+                  <section.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          {/* Desktop: vertical sidebar */}
+          <nav className="hidden sm:block w-[180px] flex-shrink-0 border-r border-border bg-muted/30 p-3 space-y-0.5 overflow-y-auto">
             <h2 className="text-xs font-semibold text-foreground mb-2 px-2">Configurações</h2>
             {navSections.map((section) => (
               <button
@@ -251,8 +273,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
           </nav>
 
           <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <header className="h-6 flex-shrink-0" />
-            <main className="flex-1 min-h-0 p-4 overflow-y-auto">{renderContent()}</main>
+            <header className="h-6 flex-shrink-0 hidden sm:block" />
+            <main className="flex-1 min-h-0 p-3 sm:p-4 overflow-y-auto">{renderContent()}</main>
           </div>
         </div>
       </DialogContent>
