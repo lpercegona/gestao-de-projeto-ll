@@ -424,7 +424,7 @@ export const CalendarPage: React.FC = () => {
                 head_cell: "text-muted-foreground rounded-md flex-1 font-normal text-[0.8rem]",
                 row: "flex w-full mt-2",
                 cell: "flex-1 h-12 text-center text-sm p-0 relative",
-                day: "h-12 w-full p-0 font-normal aria-selected:opacity-100"
+                day: "h-12 w-full p-0 font-normal rounded-md aria-selected:opacity-100"
               }}
               components={{
                 DayContent: ({ date: dayDate }) => {
