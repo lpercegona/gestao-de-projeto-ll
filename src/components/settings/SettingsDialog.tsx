@@ -20,7 +20,7 @@ import {
   SelectGroup,
   SelectLabel,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader } from "lucide-react";
 import { toast } from "sonner";
 
 const WORLD_TIMEZONES = [
