@@ -198,16 +198,10 @@ const App = () => (
                 </ProtectedRoute>
               } />
 
-              {/* Preferences - accessible by all authenticated users */}
-              <Route path="/preferences" element={
-                <ProtectedRoute>
-                  <Preferences />
-                </ProtectedRoute>
-              } />
-              
               {/* Redirects for old routes */}
-              <Route path="/profile" element={<Navigate to="/preferences" replace />} />
-              <Route path="/settings" element={<Navigate to="/preferences" replace />} />
+              <Route path="/preferences" element={<Navigate to="/" replace />} />
+              <Route path="/profile" element={<Navigate to="/" replace />} />
+              <Route path="/settings" element={<Navigate to="/" replace />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
