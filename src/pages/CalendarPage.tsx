@@ -467,12 +467,7 @@ export const CalendarPage: React.FC = () => {
               <CardTitle className="text-base">
                 {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
               </CardTitle>
-              {isClient && (
-                <Button variant="default" size="icon" onClick={() => setShowRequestForm(true)}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
-              {isAdminOrMaster && (
+              {(isClient || isAdminOrMaster) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="default" size="icon">
@@ -480,18 +475,30 @@ export const CalendarPage: React.FC = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate('/projects?new=true')}>
+                    <DropdownMenuItem onClick={() => {
+                      if (isClient) {
+                        setShowRequestForm(true);
+                      } else {
+                        navigate('/projects?new=true');
+                      }
+                    }}>
                       <FolderKanban className="h-4 w-4 mr-2" />
-                      Novo Projeto
+                      Projeto
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/projects?newTask=true')}>
+                    <DropdownMenuItem onClick={() => {
+                      if (isClient) {
+                        setShowRequestForm(true);
+                      } else {
+                        navigate('/projects?newTask=true');
+                      }
+                    }}>
                       <ListTodo className="h-4 w-4 mr-2" />
-                      Nova Tarefa
+                      Tarefa
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleOpenReminderDialog()}>
                       <Bell className="h-4 w-4 mr-2" />
-                      Novo Lembrete
+                      Lembrete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
