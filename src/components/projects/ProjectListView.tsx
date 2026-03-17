@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  CollapsibleTrigger } from
+"@/components/ui/collapsible";
 import {
   ChevronDown,
   Pencil,
@@ -17,14 +17,14 @@ import {
   Archive,
   FilePenLine,
   Check,
-  X,
-} from "lucide-react";
+  X } from
+"lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuTrigger } from
+"@/components/ui/dropdown-menu";
 import { TaskCard } from "./TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { formatHours } from "@/lib/formatHours";
@@ -139,14 +139,14 @@ interface ProjectListViewProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
   onRegisterTime: (
-    taskId: string,
-    entry?: {
-      id: string;
-      hours: number;
-      description: string | null;
-      date: string;
-    },
-  ) => void;
+  taskId: string,
+  entry?: {
+    id: string;
+    hours: number;
+    description: string | null;
+    date: string;
+  })
+  => void;
   onStartTimer: (taskId: string) => Promise<void>;
   onStopTimer: (taskId: string) => Promise<void>;
   onCompleteTask: (taskId: string) => Promise<void>;
@@ -197,12 +197,12 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   onEditRequest,
   onDeleteRequest,
   onApproveRequest,
-  onRejectRequest,
+  onRejectRequest
 }) => {
   const [openProjects, setOpenProjects] = useState<Record<string, boolean>>({});
   const [profilesByUserId, setProfilesByUserId] = useState<
-    Record<string, ProfileSummary>
-  >({});
+    Record<string, ProfileSummary>>(
+    {});
   const [shareProjectId, setShareProjectId] = useState<string | null>(null);
 
   const isClientRestrictedMode = allowProjectEditOnly && !isAdminOrMaster;
@@ -224,15 +224,15 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         return;
       }
 
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email, avatar_url")
-        .in("user_id", userIdsWithProjectAccess);
+      const { data: profiles, error: profilesError } = await supabase.
+      from("profiles").
+      select("user_id, full_name, email, avatar_url").
+      in("user_id", userIdsWithProjectAccess);
 
       if (profilesError) {
         console.error(
           "Erro ao buscar perfis de usuários para projetos:",
-          profilesError,
+          profilesError
         );
         return;
       }
@@ -286,9 +286,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
     projects.forEach((project) => {
       const userIds = new Set(
-        projectAccess
-          .filter((access) => access.project_id === project.id)
-          .map((access) => access.user_id),
+        projectAccess.
+        filter((access) => access.project_id === project.id).
+        map((access) => access.user_id)
       );
       if (project.owner_id) userIds.add(project.owner_id);
       if (project.created_by) userIds.add(project.created_by);
@@ -303,21 +303,21 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   };
 
   const getStatusLabel = (s: string) =>
-    s === "active"
-      ? "Ativo"
-      : s === "paused"
-        ? "Pausado"
-        : s === "archived"
-          ? "Arquivo"
-          : "Concluído";
+  s === "active" ?
+  "Ativo" :
+  s === "paused" ?
+  "Pausado" :
+  s === "archived" ?
+  "Arquivo" :
+  "Concluído";
   const getStatusColor = (s: string) =>
-    s === "active"
-      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-      : s === "paused"
-        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-        : s === "archived"
-          ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-          : "bg-muted text-muted-foreground";
+  s === "active" ?
+  "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
+  s === "paused" ?
+  "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" :
+  s === "archived" ?
+  "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200" :
+  "bg-muted text-muted-foreground";
 
   const getRequestStatusLabel = (status?: string) => {
     if (status === "pending") return "Pendente";
@@ -336,9 +336,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     }
 
     if (
-      project.request_status === "analyzing" ||
-      project.request_status === "in_review"
-    ) {
+    project.request_status === "analyzing" ||
+    project.request_status === "in_review")
+    {
       return "border-blue-300 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-950/20";
     }
 
@@ -351,8 +351,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         <CardContent className="py-12 text-center">
           <p className="text-muted-foreground">Nenhum projeto encontrado.</p>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   return (
@@ -362,155 +362,155 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         const projectTasks = tasks.filter((t) => t.project_id === project.id);
         const hours = getProjectHours(project.id);
         const projectCollaborators =
-          projectMembersByProjectId[project.id] || [];
+        projectMembersByProjectId[project.id] || [];
         const canManageShare =
-          isAdminOrMaster ||
-          (!!currentUserId && currentUserId === project.owner_id);
+        isAdminOrMaster ||
+        !!currentUserId && currentUserId === project.owner_id;
         const projectColumns = client ? getClientColumns(client.id) : [];
         const isOpen = openProjects[project.id] ?? false;
 
         return (
           <Card
             key={project.id}
-            className={`relative mb-4 break-inside-avoid overflow-hidden ${getRequestCardClass(project)}`}
-          >
+            className={`relative mb-4 break-inside-avoid overflow-hidden ${getRequestCardClass(project)}`}>
+            
             {/* Project Header */}
             <Collapsible
               open={isOpen}
-              onOpenChange={() => toggleProject(project.id)}
-            >
+              onOpenChange={() => toggleProject(project.id)}>
+              
               <div className="relative">
-                {hasPendingEditRequest?.(project) && (
-                  <div className="absolute top-3 right-11 z-10">
+                {hasPendingEditRequest?.(project) &&
+                <div className="absolute top-3 right-11 z-10">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onOpenEditRequestReview?.(project);
-                      }}
-                    >
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenEditRequestReview?.(project);
+                    }}>
+                    
                       <FilePenLine className="w-3 h-3 text-amber-500" />
                     </Button>
                   </div>
-                )}
+                }
 
-                {(allowProjectEditOnly || isAdminOrMaster) && (
-                  <div className="absolute top-3 right-3 z-10">
+                {(allowProjectEditOnly || isAdminOrMaster) &&
+                <div className="absolute top-3 right-3 z-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => e.stopPropagation()}>
+                        
                           <MoreVertical className="w-3 h-3" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {project.is_request ? (
-                          <>
+                        {project.is_request ?
+                      <>
                             <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEditRequest?.(project);
-                              }}
-                            >
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditRequest?.(project);
+                          }}>
+                          
                               <Pencil className="w-4 h-4 mr-2" />
                               Editar solicitação
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteRequest?.(project);
-                              }}
-                            >
+                          className="text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteRequest?.(project);
+                          }}>
+                          
                               <Trash2 className="w-4 h-4 mr-2" />
                               Excluir solicitação
                             </DropdownMenuItem>
-                            {isAdminOrMaster && (
-                              <>
+                            {isAdminOrMaster &&
+                        <>
                                 <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onApproveRequest?.(project);
-                                  }}
-                                >
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onApproveRequest?.(project);
+                            }}>
+                            
                                   <Check className="w-4 h-4 mr-2 text-green-600" />
                                   Aceitar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRejectRequest?.(project);
-                                  }}
-                                >
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRejectRequest?.(project);
+                            }}>
+                            
                                   <X className="w-4 h-4 mr-2" />
                                   Rejeitar
                                 </DropdownMenuItem>
                               </>
-                            )}
-                          </>
-                        ) : (
-                          <>
+                        }
+                          </> :
+
+                      <>
                             <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEditProject(project);
-                              }}
-                            >
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditProject(project);
+                          }}>
+                          
                               <Pencil className="w-4 h-4 mr-2" />
-                              {isClientRestrictedMode
-                                ? (project.created_by === currentUserId ? "Editar" : "Solicitar Edição")
-                                : "Editar"}
+                              {isClientRestrictedMode ?
+                          project.created_by === currentUserId ? "Editar" : "Solicitar Edição" :
+                          "Editar"}
                             </DropdownMenuItem>
 
-                            {isAdminOrMaster && !allowProjectEditOnly && (
-                              <>
+                            {isAdminOrMaster && !allowProjectEditOnly &&
+                        <>
                                 <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onArchiveProject(project);
-                                  }}
-                                >
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onArchiveProject(project);
+                            }}>
+                            
                                   <Archive className="w-4 h-4 mr-2" />
                                   Arquivar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDeleteProject(project);
-                                  }}
-                                >
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteProject(project);
+                            }}>
+                            
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Excluir
                                 </DropdownMenuItem>
                               </>
-                            )}
+                        }
 
-                            {isClientRestrictedMode && project.created_by === currentUserId && (
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteProject(project);
-                                }}
-                              >
+                            {isClientRestrictedMode && project.created_by === currentUserId &&
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProject(project);
+                          }}>
+                          
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Excluir
                               </DropdownMenuItem>
-                            )}
+                        }
                           </>
-                        )}
+                      }
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                )}
+                }
 
                 <CollapsibleTrigger
                   className="w-full text-left"
@@ -529,49 +529,49 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       event.stopPropagation();
                       onRequestCardClick(project);
                     }
-                  }}
-                >
+                  }}>
+                  
                   <CardContent className="p-4 sm:p-6 pr-16 sm:pr-20 cursor-pointer hover:bg-muted/30 transition-colors">
                     <div className="w-full space-y-2">
                       <div className="flex items-start gap-2">
                         <ChevronDown
-                          className={`w-4 h-4 mt-1 text-muted-foreground transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
-                        />
+                          className={`w-4 h-4 mt-1 text-muted-foreground transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                        
                         <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2 sm:gap-3">
                           <h3 className="font-semibold text-base sm:text-[1.05rem] text-foreground">
                             {project.name}
                           </h3>
-                          {project.is_request && (
-                            <Badge variant="secondary">
+                          {project.is_request &&
+                          <Badge variant="secondary">
                               {project.request_label || "Solicitação"}
                             </Badge>
-                          )}
+                          }
                           <span
-                            className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}
-                          >
-                            {project.is_request
-                              ? getRequestStatusLabel(project.request_status)
-                              : getStatusLabel(project.status)}
+                            className={`text-xs px-2 py-1 rounded-full ${getStatusColor(project.status)}`}>
+                            
+                            {project.is_request ?
+                            getRequestStatusLabel(project.request_status) :
+                            getStatusLabel(project.status)}
                           </span>
                           {isAdminOrMaster &&
-                            projectCollaborators.length > 0 && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                {projectCollaborators.length}
-                              </span>
-                            )}
+                          projectCollaborators.length > 0
+
+
+
+
+                          }
                         </div>
                       </div>
-                      {project.description && (
-                        <ExpandableDescription
-                          content={project.description}
-                          className="w-full max-w-none text-sm text-muted-foreground"
-                          stopPropagationOnToggle
-                        />
-                      )}
+                      {project.description &&
+                      <ExpandableDescription
+                        content={project.description}
+                        className="w-full max-w-none text-sm text-muted-foreground"
+                        stopPropagationOnToggle />
+
+                      }
                       <div className="w-full flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                        {!isClientRestrictedMode && (
-                          <div>
+                        {!isClientRestrictedMode &&
+                        <div>
                             <span className="text-muted-foreground">
                               Cliente:{" "}
                             </span>
@@ -579,9 +579,9 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                               {client?.company || client?.name}
                             </span>
                           </div>
-                        )}
-                        {!project.is_request && (
-                          <>
+                        }
+                        {!project.is_request &&
+                        <>
                             <div>
                               <span className="text-muted-foreground">
                                 Tarefas:{" "}
@@ -599,11 +599,11 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                               </span>
                             </div>
                           </>
-                        )}
+                        }
                         {projectColumns.map(
                           (col) =>
-                            project.custom_fields[col.id] && (
-                              <div key={col.id}>
+                          project.custom_fields[col.id] &&
+                          <div key={col.id}>
                                 <span className="text-muted-foreground">
                                   {col.name}:{" "}
                                 </span>
@@ -611,46 +611,46 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                   {project.custom_fields[col.id]}
                                 </span>
                               </div>
-                            ),
+
                         )}
                       </div>
-                      {projectCollaborators.length > 0 && (
-                        <div
-                          className={`inline-flex items-center -space-x-2 pt-1 ${canManageShare ? "cursor-pointer hover:opacity-80" : ""}`}
-                          onClick={(e) => {
-                            if (!canManageShare) return;
-                            e.stopPropagation();
-                            setShareProjectId(project.id);
-                          }}
-                        >
+                      {projectCollaborators.length > 0 &&
+                      <div
+                        className={`inline-flex items-center -space-x-2 pt-1 ${canManageShare ? "cursor-pointer hover:opacity-80" : ""}`}
+                        onClick={(e) => {
+                          if (!canManageShare) return;
+                          e.stopPropagation();
+                          setShareProjectId(project.id);
+                        }}>
+                        
                           {projectCollaborators.map((userId) => {
-                            const profile = profilesByUserId[userId];
-                            return (
-                              <Avatar
-                                key={userId}
-                                className="h-7 w-7 border-2 border-background"
-                                title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}
-                              >
+                          const profile = profilesByUserId[userId];
+                          return (
+                            <Avatar
+                              key={userId}
+                              className="h-7 w-7 border-2 border-background"
+                              title={`${getMemberName(userId, profile)} • ${getMemberEmail(profile)}`}>
+                              
                                 <AvatarImage
-                                  src={getAvatarSrc(profile)}
-                                  alt={`${getMemberName(userId, profile)} - Avatar`}
-                                />
+                                src={getAvatarSrc(profile)}
+                                alt={`${getMemberName(userId, profile)} - Avatar`} />
+                              
                                 <AvatarFallback className="text-[10px] bg-muted text-muted-foreground font-medium">
                                   {getAvatarInitial(userId, profile)}
                                 </AvatarFallback>
-                              </Avatar>
-                            );
-                          })}
-                          {canManageShare && (
-                            <div
-                              className="h-6 w-6 rounded-full border-2 border-background bg-secondary text-muted-foreground flex items-center justify-center z-10"
-                              title="Gerenciar compartilhamento"
-                            >
+                              </Avatar>);
+
+                        })}
+                          {canManageShare &&
+                        <div
+                          className="h-6 w-6 rounded-full border-2 border-background bg-secondary text-muted-foreground flex items-center justify-center z-10"
+                          title="Gerenciar compartilhamento">
+                          
                               <Plus className="h-3.5 w-3.5" />
                             </div>
-                          )}
+                        }
                         </div>
-                      )}
+                      }
                     </div>
                   </CardContent>
                 </CollapsibleTrigger>
@@ -658,149 +658,149 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
               <CollapsibleContent>
                 <div className="border-t px-4 sm:px-6 py-4 bg-muted/20">
-                  {project.is_request ? (
-                    <p className="text-sm text-muted-foreground">
+                  {project.is_request ?
+                  <p className="text-sm text-muted-foreground">
                       Esta solicitação ainda não foi convertida em projeto.
-                    </p>
-                  ) : (
-                    <>
+                    </p> :
+
+                  <>
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-sm font-medium text-foreground">
                           Tarefas ({projectTasks.length})
                         </h4>
                         <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onCreateTask(project.id)}
-                          className="h-8"
-                        >
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onCreateTask(project.id)}
+                        className="h-8">
+                        
                           <Plus className="w-4 h-4 mr-1" />
                           Nova Tarefa
                         </Button>
                       </div>
 
-                      {projectTasks.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">
+                      {projectTasks.length === 0 ?
+                    <p className="text-sm text-muted-foreground text-center py-4">
                           Nenhuma tarefa neste projeto.
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {projectTasks.map((task) => {
-                            const taskTimeEntries = timeEntries.filter(
-                              (te) => te.task_id === task.id,
-                            );
-                            const activeTimer = getActiveTimer(task.id);
-                            const isPendingApprovalTask = Boolean(
-                              task.is_pending_approval,
-                            );
-                            const isOwnTask = currentUserId
-                              ? task.created_by === currentUserId
-                              : true;
+                        </p> :
 
-                            return (
-                              <TaskCard
-                                key={task.id}
-                                task={task}
-                                taskHours={getTaskHours(task.id)}
-                                timeEntries={taskTimeEntries}
-                                activeTimer={activeTimer}
-                                kanbanStages={kanbanStages}
-                                getCreatorName={getCreatorName}
-                                onEditTask={() =>
-                                  !isPendingApprovalTask && onEditTask(task)
-                                }
-                                onDeleteTask={() =>
-                                  !isPendingApprovalTask && onDeleteTask(task)
-                                }
-                                onRequestEdit={
-                                  !isPendingApprovalTask &&
-                                  !isOwnTask &&
-                                  onRequestTaskEdit
-                                    ? () => onRequestTaskEdit(task)
-                                    : undefined
-                                }
-                                onRegisterTime={onRegisterTime}
-                                onStartTimer={() =>
-                                  isPendingApprovalTask
-                                    ? Promise.resolve()
-                                    : onStartTimer(task.id)
-                                }
-                                onStopTimer={() =>
-                                  isPendingApprovalTask
-                                    ? Promise.resolve()
-                                    : onStopTimer(task.id)
-                                }
-                                onCompleteTask={() =>
-                                  isPendingApprovalTask
-                                    ? Promise.resolve()
-                                    : onCompleteTask(task.id)
-                                }
-                                showStatus={true}
-                                iconOnly
-                                showTimeControls={
-                                  hasPerTaskPermissions
-                                    ? isOwnTask
-                                    : !isClientRestrictedMode
-                                }
-                                allowTaskEdit={
-                                  !isPendingApprovalTask &&
-                                  (hasPerTaskPermissions
-                                    ? isOwnTask
-                                    : !isClientRestrictedMode)
-                                }
-                                allowTaskDelete={
-                                  !isPendingApprovalTask &&
-                                  (hasPerTaskPermissions
-                                    ? isOwnTask
-                                    : !isClientRestrictedMode)
-                                }
-                                showRegisterTimeButton={
-                                  !isPendingApprovalTask &&
-                                  (hasPerTaskPermissions
-                                    ? isOwnTask
-                                    : !isClientRestrictedMode)
-                                }
-                                allowTimeEntryEdit={
-                                  !isPendingApprovalTask &&
-                                  (hasPerTaskPermissions
-                                    ? isOwnTask
-                                    : !isClientRestrictedMode)
-                                }
-                                onPendingApprovalClick={
-                                  isPendingApprovalTask
-                                    ? () => onPendingTaskClick?.(task)
-                                    : undefined
-                                }
-                              />
-                            );
-                          })}
+                    <div className="space-y-3">
+                          {projectTasks.map((task) => {
+                        const taskTimeEntries = timeEntries.filter(
+                          (te) => te.task_id === task.id
+                        );
+                        const activeTimer = getActiveTimer(task.id);
+                        const isPendingApprovalTask = Boolean(
+                          task.is_pending_approval
+                        );
+                        const isOwnTask = currentUserId ?
+                        task.created_by === currentUserId :
+                        true;
+
+                        return (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            taskHours={getTaskHours(task.id)}
+                            timeEntries={taskTimeEntries}
+                            activeTimer={activeTimer}
+                            kanbanStages={kanbanStages}
+                            getCreatorName={getCreatorName}
+                            onEditTask={() =>
+                            !isPendingApprovalTask && onEditTask(task)
+                            }
+                            onDeleteTask={() =>
+                            !isPendingApprovalTask && onDeleteTask(task)
+                            }
+                            onRequestEdit={
+                            !isPendingApprovalTask &&
+                            !isOwnTask &&
+                            onRequestTaskEdit ?
+                            () => onRequestTaskEdit(task) :
+                            undefined
+                            }
+                            onRegisterTime={onRegisterTime}
+                            onStartTimer={() =>
+                            isPendingApprovalTask ?
+                            Promise.resolve() :
+                            onStartTimer(task.id)
+                            }
+                            onStopTimer={() =>
+                            isPendingApprovalTask ?
+                            Promise.resolve() :
+                            onStopTimer(task.id)
+                            }
+                            onCompleteTask={() =>
+                            isPendingApprovalTask ?
+                            Promise.resolve() :
+                            onCompleteTask(task.id)
+                            }
+                            showStatus={true}
+                            iconOnly
+                            showTimeControls={
+                            hasPerTaskPermissions ?
+                            isOwnTask :
+                            !isClientRestrictedMode
+                            }
+                            allowTaskEdit={
+                            !isPendingApprovalTask && (
+                            hasPerTaskPermissions ?
+                            isOwnTask :
+                            !isClientRestrictedMode)
+                            }
+                            allowTaskDelete={
+                            !isPendingApprovalTask && (
+                            hasPerTaskPermissions ?
+                            isOwnTask :
+                            !isClientRestrictedMode)
+                            }
+                            showRegisterTimeButton={
+                            !isPendingApprovalTask && (
+                            hasPerTaskPermissions ?
+                            isOwnTask :
+                            !isClientRestrictedMode)
+                            }
+                            allowTimeEntryEdit={
+                            !isPendingApprovalTask && (
+                            hasPerTaskPermissions ?
+                            isOwnTask :
+                            !isClientRestrictedMode)
+                            }
+                            onPendingApprovalClick={
+                            isPendingApprovalTask ?
+                            () => onPendingTaskClick?.(task) :
+                            undefined
+                            } />);
+
+
+                      })}
                         </div>
-                      )}
+                    }
                     </>
-                  )}
+                  }
                 </div>
               </CollapsibleContent>
             </Collapsible>
-          </Card>
-        );
+          </Card>);
+
       })}
 
-      {shareProjectId && (
-        <ProjectShareDialog
-          projectId={shareProjectId}
-          projectOwnerId={
-            projects.find((p) => p.id === shareProjectId)?.owner_id
-          }
-          isOpen={!!shareProjectId}
-          onClose={() => setShareProjectId(null)}
-          canManageShare={
-            isAdminOrMaster ||
-            (!!currentUserId &&
-              currentUserId ===
-                projects.find((p) => p.id === shareProjectId)?.owner_id)
-          }
-        />
-      )}
-    </div>
-  );
+      {shareProjectId &&
+      <ProjectShareDialog
+        projectId={shareProjectId}
+        projectOwnerId={
+        projects.find((p) => p.id === shareProjectId)?.owner_id
+        }
+        isOpen={!!shareProjectId}
+        onClose={() => setShareProjectId(null)}
+        canManageShare={
+        isAdminOrMaster ||
+        !!currentUserId &&
+        currentUserId ===
+        projects.find((p) => p.id === shareProjectId)?.owner_id
+        } />
+
+      }
+    </div>);
+
 };
