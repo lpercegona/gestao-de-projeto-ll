@@ -244,7 +244,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl h-[80vh] p-0 gap-0 overflow-hidden">
         <DialogTitle className="sr-only">Configurações</DialogTitle>
-        <div className="flex h-full">
+        <div className="flex h-full overflow-hidden">
           {/* Left sidebar nav */}
           <nav className="w-[200px] flex-shrink-0 border-r border-border bg-muted/30 p-4 space-y-1 overflow-y-auto">
             <h2 className="text-sm font-semibold text-foreground mb-3 px-2">Configurações</h2>
@@ -266,7 +266,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
           </nav>
 
           {/* Right content area */}
-          <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <header className="h-8 flex-shrink-0"></header>
             <main className="flex-1 min-h-0 p-6 overflow-y-auto">{renderContent()}</main>
           </div>
