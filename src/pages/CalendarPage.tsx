@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProjectDetailDialogContent } from '@/components/projects/ProjectDetailDialogContent';
 import { TaskDetailDialogContent } from '@/components/projects/TaskDetailDialogContent';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
