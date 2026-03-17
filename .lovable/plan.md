@@ -1,76 +1,92 @@
 
 
-## Plano: 5 melhorias no calendário (dropdown cliente, fundo âmbar, ícones, pontos duplos, diálogos)
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-### 1. Dropdown de criação para usuário cliente no CalendarPage
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
 
-Atualmente o cliente vê um botão "+" que abre direto o form de solicitação de projeto. Mudar para um `DropdownMenu` com 3 opções:
-- **Projeto** → abre `ProjectRequestForm`
-- **Tarefa** → abre `ProjectRequestForm` (ou navega com param)
-- **Lembrete** → abre diálogo de lembrete (reutilizar o existente, habilitando para clientes também)
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
 
-Labels sem "Novo/Nova": apenas "Projeto", "Tarefa", "Lembrete".
+## Problema 2: Refresh destrói dados em diálogos abertos
 
-Também renomear as opções do dropdown admin de "Novo Projeto" → "Projeto", "Nova Tarefa" → "Tarefa", "Novo Lembrete" → "Lembrete".
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
 
-**Arquivo**: `src/pages/CalendarPage.tsx` (linhas 463-491)
+**Estratégia**: Duas camadas de proteção.
 
-### 2. Fundo âmbar nos cards de lembretes
+### Camada 1: Estabilizar referência do `user` no AuthContext
 
-No `renderItemCard` do CalendarPage, quando `item.type === 'reminder'`, aplicar classe de fundo âmbar (`bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800`).
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
 
-No DashboardCalendar, aplicar o mesmo estilo âmbar ao card de lembrete na listagem de itens selecionados.
+```typescript
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
+```
 
-**Arquivos**: `src/pages/CalendarPage.tsx`, `src/components/dashboard/DashboardCalendar.tsx`
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
 
-### 3. Substituir labels de tipo por ícones
+### Camada 2: Lock de edição global no DataContext
 
-Remover os `Badge` de texto ("Projeto", "Tarefa", "Lembrete") e substituir pelos ícones correspondentes com a cor do tipo:
-- Projeto: `FolderKanban` em cor primary
-- Tarefa: `ListTodo` em cor secondary
-- Lembrete: `Bell` em cor amber
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
 
-Aplicar em:
-- `getItemBadge` no CalendarPage → trocar Badge por ícone colorido
-- Cards do DashboardCalendar → trocar `Badge` por ícone
+```typescript
+// DataContext.tsx
+const editingLockRef = useRef(0);
 
-**Arquivos**: `src/pages/CalendarPage.tsx`, `src/components/dashboard/DashboardCalendar.tsx`
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
 
-### 4. Ponto âmbar no mini calendário do Dashboard
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
 
-No `DayContent` do DashboardCalendar, separar lógica para detectar:
-- `hasProjectOrTask`: se a data tem projetos/tarefas
-- `hasReminder`: se a data tem lembretes
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
+```
 
-Renderizar até 2 pontos lado a lado:
-- Ponto `bg-primary` se tem projeto/tarefa
-- Ponto `bg-amber-500` se tem lembrete
+Expor `lockEditing` e `unlockEditing` no contexto.
 
-**Arquivo**: `src/components/dashboard/DashboardCalendar.tsx`
+### Camada 3: Aplicar o lock nos diálogos
 
-### 5. Abrir diálogo de detalhe ao clicar em projeto/tarefa (CalendarPage + DashboardCalendar)
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
 
-Esta é a mudança mais complexa. O `ProjectDetailDialogContent` e `TaskDetailDialogContent` estão definidos dentro de `ProjectTableView.tsx` e recebem muitas props (callbacks de edição, exclusão, timer, etc).
+| Arquivo | Diálogo |
+|---|---|
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
 
-**Abordagem**: Ao clicar num card de projeto/tarefa no calendário, **navegar para a página do projeto** (comportamento atual) — isso já abre a visão completa. Para replicar o diálogo inline sem duplicar centenas de linhas, a abordagem pragmática é:
+Padrão de uso via `useEffect`:
 
-- Extrair `ProjectDetailDialogContent` e `TaskDetailDialogContent` de `ProjectTableView.tsx` para arquivos separados exportáveis
-- No CalendarPage, importar esses componentes e abrir um `Dialog` com eles ao clicar, passando as props necessárias via `useData()` e callbacks simplificados
-- No DashboardCalendar, ao clicar, navegar para `/projects/{id}` (manter simples dado o espaço limitado do card)
+```typescript
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
+```
 
-**Complexidade**: Este item exige extrair componentes, mapear props, e garantir funcionalidade completa (edição, timer, etc). É factível mas envolve refatoração significativa.
+## Arquivos alterados
 
-**Arquivos**: 
-- `src/components/projects/ProjectDetailDialogContent.tsx` (novo, extraído)
-- `src/components/projects/TaskDetailDialogContent.tsx` (novo, extraído)
-- `src/components/projects/ProjectTableView.tsx` (importar dos novos arquivos)
-- `src/pages/CalendarPage.tsx` (importar e usar os diálogos)
-- `src/components/dashboard/DashboardCalendar.tsx` (navegação mantida para projeto)
-
-### Arquivos alterados
-- `src/pages/CalendarPage.tsx` — itens 1-5
-- `src/components/dashboard/DashboardCalendar.tsx` — itens 2-4
-- `src/components/projects/ProjectTableView.tsx` — refatorar extração de diálogos
-- `src/components/projects/ProjectDetailDialogContent.tsx` — novo
-- `src/components/projects/TaskDetailDialogContent.tsx` — novo
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 

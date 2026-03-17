@@ -3,6 +3,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ProjectDetailDialogContent } from '@/components/projects/ProjectDetailDialogContent';
+import { TaskDetailDialogContent } from '@/components/projects/TaskDetailDialogContent';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -38,7 +40,7 @@ interface CalendarItem {
 }
 
 export const CalendarPage: React.FC = () => {
-  const { data, createReminder, updateReminder, deleteReminder } = useData();
+  const { data, createReminder, updateReminder, deleteReminder, getProjectHours, getTaskHours, getCreatorName, getClientColumns } = useData();
   const { isClient, isAdminOrMaster, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -52,6 +54,7 @@ export const CalendarPage: React.FC = () => {
   const [reminderClientId, setReminderClientId] = useState<string>('');
   const [reminderRecurrence, setReminderRecurrence] = useState<'none' | 'monthly' | 'yearly'>('none');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [detailDialogItem, setDetailDialogItem] = useState<CalendarItem | null>(null);
 
   // Handle project request submission for clients
   const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
@@ -279,9 +282,9 @@ export const CalendarPage: React.FC = () => {
 
   const getItemBadge = (type: CalendarItem['type']) => {
     switch (type) {
-      case 'project': return <Badge variant="default" className="text-xs">Projeto</Badge>;
-      case 'task': return <Badge variant="secondary" className="text-xs">Tarefa</Badge>;
-      case 'reminder': return <Badge variant="outline" className="text-xs">Lembrete</Badge>;
+      case 'project': return <FolderKanban className="h-3.5 w-3.5 text-primary" />;
+      case 'task': return <ListTodo className="h-3.5 w-3.5 text-secondary-foreground" />;
+      case 'reminder': return <Bell className="h-3.5 w-3.5 text-amber-500" />;
     }
   };
 
@@ -294,10 +297,17 @@ export const CalendarPage: React.FC = () => {
       key={`${item.type}-${item.id}`}
       className={cn(
         "group flex flex-col items-start gap-2 p-3 rounded-lg border transition-colors sm:flex-row sm:items-center sm:justify-between",
-        item.type !== 'reminder' && !isClient && "cursor-pointer hover:bg-accent/50",
-        item.type === 'reminder' && "hover:bg-accent/50"
+        item.type === 'reminder'
+          ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50"
+          : "cursor-pointer hover:bg-accent/50"
       )}
-      onClick={() => item.type !== 'reminder' && !isClient && handleNavigate(item)}
+      onClick={() => {
+        if (item.type === 'project') {
+          setDetailDialogItem(item);
+        } else if (item.type === 'task') {
+          setDetailDialogItem(item);
+        }
+      }}
     >
       <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto overflow-hidden">
         <div className={cn("p-1.5 rounded shrink-0", getStatusColor(item.status))}>
@@ -460,12 +470,7 @@ export const CalendarPage: React.FC = () => {
               <CardTitle className="text-base">
                 {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
               </CardTitle>
-              {isClient && (
-                <Button variant="default" size="icon" onClick={() => setShowRequestForm(true)}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
-              {isAdminOrMaster && (
+              {(isClient || isAdminOrMaster) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="default" size="icon">
@@ -473,18 +478,30 @@ export const CalendarPage: React.FC = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate('/projects?new=true')}>
+                    <DropdownMenuItem onClick={() => {
+                      if (isClient) {
+                        setShowRequestForm(true);
+                      } else {
+                        navigate('/projects?new=true');
+                      }
+                    }}>
                       <FolderKanban className="h-4 w-4 mr-2" />
-                      Novo Projeto
+                      Projeto
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/projects?newTask=true')}>
+                    <DropdownMenuItem onClick={() => {
+                      if (isClient) {
+                        setShowRequestForm(true);
+                      } else {
+                        navigate('/projects?newTask=true');
+                      }
+                    }}>
                       <ListTodo className="h-4 w-4 mr-2" />
-                      Nova Tarefa
+                      Tarefa
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleOpenReminderDialog()}>
                       <Bell className="h-4 w-4 mr-2" />
-                      Novo Lembrete
+                      Lembrete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -638,6 +655,69 @@ export const CalendarPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Project/Task Detail Dialog */}
+      <Dialog open={!!detailDialogItem} onOpenChange={(open) => !open && setDetailDialogItem(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto max-w-[95vw] sm:max-w-2xl">
+          {detailDialogItem?.type === 'project' && (() => {
+            const project = data.projects.find(p => p.id === detailDialogItem.id);
+            if (!project) return null;
+            const projectData = {
+              ...project,
+              custom_fields: (project.custom_fields || {}) as Record<string, string>,
+            };
+            return (
+              <ProjectDetailDialogContent
+                project={projectData}
+                clients={data.clients as any[]}
+                tasks={data.tasks as any[]}
+                timeEntries={data.timeEntries as any[]}
+                projectColumns={data.projectColumns as any[]}
+                kanbanStages={data.kanbanStages as any[]}
+                taskTimers={data.taskTimers as any[]}
+                projectAccess={data.projectAccess as any[]}
+                profilesByUserId={{}}
+                projectMembers={[]}
+                isAdminOrMaster={isAdminOrMaster}
+                isClientMode={isClient}
+                hasPerTaskPermissions={false}
+                currentUserId={user?.id}
+                getProjectHours={getProjectHours}
+                getTaskHours={getTaskHours}
+                getCreatorName={getCreatorName}
+                getClientColumns={getClientColumns}
+                getStatusLabel={(s: string) => s === 'active' ? 'Ativo' : s === 'paused' ? 'Pausado' : s === 'archived' ? 'Arquivado' : s === 'completed' ? 'Concluído' : s}
+                getStatusColor={(s: string) => s === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : s === 'paused' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 'bg-muted text-muted-foreground'}
+                onEditProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onDeleteProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onArchiveProject={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onEditTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onDeleteTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.id}`); }}
+                onClose={() => setDetailDialogItem(null)}
+              />
+            );
+          })()}
+          {detailDialogItem?.type === 'task' && (() => {
+            const task = data.tasks.find(t => t.id === detailDialogItem.id);
+            if (!task) return null;
+            return (
+              <TaskDetailDialogContent
+                task={task as any}
+                timeEntries={data.timeEntries as any[]}
+                kanbanStages={data.kanbanStages as any[]}
+                isAdminOrMaster={isAdminOrMaster}
+                isClientMode={isClient}
+                currentUserId={user?.id}
+                getTaskHours={getTaskHours}
+                getCreatorName={getCreatorName}
+                onEditTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.projectId || task.project_id}`); }}
+                onDeleteTask={() => { setDetailDialogItem(null); navigate(`/projects/${detailDialogItem.projectId || task.project_id}`); }}
+                onClose={() => setDetailDialogItem(null)}
+              />
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

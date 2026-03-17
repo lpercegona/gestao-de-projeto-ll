@@ -1,26 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Maximize2, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Maximize2, FolderKanban, ListTodo, Bell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Badge } from '@/components/ui/badge';
 import { useData } from '@/contexts/DataContext';
 import { isSameDay, parseISO, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export const DashboardCalendar: React.FC = () => {
   const navigate = useNavigate();
   const [date, setDate] = useState<Date>(new Date());
   const { data } = useData();
 
-  // Get dates with deadlines
-  const datesWithDeadlines = useMemo(() => {
-    const dates: Date[] = [];
+  // Separate dates by type for dot indicators
+  const { datesWithProjectsOrTasks, datesWithReminders } = useMemo(() => {
+    const projTaskDates: Date[] = [];
+    const reminderDates: Date[] = [];
     
     data.projects.forEach(p => {
       if (p.due_date && p.status !== 'completed' && p.status !== 'archived') {
-        dates.push(parseISO(p.due_date));
+        projTaskDates.push(parseISO(p.due_date));
       }
     });
     
@@ -28,16 +29,16 @@ export const DashboardCalendar: React.FC = () => {
       if (t.due_date && t.status !== 'completed' && t.status !== 'archived') {
         const project = data.projects.find(p => p.id === t.project_id);
         if (project && project.status !== 'archived') {
-          dates.push(parseISO(t.due_date));
+          projTaskDates.push(parseISO(t.due_date));
         }
       }
     });
 
     data.reminders.forEach(r => {
-      dates.push(parseISO(r.reminder_date));
+      reminderDates.push(parseISO(r.reminder_date));
     });
     
-    return dates;
+    return { datesWithProjectsOrTasks: projTaskDates, datesWithReminders: reminderDates };
   }, [data.projects, data.tasks, data.reminders]);
 
   // Items for selected date
@@ -70,15 +71,12 @@ export const DashboardCalendar: React.FC = () => {
     return items;
   }, [data.projects, data.tasks, data.reminders, date]);
 
-  // Custom day renderer to show dots
-  const modifiers = {
-    hasDeadline: (day: Date) => datesWithDeadlines.some(d => isSameDay(d, day)),
-  };
-
-  const modifiersStyles = {
-    hasDeadline: {
-      position: 'relative' as const,
-    },
+  const getItemIcon = (type: 'project' | 'task' | 'reminder') => {
+    switch (type) {
+      case 'project': return <FolderKanban className="h-3 w-3 text-primary" />;
+      case 'task': return <ListTodo className="h-3 w-3 text-secondary-foreground" />;
+      case 'reminder': return <Bell className="h-3 w-3 text-amber-500" />;
+    }
   };
 
   return (
@@ -106,16 +104,22 @@ export const DashboardCalendar: React.FC = () => {
           onSelect={(d) => d && setDate(d)}
           locale={ptBR}
           className="rounded-md w-full"
-          modifiers={modifiers}
-          modifiersStyles={modifiersStyles}
           components={{
             DayContent: ({ date: dayDate }) => {
-              const hasDeadline = datesWithDeadlines.some(d => isSameDay(d, dayDate));
+              const hasProjTask = datesWithProjectsOrTasks.some(d => isSameDay(d, dayDate));
+              const hasReminder = datesWithReminders.some(d => isSameDay(d, dayDate));
               return (
                 <div className="relative w-full h-full flex items-center justify-center">
                   {dayDate.getDate()}
-                  {hasDeadline && (
-                    <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                  {(hasProjTask || hasReminder) && (
+                    <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+                      {hasProjTask && (
+                        <div className="w-1 h-1 rounded-full bg-primary" />
+                      )}
+                      {hasReminder && (
+                        <div className="w-1 h-1 rounded-full bg-amber-500" />
+                      )}
+                    </div>
                   )}
                 </div>
               );
@@ -133,7 +137,12 @@ export const DashboardCalendar: React.FC = () => {
               {selectedDateItems.slice(0, 3).map(item => (
                 <div 
                   key={`${item.type}-${item.id}`}
-                  className={`flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 overflow-hidden ${item.type !== 'reminder' ? 'cursor-pointer hover:bg-accent/50' : ''}`}
+                  className={cn(
+                    "flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 overflow-hidden",
+                    item.type === 'reminder'
+                      ? "bg-amber-50 dark:bg-amber-950/30"
+                      : 'cursor-pointer hover:bg-accent/50'
+                  )}
                   onClick={() => {
                     if (item.type === 'project') {
                       navigate(`/projects/${item.id}`);
@@ -142,16 +151,11 @@ export const DashboardCalendar: React.FC = () => {
                     }
                   }}
                 >
-                  <Badge 
-                    variant={item.type === 'project' ? 'default' : item.type === 'task' ? 'secondary' : 'outline'} 
-                    className="text-[10px] px-1.5 shrink-0"
-                  >
-                    {item.type === 'project' ? 'Projeto' : item.type === 'task' ? 'Tarefa' : 'Lembrete'}
-                  </Badge>
+                  {getItemIcon(item.type)}
                   {item.isOverdue && (
-                    <Badge variant="destructive" className="text-[10px] px-1.5 shrink-0">
+                    <span className="text-[10px] text-destructive font-medium shrink-0">
                       Atrasado
-                    </Badge>
+                    </span>
                   )}
                   <span className="break-words line-clamp-1 min-w-0">{item.name}</span>
                 </div>
