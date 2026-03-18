@@ -299,7 +299,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                     aria-label="Visualização em cards"
                     variant="tab"
                     size="tb"
-                    className="hover:bg-slate-200 data-[state=on]:bg-background"
+                    className="hover:bg-slate-200"
                   >
                     <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
                     {viewMode === "list" && "Cards"}
