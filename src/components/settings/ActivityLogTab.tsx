@@ -45,7 +45,7 @@ export const ActivityLogTab: React.FC = () => {
       setLoading(true);
       let query = supabase
         .from("audit_logs" as any)
-        .select("id, user_id, action, entity_type, entity_name, created_at, details, profiles!audit_logs_user_id_fkey(full_name, email)")
+        .select("id, user_id, action, entity_type, entity_name, created_at, details")
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -54,7 +54,16 @@ export const ActivityLogTab: React.FC = () => {
       }
 
       const { data } = await query;
-      setLogs((data as unknown as AuditLog[]) || []);
+      const rawLogs = (data as unknown as AuditLog[]) || [];
+
+      // Fetch profile names for unique user_ids
+      const userIds = [...new Set(rawLogs.map(l => l.user_id))];
+      const { data: profiles } = userIds.length > 0
+        ? await supabase.from("profiles").select("user_id, full_name, email").in("user_id", userIds)
+        : { data: [] };
+      const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+
+      setLogs(rawLogs.map(l => ({ ...l, profiles: profileMap.get(l.user_id) || null })));
       setLoading(false);
     };
     fetchLogs();
