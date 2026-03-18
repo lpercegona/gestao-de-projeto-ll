@@ -476,8 +476,6 @@ export const Services: React.FC = () => {
                             <span className="font-medium text-foreground">Quantidade de horas:</span> {row.hours}h
                           </div>
                         </div>
-
-                        </div>
                   </div>
                 )}
               </div>
