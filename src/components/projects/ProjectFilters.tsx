@@ -290,7 +290,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
               type="single"
               value={viewMode}
               onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban" | "table")}
-              className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-[#000] px-0.5 py-1 text-muted-foreground"
             >
               <Tooltip>
                 <TooltipTrigger asChild>
