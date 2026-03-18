@@ -9,6 +9,7 @@ import { SecuritySection } from "@/components/settings/SecuritySection";
 import { PlatformCustomizationTab } from "@/components/settings/PlatformCustomizationTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { NotificationTemplatesTab } from "@/components/settings/NotificationTemplatesTab";
+import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { Label } from "@/components/ui/label";
 import {
