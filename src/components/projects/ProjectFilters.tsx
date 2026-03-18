@@ -299,7 +299,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                     aria-label="Visualização em cards"
                     variant="tab"
                     size="tb"
-                    className="hover:bg-muted data-[state=on]:bg-background"
+                    className="hover:bg-slate-200 data-[state=on]:bg-background"
                   >
                     <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
                     {viewMode === "list" && "Cards"}
@@ -315,7 +315,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                     aria-label="Visualização Kanban"
                     variant="tab"
                     size="tb"
-                    className="hover:bg-muted data-[state=on]:bg-background"
+                    className="hover:bg-slate-200 data-[state=on]:bg-background"
                   >
                     <Columns3 className={cn("w-3.5 h-3.5", viewMode === "kanban" && "mr-1.5")} />
                     {viewMode === "kanban" && "Kanban"}
@@ -331,7 +331,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                     aria-label="Visualização em lista"
                     variant="tab"
                     size="tb"
-                    className="hover:bg-muted data-[state=on]:bg-background"
+                    className="hover:bg-slate-200 data-[state=on]:bg-background"
                   >
                     <ClipboardList className={cn("w-3.5 h-3.5", viewMode === "table" && "mr-1.5")} />
                     {viewMode === "table" && "Lista"}
