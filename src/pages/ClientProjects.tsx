@@ -1473,9 +1473,14 @@ export const ClientProjects: React.FC = () => {
               <div className="space-y-2"><Label>Data</Label><Input type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2">
                 <Label>Tipo</Label>
-                <ToggleGroup type="single" value={timeForm.entry_type} onValueChange={(v) => v && setTimeForm({ ...timeForm, entry_type: v as 'task' | 'meeting' })} className="justify-start">
-                  <ToggleGroupItem value="task" className="gap-1.5"><ClipboardList className="h-3.5 w-3.5" />Tarefa</ToggleGroupItem>
-                  <ToggleGroupItem value="meeting" className="gap-1.5"><UsersIcon className="h-3.5 w-3.5" />Reunião</ToggleGroupItem>
+                <ToggleGroup
+                  type="single"
+                  value={timeForm.entry_type}
+                  onValueChange={(v) => v && setTimeForm({ ...timeForm, entry_type: v as 'task' | 'meeting' })}
+                  className="inline-flex h-9 justify-start rounded-lg bg-muted p-0.5 text-muted-foreground"
+                >
+                  <ToggleGroupItem value="task" variant="tab" size="sm" className="gap-1.5"><ClipboardList className="h-3.5 w-3.5" />Tarefa</ToggleGroupItem>
+                  <ToggleGroupItem value="meeting" variant="tab" size="sm" className="gap-1.5"><UsersIcon className="h-3.5 w-3.5" />Reunião</ToggleGroupItem>
                 </ToggleGroup>
               </div>
               <div className="space-y-2"><Label>Descrição (opcional)</Label><Textarea value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} rows={2} disabled={submitting} /></div>
@@ -1500,9 +1505,14 @@ export const ClientProjects: React.FC = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Tipo de Registro</Label>
-              <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
-                <ToggleGroupItem value="task" aria-label="Tarefa" className="gap-2"><ClipboardList className="w-4 h-4" />Tarefa</ToggleGroupItem>
-                <ToggleGroupItem value="meeting" aria-label="Reunião" className="gap-2"><UsersIcon className="w-4 h-4" />Reunião</ToggleGroupItem>
+              <ToggleGroup
+                type="single"
+                value={pauseEntryType}
+                onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')}
+                className="inline-flex h-9 justify-start rounded-lg bg-muted p-0.5 text-muted-foreground"
+              >
+                <ToggleGroupItem value="task" aria-label="Tarefa" variant="tab" size="sm" className="gap-2"><ClipboardList className="w-4 h-4" />Tarefa</ToggleGroupItem>
+                <ToggleGroupItem value="meeting" aria-label="Reunião" variant="tab" size="sm" className="gap-2"><UsersIcon className="w-4 h-4" />Reunião</ToggleGroupItem>
               </ToggleGroup>
             </div>
             <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
