@@ -105,7 +105,7 @@ export const Services: React.FC = () => {
 
   const activeTab = tabByPath[location.pathname] || 'services';
 
-  // Fetch catalog items from database
+  // Fetch catalog items from database + migrate localStorage if needed
   useEffect(() => {
     if (!user) return;
     const fetchCatalog = async () => {
@@ -117,6 +117,66 @@ export const Services: React.FC = () => {
       if (error) {
         console.error('Erro ao carregar catálogo:', error);
         return;
+      }
+
+      // Auto-migrate localStorage items if catalog is empty
+      if ((!data || data.length === 0)) {
+        const lsKey = `services:manual-items:${user.id}`;
+        const raw = localStorage.getItem(lsKey);
+        if (raw) {
+          try {
+            const localItems = JSON.parse(raw) as Array<{
+              id?: string;
+              service: string;
+              description?: string;
+              hours?: number;
+              pricePerHour?: number;
+              imageUrl?: string;
+              image?: string;
+              billingType?: string;
+            }>;
+
+            if (localItems.length > 0) {
+              const rows = localItems.map((item) => ({
+                owner_id: user.id,
+                service: item.service || 'Sem título',
+                description: item.description || '',
+                hours: Number(item.hours || 0),
+                price_per_hour: Number(item.pricePerHour || 0),
+                image_url: item.imageUrl || item.image || null,
+                billing_type: item.billingType || 'unique',
+              }));
+
+              const { data: inserted, error: insertError } = await supabase
+                .from('service_catalog')
+                .insert(rows)
+                .select();
+
+              if (!insertError && inserted) {
+                localStorage.removeItem(lsKey);
+                setCatalogItems(
+                  inserted.map((item) => ({
+                    id: item.id,
+                    source: 'manual' as const,
+                    service: item.service,
+                    description: item.description || '',
+                    hours: Number(item.hours || 0),
+                    pricePerHour: Number(item.price_per_hour || 0),
+                    total: Number(item.hours || 0) * Number(item.price_per_hour || 0),
+                    imageUrl: item.image_url || undefined,
+                    billingType: (item.billing_type || 'unique') as BillingType,
+                  }))
+                );
+                toast.success(`${inserted.length} item(ns) migrado(s) do armazenamento local`);
+                return;
+              } else {
+                console.error('Erro na migração localStorage:', insertError);
+              }
+            }
+          } catch (e) {
+            console.error('Erro ao parsear localStorage:', e);
+          }
+        }
       }
 
       setCatalogItems(
