@@ -249,6 +249,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
         return showAdminSections ? <ThemeSettings /> : null;
       case "notifications":
         return showAdminSections ? <NotificationTemplatesTab /> : null;
+      case "activity-log":
+        return showAdminSections ? <ActivityLogTab /> : null;
       default:
         return <GeneralSection />;
     }
