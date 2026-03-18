@@ -1,92 +1,67 @@
 
 
-# Corrigir erro de build + Prevenir refresh durante edição em diálogos
+## Plan: Services Grid Layout + Client Services Page
 
-## Problema 1: Erro de build
-`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
+### 1. Fix Services grid to 3 columns on desktop
 
-**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
+**File: `src/pages/Services.tsx`**
 
-## Problema 2: Refresh destrói dados em diálogos abertos
+Change the grid container from `grid-cols-1 md:grid-cols-2` to `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Adjust card layout so the image and content stack vertically within each card (instead of the current `md:grid-cols-3` internal split), making each card a fixed-width column item with proper image aspect ratio using `aspect-video` or `aspect-[4/3]` with `object-cover`.
 
-**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
+### 2. Add "Serviços" menu item for clients with `one_time` contract
 
-**Estratégia**: Duas camadas de proteção.
+**File: `src/components/layout/AppLayout.tsx`**
 
-### Camada 1: Estabilizar referência do `user` no AuthContext
+- Conditionally add a "Serviços" nav item (`/my-services`, icon: `Layers3`) to `clientNavItems` — but this requires knowing the client's `contract_type` at layout level.
+- Fetch the client's `contract_type` in AppLayout (similar pattern used in Dashboard.tsx) and conditionally include the nav item when `contract_type === 'one_time'`.
 
-No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
+### 3. Create Client Services page
 
-```typescript
-// AuthContext.tsx, dentro do onAuthStateChange
-const newUser = session?.user ?? null;
-setSession(session);
-setUser(prev => {
-  if (prev?.id === newUser?.id) return prev; // manter referência estável
-  return newUser;
-});
-```
+**New file: `src/pages/ClientServices.tsx`**
 
-Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
+- Fetches the logged-in client's `owner_id` (the admin who owns the client record).
+- Queries `proposals` owned by that admin, extracts service items from accepted/sent proposals linked to this client.
+- Also loads the admin's manual service catalog items from a new approach: since manual items are in localStorage (per admin), we need a database-backed catalog. **Alternative**: query proposals items where `client_id` matches the client, showing services the admin has proposed to them.
+- Displays services in a read-only 3-column grid with:
+  - Service image, name, description, price, billing type
+  - A "Selecionar" / "Contratar" button per item (UI only, no payment integration yet)
+  - A cart/selection summary at the bottom showing selected services and total
+  - A "Solicitar contratação" button that is disabled/placeholder with a toast saying "Método de pagamento será configurado em breve"
 
-### Camada 2: Lock de edição global no DataContext
+### 4. Add route in App.tsx
 
-Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+**File: `src/App.tsx`**
 
-```typescript
-// DataContext.tsx
-const editingLockRef = useRef(0);
+Add route `/my-services` protected for `client` role, rendering `ClientServices`.
 
-const lockEditing = useCallback(() => {
-  editingLockRef.current += 1;
-}, []);
+### Technical Details
 
-const unlockEditing = useCallback(() => {
-  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
-}, []);
+**Client contract_type detection in AppLayout:**
+```tsx
+const [clientContractType, setClientContractType] = useState<string | null>(null);
 
-// No refreshData:
-const refreshData = useCallback(async (showLoading = true) => {
-  if (editingLockRef.current > 0) return; // não recarregar se em edição
-  // ... resto da lógica
-}, [user]);
-```
-
-Expor `lockEditing` e `unlockEditing` no contexto.
-
-### Camada 3: Aplicar o lock nos diálogos
-
-Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
-
-| Arquivo | Diálogo |
-|---|---|
-| `QuickActionsPanel.tsx` | Criação rápida de cliente |
-| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
-| `UserCreateDialog.tsx` | Criação de usuário |
-| `UserEditDialog.tsx` | Edição de usuário |
-| `ClientEditRequestForm.tsx` | Edição de cliente |
-| `ProjectRequestForm.tsx` | Solicitação de projeto |
-| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
-| `ReportShareDialog.tsx` | Compartilhamento de relatório |
-| `ProjectTableView.tsx` | Diálogo de detalhes |
-| `Services.tsx` | Criação/edição de itens de serviço |
-| `ExpandedTimerModal.tsx` | Timer expandido |
-| `GlobalTimerCompleteDialog.tsx` | Completar timer |
-
-Padrão de uso via `useEffect`:
-
-```typescript
-const { lockEditing, unlockEditing } = useData();
 useEffect(() => {
-  if (open) { lockEditing(); } else { unlockEditing(); }
-  return () => unlockEditing();
-}, [open]);
+  if (!isClient || !user) return;
+  const fetch = async () => {
+    const { data } = await supabase
+      .from('clients')
+      .select('contract_type')
+      .or(`user_id.eq.${user.id}`)
+      .maybeSingle();
+    // also check client_users table
+    setClientContractType(data?.contract_type || null);
+  };
+  fetch();
+}, [isClient, user]);
 ```
 
-## Arquivos alterados
+Then conditionally build `clientNavItems` to include `{ path: '/my-services', icon: Layers3, label: 'Serviços' }` when `clientContractType === 'one_time'`.
 
-1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
-2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
-3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
-4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
+**Client Services data source:** Since admin manual items are in localStorage (not accessible to clients), the client services page will query `proposals` where `client_id` matches and status is `accepted` or `sent`, extracting the `items` array. This shows services the admin has offered to that specific client.
+
+### Files to modify/create
+1. `src/pages/Services.tsx` — 3-column grid, vertical card layout
+2. `src/components/layout/AppLayout.tsx` — conditional "Serviços" nav for one_time clients
+3. `src/pages/ClientServices.tsx` — new page with service listing and selection UI
+4. `src/App.tsx` — add `/my-services` route
 
