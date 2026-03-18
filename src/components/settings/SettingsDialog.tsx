@@ -216,6 +216,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
           { id: "users", label: "Usuários", icon: Users, adminOnly: true },
           { id: "platform", label: "Personalização", icon: Palette, adminOnly: true },
           { id: "notifications", label: "Notificações", icon: Bell, adminOnly: true },
+          { id: "activity-log", label: "Atividades", icon: History, adminOnly: true },
         ]
       : []),
   ];
