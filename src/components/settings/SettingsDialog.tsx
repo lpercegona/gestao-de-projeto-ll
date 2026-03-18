@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Globe, User, Lock, Users, Palette, Bell, Loader } from "lucide-react";
+import { Globe, User, Lock, Users, Palette, Bell, Loader, History } from "lucide-react";
 import { ProfileEditTab } from "@/components/settings/ProfileEditTab";
 import { SecuritySection } from "@/components/settings/SecuritySection";
 import { PlatformCustomizationTab } from "@/components/settings/PlatformCustomizationTab";
