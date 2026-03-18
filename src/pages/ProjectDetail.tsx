@@ -511,17 +511,12 @@ export const ProjectDetail: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label>Tipo</Label>
-                <ToggleGroup
-                  type="single"
-                  value={timeForm.entry_type}
-                  onValueChange={(v) => v && setTimeForm({ ...timeForm, entry_type: v as 'task' | 'meeting' })}
-                  className="inline-flex h-9 justify-start rounded-lg bg-muted p-0.5 text-muted-foreground"
-                >
-                  <ToggleGroupItem value="task" variant="tab" size="sm" className="gap-1.5">
+                <ToggleGroup type="single" value={timeForm.entry_type} onValueChange={(v) => v && setTimeForm({ ...timeForm, entry_type: v as 'task' | 'meeting' })} className="justify-start">
+                  <ToggleGroupItem value="task" className="gap-1.5">
                     <ClipboardList className="h-3.5 w-3.5" />
                     Tarefa
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="meeting" variant="tab" size="sm" className="gap-1.5">
+                  <ToggleGroupItem value="meeting" className="gap-1.5">
                     <Users className="h-3.5 w-3.5" />
                     Reunião
                   </ToggleGroupItem>

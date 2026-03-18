@@ -319,13 +319,13 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
               type="single"
               value={entryType}
               onValueChange={(value) => value && setEntryType(value as 'task' | 'meeting')}
-              className="inline-flex h-9 justify-start rounded-lg bg-muted p-0.5 text-muted-foreground"
+              className="justify-start"
             >
-              <ToggleGroupItem value="task" aria-label="Tarefa" variant="tab" size="sm" className="gap-2">
+              <ToggleGroupItem value="task" aria-label="Tarefa" className="gap-2">
                 <ClipboardList className="h-4 w-4" />
                 Tarefa
               </ToggleGroupItem>
-              <ToggleGroupItem value="meeting" aria-label="Reunião" variant="tab" size="sm" className="gap-2">
+              <ToggleGroupItem value="meeting" aria-label="Reunião" className="gap-2">
                 <Users className="h-4 w-4" />
                 Reunião
               </ToggleGroupItem>
@@ -340,12 +340,12 @@ export const GlobalTimerCompleteDialog: React.FC<GlobalTimerCompleteDialogProps>
                 type="single"
                 value={linkMode}
                 onValueChange={(value) => value && setLinkMode(value as 'existing' | 'new')}
-                className="inline-flex h-9 justify-start rounded-lg bg-muted p-0.5 text-muted-foreground"
+                className="justify-start"
               >
-                <ToggleGroupItem value="existing" aria-label="Tarefa existente" variant="tab" size="sm">
+                <ToggleGroupItem value="existing" aria-label="Tarefa existente">
                   Tarefa existente
                 </ToggleGroupItem>
-                <ToggleGroupItem value="new" aria-label="Nova tarefa" variant="tab" size="sm" className="gap-1">
+                <ToggleGroupItem value="new" aria-label="Nova tarefa" className="gap-1">
                   <Plus className="h-4 w-4" />
                   Nova tarefa
                 </ToggleGroupItem>
