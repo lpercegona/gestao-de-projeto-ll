@@ -421,24 +421,23 @@ export const Services: React.FC = () => {
               filteredRows.length === 0 ?
               <p className="text-sm text-muted-foreground">Nenhum serviço/produto encontrado.</p> :
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-secondary">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-secondary">
                 {filteredRows.map((row) =>
-                <div key={row.id} className="grid gap-4 overflow-hidden rounded-md border bg-card p-4 md:grid-cols-3">
-                        <div className="md:col-span-2">
+                <div key={row.id} className="flex flex-col overflow-hidden rounded-md border bg-card">
+                        <div className="w-full">
                           {row.imageUrl ?
                     <img
                       src={row.imageUrl}
                       alt={`Imagem de ${row.service}`}
-                      className="aspect-square h-full max-h-[174px] w-full rounded-md border object-cover" /> :
+                      className="aspect-[4/3] w-full object-cover" /> :
 
-
-                    <div className="flex aspect-square h-full max-h-[174px] w-full items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
+                    <div className="flex aspect-[4/3] w-full items-center justify-center border-b border-dashed text-xs text-muted-foreground">
                               Sem imagem
                             </div>
                     }
                         </div>
 
-                        <div className="space-y-3 md:col-span-2">
+                        <div className="space-y-3 p-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
