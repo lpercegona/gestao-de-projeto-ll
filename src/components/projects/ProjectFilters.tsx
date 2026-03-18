@@ -12,19 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Client {
   id: string;
   name: string;
   company?: string | null;
 }
-
 
 interface ProjectStatusOption {
   value: string;
@@ -97,11 +91,8 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
     }
   };
 
-
   const pendingRequestsLabel =
-    pendingRequestsCount === 1
-      ? "1 solicitação pendente"
-      : `${pendingRequestsCount} solicitações pendentes`;
+    pendingRequestsCount === 1 ? "1 solicitação pendente" : `${pendingRequestsCount} solicitações pendentes`;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -214,7 +205,6 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                 </Select>
               </div>
 
-
               {/* Requests filter */}
               {isAdminOrMaster && showRequestsFilter && (
                 <div className="flex items-center justify-between rounded-md border p-3">
@@ -228,7 +218,6 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
                   />
                 </div>
               )}
-
 
               {/* Date range filter */}
               <div className="space-y-2">
@@ -296,65 +285,63 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
 
         {/* View toggle */}
         {showViewToggle && (
-  <TooltipProvider delayDuration={0}>
-    <ToggleGroup
-      type="single"
-      value={viewMode}
-      onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban" | "table")}
-      className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
-    >
+          <TooltipProvider delayDuration={0}>
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && onViewModeChange(v as "list" | "kanban" | "table")}
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-muted px-0.5 py-1 text-muted-foreground"
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem
+                    value="list"
+                    aria-label="Visualização em cards"
+                    variant="tab"
+                    size="tb"
+                    className="hover:bg-slate-200 data-[state=on]:bg-background"
+                  >
+                    <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
+                    {viewMode === "list" && "Cards"}
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Cards</TooltipContent>
+              </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <ToggleGroupItem
-            value="list"
-            aria-label="Visualização em cards"
-            variant="tab"
-            size="tb"
-            className="hover:bg-slate-200"
-          >
-            <LayoutList className={cn("w-3.5 h-3.5", viewMode === "list" && "mr-1.5")} />
-            {viewMode === "list" && "Cards"}
-          </ToggleGroupItem>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Cards</TooltipContent>
-      </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem
+                    value="kanban"
+                    aria-label="Visualização Kanban"
+                    variant="tab"
+                    size="tb"
+                    className="hover:bg-slate-200"
+                  >
+                    <Columns3 className={cn("w-3.5 h-3.5", viewMode === "kanban" && "mr-1.5")} />
+                    {viewMode === "kanban" && "Kanban"}
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Kanban</TooltipContent>
+              </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <ToggleGroupItem
-            value="kanban"
-            aria-label="Visualização Kanban"
-            variant="tab"
-            size="tb"
-            className="hover:bg-slate-200"
-          >
-            <Columns3 className={cn("w-3.5 h-3.5", viewMode === "kanban" && "mr-1.5")} />
-            {viewMode === "kanban" && "Kanban"}
-          </ToggleGroupItem>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Kanban</TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <ToggleGroupItem
-            value="table"
-            aria-label="Visualização em lista"
-            variant="tab"
-            size="tb"
-            className="hover:bg-slate-200"
-          >
-            <ClipboardList className={cn("w-3.5 h-3.5", viewMode === "table" && "mr-1.5")} />
-            {viewMode === "table" && "Lista"}
-          </ToggleGroupItem>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Lista</TooltipContent>
-      </Tooltip>
-
-    </ToggleGroup>
-  </TooltipProvider>
-)}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem
+                    value="table"
+                    aria-label="Visualização em lista"
+                    variant="tab"
+                    size="tb"
+                    className="hover:bg-slate-200"
+                  >
+                    <ClipboardList className={cn("w-3.5 h-3.5", viewMode === "table" && "mr-1.5")} />
+                    {viewMode === "table" && "Lista"}
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Lista</TooltipContent>
+              </Tooltip>
+            </ToggleGroup>
+          </TooltipProvider>
+        )}
 
         {/* Mobile only: Add button */}
         {showAddButton && (
