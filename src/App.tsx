@@ -19,6 +19,7 @@ import { Reports } from "@/pages/Reports";
 import { Users } from "@/pages/Users";
 import { ClientReports } from "@/pages/ClientReports";
 import { ClientProjects } from "@/pages/ClientProjects";
+import { ClientServices } from "@/pages/ClientServices";
 
 import { ClientPortal } from "@/pages/ClientPortal";
 import { SharedReport } from "@/pages/SharedReport";
