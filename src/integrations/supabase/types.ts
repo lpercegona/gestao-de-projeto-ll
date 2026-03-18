@@ -1091,6 +1091,48 @@ export type Database = {
           },
         ]
       }
+      service_catalog: {
+        Row: {
+          billing_type: string
+          created_at: string
+          description: string | null
+          hours: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          owner_id: string
+          price_per_hour: number
+          service: string
+          updated_at: string
+        }
+        Insert: {
+          billing_type?: string
+          created_at?: string
+          description?: string | null
+          hours?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          owner_id: string
+          price_per_hour?: number
+          service: string
+          updated_at?: string
+        }
+        Update: {
+          billing_type?: string
+          created_at?: string
+          description?: string | null
+          hours?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          owner_id?: string
+          price_per_hour?: number
+          service?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       smtp_settings: {
         Row: {
           created_at: string

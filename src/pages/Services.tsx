@@ -73,8 +73,6 @@ interface ServiceRow {
   billingType: BillingType;
 }
 
-// Key will be set dynamically with userId
-
 type ServicesTab = 'services' | 'proposals' | 'contracts';
 
 const tabByPath: Record<string, ServicesTab> = {
@@ -87,13 +85,12 @@ export const Services: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const storageKey = user ? `services:manual-items:${user.id}` : 'services:manual-items';
 
   const [proposals, setProposals] = useState<ProposalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [createItemOpen, setCreateItemOpen] = useState(false);
-  const [manualItems, setManualItems] = useState<ServiceRow[]>([]);
+  const [catalogItems, setCatalogItems] = useState<ServiceRow[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   useEditingLock(createItemOpen || editingItemId !== null);
   const [newItem, setNewItem] = useState({
@@ -104,28 +101,40 @@ export const Services: React.FC = () => {
     imageUrl: '',
     billingType: 'unique' as BillingType
   });
+  const [savingItem, setSavingItem] = useState(false);
 
   const activeTab = tabByPath[location.pathname] || 'services';
 
+  // Fetch catalog items from database
   useEffect(() => {
     if (!user) return;
-    const storedItems = localStorage.getItem(storageKey);
+    const fetchCatalog = async () => {
+      const { data, error } = await supabase
+        .from('service_catalog')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (!storedItems) return;
+      if (error) {
+        console.error('Erro ao carregar catálogo:', error);
+        return;
+      }
 
-    try {
-      const parsedItems = JSON.parse(storedItems) as ServiceRow[];
-      setManualItems(Array.isArray(parsedItems) ? parsedItems : []);
-    } catch (error) {
-      console.error('Erro ao carregar itens manuais de serviço:', error);
-      localStorage.removeItem(storageKey);
-    }
-  }, [user, storageKey]);
-
-  useEffect(() => {
-    if (!user) return;
-    localStorage.setItem(storageKey, JSON.stringify(manualItems));
-  }, [manualItems, user, storageKey]);
+      setCatalogItems(
+        (data || []).map((item) => ({
+          id: item.id,
+          source: 'manual' as const,
+          service: item.service,
+          description: item.description || '',
+          hours: Number(item.hours || 0),
+          pricePerHour: Number(item.price_per_hour || 0),
+          total: Number(item.hours || 0) * Number(item.price_per_hour || 0),
+          imageUrl: item.image_url || undefined,
+          billingType: (item.billing_type || 'unique') as BillingType,
+        }))
+      );
+    };
+    fetchCatalog();
+  }, [user]);
 
   useEffect(() => {
     const fetchProposals = async () => {
@@ -157,7 +166,7 @@ export const Services: React.FC = () => {
   const serviceRows = useMemo(() => {
     const catalogMap = new Map<string, ServiceRow>();
 
-    manualItems.forEach((item) => {
+    catalogItems.forEach((item) => {
       catalogMap.set(item.id, { ...item, source: 'manual' });
     });
 
@@ -194,7 +203,7 @@ export const Services: React.FC = () => {
     });
 
     return Array.from(catalogMap.values());
-  }, [manualItems, proposals]);
+  }, [catalogItems, proposals]);
 
   const filteredRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -203,7 +212,7 @@ export const Services: React.FC = () => {
 
     return serviceRows.filter((row) =>
     [row.service, row.description, row.proposalTitle, row.recipientName].some((value) =>
-    value.toLowerCase().includes(term)
+    value?.toLowerCase().includes(term)
     )
     );
   }, [searchTerm, serviceRows]);
@@ -223,133 +232,224 @@ export const Services: React.FC = () => {
   };
 
   const handleSaveItem = async () => {
-    if (!newItem.service.trim()) return;
+    if (!newItem.service.trim() || !user) return;
+    setSavingItem(true);
 
-    const item: ServiceRow = {
-      id: editingItemId || crypto.randomUUID(),
-      source: 'manual',
-      proposalId: 'manual',
-      proposalTitle: 'Item adicionado manualmente',
-      recipientName: 'N/A',
-      service: newItem.service.trim(),
-      description: newItem.description.trim() || 'Sem descrição',
-      hours: Number(newItem.hours || 0),
-      pricePerHour: Number(newItem.pricePerHour || 0),
-      total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
-      imageUrl: newItem.imageUrl || undefined,
-      billingType: newItem.billingType
-    };
+    try {
+      if (editingItemId) {
+        // Check if it's a catalog item (exists in catalogItems)
+        const isCatalogItem = catalogItems.some((item) => item.id === editingItemId);
 
-    if (editingItemId) {
-      const hasManualItem = manualItems.some((existingItem) => existingItem.id === editingItemId);
+        if (isCatalogItem) {
+          const { error } = await supabase
+            .from('service_catalog')
+            .update({
+              service: newItem.service.trim(),
+              description: newItem.description.trim() || '',
+              hours: Number(newItem.hours || 0),
+              price_per_hour: Number(newItem.pricePerHour || 0),
+              image_url: newItem.imageUrl || null,
+              billing_type: newItem.billingType,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', editingItemId);
 
-      if (hasManualItem) {
-        setManualItems((prev) => prev.map((existingItem) => existingItem.id === editingItemId ? item : existingItem));
-      } else {
-        setManualItems((prev) => [item, ...prev]);
-      }
+          if (error) throw error;
 
-      const draftProposalsToUpdate = proposals.filter(
-        (proposal) =>
-        proposal.status === 'draft' &&
-        proposal.items.some((proposalItem) => (proposalItem.catalogItemId || proposalItem.id) === editingItemId)
-      );
+          setCatalogItems((prev) =>
+            prev.map((item) =>
+              item.id === editingItemId
+                ? {
+                    ...item,
+                    service: newItem.service.trim(),
+                    description: newItem.description.trim() || '',
+                    hours: Number(newItem.hours || 0),
+                    pricePerHour: Number(newItem.pricePerHour || 0),
+                    total: Number(newItem.hours || 0) * Number(newItem.pricePerHour || 0),
+                    imageUrl: newItem.imageUrl || undefined,
+                    billingType: newItem.billingType,
+                  }
+                : item
+            )
+          );
+        } else {
+          // It's a proposal-only item being "adopted" into catalog
+          const { data, error } = await supabase
+            .from('service_catalog')
+            .insert({
+              owner_id: user.id,
+              service: newItem.service.trim(),
+              description: newItem.description.trim() || '',
+              hours: Number(newItem.hours || 0),
+              price_per_hour: Number(newItem.pricePerHour || 0),
+              image_url: newItem.imageUrl || null,
+              billing_type: newItem.billingType,
+            })
+            .select()
+            .single();
 
-      try {
-        await Promise.all(
-          draftProposalsToUpdate.map(async (proposal) => {
-            const updatedItems = proposal.items.map((proposalItem) => {
-              const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
-              if (itemCatalogId !== editingItemId) return proposalItem;
+          if (error) throw error;
 
-              return {
-                ...proposalItem,
-                catalogItemId: editingItemId,
-                service: item.service,
-                description: item.description,
-                hours: item.hours,
-                pricePerHour: item.pricePerHour,
-                imageUrl: item.imageUrl,
-                billingType: item.billingType
-              };
-            });
+          setCatalogItems((prev) => [
+            {
+              id: data.id,
+              source: 'manual',
+              service: data.service,
+              description: data.description || '',
+              hours: Number(data.hours || 0),
+              pricePerHour: Number(data.price_per_hour || 0),
+              total: Number(data.hours || 0) * Number(data.price_per_hour || 0),
+              imageUrl: data.image_url || undefined,
+              billingType: (data.billing_type || 'unique') as BillingType,
+            },
+            ...prev,
+          ]);
+        }
 
-            const totalHours = updatedItems.reduce((sum, currentItem) => sum + Number(currentItem.hours || 0), 0);
-            const totalValue = updatedItems.reduce(
-              (sum, currentItem) => sum + Number(currentItem.hours || 0) * Number(currentItem.pricePerHour || 0),
-              0
-            );
-
-            const { error } = await supabase.
-            from('proposals').
-            update({
-              items: updatedItems as unknown as Json,
-              total_hours: totalHours,
-              total_value: totalValue
-            }).
-            eq('id', proposal.id).
-            eq('status', 'draft');
-
-            if (error) throw error;
-          })
+        // Sync with draft proposals
+        const draftProposalsToUpdate = proposals.filter(
+          (proposal) =>
+          proposal.status === 'draft' &&
+          proposal.items.some((proposalItem) => (proposalItem.catalogItemId || proposalItem.id) === editingItemId)
         );
 
-        setProposals((prev) =>
-        prev.map((proposal) => {
-          if (proposal.status !== 'draft') return proposal;
+        if (draftProposalsToUpdate.length > 0) {
+          await Promise.all(
+            draftProposalsToUpdate.map(async (proposal) => {
+              const updatedItems = proposal.items.map((proposalItem) => {
+                const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
+                if (itemCatalogId !== editingItemId) return proposalItem;
+                return {
+                  ...proposalItem,
+                  catalogItemId: editingItemId,
+                  service: newItem.service.trim(),
+                  description: newItem.description.trim(),
+                  hours: Number(newItem.hours || 0),
+                  pricePerHour: Number(newItem.pricePerHour || 0),
+                  imageUrl: newItem.imageUrl,
+                  billingType: newItem.billingType
+                };
+              });
 
-          return {
-            ...proposal,
-            items: proposal.items.map((proposalItem) => {
-              const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
-              if (itemCatalogId !== editingItemId) return proposalItem;
+              const totalHours = updatedItems.reduce((sum, currentItem) => sum + Number(currentItem.hours || 0), 0);
+              const totalValue = updatedItems.reduce(
+                (sum, currentItem) => sum + Number(currentItem.hours || 0) * Number(currentItem.pricePerHour || 0),
+                0
+              );
 
+              const { error } = await supabase
+                .from('proposals')
+                .update({
+                  items: updatedItems as unknown as Json,
+                  total_hours: totalHours,
+                  total_value: totalValue
+                })
+                .eq('id', proposal.id)
+                .eq('status', 'draft');
+
+              if (error) throw error;
+            })
+          );
+
+          setProposals((prev) =>
+            prev.map((proposal) => {
+              if (proposal.status !== 'draft') return proposal;
               return {
-                ...proposalItem,
-                catalogItemId: editingItemId,
-                service: item.service,
-                description: item.description,
-                hours: item.hours,
-                pricePerHour: item.pricePerHour,
-                imageUrl: item.imageUrl,
-                billingType: item.billingType
+                ...proposal,
+                items: proposal.items.map((proposalItem) => {
+                  const itemCatalogId = proposalItem.catalogItemId || proposalItem.id;
+                  if (itemCatalogId !== editingItemId) return proposalItem;
+                  return {
+                    ...proposalItem,
+                    catalogItemId: editingItemId,
+                    service: newItem.service.trim(),
+                    description: newItem.description.trim(),
+                    hours: Number(newItem.hours || 0),
+                    pricePerHour: Number(newItem.pricePerHour || 0),
+                    imageUrl: newItem.imageUrl,
+                    billingType: newItem.billingType
+                  };
+                })
               };
             })
-          };
-        })
-        );
+          );
+        }
 
-        toast.success('Item atualizado e sincronizado com propostas em rascunho');
-      } catch (error) {
-        console.error('Erro ao atualizar item nas propostas em rascunho:', error);
-        toast.error('Item atualizado localmente, mas houve erro ao sincronizar propostas em rascunho');
+        toast.success('Item atualizado com sucesso');
+      } else {
+        // Create new item
+        const { data, error } = await supabase
+          .from('service_catalog')
+          .insert({
+            owner_id: user.id,
+            service: newItem.service.trim(),
+            description: newItem.description.trim() || '',
+            hours: Number(newItem.hours || 0),
+            price_per_hour: Number(newItem.pricePerHour || 0),
+            image_url: newItem.imageUrl || null,
+            billing_type: newItem.billingType,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setCatalogItems((prev) => [
+          {
+            id: data.id,
+            source: 'manual',
+            service: data.service,
+            description: data.description || '',
+            hours: Number(data.hours || 0),
+            pricePerHour: Number(data.price_per_hour || 0),
+            total: Number(data.hours || 0) * Number(data.price_per_hour || 0),
+            imageUrl: data.image_url || undefined,
+            billingType: (data.billing_type || 'unique') as BillingType,
+          },
+          ...prev,
+        ]);
+
+        toast.success('Item adicionado com sucesso');
       }
-    } else {
-      setManualItems((prev) => [item, ...prev]);
-      toast.success('Item adicionado com sucesso');
+    } catch (error) {
+      console.error('Erro ao salvar item:', error);
+      toast.error('Erro ao salvar item de serviço');
+    } finally {
+      setSavingItem(false);
+      setCreateItemOpen(false);
+      setEditingItemId(null);
+      resetNewItem();
     }
-
-    setCreateItemOpen(false);
-    setEditingItemId(null);
-    resetNewItem();
   };
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
-    if (!file) return;
+    if (!file || !user) return;
 
     if (!file.type.startsWith('image/')) {
       toast.error('Selecione um arquivo de imagem válido.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      setNewItem((prev) => ({ ...prev, imageUrl: result }));
-    };
-    reader.readAsDataURL(file);
+    // Upload to storage
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('proposal-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Erro ao fazer upload:', uploadError);
+      toast.error('Erro ao fazer upload da imagem');
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('proposal-images')
+      .getPublicUrl(filePath);
+
+    setNewItem((prev) => ({ ...prev, imageUrl: urlData.publicUrl }));
   };
 
   const handleEditItem = (item: ServiceRow) => {
@@ -365,14 +465,26 @@ export const Services: React.FC = () => {
     setCreateItemOpen(true);
   };
 
-  const handleDeleteItem = (item: ServiceRow) => {
-    if (item.source !== 'manual') {
+  const handleDeleteItem = async (item: ServiceRow) => {
+    if (item.source === 'proposal') {
       toast.info('A exclusão de itens vinculados a propostas ainda deve ser feita na proposta.');
       return;
     }
 
-    setManualItems((prev) => prev.filter((existingItem) => existingItem.id !== item.id));
-    toast.success('Item removido com sucesso');
+    try {
+      const { error } = await supabase
+        .from('service_catalog')
+        .delete()
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      setCatalogItems((prev) => prev.filter((existingItem) => existingItem.id !== item.id));
+      toast.success('Item removido com sucesso');
+    } catch (error) {
+      console.error('Erro ao excluir item:', error);
+      toast.error('Erro ao excluir item');
+    }
   };
 
   return (
@@ -405,7 +517,6 @@ export const Services: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por serviço/produto, proposta ou destinatário"
                 className="pl-9" />
-              
             </div>
 
             <Button onClick={handleAddItem}>
@@ -464,7 +575,6 @@ export const Services: React.FC = () => {
                                 <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => handleDeleteItem(row)}>
-                            
                                   Excluir
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -480,7 +590,6 @@ export const Services: React.FC = () => {
                 )}
               </div>
               }
-			  
             </CardContent>
           </Card>
         </TabsContent>
@@ -510,7 +619,6 @@ export const Services: React.FC = () => {
                 value={newItem.service}
                 onChange={(e) => setNewItem((prev) => ({ ...prev, service: e.target.value }))}
                 placeholder="Ex: Consultoria mensal" />
-              
             </div>
 
             <div className="space-y-2">
@@ -519,7 +627,6 @@ export const Services: React.FC = () => {
                 value={newItem.description}
                 onChange={(e) => setNewItem((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Descrição resumida" />
-              
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -530,7 +637,6 @@ export const Services: React.FC = () => {
                   min={0}
                   value={newItem.hours || ''}
                   onChange={(e) => setNewItem((prev) => ({ ...prev, hours: Number(e.target.value) || 0 }))} />
-                
               </div>
               <div className="space-y-2">
                 <Label>Preço/Hora (R$)</Label>
@@ -539,7 +645,6 @@ export const Services: React.FC = () => {
                   min={0}
                   value={newItem.pricePerHour || ''}
                   onChange={(e) => setNewItem((prev) => ({ ...prev, pricePerHour: Number(e.target.value) || 0 }))} />
-                
               </div>
             </div>
 
@@ -548,7 +653,6 @@ export const Services: React.FC = () => {
               <Select
                 value={newItem.billingType}
                 onValueChange={(value) => setNewItem((prev) => ({ ...prev, billingType: value as BillingType }))}>
-                
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
@@ -577,8 +681,8 @@ export const Services: React.FC = () => {
             <Button variant="outline" onClick={() => {setCreateItemOpen(false);resetNewItem();}}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveItem} disabled={!newItem.service.trim()}>
-              {editingItemId ? 'Salvar alterações' : 'Adicionar item'}
+            <Button onClick={handleSaveItem} disabled={!newItem.service.trim() || savingItem}>
+              {savingItem ? 'Salvando...' : editingItemId ? 'Salvar alterações' : 'Adicionar item'}
             </Button>
           </DialogFooter>
         </DialogContent>

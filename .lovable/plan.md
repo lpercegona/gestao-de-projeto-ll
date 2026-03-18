@@ -1,82 +1,92 @@
 
 
-## Plan: Fix Service Menu Delay + Database-Backed Service Catalog
+# Corrigir erro de build + Prevenir refresh durante edição em diálogos
 
-### Problem 1: Menu "Serviços" loads slowly
-The `clientContractType` state starts as `null` and only populates after an async fetch, causing the menu to render without the item first, then re-render. 
+## Problema 1: Erro de build
+`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
 
-**Fix**: Use the client data already available in the `clients` RLS policy. Since `AppLayout` already knows `isClient`, we can fetch `contract_type` eagerly during the initial client record fetch that already happens (via `client_users` → `clients`). Additionally, initialize `clientContractType` from cached data or fetch it in parallel with the auth role to avoid the visible delay.
+**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
 
-**File: `src/components/layout/AppLayout.tsx`**
-- Move the contract type fetch to run immediately when `isClient` becomes true (no extra wait)
-- Use `get_user_client_id` RPC or a single query joining `client_users` → `clients` to reduce from 2 sequential queries to 1
+## Problema 2: Refresh destrói dados em diálogos abertos
 
-### Problem 2: Services must be independent of proposals
-Currently admin items are in `localStorage` (inaccessible to clients). Need a database-backed catalog.
+**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
 
-#### Step A: Create `service_catalog` table
+**Estratégia**: Duas camadas de proteção.
 
-```sql
-CREATE TABLE public.service_catalog (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id uuid NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  service text NOT NULL,
-  description text DEFAULT '',
-  hours numeric NOT NULL DEFAULT 0,
-  price_per_hour numeric NOT NULL DEFAULT 0,
-  image_url text,
-  billing_type text NOT NULL DEFAULT 'unique',
-  is_active boolean NOT NULL DEFAULT true
-);
+### Camada 1: Estabilizar referência do `user` no AuthContext
 
-ALTER TABLE public.service_catalog ENABLE ROW LEVEL SECURITY;
+No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
 
--- Admin manages own catalog
-CREATE POLICY "Admin can manage own catalog" ON public.service_catalog
-  FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'admin'::app_role) AND owner_id = auth.uid())
-  WITH CHECK (has_role(auth.uid(), 'admin'::app_role) AND owner_id = auth.uid());
-
--- Master admin full access
-CREATE POLICY "Master admin full access" ON public.service_catalog
-  FOR ALL TO authenticated
-  USING (is_master_admin(auth.uid()))
-  WITH CHECK (is_master_admin(auth.uid()));
-
--- Clients can view catalog from their admin (owner)
-CREATE POLICY "Clients can view owner catalog" ON public.service_catalog
-  FOR SELECT TO authenticated
-  USING (
-    has_role(auth.uid(), 'client'::app_role)
-    AND owner_id = (
-      SELECT c.owner_id FROM clients c
-      WHERE c.id = get_user_client_id(auth.uid())
-    )
-    AND is_active = true
-  );
+```typescript
+// AuthContext.tsx, dentro do onAuthStateChange
+const newUser = session?.user ?? null;
+setSession(session);
+setUser(prev => {
+  if (prev?.id === newUser?.id) return prev; // manter referência estável
+  return newUser;
+});
 ```
 
-#### Step B: Migrate admin `Services.tsx` to use database
+Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
 
-**File: `src/pages/Services.tsx`**
-- Replace `localStorage` reads/writes with `service_catalog` table CRUD
-- On save/create manual item → INSERT into `service_catalog`
-- On edit → UPDATE in `service_catalog`
-- On delete → DELETE from `service_catalog`
-- Keep proposal items as read-only merged view (no change there)
+### Camada 2: Lock de edição global no DataContext
 
-#### Step C: Update `ClientServices.tsx` to read from `service_catalog`
+Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
 
-**File: `src/pages/ClientServices.tsx`**
-- Replace the proposals-based fetch with a simple query to `service_catalog` (RLS handles filtering by admin's `owner_id` automatically)
-- Remove the complex `client_users` → `clients` → `proposals` chain
-- Much simpler and faster data loading
+```typescript
+// DataContext.tsx
+const editingLockRef = useRef(0);
 
-### Files to modify/create
-1. **Migration SQL** — create `service_catalog` table + RLS
-2. **`src/pages/Services.tsx`** — CRUD against `service_catalog` instead of localStorage
-3. **`src/pages/ClientServices.tsx`** — fetch from `service_catalog` instead of proposals
-4. **`src/components/layout/AppLayout.tsx`** — optimize contract type fetch to single query
+const lockEditing = useCallback(() => {
+  editingLockRef.current += 1;
+}, []);
+
+const unlockEditing = useCallback(() => {
+  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
+}, []);
+
+// No refreshData:
+const refreshData = useCallback(async (showLoading = true) => {
+  if (editingLockRef.current > 0) return; // não recarregar se em edição
+  // ... resto da lógica
+}, [user]);
+```
+
+Expor `lockEditing` e `unlockEditing` no contexto.
+
+### Camada 3: Aplicar o lock nos diálogos
+
+Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
+
+| Arquivo | Diálogo |
+|---|---|
+| `QuickActionsPanel.tsx` | Criação rápida de cliente |
+| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
+| `UserCreateDialog.tsx` | Criação de usuário |
+| `UserEditDialog.tsx` | Edição de usuário |
+| `ClientEditRequestForm.tsx` | Edição de cliente |
+| `ProjectRequestForm.tsx` | Solicitação de projeto |
+| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
+| `ReportShareDialog.tsx` | Compartilhamento de relatório |
+| `ProjectTableView.tsx` | Diálogo de detalhes |
+| `Services.tsx` | Criação/edição de itens de serviço |
+| `ExpandedTimerModal.tsx` | Timer expandido |
+| `GlobalTimerCompleteDialog.tsx` | Completar timer |
+
+Padrão de uso via `useEffect`:
+
+```typescript
+const { lockEditing, unlockEditing } = useData();
+useEffect(() => {
+  if (open) { lockEditing(); } else { unlockEditing(); }
+  return () => unlockEditing();
+}, [open]);
+```
+
+## Arquivos alterados
+
+1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
+2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
+3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
+4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
 

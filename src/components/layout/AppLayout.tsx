@@ -327,37 +327,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }];
 
 
-  // Client contract type detection for conditional nav
+  // Client contract type detection for conditional nav — single query via RLS
   const [clientContractType, setClientContractType] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isClient || !user) return;
-    const fetchContractType = async () => {
-      // Check client_users first, then legacy user_id
-      const { data: cuData } = await supabase
-        .from('client_users')
-        .select('client_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const clientId = cuData?.client_id;
-      if (clientId) {
-        const { data } = await supabase
-          .from('clients')
-          .select('contract_type')
-          .eq('id', clientId)
-          .maybeSingle();
+    // clients RLS already filters to user's own client record
+    supabase
+      .from('clients')
+      .select('contract_type')
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
         setClientContractType(data?.contract_type || null);
-      } else {
-        const { data } = await supabase
-          .from('clients')
-          .select('contract_type')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        setClientContractType(data?.contract_type || null);
-      }
-    };
-    fetchContractType();
+      });
   }, [isClient, user]);
 
   // Client nav items (dashboard, reports, projects and calendar)
