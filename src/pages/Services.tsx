@@ -477,6 +477,7 @@ export const Services: React.FC = () => {
                           </div>
                         </div>
 
+                        </div>
                   </div>
                 )}
               </div>

@@ -180,6 +180,12 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              <Route path="/my-services" element={
+                <ProtectedRoute requiredRole="client">
+                  <ClientServices />
+                </ProtectedRoute>
+              } />
+              
               {/* Consultas de banco - master admin only */}
               <Route path="/database-queries" element={
                 <ProtectedRoute requiredRole="master_admin">

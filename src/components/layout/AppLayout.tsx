@@ -327,31 +327,52 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }];
 
 
+  // Client contract type detection for conditional nav
+  const [clientContractType, setClientContractType] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isClient || !user) return;
+    const fetchContractType = async () => {
+      // Check client_users first, then legacy user_id
+      const { data: cuData } = await supabase
+        .from('client_users')
+        .select('client_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const clientId = cuData?.client_id;
+      if (clientId) {
+        const { data } = await supabase
+          .from('clients')
+          .select('contract_type')
+          .eq('id', clientId)
+          .maybeSingle();
+        setClientContractType(data?.contract_type || null);
+      } else {
+        const { data } = await supabase
+          .from('clients')
+          .select('contract_type')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setClientContractType(data?.contract_type || null);
+      }
+    };
+    fetchContractType();
+  }, [isClient, user]);
+
   // Client nav items (dashboard, reports, projects and calendar)
-  const clientNavItems = [
-  {
-    path: "/",
-    icon: LayoutDashboard,
-    label: "Painel"
-  },
-  {
-    path: "/my-projects",
-    icon: FolderKanban,
-    label: "Projetos"
-  },
-
-  {
-    path: "/calendar",
-    icon: Calendar,
-    label: "Calendário"
-  },
-
-  {
-    path: "/my-reports",
-    icon: FileBarChart,
-    label: "Relatórios"
-  }];
-
+  const clientNavItems = useMemo(() => {
+    const items = [
+      { path: "/", icon: LayoutDashboard, label: "Painel" },
+      { path: "/my-projects", icon: FolderKanban, label: "Projetos" },
+      { path: "/calendar", icon: Calendar, label: "Calendário" },
+      { path: "/my-reports", icon: FileBarChart, label: "Relatórios" },
+    ];
+    if (clientContractType === 'one_time') {
+      items.splice(2, 0, { path: "/my-services", icon: Layers3, label: "Serviços" });
+    }
+    return items;
+  }, [clientContractType]);
 
   // Select nav items based on role
   const getNavItems = () => {
