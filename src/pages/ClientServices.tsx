@@ -7,17 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Layers3, ShoppingCart, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface ServiceItem {
-  id: string;
-  service: string;
-  description: string;
-  hours: number;
-  pricePerHour: number;
-  imageUrl?: string;
-  image?: string;
-  billingType?: 'unique' | 'monthly';
-}
-
 interface DisplayService {
   id: string;
   service: string;
@@ -41,65 +30,27 @@ export const ClientServices: React.FC = () => {
     const fetchServices = async () => {
       setLoading(true);
       try {
-        // Get client record for this user
-        const { data: cuData } = await supabase
-          .from('client_users')
-          .select('client_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // RLS automatically filters to the client's admin catalog
+        const { data, error } = await supabase
+          .from('service_catalog')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
 
-        let clientId = cuData?.client_id;
+        if (error) throw error;
 
-        if (!clientId) {
-          const { data: clientData } = await supabase
-            .from('clients')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          clientId = clientData?.id;
-        }
-
-        if (!clientId) {
-          setLoading(false);
-          return;
-        }
-
-        // Fetch proposals linked to this client with items
-        const { data: proposals } = await supabase
-          .from('proposals')
-          .select('id, items')
-          .eq('client_id', clientId)
-          .in('status', ['sent', 'accepted', 'viewed']);
-
-        if (!proposals?.length) {
-          setLoading(false);
-          return;
-        }
-
-        const catalogMap = new Map<string, DisplayService>();
-
-        proposals.forEach((proposal) => {
-          const items = (proposal.items as unknown as ServiceItem[]) || [];
-          items
-            .filter((item) => item.service?.trim())
-            .forEach((item, index) => {
-              const itemId = item.id || `${proposal.id}-${index}`;
-              if (catalogMap.has(itemId)) return;
-
-              catalogMap.set(itemId, {
-                id: itemId,
-                service: item.service,
-                description: item.description || '',
-                hours: Number(item.hours || 0),
-                pricePerHour: Number(item.pricePerHour || 0),
-                total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
-                imageUrl: item.imageUrl || item.image,
-                billingType: item.billingType || 'unique',
-              });
-            });
-        });
-
-        setServices(Array.from(catalogMap.values()));
+        setServices(
+          (data || []).map((item) => ({
+            id: item.id,
+            service: item.service,
+            description: item.description || '',
+            hours: Number(item.hours || 0),
+            pricePerHour: Number(item.price_per_hour || 0),
+            total: Number(item.hours || 0) * Number(item.price_per_hour || 0),
+            imageUrl: item.image_url || undefined,
+            billingType: (item.billing_type || 'unique') as 'unique' | 'monthly',
+          }))
+        );
       } catch (error) {
         console.error('Erro ao carregar serviços:', error);
       } finally {
