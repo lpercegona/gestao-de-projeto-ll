@@ -1,92 +1,52 @@
 
 
-# Corrigir erro de build + Prevenir refresh durante edição em diálogos
+## Plan: Log de Atividades na Caixa de Diálogo de Configurações
 
-## Problema 1: Erro de build
-`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
+### Objetivo
+Adicionar uma nova seção "Log de Atividades" no menu do SettingsDialog que exibe um histórico de todas as alterações feitas na conta (criação/edição de clientes, projetos, tarefas, propostas, contratos, usuários, etc).
 
-**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
+### 1. Criar tabela `audit_logs` no banco de dados
 
-## Problema 2: Refresh destrói dados em diálogos abertos
+Nova tabela para armazenar eventos de auditoria:
 
-**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
-
-**Estratégia**: Duas camadas de proteção.
-
-### Camada 1: Estabilizar referência do `user` no AuthContext
-
-No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
-
-```typescript
-// AuthContext.tsx, dentro do onAuthStateChange
-const newUser = session?.user ?? null;
-setSession(session);
-setUser(prev => {
-  if (prev?.id === newUser?.id) return prev; // manter referência estável
-  return newUser;
-});
+```sql
+CREATE TABLE public.audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  owner_id uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  action text NOT NULL,        -- 'create', 'update', 'delete'
+  entity_type text NOT NULL,   -- 'client', 'project', 'task', 'proposal', 'contract', 'user'
+  entity_id uuid,
+  entity_name text,
+  details jsonb DEFAULT '{}'
+);
 ```
 
-Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
+Com RLS policies para admin/master_admin verem logs da sua conta e usuários verem seus próprios logs.
 
-### Camada 2: Lock de edição global no DataContext
+### 2. Criar triggers para popular `audit_logs`
 
-Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+Triggers em tabelas-chave (`clients`, `projects`, `tasks`, `proposals`, `contracts`, `profiles`) que inserem registros no `audit_logs` automaticamente em INSERT/UPDATE/DELETE.
 
-```typescript
-// DataContext.tsx
-const editingLockRef = useRef(0);
+### 3. Criar componente `ActivityLogTab`
 
-const lockEditing = useCallback(() => {
-  editingLockRef.current += 1;
-}, []);
+**Novo arquivo: `src/components/settings/ActivityLogTab.tsx`**
 
-const unlockEditing = useCallback(() => {
-  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
-}, []);
+- Consulta `audit_logs` filtrada por `owner_id` (para admin) ou `user_id` (para todos)
+- Exibe uma timeline/tabela com: data/hora, usuário, ação, tipo de entidade, nome da entidade
+- Ícones por tipo de entidade e badges por tipo de ação (criou, editou, removeu)
+- Filtros opcionais por tipo de entidade e período
 
-// No refreshData:
-const refreshData = useCallback(async (showLoading = true) => {
-  if (editingLockRef.current > 0) return; // não recarregar se em edição
-  // ... resto da lógica
-}, [user]);
-```
+### 4. Atualizar `SettingsDialog.tsx`
 
-Expor `lockEditing` e `unlockEditing` no contexto.
+- Adicionar `History` (lucide icon) no import
+- Adicionar novo item no `navSections`: `{ id: 'activity-log', label: 'Atividades', icon: History }`
+- Disponível para todos os perfis admin/master_admin
+- Adicionar case no `renderContent()` para renderizar `<ActivityLogTab />`
 
-### Camada 3: Aplicar o lock nos diálogos
-
-Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
-
-| Arquivo | Diálogo |
-|---|---|
-| `QuickActionsPanel.tsx` | Criação rápida de cliente |
-| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
-| `UserCreateDialog.tsx` | Criação de usuário |
-| `UserEditDialog.tsx` | Edição de usuário |
-| `ClientEditRequestForm.tsx` | Edição de cliente |
-| `ProjectRequestForm.tsx` | Solicitação de projeto |
-| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
-| `ReportShareDialog.tsx` | Compartilhamento de relatório |
-| `ProjectTableView.tsx` | Diálogo de detalhes |
-| `Services.tsx` | Criação/edição de itens de serviço |
-| `ExpandedTimerModal.tsx` | Timer expandido |
-| `GlobalTimerCompleteDialog.tsx` | Completar timer |
-
-Padrão de uso via `useEffect`:
-
-```typescript
-const { lockEditing, unlockEditing } = useData();
-useEffect(() => {
-  if (open) { lockEditing(); } else { unlockEditing(); }
-  return () => unlockEditing();
-}, [open]);
-```
-
-## Arquivos alterados
-
-1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
-2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
-3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
-4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
+### Arquivos a modificar/criar
+1. **Migration SQL** — criar tabela `audit_logs` + RLS + triggers
+2. **`src/components/settings/ActivityLogTab.tsx`** — novo componente
+3. **`src/components/settings/SettingsDialog.tsx`** — adicionar item no menu
 
