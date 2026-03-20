@@ -328,6 +328,62 @@ export const ProfileEditTab: React.FC = () => {
           </>
         )}
 
+        {/* Perfil Público — admin/master_admin only */}
+        {!isClient && (
+          <>
+            <Separator className="my-3" />
+            <div>
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5" />Perfil Público
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Configure sua página pública de serviços</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="publicProfileEnabled" className="text-xs">Ativar perfil público</Label>
+              <Switch
+                id="publicProfileEnabled"
+                checked={publicProfileEnabled}
+                onCheckedChange={setPublicProfileEnabled}
+                disabled={savingProfile}
+              />
+            </div>
+
+            {publicProfileEnabled && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="publicSlug" className="text-xs">URL do perfil</Label>
+                  <Input
+                    id="publicSlug"
+                    value={publicProfileSlug}
+                    onChange={(e) => setPublicProfileSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="minha-empresa"
+                    disabled={savingProfile}
+                    className="h-8 text-xs"
+                  />
+                  {publicProfileSlug && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {window.location.origin}/{publicProfileSlug}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Imagem de capa</Label>
+                  {coverUrl && (
+                    <div className="relative w-full h-24 rounded-md overflow-hidden border">
+                      <img src={coverUrl} alt="Capa" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <input ref={coverFileInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
+                  <Button type="button" variant="outline" size="sm" onClick={() => coverFileInputRef.current?.click()} disabled={uploadingCover} className="h-7 text-xs">
+                    {uploadingCover ? (<><Loader2 className="w-3 h-3 mr-1 animate-spin" />Enviando...</>) : (<><ImagePlus className="w-3 h-3 mr-1" />{coverUrl ? 'Alterar capa' : 'Adicionar capa'}</>)}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">Recomendado: 1200×400px. Máx 2MB.</p>
+                </div>
+              </div>
+            )}
+
         <Button type="submit" size="sm" disabled={savingProfile} className="mt-1">
           {savingProfile ? (<><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Salvando...</>) : (<><Save className="w-3.5 h-3.5 mr-1.5" />Salvar Alterações</>)}
         </Button>
