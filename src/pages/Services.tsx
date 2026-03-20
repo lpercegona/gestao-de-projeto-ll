@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
+import { PortfolioTab } from '@/components/services/PortfolioTab';
 import { Layers3, Search, Plus, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
