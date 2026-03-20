@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Clock, FolderKanban, FileText, Users, BarChart3, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import LogoOras from '@/assets/logo-oras.svg';
 import SimboloOras from '@/assets/simbolo-oras.svg';
@@ -16,6 +16,39 @@ interface PortfolioItem {
   owner_slug: string | null;
   owner_avatar: string | null;
 }
+
+const features = [
+  {
+    icon: Clock,
+    title: 'Controle de Horas',
+    description: 'Registre e acompanhe o tempo dedicado a cada projeto e tarefa com precisão.',
+  },
+  {
+    icon: FolderKanban,
+    title: 'Gestão de Projetos',
+    description: 'Organize projetos com Kanban, tarefas e prazos em um só lugar.',
+  },
+  {
+    icon: FileText,
+    title: 'Propostas e Contratos',
+    description: 'Crie, envie e gerencie propostas comerciais e contratos digitais.',
+  },
+  {
+    icon: Users,
+    title: 'Portal do Cliente',
+    description: 'Ofereça acesso exclusivo para seus clientes acompanharem o andamento.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Relatórios Automáticos',
+    description: 'Gere relatórios detalhados de horas e projetos para seus clientes.',
+  },
+  {
+    icon: Shield,
+    title: 'Portfólio Público',
+    description: 'Apresente seus melhores trabalhos e atraia novos clientes.',
+  },
+];
 
 export const Landing: React.FC = () => {
   const [projects, setProjects] = useState<PortfolioItem[]>([]);
@@ -122,6 +155,39 @@ export const Landing: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-16 sm:py-24 border-t border-border bg-muted/30">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <img src={SimboloOras} alt="ORAS" className="h-10 w-auto mx-auto mb-6 opacity-80" />
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Tudo que você precisa para gerenciar seus projetos
+            </h2>
+            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+              Uma plataforma completa para freelancers e agências organizarem trabalho, tempo e clientes.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((f) => (
+              <div key={f.title} className="rounded-lg border bg-card p-5 space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+                  <f.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+            <Link to="/login">
+              <Button size="lg">
+                Começar Gratuitamente <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
