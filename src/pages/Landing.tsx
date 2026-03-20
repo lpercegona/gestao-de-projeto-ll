@@ -82,6 +82,7 @@ export const Landing: React.FC = () => {
                   Entrar
                 </Button>
               </Link>
+              </div>
             </div>
           </div>
         </div>
