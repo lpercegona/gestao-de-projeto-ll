@@ -219,7 +219,7 @@ const App = () => (
               <Route path="/settings" element={<Navigate to="/" replace />} />
               
               {/* Public profile and portfolio */}
-              <Route path="/:slug/portfolio/:projectId" element={<PublicPortfolioProject />} />
+              <Route path="/:slug/:projectId" element={<PublicPortfolioProject />} />
               <Route path="/:slug" element={<PublicProfile />} />
               
               {/* Catch-all */}
