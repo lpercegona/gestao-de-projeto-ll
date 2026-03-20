@@ -126,7 +126,7 @@ export const PublicProfile: React.FC = () => {
               {portfolio.map(item => (
                 <Link
                   key={item.id}
-                  to={`/${slug}/portfolio/${item.id}`}
+                  to={`/${slug}/${item.id}`}
                   className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-shadow"
                 >
                   {item.cover_url ? (
