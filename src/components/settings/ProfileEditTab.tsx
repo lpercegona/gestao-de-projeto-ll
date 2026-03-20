@@ -104,6 +104,9 @@ export const ProfileEditTab: React.FC = () => {
           setPublicProfileEnabled((extProfile as any)?.public_profile_enabled || false);
           setPublicProfileSlug((extProfile as any)?.public_profile_slug || '');
           setCoverUrl((extProfile as any)?.cover_url || null);
+          setContactEmail((extProfile as any)?.contact_email || '');
+          setContactPhone((extProfile as any)?.contact_phone || '');
+          setShowContactInfo((extProfile as any)?.show_contact_info || false);
         }
       } catch (err) {
         console.error('Error loading profile:', err);
