@@ -164,6 +164,11 @@ const App = () => (
                   <Services />
                 </ProtectedRoute>
               } />
+              <Route path="/portfolio" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Services />
+                </ProtectedRoute>
+              } />
               
               {/* Client routes */}
               <Route path="/client-dashboard" element={
