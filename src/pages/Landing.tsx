@@ -91,7 +91,7 @@ export const Landing: React.FC = () => {
       <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
           <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
-           Para trabalha<br> com criatividade
+           Para trabalha com criatividade
             
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
