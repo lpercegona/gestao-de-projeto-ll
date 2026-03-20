@@ -172,6 +172,7 @@ export const PublicProfile: React.FC = () => {
                         {formatCurrency(s.hours * s.price_per_hour)}
                       </span>
                     </div>
+                    <Button className="w-full mt-2" size="sm">Contratar</Button>
                   </CardContent>
                 </Card>
               ))}
