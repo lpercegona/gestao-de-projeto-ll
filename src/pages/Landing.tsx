@@ -96,12 +96,12 @@ export const Landing: React.FC = () => {
       <header className="border-b border-border animate-fade-in">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
-            <img src={LogoOras} alt="ORAS" className="hidden sm:block h-8 w-auto" />
+            <img src={LogoOras} alt="ORAS" className="hidden sm:block h-6 w-auto" />
             <img src={SimboloOras} alt="ORAS" className="sm:hidden h-6 w-auto" />
 
             <div className="flex items-center gap-2 sm:gap-4">
               <Link to="/list">
-                <Button variant="ghost" size="default" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                <Button variant="default" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
                   Explorar
                 </Button>
               </Link>
