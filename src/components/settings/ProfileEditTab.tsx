@@ -188,6 +188,9 @@ export const ProfileEditTab: React.FC = () => {
         updateData.cpf = adminCpf || null;
         updateData.company_name = adminCompanyName || null;
         updateData.company_address = adminCompanyAddress || null;
+        updateData.public_profile_enabled = publicProfileEnabled;
+        updateData.public_profile_slug = publicProfileSlug.trim() || null;
+        updateData.cover_url = coverUrl || null;
       }
       const { error } = await supabase.from('profiles').update(updateData as any).eq('user_id', user.id);
       if (error) toast.error('Erro ao salvar perfil: ' + error.message);
