@@ -593,12 +593,15 @@ export type Database = {
           cnpj: string | null
           company_address: string | null
           company_name: string | null
+          cover_url: string | null
           cpf: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
           owner_id: string | null
+          public_profile_enabled: boolean
+          public_profile_slug: string | null
           updated_at: string
           user_id: string
         }
@@ -607,12 +610,15 @@ export type Database = {
           cnpj?: string | null
           company_address?: string | null
           company_name?: string | null
+          cover_url?: string | null
           cpf?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
           owner_id?: string | null
+          public_profile_enabled?: boolean
+          public_profile_slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -621,12 +627,15 @@ export type Database = {
           cnpj?: string | null
           company_address?: string | null
           company_name?: string | null
+          cover_url?: string | null
           cpf?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
           owner_id?: string | null
+          public_profile_enabled?: boolean
+          public_profile_slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1611,6 +1620,28 @@ export type Database = {
           comment_id: string
           content: string
           created_at: string
+        }[]
+      }
+      get_public_profile: {
+        Args: { p_slug: string }
+        Returns: {
+          avatar_url: string
+          company_name: string
+          cover_url: string
+          full_name: string
+          owner_id: string
+        }[]
+      }
+      get_public_profile_services: {
+        Args: { p_slug: string }
+        Returns: {
+          billing_type: string
+          description: string
+          hours: number
+          id: string
+          image_url: string
+          price_per_hour: number
+          service: string
         }[]
       }
       get_shared_report: {
