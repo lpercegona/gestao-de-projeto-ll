@@ -71,18 +71,17 @@ export const Landing: React.FC = () => {
                 </Button>
               </Link>
               <div className="flex items-center gap-2 sm:gap-4">
-                <Link to="">
-                  <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
-                    Gestão
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
-                    <LogIn className="h-3.5 w-3.5" />
-                    Entrar
-                  </Button>
-                </Link>
-              </div>
+              <Link to="">
+                <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                  Gestão
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                  <LogIn className="h-3.5 w-3.5" />
+                  Entrar
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -92,11 +91,12 @@ export const Landing: React.FC = () => {
       <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
           <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
-            Descubra profissionais{' '}
-            <span className="text-primary">criativos</span>
+           Para trabalha<br> com criatividade
+            
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
-            Explore portfólios, conheça e contrate profissionais e serviços criativos.
+            Explore portfólios, conheça e contrate 
+<bprofissionais e serviços criativos.
           </p>
 
           {/* View toggle */}
