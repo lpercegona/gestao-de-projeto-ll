@@ -70,6 +70,7 @@ export const Landing: React.FC = () => {
                   Explorar
                 </Button>
               </Link>
+              <div className="flex items-center gap-2 sm:gap-4">
               <Link to="">
                 <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
                   Gestão
@@ -90,7 +91,7 @@ export const Landing: React.FC = () => {
       <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
           <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
-           Para trabalha com criatividade
+           Para quem trabalha com criatividade
             
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
