@@ -6,6 +6,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
@@ -21,6 +22,8 @@ import {
   Paperclip,
   Download,
   CalendarClock,
+  Globe,
+  ImagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
