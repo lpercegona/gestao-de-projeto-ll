@@ -30,6 +30,7 @@ import { FirstAccess } from "@/pages/FirstAccess";
 import { PublicProposal } from "@/pages/PublicProposal";
 import { PublicContract } from "@/pages/PublicContract";
 import { PublicProfile } from "@/pages/PublicProfile";
+import { PublicPortfolioProject } from "@/pages/PublicPortfolioProject";
 import { Services } from "@/pages/Services";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { DatabaseQueries } from "@/pages/DatabaseQueries";
