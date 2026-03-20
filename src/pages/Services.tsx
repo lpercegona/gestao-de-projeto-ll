@@ -262,7 +262,8 @@ export const Services: React.FC = () => {
           pricePerHour: Number(item.pricePerHour || 0),
           total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
           imageUrl: item.imageUrl || item.image,
-          billingType: item.billingType || 'unique'
+          billingType: item.billingType || 'unique',
+          isActive: true,
         });
       });
     });
