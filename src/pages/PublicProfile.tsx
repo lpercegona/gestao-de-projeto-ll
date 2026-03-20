@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,10 +23,19 @@ interface ServiceItem {
   billing_type: string;
 }
 
+interface PortfolioItem {
+  id: string;
+  title: string;
+  description: string | null;
+  cover_url: string | null;
+  service_name: string | null;
+}
+
 export const PublicProfile: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -45,8 +54,13 @@ export const PublicProfile: React.FC = () => {
       const p = (profileData as any[])[0] as ProfileData;
       setProfile(p);
 
-      const { data: servicesData } = await supabase.rpc('get_public_profile_services' as any, { p_slug: slug });
-      setServices((servicesData as ServiceItem[]) || []);
+      const [servicesRes, portfolioRes] = await Promise.all([
+        supabase.rpc('get_public_profile_services' as any, { p_slug: slug }),
+        supabase.rpc('get_public_portfolio' as any, { p_slug: slug }),
+      ]);
+
+      setServices((servicesRes.data as ServiceItem[]) || []);
+      setPortfolio((portfolioRes.data as PortfolioItem[]) || []);
       setLoading(false);
     };
     fetchData();
@@ -103,10 +117,39 @@ export const PublicProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* Services */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">
+        {/* Portfolio */}
+        {portfolio.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Portfólio</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {portfolio.map(item => (
+                <Link
+                  key={item.id}
+                  to={`/${slug}/portfolio/${item.id}`}
+                  className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-shadow"
+                >
+                  {item.cover_url ? (
+                    <img src={item.cover_url} alt={item.title} className="aspect-[4/3] w-full object-cover" />
+                  ) : (
+                    <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted text-xs text-muted-foreground">
+                      Sem capa
+                    </div>
+                  )}
+                  <div className="p-2">
+                    <h3 className="text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                      {item.title}
+                    </h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Services */}
         {services.length > 0 ? (
-          <>
+          <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">Serviços</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {services.map((s) => (
@@ -133,10 +176,10 @@ export const PublicProfile: React.FC = () => {
                 </Card>
               ))}
             </div>
-          </>
-        ) : (
+          </div>
+        ) : portfolio.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-12">Nenhum serviço disponível no momento.</p>
-        )}
+        ) : null}
       </div>
     </div>
   );
