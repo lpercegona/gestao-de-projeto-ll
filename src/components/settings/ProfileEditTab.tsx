@@ -6,6 +6,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
@@ -21,6 +22,8 @@ import {
   Paperclip,
   Download,
   CalendarClock,
+  Globe,
+  ImagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
@@ -56,6 +59,13 @@ export const ProfileEditTab: React.FC = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Public profile state
+  const [publicProfileEnabled, setPublicProfileEnabled] = useState(false);
+  const [publicProfileSlug, setPublicProfileSlug] = useState('');
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const [identityGuidelines, setIdentityGuidelines] = useState('');
   const [identityAttachments, setIdentityAttachments] = useState<IdentityAttachment[]>([]);
@@ -86,6 +96,9 @@ export const ProfileEditTab: React.FC = () => {
           setAdminCpf((extProfile as any)?.cpf || '');
           setAdminCompanyName((extProfile as any)?.company_name || '');
           setAdminCompanyAddress((extProfile as any)?.company_address || '');
+          setPublicProfileEnabled((extProfile as any)?.public_profile_enabled || false);
+          setPublicProfileSlug((extProfile as any)?.public_profile_slug || '');
+          setCoverUrl((extProfile as any)?.cover_url || null);
         }
       } catch (err) {
         console.error('Error loading profile:', err);
@@ -164,6 +177,29 @@ export const ProfileEditTab: React.FC = () => {
     }
   };
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) { toast.error('Selecione uma imagem válida.'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Máximo 2MB.'); return; }
+    setUploadingCover(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/cover.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
+      setCoverUrl(urlWithCacheBuster);
+      toast.success('Capa atualizada!');
+    } catch (err) {
+      toast.error('Erro ao fazer upload da capa');
+    } finally {
+      setUploadingCover(false);
+      if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -175,6 +211,9 @@ export const ProfileEditTab: React.FC = () => {
         updateData.cpf = adminCpf || null;
         updateData.company_name = adminCompanyName || null;
         updateData.company_address = adminCompanyAddress || null;
+        updateData.public_profile_enabled = publicProfileEnabled;
+        updateData.public_profile_slug = publicProfileSlug.trim() || null;
+        updateData.cover_url = coverUrl || null;
       }
       const { error } = await supabase.from('profiles').update(updateData as any).eq('user_id', user.id);
       if (error) toast.error('Erro ao salvar perfil: ' + error.message);
@@ -309,6 +348,64 @@ export const ProfileEditTab: React.FC = () => {
                 <Input id="adminCompanyAddress" value={adminCompanyAddress} onChange={(e) => setAdminCompanyAddress(e.target.value)} placeholder="Endereço completo" disabled={savingProfile} className="h-8 text-xs" />
               </div>
             </div>
+          </>
+        )}
+
+        {/* Perfil Público — admin/master_admin only */}
+        {!isClient && (
+          <>
+            <Separator className="my-3" />
+            <div>
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5" />Perfil Público
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Configure sua página pública de serviços</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="publicProfileEnabled" className="text-xs">Ativar perfil público</Label>
+              <Switch
+                id="publicProfileEnabled"
+                checked={publicProfileEnabled}
+                onCheckedChange={setPublicProfileEnabled}
+                disabled={savingProfile}
+              />
+            </div>
+
+            {publicProfileEnabled && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="publicSlug" className="text-xs">URL do perfil</Label>
+                  <Input
+                    id="publicSlug"
+                    value={publicProfileSlug}
+                    onChange={(e) => setPublicProfileSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="minha-empresa"
+                    disabled={savingProfile}
+                    className="h-8 text-xs"
+                  />
+                  {publicProfileSlug && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {window.location.origin}/{publicProfileSlug}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Imagem de capa</Label>
+                  {coverUrl && (
+                    <div className="relative w-full h-24 rounded-md overflow-hidden border">
+                      <img src={coverUrl} alt="Capa" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <input ref={coverFileInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
+                  <Button type="button" variant="outline" size="sm" onClick={() => coverFileInputRef.current?.click()} disabled={uploadingCover} className="h-7 text-xs">
+                    {uploadingCover ? (<><Loader2 className="w-3 h-3 mr-1 animate-spin" />Enviando...</>) : (<><ImagePlus className="w-3 h-3 mr-1" />{coverUrl ? 'Alterar capa' : 'Adicionar capa'}</>)}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">Recomendado: 1200×400px. Máx 2MB.</p>
+                </div>
+              </div>
+            )}
           </>
         )}
 

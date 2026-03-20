@@ -29,6 +29,7 @@ import { Landing } from "@/pages/Landing";
 import { FirstAccess } from "@/pages/FirstAccess";
 import { PublicProposal } from "@/pages/PublicProposal";
 import { PublicContract } from "@/pages/PublicContract";
+import { PublicProfile } from "@/pages/PublicProfile";
 import { Services } from "@/pages/Services";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { DatabaseQueries } from "@/pages/DatabaseQueries";
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="/report/:token" element={<SharedReport />} />
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
+              
               
               {/* Home: Landing for visitors, dashboard for authenticated users */}
               <Route path="/" element={<RootRoute />} />
@@ -209,6 +211,9 @@ const App = () => (
               <Route path="/preferences" element={<Navigate to="/" replace />} />
               <Route path="/profile" element={<Navigate to="/" replace />} />
               <Route path="/settings" element={<Navigate to="/" replace />} />
+              
+              {/* Public profile - must be before catch-all */}
+              <Route path="/:slug" element={<PublicProfile />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
