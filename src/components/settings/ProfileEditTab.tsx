@@ -59,6 +59,13 @@ export const ProfileEditTab: React.FC = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Public profile state
+  const [publicProfileEnabled, setPublicProfileEnabled] = useState(false);
+  const [publicProfileSlug, setPublicProfileSlug] = useState('');
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const [identityGuidelines, setIdentityGuidelines] = useState('');
   const [identityAttachments, setIdentityAttachments] = useState<IdentityAttachment[]>([]);
