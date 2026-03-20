@@ -556,6 +556,7 @@ export const Services: React.FC = () => {
           <TabsTrigger value="services">Serviços</TabsTrigger>
           <TabsTrigger value="proposals">Propostas</TabsTrigger>
           <TabsTrigger value="contracts">Contratos</TabsTrigger>
+          <TabsTrigger value="portfolio">Portfólio</TabsTrigger>
         </TabsList>
 
         <TabsContent value="services" className="space-y-4">
