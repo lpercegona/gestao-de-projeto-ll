@@ -665,7 +665,7 @@ export const Services: React.FC = () => {
                                   Editar
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleToggleActive(row)}>
-                                  {catalogItems.find(c => c.id === row.id && (c as any).isActive === false) ? 'Apresentar' : 'Ocultar'}
+                                  {row.isActive === false ? 'Apresentar' : 'Ocultar'}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
