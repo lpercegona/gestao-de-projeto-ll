@@ -101,7 +101,7 @@ export const Landing: React.FC = () => {
 
             <div className="flex items-center gap-2 sm:gap-4">
               <Link to="/list">
-                <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                <Button variant="ghost" size="default" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
                   Explorar
                 </Button>
               </Link>
