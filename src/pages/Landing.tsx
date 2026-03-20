@@ -26,13 +26,13 @@ interface ProfileItem {
 }
 
 const features = [
-  { icon: Clock, title: 'Controle de Horas', description: 'Registre e acompanhe o tempo dedicado a cada projeto e tarefa com precisão.' },
-  { icon: FolderKanban, title: 'Gestão de Projetos', description: 'Organize projetos com Kanban, tarefas e prazos em um só lugar.' },
-  { icon: FileText, title: 'Propostas e Contratos', description: 'Crie, envie e gerencie propostas comerciais e contratos digitais.' },
-  { icon: Users, title: 'Portal do Cliente', description: 'Ofereça acesso exclusivo para seus clientes acompanharem o andamento.' },
-  { icon: BarChart3, title: 'Relatórios Automáticos', description: 'Gere relatórios detalhados de horas e projetos para seus clientes.' },
-  { icon: Shield, title: 'Portfólio Público', description: 'Apresente seus melhores trabalhos e atraia novos clientes.' },
-];
+{ icon: Clock, title: 'Controle de Horas', description: 'Registre e acompanhe o tempo dedicado a cada projeto e tarefa com precisão.' },
+{ icon: FolderKanban, title: 'Gestão de Projetos', description: 'Organize projetos com Kanban, tarefas e prazos em um só lugar.' },
+{ icon: FileText, title: 'Propostas e Contratos', description: 'Crie, envie e gerencie propostas comerciais e contratos digitais.' },
+{ icon: Users, title: 'Portal do Cliente', description: 'Ofereça acesso exclusivo para seus clientes acompanharem o andamento.' },
+{ icon: BarChart3, title: 'Relatórios Automáticos', description: 'Gere relatórios detalhados de horas e projetos para seus clientes.' },
+{ icon: Shield, title: 'Portfólio Público', description: 'Apresente seus melhores trabalhos e atraia novos clientes.' }];
+
 
 type ViewMode = 'projects' | 'profiles';
 
@@ -45,11 +45,11 @@ export const Landing: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       const [projRes, profRes] = await Promise.all([
-        supabase.rpc('get_all_public_portfolio' as any),
-        supabase.rpc('get_all_public_profiles' as any),
-      ]);
-      setProjects(((projRes.data as PortfolioItem[]) || []).slice(0, 8));
-      setProfiles(((profRes.data as ProfileItem[]) || []).slice(0, 8));
+      supabase.rpc('get_all_public_portfolio' as any),
+      supabase.rpc('get_all_public_profiles' as any)]
+      );
+      setProjects((projRes.data as PortfolioItem[] || []).slice(0, 8));
+      setProfiles((profRes.data as ProfileItem[] || []).slice(0, 8));
       setLoading(false);
     };
     fetchData();
@@ -90,25 +90,25 @@ export const Landing: React.FC = () => {
             <span className="text-primary">criativos</span>
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
-            Explore portfólios, conheça serviços e contrate profissionais criativos.
+            Explore portfólios, conheça e contrate 
+<bprofissionais e serviços criativos.
           </p>
 
           {/* View toggle */}
           <div className="mt-5 sm:mt-8 flex items-center justify-center gap-2 sm:gap-3">
-            <Button
-              size="sm"
-              variant={view === 'projects' ? 'default' : 'outline'}
-              className="sm:h-11 sm:px-8 sm:text-sm"
-              onClick={() => setView('projects')}
-            >
+            <Button size="sm"
+            variant={view === 'projects' ? 'default' : 'outline'}
+            className="sm:h-11 sm:px-8 sm:text-sm"
+            onClick={() => setView('projects')}>
+              
               Projetos
             </Button>
             <Button
               size="sm"
               variant={view === 'profiles' ? 'default' : 'outline'}
               className="sm:h-11 sm:px-8 sm:text-sm"
-              onClick={() => setView('profiles')}
-            >
+              onClick={() => setView('profiles')}>
+              
               Perfis
             </Button>
           </div>
@@ -124,33 +124,33 @@ export const Landing: React.FC = () => {
             </h2>
             <Link
               to={view === 'projects' ? '/list' : '/list?tab=profiles'}
-              className="text-xs sm:text-sm text-primary hover:underline"
-            >
+              className="text-xs sm:text-sm text-primary hover:underline">
+              
               Ver todos
             </Link>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center py-12">
+          {loading ?
+          <div className="flex justify-center py-12">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : view === 'projects' ? (
-            projects.length === 0 ? (
-              <p className="text-xs sm:text-sm text-muted-foreground text-center py-12">Nenhum projeto publicado ainda.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-                {projects.map((item, index) => (
-                  <Link
-                    key={item.id}
-                    to={`/${item.owner_slug}/${item.id}`}
-                    className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-all duration-300 animate-fade-in"
-                    style={{ animationDelay: `${300 + index * 60}ms`, animationFillMode: 'both' }}
-                  >
-                    {item.cover_url ? (
-                      <img src={item.cover_url} alt={item.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                    ) : (
-                      <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted text-[10px] sm:text-xs text-muted-foreground">Sem capa</div>
-                    )}
+            </div> :
+          view === 'projects' ?
+          projects.length === 0 ?
+          <p className="text-xs sm:text-sm text-muted-foreground text-center py-12">Nenhum projeto publicado ainda.</p> :
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                {projects.map((item, index) =>
+            <Link
+              key={item.id}
+              to={`/${item.owner_slug}/${item.id}`}
+              className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-all duration-300 animate-fade-in"
+              style={{ animationDelay: `${300 + index * 60}ms`, animationFillMode: 'both' }}>
+              
+                    {item.cover_url ?
+              <img src={item.cover_url} alt={item.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105" /> :
+
+              <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted text-[10px] sm:text-xs text-muted-foreground">Sem capa</div>
+              }
                     <div className="p-1.5 sm:p-2 space-y-0.5 sm:space-y-1">
                       <h3 className="text-[10px] sm:text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h3>
                       <div className="flex items-center gap-1">
@@ -162,42 +162,42 @@ export const Landing: React.FC = () => {
                       </div>
                     </div>
                   </Link>
-                ))}
-              </div>
-            )
-          ) : (
-            profiles.length === 0 ? (
-              <p className="text-xs sm:text-sm text-muted-foreground text-center py-12">Nenhum perfil publicado ainda.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-                {profiles.map((prof, index) => (
-                  <Link
-                    key={prof.slug}
-                    to={`/${prof.slug}`}
-                    className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-all duration-300 animate-fade-in"
-                    style={{ animationDelay: `${300 + index * 60}ms`, animationFillMode: 'both' }}
-                  >
-                    {prof.cover_url ? (
-                      <img src={prof.cover_url} alt={prof.full_name} className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                    ) : (
-                      <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted">
+            )}
+              </div> :
+
+
+          profiles.length === 0 ?
+          <p className="text-xs sm:text-sm text-muted-foreground text-center py-12">Nenhum perfil publicado ainda.</p> :
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                {profiles.map((prof, index) =>
+            <Link
+              key={prof.slug}
+              to={`/${prof.slug}`}
+              className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-all duration-300 animate-fade-in"
+              style={{ animationDelay: `${300 + index * 60}ms`, animationFillMode: 'both' }}>
+              
+                    {prof.cover_url ?
+              <img src={prof.cover_url} alt={prof.full_name} className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105" /> :
+
+              <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted">
                         <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
                           <AvatarImage src={prof.avatar_url || undefined} />
                           <AvatarFallback className="text-base sm:text-lg">{prof.full_name?.[0]?.toUpperCase() || '?'}</AvatarFallback>
                         </Avatar>
                       </div>
-                    )}
+              }
                     <div className="p-1.5 sm:p-2 space-y-0.5">
                       <h3 className="text-[10px] sm:text-xs font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{prof.full_name}</h3>
-                      {prof.company_name && (
-                        <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{prof.company_name}</p>
-                      )}
+                      {prof.company_name &&
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{prof.company_name}</p>
+                }
                     </div>
                   </Link>
-                ))}
+            )}
               </div>
-            )
-          )}
+
+          }
         </div>
       </section>
 
@@ -212,19 +212,19 @@ export const Landing: React.FC = () => {
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-            {features.map((f, index) => (
-              <div
-                key={f.title}
-                className="rounded-lg border bg-card p-3 sm:p-5 space-y-2 sm:space-y-3 transition-all duration-300 hover:shadow-md animate-fade-in"
-                style={{ animationDelay: `${500 + index * 80}ms`, animationFillMode: 'both' }}
-              >
+            {features.map((f, index) =>
+            <div
+              key={f.title}
+              className="rounded-lg border bg-card p-3 sm:p-5 space-y-2 sm:space-y-3 transition-all duration-300 hover:shadow-md animate-fade-in"
+              style={{ animationDelay: `${500 + index * 80}ms`, animationFillMode: 'both' }}>
+              
                 <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-md bg-primary/10">
                   <f.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
                 <h3 className="text-xs sm:text-base font-semibold text-foreground">{f.title}</h3>
                 <p className="text-[10px] sm:text-sm text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
-            ))}
+            )}
           </div>
           <div className="text-center mt-6 sm:mt-10 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'both' }}>
             <Link to="/login">
@@ -249,6 +249,6 @@ export const Landing: React.FC = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>);
+
 };
