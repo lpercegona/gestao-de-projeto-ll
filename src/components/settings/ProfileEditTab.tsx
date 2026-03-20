@@ -200,6 +200,7 @@ export const ProfileEditTab: React.FC = () => {
     }
   };
 
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setSavingProfile(true);
