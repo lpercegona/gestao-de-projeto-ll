@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ProjectData {
   id: string;
@@ -11,6 +12,9 @@ interface ProjectData {
   description: string;
   cover_url: string | null;
   service_name: string | null;
+  owner_name: string | null;
+  owner_avatar: string | null;
+  owner_slug: string | null;
 }
 
 interface ProjectImage {
@@ -21,12 +25,17 @@ interface ProjectImage {
 
 export const PublicPortfolioProject: React.FC = () => {
   const { slug, projectId } = useParams<{ slug: string; projectId: string }>();
+  const [searchParams] = useSearchParams();
+  const fromList = searchParams.get('from') === 'list';
   const [project, setProject] = useState<ProjectData | null>(null);
   const [images, setImages] = useState<ProjectImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showCta, setShowCta] = useState(true);
   const lastScrollY = useRef(0);
+
+  const backLink = fromList ? '/list' : `/${slug}`;
+  const backLabel = fromList ? '← Voltar à listagem' : '← Voltar ao perfil';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,8 +86,8 @@ export const PublicPortfolioProject: React.FC = () => {
         <h1 className="text-2xl font-semibold text-foreground">Projeto não encontrado</h1>
         <p className="text-sm text-muted-foreground mt-2">Este projeto não existe ou está oculto.</p>
         {slug && (
-          <Link to={`/${slug}`} className="mt-4 text-sm text-primary hover:underline">
-            ← Voltar ao perfil
+          <Link to={backLink} className="mt-4 text-sm text-primary hover:underline">
+            {backLabel}
           </Link>
         )}
       </div>
@@ -87,11 +96,24 @@ export const PublicPortfolioProject: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with padding */}
+      {/* Header */}
       <div className="max-w-3xl mx-auto px-4 pt-8 pb-4">
-        <Link to={`/${slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
-          <ArrowLeft className="h-4 w-4" /> Voltar ao perfil
+        <Link to={backLink} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
+          <ArrowLeft className="h-4 w-4" /> {fromList ? 'Voltar à listagem' : 'Voltar ao perfil'}
         </Link>
+
+        {/* Owner info */}
+        {project?.owner_name && (
+          <Link to={`/${project.owner_slug}`} className="inline-flex items-center gap-2 mb-3 hover:opacity-80 transition-opacity">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={project.owner_avatar || undefined} />
+              <AvatarFallback className="text-[10px]">
+                {project.owner_name?.[0]?.toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm text-muted-foreground">{project.owner_name}</span>
+          </Link>
+        )}
 
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">{project?.title}</h1>
 

@@ -67,6 +67,11 @@ export const ProfileEditTab: React.FC = () => {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
 
+  // Contact info
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [showContactInfo, setShowContactInfo] = useState(false);
+
   const [identityGuidelines, setIdentityGuidelines] = useState('');
   const [identityAttachments, setIdentityAttachments] = useState<IdentityAttachment[]>([]);
   const [savingIdentity, setSavingIdentity] = useState(false);
