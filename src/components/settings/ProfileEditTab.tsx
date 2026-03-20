@@ -96,6 +96,9 @@ export const ProfileEditTab: React.FC = () => {
           setAdminCpf((extProfile as any)?.cpf || '');
           setAdminCompanyName((extProfile as any)?.company_name || '');
           setAdminCompanyAddress((extProfile as any)?.company_address || '');
+          setPublicProfileEnabled((extProfile as any)?.public_profile_enabled || false);
+          setPublicProfileSlug((extProfile as any)?.public_profile_slug || '');
+          setCoverUrl((extProfile as any)?.cover_url || null);
         }
       } catch (err) {
         console.error('Error loading profile:', err);
