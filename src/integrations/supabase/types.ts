@@ -669,6 +669,8 @@ export type Database = {
           cnpj: string | null
           company_address: string | null
           company_name: string | null
+          contact_email: string | null
+          contact_phone: string | null
           cover_url: string | null
           cpf: string | null
           created_at: string
@@ -678,6 +680,7 @@ export type Database = {
           owner_id: string | null
           public_profile_enabled: boolean
           public_profile_slug: string | null
+          show_contact_info: boolean
           updated_at: string
           user_id: string
         }
@@ -686,6 +689,8 @@ export type Database = {
           cnpj?: string | null
           company_address?: string | null
           company_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           cover_url?: string | null
           cpf?: string | null
           created_at?: string
@@ -695,6 +700,7 @@ export type Database = {
           owner_id?: string | null
           public_profile_enabled?: boolean
           public_profile_slug?: string | null
+          show_contact_info?: boolean
           updated_at?: string
           user_id: string
         }
@@ -703,6 +709,8 @@ export type Database = {
           cnpj?: string | null
           company_address?: string | null
           company_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           cover_url?: string | null
           cpf?: string | null
           created_at?: string
@@ -712,6 +720,7 @@ export type Database = {
           owner_id?: string | null
           public_profile_enabled?: boolean
           public_profile_slug?: string | null
+          show_contact_info?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -1745,6 +1754,9 @@ export type Database = {
           cover_url: string
           description: string
           id: string
+          owner_avatar: string
+          owner_name: string
+          owner_slug: string
           service_name: string
           title: string
         }[]
@@ -1754,9 +1766,12 @@ export type Database = {
         Returns: {
           avatar_url: string
           company_name: string
+          contact_email: string
+          contact_phone: string
           cover_url: string
           full_name: string
           owner_id: string
+          show_contact_info: boolean
         }[]
       }
       get_public_profile_services: {
