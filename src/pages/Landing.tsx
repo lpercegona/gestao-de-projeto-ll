@@ -71,17 +71,18 @@ export const Landing: React.FC = () => {
                 </Button>
               </Link>
               <div className="flex items-center gap-2 sm:gap-4">
-              <Link to="">
-                <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
-                  Gestão
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
-                  <LogIn className="h-3.5 w-3.5" />
-                  Entrar
-                </Button>
-              </Link>
+                <Link to="">
+                  <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                    Gestão
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                    <LogIn className="h-3.5 w-3.5" />
+                    Entrar
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -95,8 +96,7 @@ export const Landing: React.FC = () => {
             <span className="text-primary">criativos</span>
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
-            Explore portfólios, conheça e contrate 
-<bprofissionais e serviços criativos.
+            Explore portfólios, conheça e contrate profissionais e serviços criativos.
           </p>
 
           {/* View toggle */}
