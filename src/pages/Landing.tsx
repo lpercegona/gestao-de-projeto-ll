@@ -86,8 +86,8 @@ export const Landing: React.FC = () => {
       <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
           <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
-            Descubra profissionais{' '}
-            <span className="text-primary">criativos</span>
+            Para quem trabalha
+            <br />com <span className="text-primary">criatividade</span>
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
             Explore portfólios, conheça e contrate 
