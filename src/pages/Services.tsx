@@ -472,6 +472,7 @@ export const Services: React.FC = () => {
             total: Number(data.hours || 0) * Number(data.price_per_hour || 0),
             imageUrl: data.image_url || undefined,
             billingType: (data.billing_type || 'unique') as BillingType,
+            isActive: data.is_active,
           },
           ...prev,
         ]);
