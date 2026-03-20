@@ -383,6 +383,8 @@ export const ProfileEditTab: React.FC = () => {
                 </div>
               </div>
             )}
+          </>
+        )}
 
         <Button type="submit" size="sm" disabled={savingProfile} className="mt-1">
           {savingProfile ? (<><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Salvando...</>) : (<><Save className="w-3.5 h-3.5 mr-1.5" />Salvar Alterações</>)}
