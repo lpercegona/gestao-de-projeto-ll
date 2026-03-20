@@ -551,6 +551,29 @@ export const Services: React.FC = () => {
     }
   };
 
+  const handleToggleActive = async (row: ServiceRow) => {
+    const isCatalogItem = catalogItems.some((item) => item.id === row.id);
+    if (!isCatalogItem) {
+      toast.info('Apenas itens do catálogo podem ser ocultados.');
+      return;
+    }
+    const newActive = !row.isActive;
+    try {
+      const { error } = await supabase
+        .from('service_catalog')
+        .update({ is_active: newActive })
+        .eq('id', row.id);
+      if (error) throw error;
+      setCatalogItems((prev) =>
+        prev.map((item) => item.id === row.id ? { ...item, isActive: newActive } : item)
+      );
+      toast.success(newActive ? 'Serviço apresentado' : 'Serviço ocultado');
+    } catch (error) {
+      console.error('Erro ao alterar visibilidade:', error);
+      toast.error('Erro ao alterar visibilidade');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
