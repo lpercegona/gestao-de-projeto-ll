@@ -86,7 +86,7 @@ const App = () => (
               <Route path="/report/:token" element={<SharedReport />} />
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
-              <Route path="/:slug" element={<PublicProfile />} />
+              
               
               {/* Home: Landing for visitors, dashboard for authenticated users */}
               <Route path="/" element={<RootRoute />} />
