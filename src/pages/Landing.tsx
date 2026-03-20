@@ -90,8 +90,7 @@ export const Landing: React.FC = () => {
             <span className="text-primary">criativos</span>
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
-            Explore portfólios, conheça e contrate 
-<bprofissionais e serviços criativos.
+            Explore portfólios, conheça serviços e<br />colabore com profissionais criativos.
           </p>
 
           {/* View toggle */}
