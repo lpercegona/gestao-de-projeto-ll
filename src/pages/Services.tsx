@@ -664,6 +664,10 @@ export const Services: React.FC = () => {
         <TabsContent value="contracts" className="space-y-4">
           <Contracts />
         </TabsContent>
+
+        <TabsContent value="portfolio" className="space-y-4">
+          <PortfolioTab />
+        </TabsContent>
       </Tabs>
 
       <Dialog open={createItemOpen} onOpenChange={setCreateItemOpen}>

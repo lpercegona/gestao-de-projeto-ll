@@ -217,7 +217,8 @@ const App = () => (
               <Route path="/profile" element={<Navigate to="/" replace />} />
               <Route path="/settings" element={<Navigate to="/" replace />} />
               
-              {/* Public profile - must be before catch-all */}
+              {/* Public profile and portfolio */}
+              <Route path="/:slug/portfolio/:projectId" element={<PublicPortfolioProject />} />
               <Route path="/:slug" element={<PublicProfile />} />
               
               {/* Catch-all */}
