@@ -1,37 +1,69 @@
-## Plano: Página de Perfil Público do Admin
+## Plano: Portfólio no módulo de Serviços + Perfil Público
 
 ### Resumo
 
-Criar página pública `/meunome` que exibe perfil do admin (nome, empresa, avatar, capa) e catálogo de serviços ativos. Adicionar controles no ProfileEditTab para ativar/desativar, definir slug e fazer upload de imagem de capa.
+Criar tabela `portfolio_projects` e `portfolio_images` no banco. Adicionar aba "Portfólio" no módulo de Serviços com CRUD completo. Exibir portfólio na página pública e criar página pública individual por projeto. 
 
 ---
 
 ### 1. Migration SQL
 
-Adicionar colunas na tabela `profiles` e criar RPCs para acesso público:
-
 ```sql
-ALTER TABLE public.profiles
-  ADD COLUMN public_profile_enabled boolean NOT NULL DEFAULT false,
-  ADD COLUMN public_profile_slug text UNIQUE,
-  ADD COLUMN cover_url text;
+-- Tabela de projetos do portfólio
+CREATE TABLE public.portfolio_projects (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  description text DEFAULT '',
+  cover_url text,
+  service_id uuid REFERENCES public.service_catalog(id) ON DELETE SET NULL,
+  is_visible boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 
--- RPC: buscar perfil público por slug (sem autenticação)
-CREATE FUNCTION public.get_public_profile(p_slug text)
-RETURNS TABLE(full_name text, company_name text, avatar_url text, cover_url text, owner_id uuid)
-LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT p.full_name, p.company_name, p.avatar_url, p.cover_url, p.user_id AS owner_id
-  FROM profiles p
-  WHERE p.public_profile_slug = p_slug AND p.public_profile_enabled = true;
-END;
-$$;
+ALTER TABLE public.portfolio_projects ENABLE ROW LEVEL SECURITY;
 
--- RPC: buscar serviços ativos do perfil público
-CREATE FUNCTION public.get_public_profile_services(p_slug text)
-RETURNS TABLE(id uuid, service text, description text, hours numeric, price_per_hour numeric, image_url text, billing_type text)
+CREATE POLICY "Admin can manage own portfolio" ON public.portfolio_projects
+  FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin') AND owner_id = auth.uid())
+  WITH CHECK (has_role(auth.uid(), 'admin') AND owner_id = auth.uid());
+
+CREATE POLICY "Master admin full access" ON public.portfolio_projects
+  FOR ALL TO authenticated
+  USING (is_master_admin(auth.uid()))
+  WITH CHECK (is_master_admin(auth.uid()));
+
+-- Tabela de imagens do portfólio
+CREATE TABLE public.portfolio_images (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL REFERENCES public.portfolio_projects(id) ON DELETE CASCADE,
+  image_url text NOT NULL,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.portfolio_images ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admin can manage own portfolio images" ON public.portfolio_images
+  FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM portfolio_projects pp
+    WHERE pp.id = portfolio_images.project_id AND pp.owner_id = auth.uid()
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM portfolio_projects pp
+    WHERE pp.id = portfolio_images.project_id AND pp.owner_id = auth.uid()
+  ));
+
+CREATE POLICY "Master admin full access images" ON public.portfolio_images
+  FOR ALL TO authenticated
+  USING (is_master_admin(auth.uid()))
+  WITH CHECK (is_master_admin(auth.uid()));
+
+-- RPC para acesso público ao portfólio
+CREATE FUNCTION public.get_public_portfolio(p_slug text)
+RETURNS TABLE(id uuid, title text, description text, cover_url text, service_name text, is_visible boolean)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $$
 DECLARE v_owner_id uuid;
@@ -40,49 +72,102 @@ BEGIN
   WHERE p.public_profile_slug = p_slug AND p.public_profile_enabled = true;
   IF v_owner_id IS NULL THEN RETURN; END IF;
   RETURN QUERY
-  SELECT sc.id, sc.service, sc.description, sc.hours, sc.price_per_hour, sc.image_url, sc.billing_type
-  FROM service_catalog sc WHERE sc.owner_id = v_owner_id AND sc.is_active = true;
+  SELECT pp.id, pp.title, pp.description, pp.cover_url,
+    sc.service AS service_name, pp.is_visible
+  FROM portfolio_projects pp
+  LEFT JOIN service_catalog sc ON sc.id = pp.service_id
+  WHERE pp.owner_id = v_owner_id AND pp.is_visible = true
+  ORDER BY pp.created_at DESC;
+END;
+$$;
+
+-- RPC para buscar imagens de um projeto público
+CREATE FUNCTION public.get_public_portfolio_images(p_slug text, p_project_id uuid)
+RETURNS TABLE(id uuid, image_url text, sort_order integer)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+DECLARE v_owner_id uuid;
+BEGIN
+  SELECT p.user_id INTO v_owner_id FROM profiles p
+  WHERE p.public_profile_slug = p_slug AND p.public_profile_enabled = true;
+  IF v_owner_id IS NULL THEN RETURN; END IF;
+  RETURN QUERY
+  SELECT pi.id, pi.image_url, pi.sort_order
+  FROM portfolio_images pi
+  JOIN portfolio_projects pp ON pp.id = pi.project_id
+  WHERE pp.id = p_project_id AND pp.owner_id = v_owner_id AND pp.is_visible = true
+  ORDER BY pi.sort_order ASC;
+END;
+$$;
+
+-- RPC para buscar projeto individual público
+CREATE FUNCTION public.get_public_portfolio_project(p_slug text, p_project_id uuid)
+RETURNS TABLE(id uuid, title text, description text, cover_url text, service_name text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+DECLARE v_owner_id uuid;
+BEGIN
+  SELECT p.user_id INTO v_owner_id FROM profiles p
+  WHERE p.public_profile_slug = p_slug AND p.public_profile_enabled = true;
+  IF v_owner_id IS NULL THEN RETURN; END IF;
+  RETURN QUERY
+  SELECT pp.id, pp.title, pp.description, pp.cover_url, sc.service AS service_name
+  FROM portfolio_projects pp
+  LEFT JOIN service_catalog sc ON sc.id = pp.service_id
+  WHERE pp.id = p_project_id AND pp.owner_id = v_owner_id AND pp.is_visible = true;
 END;
 $$;
 ```
 
-### 2. Novo arquivo: `src/pages/PublicProfile.tsx`
+### 2. Storage
 
-- Rota pública sem autenticação
-- Recebe slug via `useParams`
-- Chama RPCs `get_public_profile` e `get_public_profile_services`
-- Layout minimalista: imagem de capa no topo, avatar sobreposto, nome, empresa
-- Grid de cards de serviços abaixo
-- Mensagem de "perfil não encontrado" se slug inválido ou desativado
-- Preparado para futura contratação (estrutura extensível)
+Criar bucket público `portfolio` para capas e imagens de portfólio:
 
-### 3. Editar: `src/components/settings/ProfileEditTab.tsx`
-
-Adicionar seção "Perfil Público" (apenas para admin/master_admin, após Informações Fiscais):
-
-- **Switch** para ativar/desativar perfil público
-- **Input** para slug da URL com validação (apenas letras minúsculas, números, hifens)
-- **Preview** da URL completa (ex: `oras.lovable.app/meunome`)
-- **Upload de capa** com preview da imagem (usando bucket `avatars` ou novo path)
-- Salvar junto com `handleSaveProfile`
-
-### 4. Editar: `src/App.tsx`
-
-Adicionar rota pública:
-
-```tsx
-<Route path="/meunome" element={<PublicProfile />} />
+```sql
+INSERT INTO storage.buckets (id, name, public) VALUES ('portfolio', 'portfolio', true);
 ```
 
-### 5. Storage
+Com políticas de upload para admins autenticados.
 
-Reutilizar o bucket `avatars` para as imagens de capa (path: `{user_id}/cover.{ext}`), pois já é público.
+### 3. Novo arquivo: `src/components/services/PortfolioTab.tsx`
 
----
+Componente com CRUD completo de projetos de portfólio:
+
+- Listagem em grid de cards com capa, título, serviço vinculado e badge visível/oculto
+- Botão "Novo Projeto" abre dialog com: título, descrição (textarea), upload de capa, select de serviço (opcional do `service_catalog`), upload de múltiplas imagens (listagem vertical com reordenação)
+- Menu de ações por card: Editar, Ocultar/Apresentar (toggle `is_visible`), Excluir
+- Upload de imagens ao bucket `portfolio`
+
+### 4. Editar: `src/pages/Services.tsx`
+
+- Adicionar `'portfolio'` ao tipo `ServicesTab` e ao `tabByPath` (`/portfolio`)
+- Adicionar `<TabsTrigger value="portfolio">Portfólio</TabsTrigger>`
+- Adicionar `<TabsContent value="portfolio"><PortfolioTab /></TabsContent>`
+
+### 5. Editar: `src/App.tsx`
+
+- Adicionar rota `/portfolio` apontando para `<Services />` (admin only)
+- Adicionar rota pública `/:slug/:projecttitle` para página individual do projeto
+
+### 6. Editar: `src/pages/PublicProfile.tsx`
+
+- Buscar portfólio via RPC `get_public_portfolio`
+- Exibir grid de 2 colunas (mobile) acima dos serviços: capa + título
+- Cada item linkando para `/:slug/:projecttitle`
+
+### 7. Novo arquivo: `src/pages/PublicPortfolioProject.tsx`
+
+Página pública individual do projeto de portfólio:
+
+- Busca dados via RPC `get_public_portfolio_project` e `get_public_portfolio_images`
+- Layout: título, serviço vinculado, descrição, listagem vertical de imagens em alta resolução
+- Link de volta ao perfil
 
 ### Arquivos a criar/modificar
 
-1. **Migration SQL** — 3 colunas em `profiles` + 2 RPCs
-2. `**src/pages/PublicProfile.tsx**` — nova página pública
-3. `**src/components/settings/ProfileEditTab.tsx**` — seção de perfil público
-4. `**src/App.tsx**` — rota `/menome`
+1. **Migration SQL** — 2 tabelas + RLS + 4 RPCs + bucket
+2. `**src/components/services/PortfolioTab.tsx**` — CRUD de portfólio (novo)
+3. `**src/pages/PublicPortfolioProject.tsx**` — página pública do projeto (novo)
+4. `**src/pages/Services.tsx**` — nova aba
+5. `**src/pages/PublicProfile.tsx**` — grid de portfólio
+6. `**src/App.tsx**` — rotas `/portfolio` e `/:slug/:projecttitle`
