@@ -587,6 +587,82 @@ export type Database = {
           },
         ]
       }
+      portfolio_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          project_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          project_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          project_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_images_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_projects: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_visible: boolean
+          owner_id: string
+          service_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_visible?: boolean
+          owner_id: string
+          service_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_visible?: boolean
+          owner_id?: string
+          service_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_projects_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1620,6 +1696,35 @@ export type Database = {
           comment_id: string
           content: string
           created_at: string
+        }[]
+      }
+      get_public_portfolio: {
+        Args: { p_slug: string }
+        Returns: {
+          cover_url: string
+          description: string
+          id: string
+          is_visible: boolean
+          service_name: string
+          title: string
+        }[]
+      }
+      get_public_portfolio_images: {
+        Args: { p_project_id: string; p_slug: string }
+        Returns: {
+          id: string
+          image_url: string
+          sort_order: number
+        }[]
+      }
+      get_public_portfolio_project: {
+        Args: { p_project_id: string; p_slug: string }
+        Returns: {
+          cover_url: string
+          description: string
+          id: string
+          service_name: string
+          title: string
         }[]
       }
       get_public_profile: {
