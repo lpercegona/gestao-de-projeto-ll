@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2, Clock, FolderKanban, FileText, Users, BarChart3, Shield } from 'lucide-react';
+import { ArrowRight, Loader2, Clock, FolderKanban, FileText, Users, BarChart3, Shield, Search, LogIn } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import LogoOras from '@/assets/logo-oras.svg';
 import SimboloOras from '@/assets/simbolo-oras.svg';
@@ -66,19 +66,29 @@ export const Landing: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border">
+      <header className="border-b border-border animate-fade-in">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <img src={LogoOras} alt="ORAS" className="h-8 w-auto" />
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            {/* Logo hidden on mobile, shown on sm+ */}
+            <img src={LogoOras} alt="ORAS" className="hidden sm:block h-8 w-auto" />
+            {/* Mobile: symbol only */}
+            <img src={SimboloOras} alt="ORAS" className="sm:hidden h-6 w-auto" />
+
+            <div className="flex items-center gap-2 sm:gap-4">
               <Link to="/list">
-                <Button variant="ghost" size="sm">Explorar</Button>
+                <Button variant="ghost" size="icon" className="sm:hidden h-8 w-8">
+                  <Search className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Explorar</Button>
               </Link>
               <Link to="/login">
-                <Button variant="ghost" size="sm">Entrar</Button>
+                <Button variant="ghost" size="icon" className="sm:hidden h-8 w-8">
+                  <LogIn className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Entrar</Button>
               </Link>
               <Link to="/login">
-                <Button size="sm">Começar Agora</Button>
+                <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9 px-3 sm:px-4">Começar</Button>
               </Link>
             </div>
           </div>
@@ -86,69 +96,82 @@ export const Landing: React.FC = () => {
       </header>
 
       {/* Hero */}
-      <section className="py-16 sm:py-24">
+      <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
-          <h1 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
+          {/* Logo on mobile only, above H1 */}
+          <img
+            src={LogoOras}
+            alt="ORAS"
+            className="sm:hidden h-7 w-auto mx-auto mb-5 opacity-90"
+          />
+
+          <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
             Descubra profissionais{' '}
             <span className="text-primary">criativos</span>
           </h1>
-          <p className="mt-6 text-lg text-muted-foreground">
-            Explore portfólios, conheça serviços e contrate profissionais talentosos em um só lugar.
+          <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
+            Explore portfólios, conheça serviços e contrate profissionais criativos.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-5 sm:mt-8 flex items-center justify-center gap-2 sm:gap-3">
             <Link to="/list">
-              <Button size="lg">
-                Ver Projetos <ArrowRight className="w-4 h-4 ml-2" />
+              <Button size="sm" className="sm:h-11 sm:px-8 sm:text-sm">
+                <span className="sm:hidden">Projetos</span>
+                <span className="hidden sm:inline">Ver Projetos</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1 hidden sm:inline-block" />
               </Button>
             </Link>
             <Link to="/list?tab=profiles">
-              <Button size="lg" variant="outline">Ver Perfis</Button>
+              <Button size="sm" variant="outline" className="sm:h-11 sm:px-8 sm:text-sm">
+                <span className="sm:hidden">Perfis</span>
+                <span className="hidden sm:inline">Ver Perfis</span>
+              </Button>
             </Link>
           </div>
         </div>
       </section>
 
       {/* Featured Projects */}
-      <section className="pb-16 sm:pb-24">
+      <section className="pb-10 sm:pb-24 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-foreground">Projetos em destaque</h2>
-            <Link to="/list" className="text-sm text-primary hover:underline">Ver todos</Link>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-base sm:text-xl font-semibold text-foreground">Projetos em destaque</h2>
+            <Link to="/list" className="text-xs sm:text-sm text-primary hover:underline">Ver todos</Link>
           </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           ) : projects.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">Nenhum projeto publicado ainda.</p>
+            <p className="text-xs sm:text-sm text-muted-foreground text-center py-12">Nenhum projeto publicado ainda.</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {projects.map((item) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {projects.map((item, index) => (
                 <Link
                   key={item.id}
                   to={`/${item.owner_slug}/${item.id}`}
-                  className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-shadow"
+                  className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-all duration-300 animate-fade-in"
+                  style={{ animationDelay: `${300 + index * 60}ms`, animationFillMode: 'both' }}
                 >
                   {item.cover_url ? (
-                    <img src={item.cover_url} alt={item.title} className="aspect-[4/3] w-full object-cover" />
+                    <img src={item.cover_url} alt={item.title} className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                   ) : (
-                    <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted text-xs text-muted-foreground">
+                    <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted text-[10px] sm:text-xs text-muted-foreground">
                       Sem capa
                     </div>
                   )}
-                  <div className="p-2 space-y-1">
-                    <h3 className="text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                  <div className="p-1.5 sm:p-2 space-y-0.5 sm:space-y-1">
+                    <h3 className="text-[10px] sm:text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                       {item.title}
                     </h3>
-                    <div className="flex items-center gap-1.5">
-                      <Avatar className="h-4 w-4">
+                    <div className="flex items-center gap-1">
+                      <Avatar className="h-3.5 w-3.5 sm:h-4 sm:w-4">
                         <AvatarImage src={item.owner_avatar || undefined} />
-                        <AvatarFallback className="text-[8px]">
+                        <AvatarFallback className="text-[7px] sm:text-[8px]">
                           {item.owner_name?.[0]?.toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-[10px] text-muted-foreground truncate">{item.owner_name}</span>
+                      <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{item.owner_name}</span>
                     </div>
                   </div>
                 </Link>
@@ -159,32 +182,38 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* Features */}
-      <section className="py-16 sm:py-24 border-t border-border bg-muted/30">
+      <section className="py-10 sm:py-24 border-t border-border bg-muted/30 animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <img src={SimboloOras} alt="ORAS" className="h-10 w-auto mx-auto mb-6 opacity-80" />
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+          <div className="text-center mb-8 sm:mb-12">
+            <img src={SimboloOras} alt="ORAS" className="h-8 sm:h-10 w-auto mx-auto mb-4 sm:mb-6 opacity-80" />
+            <h2 className="text-lg sm:text-3xl font-bold text-foreground">
               Tudo que você precisa para gerenciar seus projetos
             </h2>
-            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-muted-foreground max-w-xl mx-auto">
               Uma plataforma completa para freelancers e agências organizarem trabalho, tempo e clientes.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((f) => (
-              <div key={f.title} className="rounded-lg border bg-card p-5 space-y-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-                  <f.icon className="h-5 w-5 text-primary" />
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            {features.map((f, index) => (
+              <div
+                key={f.title}
+                className="rounded-lg border bg-card p-3 sm:p-5 space-y-2 sm:space-y-3 transition-all duration-300 hover:shadow-md animate-fade-in"
+                style={{ animationDelay: `${500 + index * 80}ms`, animationFillMode: 'both' }}
+              >
+                <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-md bg-primary/10">
+                  <f.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <h3 className="font-semibold text-foreground">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                <h3 className="text-xs sm:text-base font-semibold text-foreground">{f.title}</h3>
+                <p className="text-[10px] sm:text-sm text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>
-          <div className="text-center mt-10">
+          <div className="text-center mt-6 sm:mt-10 animate-fade-in" style={{ animationDelay: '800ms', animationFillMode: 'both' }}>
             <Link to="/login">
-              <Button size="lg">
-                Começar Gratuitamente <ArrowRight className="w-4 h-4 ml-2" />
+              <Button size="sm" className="sm:h-11 sm:px-8 sm:text-sm">
+                <span className="sm:hidden">Começar</span>
+                <span className="hidden sm:inline">Começar Gratuitamente</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1 hidden sm:inline-block" />
               </Button>
             </Link>
           </div>
@@ -192,11 +221,11 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-border">
+      <footer className="py-6 sm:py-8 border-t border-border animate-fade-in" style={{ animationDelay: '900ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <img src={SimboloOras} alt="ORAS" className="h-6 w-auto" />
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+            <img src={SimboloOras} alt="ORAS" className="h-5 sm:h-6 w-auto" />
+            <p className="text-[10px] sm:text-sm text-muted-foreground">
               © {new Date().getFullYear()} ORAS. Gestão de Projetos e Horas.
             </p>
           </div>
