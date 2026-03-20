@@ -1587,6 +1587,28 @@ export type Database = {
         Args: { p_proposal_id: string; p_template_id?: string }
         Returns: string
       }
+      get_all_public_portfolio: {
+        Args: never
+        Returns: {
+          cover_url: string
+          id: string
+          owner_avatar: string
+          owner_name: string
+          owner_slug: string
+          service_name: string
+          title: string
+        }[]
+      }
+      get_all_public_profiles: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          company_name: string
+          cover_url: string
+          full_name: string
+          slug: string
+        }[]
+      }
       get_client_access_token: {
         Args: { p_client_id: string }
         Returns: string
