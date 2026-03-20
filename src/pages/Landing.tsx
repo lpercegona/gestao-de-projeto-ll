@@ -207,8 +207,8 @@ export const Landing: React.FC = () => {
           <div className="text-center mb-8 sm:mb-12">
             <img src={SimboloOras} alt="ORAS" className="h-8 sm:h-10 w-auto mx-auto mb-4 sm:mb-6 opacity-80" />
             <h2 className="text-lg sm:text-3xl font-bold text-foreground">Ganhe tempo<br />para criar</h2>
-            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-muted-foreground max-w-xl mx-auto whitespace-pre-line">
-              {'Plataforma completa para\nautomatizar as burocracias.\n\n\n\nPara freelancers e agências.'}
+            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-muted-foreground max-w-xl mx-auto">
+              Plataforma completa para<br />automatizar as burocracias.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
