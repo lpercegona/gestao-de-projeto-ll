@@ -415,6 +415,28 @@ export const ProfileEditTab: React.FC = () => {
                   </Button>
                   <p className="text-[10px] text-muted-foreground">Recomendado: 1200×400px. Máx 2MB.</p>
                 </div>
+
+                {/* Contact info */}
+                <Separator className="my-2" />
+                <div>
+                  <h4 className="text-xs font-medium text-foreground mb-2">Informações de Contato Público</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="showContactInfo" className="text-xs">Exibir contato no perfil</Label>
+                    <Switch id="showContactInfo" checked={showContactInfo} onCheckedChange={setShowContactInfo} disabled={savingProfile} />
+                  </div>
+                  {showContactInfo && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="contactEmail" className="text-xs">Email público</Label>
+                        <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="contato@empresa.com" disabled={savingProfile} className="h-8 text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="contactPhone" className="text-xs">Telefone público</Label>
+                        <Input id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(11) 99999-0000" disabled={savingProfile} className="h-8 text-xs" />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>
