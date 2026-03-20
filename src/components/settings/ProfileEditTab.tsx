@@ -177,7 +177,29 @@ export const ProfileEditTab: React.FC = () => {
     }
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) { toast.error('Selecione uma imagem válida.'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Máximo 2MB.'); return; }
+    setUploadingCover(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/cover.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
+      setCoverUrl(urlWithCacheBuster);
+      toast.success('Capa atualizada!');
+    } catch (err) {
+      toast.error('Erro ao fazer upload da capa');
+    } finally {
+      setUploadingCover(false);
+      if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+    }
+  };
+
     e.preventDefault();
     if (!user) return;
     setSavingProfile(true);
