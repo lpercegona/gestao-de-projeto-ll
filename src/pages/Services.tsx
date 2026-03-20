@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Proposals } from '@/pages/Proposals';
 import { Contracts } from '@/pages/Contracts';
+import { PortfolioTab } from '@/components/services/PortfolioTab';
 import { Layers3, Search, Plus, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -73,12 +74,13 @@ interface ServiceRow {
   billingType: BillingType;
 }
 
-type ServicesTab = 'services' | 'proposals' | 'contracts';
+type ServicesTab = 'services' | 'proposals' | 'contracts' | 'portfolio';
 
 const tabByPath: Record<string, ServicesTab> = {
   '/services': 'services',
   '/proposals': 'proposals',
-  '/contracts': 'contracts'
+  '/contracts': 'contracts',
+  '/portfolio': 'portfolio'
 };
 
 export const Services: React.FC = () => {
@@ -554,6 +556,7 @@ export const Services: React.FC = () => {
           <TabsTrigger value="services">Serviços</TabsTrigger>
           <TabsTrigger value="proposals">Propostas</TabsTrigger>
           <TabsTrigger value="contracts">Contratos</TabsTrigger>
+          <TabsTrigger value="portfolio">Portfólio</TabsTrigger>
         </TabsList>
 
         <TabsContent value="services" className="space-y-4">
@@ -660,6 +663,10 @@ export const Services: React.FC = () => {
 
         <TabsContent value="contracts" className="space-y-4">
           <Contracts />
+        </TabsContent>
+
+        <TabsContent value="portfolio" className="space-y-4">
+          <PortfolioTab />
         </TabsContent>
       </Tabs>
 

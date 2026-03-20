@@ -30,6 +30,7 @@ import { FirstAccess } from "@/pages/FirstAccess";
 import { PublicProposal } from "@/pages/PublicProposal";
 import { PublicContract } from "@/pages/PublicContract";
 import { PublicProfile } from "@/pages/PublicProfile";
+import { PublicPortfolioProject } from "@/pages/PublicPortfolioProject";
 import { Services } from "@/pages/Services";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { DatabaseQueries } from "@/pages/DatabaseQueries";
@@ -164,6 +165,11 @@ const App = () => (
                   <Services />
                 </ProtectedRoute>
               } />
+              <Route path="/portfolio" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Services />
+                </ProtectedRoute>
+              } />
               
               {/* Client routes */}
               <Route path="/client-dashboard" element={
@@ -212,7 +218,8 @@ const App = () => (
               <Route path="/profile" element={<Navigate to="/" replace />} />
               <Route path="/settings" element={<Navigate to="/" replace />} />
               
-              {/* Public profile - must be before catch-all */}
+              {/* Public profile and portfolio */}
+              <Route path="/:slug/portfolio/:projectId" element={<PublicPortfolioProject />} />
               <Route path="/:slug" element={<PublicProfile />} />
               
               {/* Catch-all */}
