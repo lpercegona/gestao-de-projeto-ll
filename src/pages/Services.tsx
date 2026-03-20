@@ -73,12 +73,13 @@ interface ServiceRow {
   billingType: BillingType;
 }
 
-type ServicesTab = 'services' | 'proposals' | 'contracts';
+type ServicesTab = 'services' | 'proposals' | 'contracts' | 'portfolio';
 
 const tabByPath: Record<string, ServicesTab> = {
   '/services': 'services',
   '/proposals': 'proposals',
-  '/contracts': 'contracts'
+  '/contracts': 'contracts',
+  '/portfolio': 'portfolio'
 };
 
 export const Services: React.FC = () => {
