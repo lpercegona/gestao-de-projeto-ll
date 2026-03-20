@@ -87,8 +87,7 @@ export const Landing: React.FC = () => {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+        <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
           <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
            Para quem trabalha com criatividade
