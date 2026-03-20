@@ -212,6 +212,9 @@ const App = () => (
               <Route path="/profile" element={<Navigate to="/" replace />} />
               <Route path="/settings" element={<Navigate to="/" replace />} />
               
+              {/* Public profile - must be before catch-all */}
+              <Route path="/:slug" element={<PublicProfile />} />
+              
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
