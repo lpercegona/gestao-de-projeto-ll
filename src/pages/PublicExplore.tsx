@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -24,7 +24,9 @@ interface ProfileItem {
 }
 
 export const PublicExplore: React.FC = () => {
-  const [tab, setTab] = useState<'projects' | 'profiles'>('projects');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'profiles' ? 'profiles' : 'projects';
+  const [tab, setTab] = useState<'projects' | 'profiles'>(initialTab);
   const [projects, setProjects] = useState<PortfolioItem[]>([]);
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,10 @@ export const PublicExplore: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 py-8">
+        <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
+          <ArrowLeft className="h-4 w-4" /> Voltar ao início
+        </Link>
+
         <h1 className="text-2xl font-bold text-foreground mb-6">Explorar</h1>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as 'projects' | 'profiles')}>
@@ -69,7 +75,7 @@ export const PublicExplore: React.FC = () => {
                 {projects.map((item) => (
                   <Link
                     key={item.id}
-                    to={`/${item.owner_slug}/${item.id}`}
+                    to={`/${item.owner_slug}/${item.id}?from=list`}
                     className="group overflow-hidden rounded-lg border bg-card hover:shadow-md transition-shadow"
                   >
                     {item.cover_url ? (

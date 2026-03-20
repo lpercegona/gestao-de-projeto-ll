@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Phone } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,9 @@ interface ProfileData {
   avatar_url: string | null;
   cover_url: string | null;
   owner_id: string;
+  contact_email: string | null;
+  contact_phone: string | null;
+  show_contact_info: boolean;
 }
 
 interface ServiceItem {
@@ -80,6 +83,7 @@ export const PublicProfile: React.FC = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center px-4">
         <h1 className="text-2xl font-semibold text-foreground">Perfil não encontrado</h1>
         <p className="text-sm text-muted-foreground mt-2">Este perfil não existe ou está desativado.</p>
+        <Link to="/list" className="mt-4 text-sm text-primary hover:underline">← Voltar à listagem</Link>
       </div>
     );
   }
@@ -104,6 +108,10 @@ export const PublicProfile: React.FC = () => {
 
       {/* Profile header */}
       <div className="max-w-4xl mx-auto px-4 -mt-12 relative z-10">
+        <Link to="/list" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
+          <ArrowLeft className="h-4 w-4" /> Voltar à listagem
+        </Link>
+
         <div className="flex items-end gap-4">
           <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
             <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
@@ -113,6 +121,21 @@ export const PublicProfile: React.FC = () => {
             <h1 className="text-xl md:text-2xl font-bold text-foreground">{profile?.full_name || 'Sem nome'}</h1>
             {profile?.company_name && (
               <p className="text-sm text-muted-foreground">{profile.company_name}</p>
+            )}
+            {/* Contact info */}
+            {profile?.show_contact_info && (profile?.contact_email || profile?.contact_phone) && (
+              <div className="flex flex-wrap items-center gap-3 mt-1">
+                {profile.contact_email && (
+                  <a href={`mailto:${profile.contact_email}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                    <Mail className="h-3 w-3" /> {profile.contact_email}
+                  </a>
+                )}
+                {profile.contact_phone && (
+                  <a href={`tel:${profile.contact_phone}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                    <Phone className="h-3 w-3" /> {profile.contact_phone}
+                  </a>
+                )}
+              </div>
             )}
           </div>
         </div>

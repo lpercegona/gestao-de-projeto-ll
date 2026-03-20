@@ -67,6 +67,11 @@ export const ProfileEditTab: React.FC = () => {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
 
+  // Contact info
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [showContactInfo, setShowContactInfo] = useState(false);
+
   const [identityGuidelines, setIdentityGuidelines] = useState('');
   const [identityAttachments, setIdentityAttachments] = useState<IdentityAttachment[]>([]);
   const [savingIdentity, setSavingIdentity] = useState(false);
@@ -99,6 +104,9 @@ export const ProfileEditTab: React.FC = () => {
           setPublicProfileEnabled((extProfile as any)?.public_profile_enabled || false);
           setPublicProfileSlug((extProfile as any)?.public_profile_slug || '');
           setCoverUrl((extProfile as any)?.cover_url || null);
+          setContactEmail((extProfile as any)?.contact_email || '');
+          setContactPhone((extProfile as any)?.contact_phone || '');
+          setShowContactInfo((extProfile as any)?.show_contact_info || false);
         }
       } catch (err) {
         console.error('Error loading profile:', err);
@@ -214,6 +222,9 @@ export const ProfileEditTab: React.FC = () => {
         updateData.public_profile_enabled = publicProfileEnabled;
         updateData.public_profile_slug = publicProfileSlug.trim() || null;
         updateData.cover_url = coverUrl || null;
+        updateData.contact_email = contactEmail.trim() || null;
+        updateData.contact_phone = contactPhone.trim() || null;
+        updateData.show_contact_info = showContactInfo;
       }
       const { error } = await supabase.from('profiles').update(updateData as any).eq('user_id', user.id);
       if (error) toast.error('Erro ao salvar perfil: ' + error.message);
@@ -403,6 +414,28 @@ export const ProfileEditTab: React.FC = () => {
                     {uploadingCover ? (<><Loader2 className="w-3 h-3 mr-1 animate-spin" />Enviando...</>) : (<><ImagePlus className="w-3 h-3 mr-1" />{coverUrl ? 'Alterar capa' : 'Adicionar capa'}</>)}
                   </Button>
                   <p className="text-[10px] text-muted-foreground">Recomendado: 1200×400px. Máx 2MB.</p>
+                </div>
+
+                {/* Contact info */}
+                <Separator className="my-2" />
+                <div>
+                  <h4 className="text-xs font-medium text-foreground mb-2">Informações de Contato Público</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="showContactInfo" className="text-xs">Exibir contato no perfil</Label>
+                    <Switch id="showContactInfo" checked={showContactInfo} onCheckedChange={setShowContactInfo} disabled={savingProfile} />
+                  </div>
+                  {showContactInfo && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="contactEmail" className="text-xs">Email público</Label>
+                        <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="contato@empresa.com" disabled={savingProfile} className="h-8 text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="contactPhone" className="text-xs">Telefone público</Label>
+                        <Input id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(11) 99999-0000" disabled={savingProfile} className="h-8 text-xs" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
