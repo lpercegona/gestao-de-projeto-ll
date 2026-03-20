@@ -72,6 +72,7 @@ interface ServiceRow {
   total: number;
   imageUrl?: string;
   billingType: BillingType;
+  isActive: boolean;
 }
 
 type ServicesTab = 'services' | 'proposals' | 'contracts' | 'portfolio';
