@@ -72,6 +72,7 @@ interface ServiceRow {
   total: number;
   imageUrl?: string;
   billingType: BillingType;
+  isActive: boolean;
 }
 
 type ServicesTab = 'services' | 'proposals' | 'contracts' | 'portfolio';
@@ -167,6 +168,7 @@ export const Services: React.FC = () => {
                     total: Number(item.hours || 0) * Number(item.price_per_hour || 0),
                     imageUrl: item.image_url || undefined,
                     billingType: (item.billing_type || 'unique') as BillingType,
+                    isActive: item.is_active,
                   }))
                 );
                 toast.success(`${inserted.length} item(ns) migrado(s) do armazenamento local`);
@@ -192,6 +194,7 @@ export const Services: React.FC = () => {
           total: Number(item.hours || 0) * Number(item.price_per_hour || 0),
           imageUrl: item.image_url || undefined,
           billingType: (item.billing_type || 'unique') as BillingType,
+          isActive: item.is_active,
         }))
       );
     };
@@ -259,7 +262,8 @@ export const Services: React.FC = () => {
           pricePerHour: Number(item.pricePerHour || 0),
           total: Number(item.hours || 0) * Number(item.pricePerHour || 0),
           imageUrl: item.imageUrl || item.image,
-          billingType: item.billingType || 'unique'
+          billingType: item.billingType || 'unique',
+          isActive: true,
         });
       });
     });
@@ -363,6 +367,7 @@ export const Services: React.FC = () => {
               total: Number(data.hours || 0) * Number(data.price_per_hour || 0),
               imageUrl: data.image_url || undefined,
               billingType: (data.billing_type || 'unique') as BillingType,
+              isActive: data.is_active,
             },
             ...prev,
           ]);
@@ -467,6 +472,7 @@ export const Services: React.FC = () => {
             total: Number(data.hours || 0) * Number(data.price_per_hour || 0),
             imageUrl: data.image_url || undefined,
             billingType: (data.billing_type || 'unique') as BillingType,
+            isActive: data.is_active,
           },
           ...prev,
         ]);
@@ -549,6 +555,29 @@ export const Services: React.FC = () => {
     }
   };
 
+  const handleToggleActive = async (row: ServiceRow) => {
+    const isCatalogItem = catalogItems.some((item) => item.id === row.id);
+    if (!isCatalogItem) {
+      toast.info('Apenas itens do catálogo podem ser ocultados.');
+      return;
+    }
+    const newActive = !row.isActive;
+    try {
+      const { error } = await supabase
+        .from('service_catalog')
+        .update({ is_active: newActive })
+        .eq('id', row.id);
+      if (error) throw error;
+      setCatalogItems((prev) =>
+        prev.map((item) => item.id === row.id ? { ...item, isActive: newActive } : item)
+      );
+      toast.success(newActive ? 'Serviço apresentado' : 'Serviço ocultado');
+    } catch (error) {
+      console.error('Erro ao alterar visibilidade:', error);
+      toast.error('Erro ao alterar visibilidade');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -597,7 +626,7 @@ export const Services: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-secondary">
                 {filteredRows.map((row) =>
-                <div key={row.id} className="flex flex-col overflow-hidden rounded-md border bg-card">
+                <div key={row.id} className={`flex flex-col overflow-hidden rounded-md border bg-card ${row.isActive === false ? 'opacity-60' : ''}`}>
                         <div className="w-full">
                           {row.imageUrl ?
                     <img
@@ -614,11 +643,16 @@ export const Services: React.FC = () => {
                         <div className="space-y-3 p-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold">{row.service}</h3>
                                 <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                                   {row.billingType === 'monthly' ? 'Mensal' : 'Único'}
                                 </span>
+                                {row.isActive === false && (
+                                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                                    Oculto
+                                  </span>
+                                )}
                               </div>
                               <span className="text-sm text-muted-foreground">
                                 {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -634,6 +668,9 @@ export const Services: React.FC = () => {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditItem(row)}>
                                   Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleActive(row)}>
+                                  {row.isActive === false ? 'Apresentar' : 'Ocultar'}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                             className="text-destructive focus:text-destructive"

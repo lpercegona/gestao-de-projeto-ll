@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface ProjectData {
   id: string;
@@ -24,6 +25,8 @@ export const PublicPortfolioProject: React.FC = () => {
   const [images, setImages] = useState<ProjectImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [showCta, setShowCta] = useState(true);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +50,18 @@ export const PublicPortfolioProject: React.FC = () => {
     };
     fetchData();
   }, [slug, projectId]);
+
+  const handleScroll = useCallback(() => {
+    const currentY = window.scrollY;
+    setShowCta(currentY <= lastScrollY.current || currentY < 50);
+    lastScrollY.current = currentY;
+  }, []);
+
+  useEffect(() => {
+    if (!project?.service_name) return;
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [project?.service_name, handleScroll]);
 
   if (loading) {
     return (
@@ -72,7 +87,8 @@ export const PublicPortfolioProject: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      {/* Header with padding */}
+      <div className="max-w-3xl mx-auto px-4 pt-8 pb-4">
         <Link to={`/${slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4" /> Voltar ao perfil
         </Link>
@@ -86,22 +102,40 @@ export const PublicPortfolioProject: React.FC = () => {
         {project?.description && (
           <p className="text-sm text-muted-foreground mt-4 whitespace-pre-line">{project.description}</p>
         )}
-
-        {/* Images gallery */}
-        {images.length > 0 && (
-          <div className="mt-8 space-y-4">
-            {images.map(img => (
-              <img
-                key={img.id}
-                src={img.image_url}
-                alt={project?.title || ''}
-                className="w-full rounded-lg"
-                loading="lazy"
-              />
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Full-width images, no gaps */}
+      {images.length > 0 && (
+        <div className="flex flex-col">
+          {images.map(img => (
+            <img
+              key={img.id}
+              src={img.image_url}
+              alt={project?.title || ''}
+              className="w-full block"
+              loading="lazy"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Sticky "Contratar" button */}
+      {project?.service_name && (
+        <div
+          className={`fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/80 backdrop-blur border-t border-border transition-transform duration-300 ${
+            showCta ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <div className="max-w-3xl mx-auto">
+            <Button className="w-full" size="lg">
+              Contratar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom spacing when CTA is present */}
+      {project?.service_name && <div className="h-20" />}
     </div>
   );
 };
