@@ -86,12 +86,12 @@ export const Landing: React.FC = () => {
       <section className="py-10 sm:py-24 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
           <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
-            Descubra profissionais{' '}
-            <span className="text-primary">criativos</span>
+            Para quem trabalha
+            <br />com <span className="text-primary">criatividade</span>
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground">
-            Explore portfólios, conheça e contrate 
-<bprofissionais e serviços criativos.
+            Explore portfólios, conheça serviços e
+            <br /> colabore com profissionais criativos.
           </p>
 
           {/* View toggle */}
@@ -206,9 +206,9 @@ export const Landing: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
             <img src={SimboloOras} alt="ORAS" className="h-8 sm:h-10 w-auto mx-auto mb-4 sm:mb-6 opacity-80" />
-            <h2 className="text-lg sm:text-3xl font-bold text-foreground">Tudo que você precisa para gerenciar seus projetos</h2>
-            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-muted-foreground max-w-xl mx-auto">
-              Uma plataforma completa para freelancers e agências organizarem trabalho, tempo e clientes.
+            <h2 className="text-lg sm:text-3xl font-bold text-foreground">Ganhe tempo<br />para criar</h2>
+            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-muted-foreground max-w-xl mx-auto whitespace-pre-line">
+              {'Plataforma completa para\nautomatizar as burocracias.\n\n\n\nPara freelancers e agências.'}
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
