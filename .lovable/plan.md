@@ -1,92 +1,88 @@
+## Plano: Página de Perfil Público do Admin
 
+### Resumo
 
-# Corrigir erro de build + Prevenir refresh durante edição em diálogos
+Criar página pública `/meunome` que exibe perfil do admin (nome, empresa, avatar, capa) e catálogo de serviços ativos. Adicionar controles no ProfileEditTab para ativar/desativar, definir slug e fazer upload de imagem de capa.
 
-## Problema 1: Erro de build
-`CheckCircle2` é usado no Dashboard.tsx mas não está importado.
+---
 
-**Correção**: Adicionar `CheckCircle2` à lista de imports do lucide-react na linha 17.
+### 1. Migration SQL
 
-## Problema 2: Refresh destrói dados em diálogos abertos
+Adicionar colunas na tabela `profiles` e criar RPCs para acesso público:
 
-**Causa raiz**: Quando o Supabase dispara `TOKEN_REFRESHED`, o `onAuthStateChange` chama `setUser(session?.user)`, criando uma nova referência de objeto. Como `refreshData` depende de `[user]`, o `useCallback` recria a função, o `useEffect` re-executa, e todos os dados são recarregados — resetando o estado de componentes que dependem do DataContext.
+```sql
+ALTER TABLE public.profiles
+  ADD COLUMN public_profile_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN public_profile_slug text UNIQUE,
+  ADD COLUMN cover_url text;
 
-**Estratégia**: Duas camadas de proteção.
+-- RPC: buscar perfil público por slug (sem autenticação)
+CREATE FUNCTION public.get_public_profile(p_slug text)
+RETURNS TABLE(full_name text, company_name text, avatar_url text, cover_url text, owner_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT p.full_name, p.company_name, p.avatar_url, p.cover_url, p.user_id AS owner_id
+  FROM profiles p
+  WHERE p.public_profile_slug = p_slug AND p.public_profile_enabled = true;
+END;
+$$;
 
-### Camada 1: Estabilizar referência do `user` no AuthContext
-
-No `onAuthStateChange`, só chamar `setUser()` se o ID do usuário mudou de fato:
-
-```typescript
-// AuthContext.tsx, dentro do onAuthStateChange
-const newUser = session?.user ?? null;
-setSession(session);
-setUser(prev => {
-  if (prev?.id === newUser?.id) return prev; // manter referência estável
-  return newUser;
-});
+-- RPC: buscar serviços ativos do perfil público
+CREATE FUNCTION public.get_public_profile_services(p_slug text)
+RETURNS TABLE(id uuid, service text, description text, hours numeric, price_per_hour numeric, image_url text, billing_type text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+DECLARE v_owner_id uuid;
+BEGIN
+  SELECT p.user_id INTO v_owner_id FROM profiles p
+  WHERE p.public_profile_slug = p_slug AND p.public_profile_enabled = true;
+  IF v_owner_id IS NULL THEN RETURN; END IF;
+  RETURN QUERY
+  SELECT sc.id, sc.service, sc.description, sc.hours, sc.price_per_hour, sc.image_url, sc.billing_type
+  FROM service_catalog sc WHERE sc.owner_id = v_owner_id AND sc.is_active = true;
+END;
+$$;
 ```
 
-Isso elimina 90% dos refreshes desnecessários (TOKEN_REFRESHED não muda o user ID).
+### 2. Novo arquivo: `src/pages/PublicProfile.tsx`
 
-### Camada 2: Lock de edição global no DataContext
+- Rota pública sem autenticação
+- Recebe slug via `useParams`
+- Chama RPCs `get_public_profile` e `get_public_profile_services`
+- Layout minimalista: imagem de capa no topo, avatar sobreposto, nome, empresa
+- Grid de cards de serviços abaixo
+- Mensagem de "perfil não encontrado" se slug inválido ou desativado
+- Preparado para futura contratação (estrutura extensível)
 
-Criar um mecanismo de "editing lock" que impede `refreshData` de rodar enquanto um diálogo estiver aberto:
+### 3. Editar: `src/components/settings/ProfileEditTab.tsx`
 
-```typescript
-// DataContext.tsx
-const editingLockRef = useRef(0);
+Adicionar seção "Perfil Público" (apenas para admin/master_admin, após Informações Fiscais):
 
-const lockEditing = useCallback(() => {
-  editingLockRef.current += 1;
-}, []);
+- **Switch** para ativar/desativar perfil público
+- **Input** para slug da URL com validação (apenas letras minúsculas, números, hifens)
+- **Preview** da URL completa (ex: `oras.lovable.app/meunome`)
+- **Upload de capa** com preview da imagem (usando bucket `avatars` ou novo path)
+- Salvar junto com `handleSaveProfile`
 
-const unlockEditing = useCallback(() => {
-  editingLockRef.current = Math.max(0, editingLockRef.current - 1);
-}, []);
+### 4. Editar: `src/App.tsx`
 
-// No refreshData:
-const refreshData = useCallback(async (showLoading = true) => {
-  if (editingLockRef.current > 0) return; // não recarregar se em edição
-  // ... resto da lógica
-}, [user]);
+Adicionar rota pública:
+
+```tsx
+<Route path="/meunome" element={<PublicProfile />} />
 ```
 
-Expor `lockEditing` e `unlockEditing` no contexto.
+### 5. Storage
 
-### Camada 3: Aplicar o lock nos diálogos
+Reutilizar o bucket `avatars` para as imagens de capa (path: `{user_id}/cover.{ext}`), pois já é público.
 
-Nos diálogos de criação/edição, chamar `lockEditing()` ao abrir e `unlockEditing()` ao fechar. Os principais diálogos são:
+---
 
-| Arquivo | Diálogo |
-|---|---|
-| `QuickActionsPanel.tsx` | Criação rápida de cliente |
-| `ProjectShareDialog.tsx` | Compartilhamento de projeto |
-| `UserCreateDialog.tsx` | Criação de usuário |
-| `UserEditDialog.tsx` | Edição de usuário |
-| `ClientEditRequestForm.tsx` | Edição de cliente |
-| `ProjectRequestForm.tsx` | Solicitação de projeto |
-| `KanbanStagesDialog.tsx` | Configuração de estágios Kanban |
-| `ReportShareDialog.tsx` | Compartilhamento de relatório |
-| `ProjectTableView.tsx` | Diálogo de detalhes |
-| `Services.tsx` | Criação/edição de itens de serviço |
-| `ExpandedTimerModal.tsx` | Timer expandido |
-| `GlobalTimerCompleteDialog.tsx` | Completar timer |
+### Arquivos a criar/modificar
 
-Padrão de uso via `useEffect`:
-
-```typescript
-const { lockEditing, unlockEditing } = useData();
-useEffect(() => {
-  if (open) { lockEditing(); } else { unlockEditing(); }
-  return () => unlockEditing();
-}, [open]);
-```
-
-## Arquivos alterados
-
-1. **`src/pages/Dashboard.tsx`** — Adicionar import `CheckCircle2`
-2. **`src/contexts/AuthContext.tsx`** — Estabilizar referência do `user`
-3. **`src/contexts/DataContext.tsx`** — Adicionar `editingLockRef`, `lockEditing`, `unlockEditing`
-4. **12 componentes de diálogo** — Adicionar `useEffect` com lock/unlock
-
+1. **Migration SQL** — 3 colunas em `profiles` + 2 RPCs
+2. `**src/pages/PublicProfile.tsx**` — nova página pública
+3. `**src/components/settings/ProfileEditTab.tsx**` — seção de perfil público
+4. `**src/App.tsx**` — rota `/menome`
