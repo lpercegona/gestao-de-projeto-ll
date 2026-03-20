@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2, Clock, FolderKanban, FileText, Users, BarChart3, Shield } from 'lucide-react';
+import { ArrowRight, Loader2, Clock, FolderKanban, FileText, Users, BarChart3, Shield, Search, LogIn } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import LogoOras from '@/assets/logo-oras.svg';
 import SimboloOras from '@/assets/simbolo-oras.svg';

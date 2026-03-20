@@ -98,14 +98,14 @@ export const PublicPortfolioProject: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="max-w-3xl mx-auto px-4 pt-8 pb-4">
-        <Link to={backLink} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
+        <Link to={backLink} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> {fromList ? 'Voltar à listagem' : 'Voltar ao perfil'}
         </Link>
 
-        {/* Owner info */}
+        {/* Owner info – below back button */}
         {project?.owner_name && (
-          <Link to={`/${project.owner_slug}`} className="inline-flex items-center gap-2 mb-3 hover:opacity-80 transition-opacity">
-            <Avatar className="h-6 w-6">
+          <Link to={`/${project.owner_slug}`} className="inline-flex items-center gap-2 mt-4 mb-4 hover:opacity-80 transition-opacity">
+            <Avatar className="h-7 w-7">
               <AvatarImage src={project.owner_avatar || undefined} />
               <AvatarFallback className="text-[10px]">
                 {project.owner_name?.[0]?.toUpperCase() || '?'}
