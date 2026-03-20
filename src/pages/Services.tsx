@@ -643,11 +643,16 @@ export const Services: React.FC = () => {
                         <div className="space-y-3 p-4">
                           <div className="flex items-start justify-between gap-2">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold">{row.service}</h3>
                                 <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                                   {row.billingType === 'monthly' ? 'Mensal' : 'Único'}
                                 </span>
+                                {row.isActive === false && (
+                                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                                    Oculto
+                                  </span>
+                                )}
                               </div>
                               <span className="text-sm text-muted-foreground">
                                 {row.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
