@@ -38,6 +38,11 @@ import { DatabaseQueries } from "@/pages/DatabaseQueries";
 import { StyleClasses } from "@/pages/StyleClasses";
 import { PageConstants } from "@/pages/PageConstants";
 import NotFound from "./pages/NotFound";
+import { PrivacyPolicy } from "@/pages/legal/PrivacyPolicy";
+import { TermsOfUse } from "@/pages/legal/TermsOfUse";
+import { CookiePolicy } from "@/pages/legal/CookiePolicy";
+import { DataSubjectRights } from "@/pages/legal/DataSubjectRights";
+import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
