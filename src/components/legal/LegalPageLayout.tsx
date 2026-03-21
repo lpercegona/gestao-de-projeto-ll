@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LogIn, ChevronDown } from "lucide-react";
 import LogoOras from "@/assets/logo-oras.svg";
 import SimboloOras from "@/assets/simbolo-oras.svg";
 import LegalFooter from "./LegalFooter";
