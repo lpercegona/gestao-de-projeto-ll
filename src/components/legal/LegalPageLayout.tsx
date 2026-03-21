@@ -30,11 +30,21 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ title, lastUpdated, c
                   Explorar
                 </Button>
               </Link>
-              <Link to="">
-                <Button variant="link" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
-                  Gestão
-                </Button>
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="link" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                    Gestão <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/criativos" className="cursor-pointer">Criativos</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/clientes-info" className="cursor-pointer">Clientes</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Link to="/login">
                 <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
                   <LogIn className="h-3.5 w-3.5" />
