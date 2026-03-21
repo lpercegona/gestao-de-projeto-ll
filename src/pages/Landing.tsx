@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LogoOras from "@/assets/logo-oras.svg";
 import SimboloOras from "@/assets/simbolo-oras.svg";
+import LegalFooter from "@/components/legal/LegalFooter";
 
 interface PortfolioItem {
   id: string;
@@ -311,19 +312,9 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer
-        className="py-6 sm:py-8 border-t border-border animate-fade-in"
-        style={{ animationDelay: "900ms", animationFillMode: "both" }}
-      >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-            <img src={SimboloOras} alt="ORAS" className="h-5 sm:h-6 w-auto" />
-            <p className="text-[10px] sm:text-sm text-muted-foreground">
-              © {new Date().getFullYear()} ORAS. Gestão de Projetos e Horas.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <div className="animate-fade-in" style={{ animationDelay: "900ms", animationFillMode: "both" }}>
+        <LegalFooter />
+      </div>
     </div>
   );
 };

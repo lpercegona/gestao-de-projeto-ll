@@ -38,6 +38,11 @@ import { DatabaseQueries } from "@/pages/DatabaseQueries";
 import { StyleClasses } from "@/pages/StyleClasses";
 import { PageConstants } from "@/pages/PageConstants";
 import NotFound from "./pages/NotFound";
+import { PrivacyPolicy } from "@/pages/legal/PrivacyPolicy";
+import { TermsOfUse } from "@/pages/legal/TermsOfUse";
+import { CookiePolicy } from "@/pages/legal/CookiePolicy";
+import { DataSubjectRights } from "@/pages/legal/DataSubjectRights";
+import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,6 +94,10 @@ const App = () => (
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
               <Route path="/list" element={<PublicExplore />} />
+              <Route path="/privacidade" element={<PrivacyPolicy />} />
+              <Route path="/termos" element={<TermsOfUse />} />
+              <Route path="/cookies" element={<CookiePolicy />} />
+              <Route path="/direitos" element={<DataSubjectRights />} />
               
               {/* Home: Landing for visitors, dashboard for authenticated users */}
               <Route path="/" element={<RootRoute />} />
@@ -226,6 +235,7 @@ const App = () => (
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CookieConsentBanner />
             </BrowserRouter>
             </GlobalTimerProvider>
           </DataProvider>
