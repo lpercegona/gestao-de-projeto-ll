@@ -1,51 +1,37 @@
-## Plano: Dropdown "Gestão" + Páginas Criativos e Clientes
-
-### Resumo
-
-Transformar o link "Gestão" no header (Landing + LegalPageLayout) em um dropdown com duas opções ("Criativos" e "Clientes"), e criar as respectivas páginas públicas descrevendo as features da plataforma para cada perfil.
-
-### 1. Criar páginas públicas
 
 
-| Página         | Rota         | Arquivo                             |
-| -------------- | ------------ | ----------------------------------- |
-| Para Criativos | `/criativos` | `src/pages/public/ForCreatives.tsx` |
-| Para Clientes  | `/clientes`  | `src/pages/public/ForClients.tsx`   |
+## Plano: Reestruturar /criativos e /clientes com visual marketing
 
+### 1. Alterar rota `/clientes-info` para `/clientes`
 
-**Criativos** — features voltadas ao profissional criativo:
+**Arquivos afetados**: `App.tsx`, `Landing.tsx`, `LegalPageLayout.tsx`
+- Trocar rota de `/clientes-info` para `/clientes`
+- Atualizar links no dropdown "Gestão" em ambos os headers
+- Nota: a rota `/clients` (admin) ja existe, mas `/clientes` nao conflita
 
-- Controle de horas e timer integrado
-- Gestão de projetos com Kanban e tarefas
-- Propostas e contratos digitais
-- Relatórios automáticos por projeto/mês
-- Portfólio público e perfil profissional
-- Portal do cliente com acesso exclusivo
+### 2. Redesign de ForCreatives.tsx e ForClients.tsx
 
-**Para Clientes** — features voltadas à empresa contratante:
+Abandonar o `LegalPageLayout` (que e para paginas juridicas) e criar um layout proprio de marketing, seguindo o mesmo estilo visual da Landing:
 
-- Acompanhamento de projetos em tempo real
-- Relatórios de horas consumidas e saldo
-- Solicitação de novos projetos e tarefas
-- Acesso a relatórios e entregas
-- Calendário de prazos e entregas
-- Aprovação de propostas e contratos
+**Estrutura de cada pagina:**
 
-Ambas usarão o `LegalPageLayout` adaptado (ou um layout público compartilhado com o mesmo header/footer).
+1. **Header** — identico ao da Landing (logo, Explorar, dropdown Gestão, Entrar)
+2. **Hero section** — titulo grande + subtitulo curto + CTA "Começar Gratuitamente" com animações fade-in
+3. **Feature cards grid** — grid 2 colunas (mobile) / 3 colunas (desktop) com icones lucide, titulo curto e paragrafo descritivo por feature, mesmo estilo dos cards da Landing (borda, bg-card, hover shadow, icone em bg-primary/10)
+4. **CTA final** — botao "Começar Gratuitamente" centralizado
+5. **LegalFooter** — footer padrao
 
-### 2. Dropdown no header
+**ForCreatives** — hero: "Mais tempo para criar, menos burocracia" + 6 cards (Timer/Horas, Kanban/Projetos, Propostas/Contratos, Relatorios, Portfolio, Portal do Cliente) com textos descritivos em paragrafo
 
-Substituir o link "Gestão" por um `DropdownMenu` (shadcn) com dois itens:
+**ForClients** — hero: "Transparência total nos seus projetos" + 6 cards (Acompanhamento, Horas/Saldo, Solicitações, Relatorios, Calendario, Propostas/Contratos) com textos descritivos em paragrafo
 
-- "Criativos" → `/criativos`
-- "Clientes" → `/clientes`
+### 3. Arquivos
 
-Aplicar em **dois locais**:
+| Acao | Arquivo |
+|------|---------|
+| Reescrever | `src/pages/public/ForCreatives.tsx` |
+| Reescrever | `src/pages/public/ForClients.tsx` |
+| Editar | `src/App.tsx` (rota `/clientes-info` → `/clientes`) |
+| Editar | `src/pages/Landing.tsx` (link dropdown → `/clientes`) |
+| Editar | `src/components/legal/LegalPageLayout.tsx` (link dropdown → `/clientes`) |
 
-- `src/pages/Landing.tsx` (header, linhas 109-114)
-- `src/components/legal/LegalPageLayout.tsx` (header, linhas 32-36)
-
-### 3. Rotas no App.tsx
-
-Adicionar as 2 rotas públicas:
-```
