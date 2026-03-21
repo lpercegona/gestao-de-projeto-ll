@@ -14,6 +14,7 @@ import {
   Shield,
   Search,
   LogIn,
+  ChevronDown,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LogoOras from "@/assets/logo-oras.svg";
