@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LogoOras from "@/assets/logo-oras.svg";
 import SimboloOras from "@/assets/simbolo-oras.svg";
+import LegalFooter from "@/components/legal/LegalFooter";
 
 interface PortfolioItem {
   id: string;
