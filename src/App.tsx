@@ -43,6 +43,8 @@ import { TermsOfUse } from "@/pages/legal/TermsOfUse";
 import { CookiePolicy } from "@/pages/legal/CookiePolicy";
 import { DataSubjectRights } from "@/pages/legal/DataSubjectRights";
 import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
+import { ForCreatives } from "@/pages/public/ForCreatives";
+import { ForClients } from "@/pages/public/ForClients";
 
 const queryClient = new QueryClient({
   defaultOptions: {
