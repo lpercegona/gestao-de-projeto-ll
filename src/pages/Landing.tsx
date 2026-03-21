@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   ArrowRight,
   Loader2,
@@ -13,6 +14,7 @@ import {
   Shield,
   Search,
   LogIn,
+  ChevronDown,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import LogoOras from "@/assets/logo-oras.svg";
@@ -107,11 +109,21 @@ export const Landing: React.FC = () => {
                 </Button>
               </Link>
               <div className="flex items-center gap-2 sm:gap-4">
-                <Link to="">
-                  <Button variant="link" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
-                    Gestão
-                  </Button>
-                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="link" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
+                      Gestão <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to="/criativos" className="cursor-pointer">Criativos</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/clientes-info" className="cursor-pointer">Clientes</Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Link to="/login">
                   <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9 gap-1.5">
                     <LogIn className="h-3.5 w-3.5" />

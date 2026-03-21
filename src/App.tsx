@@ -43,6 +43,8 @@ import { TermsOfUse } from "@/pages/legal/TermsOfUse";
 import { CookiePolicy } from "@/pages/legal/CookiePolicy";
 import { DataSubjectRights } from "@/pages/legal/DataSubjectRights";
 import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
+import { ForCreatives } from "@/pages/public/ForCreatives";
+import { ForClients } from "@/pages/public/ForClients";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +96,8 @@ const App = () => (
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
               <Route path="/list" element={<PublicExplore />} />
+              <Route path="/criativos" element={<ForCreatives />} />
+              <Route path="/clientes-info" element={<ForClients />} />
               <Route path="/privacidade" element={<PrivacyPolicy />} />
               <Route path="/termos" element={<TermsOfUse />} />
               <Route path="/cookies" element={<CookiePolicy />} />
