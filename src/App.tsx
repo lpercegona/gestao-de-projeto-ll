@@ -94,6 +94,10 @@ const App = () => (
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
               <Route path="/list" element={<PublicExplore />} />
+              <Route path="/privacidade" element={<PrivacyPolicy />} />
+              <Route path="/termos" element={<TermsOfUse />} />
+              <Route path="/cookies" element={<CookiePolicy />} />
+              <Route path="/direitos" element={<DataSubjectRights />} />
               
               {/* Home: Landing for visitors, dashboard for authenticated users */}
               <Route path="/" element={<RootRoute />} />
