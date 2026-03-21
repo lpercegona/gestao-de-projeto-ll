@@ -41,7 +41,7 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ title, lastUpdated, c
                     <Link to="/criativos" className="cursor-pointer">Criativos</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/clientes-info" className="cursor-pointer">Clientes</Link>
+                    <Link to="/clientes" className="cursor-pointer">Clientes</Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
