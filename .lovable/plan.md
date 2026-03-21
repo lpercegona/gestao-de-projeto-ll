@@ -1,71 +1,89 @@
+## Plano: Páginas LGPD + Footer + Modal de Cookies
+
+### Visão geral
+
+Criar 4 páginas públicas de conformidade LGPD, atualizar o footer da Landing com links para elas, e implementar um banner/modal de consentimento de cookies.
+
+### 1. Criar as 4 páginas públicas
+
+Cada página será um componente React com texto corrido estruturado em seções (sem bullets), layout responsivo, com header simplificado e footer consistente.
 
 
-## Plano: Landing com portfólio, navegação contextual, avatar no projeto, contato no perfil
+| Página                  | Rota           | Arquivo                                 |
+| ----------------------- | -------------- | --------------------------------------- |
+| Política de Privacidade | `/privacidade` | `src/pages/legal/PrivacyPolicy.tsx`     |
+| Termos de Uso           | `/termos`      | `src/pages/legal/TermsOfUse.tsx`        |
+| Política de Cookies     | `/cookies`     | `src/pages/legal/CookiePolicy.tsx`      |
+| Direitos do Titular     | `/direitos`    | `src/pages/legal/DataSubjectRights.tsx` |
 
-### Resumo
 
-6 mudanças: (1) Reescrever Landing com seção de projetos públicos via RPC, (2) navegação contextual no projeto (voltar para `/list` ou `/:slug` conforme origem), (3) avatar+nome do criador na página de projeto com link ao perfil, (4) verificar páginas públicas sem retorno, (5) campos de contato no perfil público com toggle de visibilidade, (6) migration para novos campos e atualização das RPCs.
+Cada página terá:
 
----
+- Header com logo "oras" e menu (explorar, gestão e entrar
+- Conteúdo em `prose` com seções `h2`/`h3` e parágrafos
+- Footer com links para as outras páginas legais
+- Layout extraído em um componente compartilhado `LegalPageLayout.tsx`
 
-### 1. Migration SQL
+### 2. Componente LegalPageLayout
 
-- Adicionar colunas à tabela `profiles`:
-  - `contact_email text` (email público, separado do email de login)
-  - `contact_phone text`
-  - `show_contact_info boolean NOT NULL DEFAULT false`
-- Atualizar RPC `get_public_profile` para retornar `contact_email`, `contact_phone`, `show_contact_info`
-- Atualizar RPC `get_public_portfolio_project` para retornar `owner_name`, `owner_avatar`, `owner_slug` (join com profiles)
+**Arquivo**: `src/components/legal/LegalPageLayout.tsx`
 
-### 2. Editar: `src/pages/Landing.tsx`
+Layout compartilhado com:
 
-- Substituir hero e features genéricos por conteúdo focado na plataforma como marketplace de profissionais/portfólio
-- Após o hero, adicionar seção com grid limitado (6-8 projetos) usando RPC `get_all_public_portfolio`
-- Botões "Ver todos os projetos" e "Ver perfis" linkando para `/list` com respectiva tab
-- Manter header com logo e botões login/entrar
-- Manter footer
+- Header com logo e navegação
+- Container de conteúdo com tipografia `prose`
+- Footer com links para as 4 páginas legais + copyright
 
-### 3. Editar: `src/pages/PublicPortfolioProject.tsx`
+### 3. Registrar rotas no App.tsx
 
-- Aceitar `from` query param (`?from=list`) para determinar destino do botão voltar
-- Se `from=list`: voltar para `/list`, senão voltar para `/:slug`
-- Adicionar avatar pequeno + nome do criador acima do título, clicável para `/:slug`
-- Requer dados do owner (da RPC atualizada)
-- Reorganizar layout: avatar/nome do criador → título → badge → descrição
+Adicionar as 4 rotas públicas antes do catch-all `/:slug`:
 
-### 4. Editar: `src/pages/PublicExplore.tsx`
+```
+/privacidade → PrivacyPolicy
+/termos → TermsOfUse
+/cookies → CookiePolicy
+/direitos → DataSubjectRights
+```
 
-- Nos links de projeto, adicionar `?from=list` ao href: `/${item.owner_slug}/${item.id}?from=list`
-- Adicionar link de voltar para `/` (landing) no topo
+### 4. Atualizar footer da Landing
 
-### 5. Editar: `src/pages/PublicProfile.tsx`
+No footer existente de `Landing.tsx` (linhas 313-326), adicionar uma linha de links para as 4 páginas legais, visíveis e responsivos.
 
-- Adicionar seção de contato (email, telefone) abaixo do nome/empresa quando `show_contact_info` é true
-- Adicionar link de voltar para `/list` ou `/` no topo
-- Buscar novos campos da RPC atualizada
+### 5. Modal de consentimento de cookies
 
-### 6. Editar: `src/components/settings/ProfileEditTab.tsx`
+**Arquivo**: `src/components/legal/CookieConsentBanner.tsx`
 
-- Adicionar campos `contact_email`, `contact_phone` e toggle `show_contact_info` na seção de perfil público
-- Salvar junto com os outros dados do perfil
+- Exibido no primeiro acesso (verificação via `localStorage`)
+- 3 ações: "Aceitar todos", "Rejeitar não essenciais", "Personalizar"
+- Modo personalizar: toggles para cookies analíticos e marketing
+- Armazena preferências em `localStorage` como JSON
+- Componente montado no `App.tsx` (fora das rotas, sempre visível)
+- Botão discreto no footer para reabrir preferências
 
-### 7. Verificação de navegação pública
+### 6. Componente LegalFooter
 
-- Landing (`/`) → `/list` → `/:slug/:projectId` (voltar para `/list`)
-- Landing (`/`) → `/list` → `/:slug` → `/:slug/:projectId` (voltar para `/:slug`)
-- `/:slug` → `/:slug/:projectId` (voltar para `/:slug`)
-- `/list` tem link de voltar para `/`
-- `/:slug` tem link de voltar para `/list`
-- Not found pages mantêm links de retorno
+**Arquivo**: `src/components/legal/LegalFooter.tsx`
 
----
+Footer reutilizável com links legais, usado tanto na Landing quanto nas páginas legais e no `PublicExplore`. Inclui link para reabrir preferências de cookies.
 
-### Arquivos a criar/modificar
+### Arquivos a criar
 
-1. **Migration SQL** — 3 colunas em profiles + 2 RPCs atualizadas
-2. **`src/pages/Landing.tsx`** — reescrita com grid de projetos
-3. **`src/pages/PublicPortfolioProject.tsx`** — avatar do criador + navegação contextual
-4. **`src/pages/PublicExplore.tsx`** — query param `from=list` + link voltar
-5. **`src/pages/PublicProfile.tsx`** — contato + link voltar
-6. **`src/components/settings/ProfileEditTab.tsx`** — campos de contato público
+- `src/pages/legal/PrivacyPolicy.tsx`
+- `src/pages/legal/TermsOfUse.tsx`
+- `src/pages/legal/CookiePolicy.tsx`
+- `src/pages/legal/DataSubjectRights.tsx`
+- `src/components/legal/LegalPageLayout.tsx`
+- `src/components/legal/LegalFooter.tsx`
+- `src/components/legal/CookieConsentBanner.tsx`
 
+### Arquivos a editar
+
+- `src/App.tsx` — adicionar rotas e montar CookieConsentBanner
+- `src/pages/Landing.tsx` — substituir footer por LegalFooter
+
+### Detalhes técnicos
+
+- Consentimento de cookies armazenado em `localStorage` com chave `oras_cookie_consent` contendo `{ essential: true, analytics: boolean, marketing: boolean, timestamp: string }`
+- Banner fixo na parte inferior da tela com `z-50`
+- Nenhuma alteração de banco de dados necessária
+- Páginas são 100% estáticas, sem dependência de autenticação
