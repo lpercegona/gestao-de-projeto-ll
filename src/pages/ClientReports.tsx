@@ -85,16 +85,20 @@ export const ClientReports: React.FC = () => {
   const timeEntries = data.timeEntries;
   const projectColumns = client ? getClientColumns(client.id) : [];
 
-  // Fetch report share settings
+  // Fetch report share settings + custom metrics
   useEffect(() => {
     const fetchShareSettings = async () => {
       if (!client) return;
-      const { data: shareData } = await supabase
-        .from("report_shares")
-        .select("*")
-        .eq("client_id", client.id)
-        .maybeSingle();
-      setReportShare(shareData);
+      const [shareResult, metricsResult] = await Promise.all([
+        supabase.from("report_shares").select("*").eq("client_id", client.id).maybeSingle(),
+        supabase.from("report_custom_metrics").select("*").eq("client_id", client.id).order("sort_order", { ascending: true }),
+      ]);
+      setReportShare(shareResult.data);
+      setCustomMetrics((metricsResult.data || []).map((m: any) => ({
+        id: m.id, label: m.label, entity_type: m.entity_type, category_source: m.category_source,
+        category_field_id: m.category_field_id, category_value: m.category_value,
+        display_type: m.display_type, sort_order: m.sort_order,
+      })));
     };
     fetchShareSettings();
   }, [client]);
