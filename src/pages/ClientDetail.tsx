@@ -1649,6 +1649,18 @@ export const ClientDetail: React.FC = () => {
               )}
             </TabsContent>
           </Tabs>
+
+          {clientId && user && (
+            <CustomMetricsConfigDialog
+              open={isMetricsConfigOpen}
+              onOpenChange={setIsMetricsConfigOpen}
+              clientId={clientId}
+              ownerId={user.id}
+              projectColumns={getClientColumns(clientId)}
+              kanbanStages={data.kanbanStages}
+              onMetricsChange={fetchCustomMetrics}
+            />
+          )}
         </TabsContent>
 
         {/* Team Tab */}
