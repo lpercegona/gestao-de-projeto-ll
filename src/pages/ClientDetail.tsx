@@ -171,6 +171,9 @@ export const ClientDetail: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [reportShare, setReportShare] = useState<ReportShare | null>(null);
+  const [customMetricsOpen, setCustomMetricsOpen] = useState(false);
+  const [customMetrics, setCustomMetrics] = useState<CustomMetricConfig[]>([]);
+  const [kanbanStages, setKanbanStages] = useState<{ id: string; name: string }[]>([]);
 
   // Project management state
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
