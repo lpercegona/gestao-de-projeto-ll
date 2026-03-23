@@ -674,6 +674,15 @@ export const SharedReport: React.FC = () => {
                 </CardContent>
               </Card>
 
+              {customMetrics.length > 0 && (
+                <CustomMetricsCard
+                  metrics={customMetrics}
+                  projects={projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
+                  tasks={tasks.map(t => ({ id: t.id, name: t.name, status: 'pending', project_id: t.project_id }))}
+                  projectColumns={projectColumns}
+                />
+              )}
+
               {isMonthly && totalMonthHours > availableHours && (
                 <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
