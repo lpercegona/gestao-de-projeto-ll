@@ -76,7 +76,7 @@ export const CustomMetricsCard: React.FC<Props> = ({
         if (metric.entity_type === 'projects') {
           matchCount = projects.filter(p => {
             const fields = p.custom_fields as Record<string, string> | null;
-            return fields?.[col.name] === metric.category_value;
+            return fields?.[col.id] === metric.category_value;
           }).length;
         } else {
           // For tasks, check parent project's custom fields
@@ -84,7 +84,7 @@ export const CustomMetricsCard: React.FC<Props> = ({
             projects
               .filter(p => {
                 const fields = p.custom_fields as Record<string, string> | null;
-                return fields?.[col.name] === metric.category_value;
+                return fields?.[col.id] === metric.category_value;
               })
               .map(p => p.id)
           );
