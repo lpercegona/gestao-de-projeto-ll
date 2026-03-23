@@ -60,7 +60,10 @@ import {
   Trash2,
   CalendarIcon,
   MoreVertical,
+  Settings,
 } from 'lucide-react';
+import { CustomMetricsConfigDialog } from '@/components/reports/CustomMetricsConfigDialog';
+import { CustomMetricsCard, CustomMetricConfig } from '@/components/reports/CustomMetricsCard';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
