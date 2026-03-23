@@ -16,6 +16,7 @@ import { formatHours } from "@/lib/formatHours";
 import orasLogo from "@/assets/logo-oras.svg";
 import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 import { toast } from "sonner";
+import { CustomMetricsCard } from "@/components/reports/CustomMetricsCard";
 
 interface ProjectColumn {
   id: string;
