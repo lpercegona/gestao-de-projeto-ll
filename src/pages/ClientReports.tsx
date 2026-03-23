@@ -24,6 +24,7 @@ import { ReportShare } from "@/components/reports/ReportShareDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 import { toast } from "sonner";
+import { CustomMetricsCard } from "@/components/reports/CustomMetricsCard";
 
 interface ProjectRequestHistory {
   id: string;
