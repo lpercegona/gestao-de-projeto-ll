@@ -1581,6 +1581,21 @@ export const ClientDetail: React.FC = () => {
                 </CardContent>
               </Card>
 
+              <CustomMetricsCard
+                metrics={customMetrics}
+                projects={clientProjects}
+                tasks={data.tasks.filter(t => clientProjects.some(p => p.id === t.project_id))}
+              />
+
+              <CustomMetricsConfigDialog
+                open={customMetricsOpen}
+                onOpenChange={setCustomMetricsOpen}
+                clientId={clientId!}
+                projectColumns={getClientColumns(clientId!)}
+                kanbanStages={kanbanStages}
+                onMetricsChange={refreshCustomMetrics}
+              />
+
               {reportData.projects.length === 0 ? (
                 <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground">Nenhuma hora registrada neste período.</p></CardContent></Card>
               ) : (

@@ -704,6 +704,12 @@ export const ClientReports: React.FC = () => {
             </CardContent>
           </Card>
 
+          <CustomMetricsCard
+            metrics={customMetrics}
+            projects={projects}
+            tasks={tasks}
+          />
+
           {visibleReportColumns.length > 0 && (
             <Card>
               <CardHeader>
