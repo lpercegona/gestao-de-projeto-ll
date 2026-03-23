@@ -1574,6 +1574,16 @@ export const ClientDetail: React.FC = () => {
                 </CardContent>
               </Card>
 
+              {customMetrics.length > 0 && (
+                <CustomMetricsCard
+                  metrics={customMetrics}
+                  projects={reportData.projects.map(p => ({ id: p.id, name: p.name, status: data.projects.find(dp => dp.id === p.id)?.status || 'active', custom_fields: data.projects.find(dp => dp.id === p.id)?.custom_fields as Record<string, string> | null }))}
+                  tasks={data.tasks.filter(t => clientProjects.some(p => p.id === t.project_id)).map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id }))}
+                  kanbanStages={data.kanbanStages}
+                  projectColumns={clientId ? getClientColumns(clientId) : []}
+                />
+              )}
+
               {reportData.projects.length === 0 ? (
                 <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground">Nenhuma hora registrada neste período.</p></CardContent></Card>
               ) : (
