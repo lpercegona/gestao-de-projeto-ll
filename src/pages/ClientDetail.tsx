@@ -401,22 +401,38 @@ export const ClientDetail: React.FC = () => {
     }
   }, [clientId, activeTab, clientProjects.length, client?.email]);
 
-  // Fetch report share
+  // Fetch report share + custom metrics + kanban stages
   useEffect(() => {
-    const fetchShare = async () => {
+    const fetchReportData = async () => {
       if (!clientId) return;
-      const { data: shareData } = await supabase
-        .from('report_shares')
-        .select('*')
-        .eq('client_id', clientId)
-        .maybeSingle();
-      setReportShare(shareData);
+      const [shareResult, metricsResult, stagesResult] = await Promise.all([
+        supabase.from('report_shares').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('report_custom_metrics').select('*').eq('client_id', clientId).order('sort_order', { ascending: true }),
+        supabase.from('kanban_stages').select('id, name').order('order_position', { ascending: true }),
+      ]);
+      setReportShare(shareResult.data);
+      setCustomMetrics((metricsResult.data || []).map((m: any) => ({
+        id: m.id, label: m.label, entity_type: m.entity_type, category_source: m.category_source,
+        category_field_id: m.category_field_id, category_value: m.category_value,
+        display_type: m.display_type, sort_order: m.sort_order,
+      })));
+      setKanbanStages((stagesResult.data || []).map((s: any) => ({ id: s.id, name: s.name })));
     };
     
     if (activeTab === 'reports') {
-      fetchShare();
+      fetchReportData();
     }
   }, [clientId, activeTab]);
+
+  const refreshCustomMetrics = useCallback(async () => {
+    if (!clientId) return;
+    const { data } = await supabase.from('report_custom_metrics').select('*').eq('client_id', clientId).order('sort_order', { ascending: true });
+    setCustomMetrics((data || []).map((m: any) => ({
+      id: m.id, label: m.label, entity_type: m.entity_type, category_source: m.category_source,
+      category_field_id: m.category_field_id, category_value: m.category_value,
+      display_type: m.display_type, sort_order: m.sort_order,
+    })));
+  }, [clientId]);
 
   // Generate month options
   const monthOptions = useMemo(() => {
