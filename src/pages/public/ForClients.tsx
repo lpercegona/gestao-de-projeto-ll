@@ -104,8 +104,8 @@ export const ForClients = () => {
         style={{ animationDelay: "100ms", animationFillMode: "both" }}>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
-          <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight whitespace-pre-line">
-            Transparência total{"\n"}nos seus projetos
+          <h1 className="text-2xl sm:text-5xl font-bold text-foreground tracking-tight">
+            Solicitações e relatórios de projetos criativos
           </h1>
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-muted-foreground max-w-xl mx-auto">
             Solicite projetos e acompanhe em tempo real entregas, horas consumidas e prazos. 
