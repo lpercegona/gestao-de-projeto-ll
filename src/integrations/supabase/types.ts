@@ -1910,6 +1910,7 @@ export type Database = {
           task_description: string
           task_id: string
           task_name: string
+          task_status: string
         }[]
       }
       get_shared_report_time_entries: {
