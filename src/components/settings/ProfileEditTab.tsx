@@ -208,6 +208,70 @@ export const ProfileEditTab: React.FC = () => {
     }
   };
 
+  const removeStoredProfileImage = async (prefix: 'avatar' | 'cover') => {
+    if (!user) return;
+
+    const { data: files, error: listError } = await supabase.storage
+      .from('avatars')
+      .list(user.id);
+
+    if (listError) throw listError;
+
+    const pathsToRemove = (files || [])
+      .filter((file) => file.name.startsWith(`${prefix}.`))
+      .map((file) => `${user.id}/${file.name}`);
+
+    if (pathsToRemove.length === 0) return;
+
+    const { error: removeError } = await supabase.storage
+      .from('avatars')
+      .remove(pathsToRemove);
+
+    if (removeError) throw removeError;
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!user || uploadingAvatar || savingProfile || !avatarUrl) return;
+
+    setUploadingAvatar(true);
+    try {
+      await removeStoredProfileImage('avatar');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setAvatarUrl(null);
+      toast.success('Foto removida!');
+    } catch (err) {
+      console.error('Error removing avatar:', err);
+      toast.error('Erro ao remover a foto');
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCoverRemove = async () => {
+    if (!user || uploadingCover || savingProfile || !coverUrl) return;
+
+    setUploadingCover(true);
+    try {
+      await removeStoredProfileImage('cover');
+      setCoverUrl(null);
+      toast.success('Capa removida!');
+    } catch (err) {
+      console.error('Error removing cover:', err);
+      toast.error('Erro ao remover a capa');
+    } finally {
+      setUploadingCover(false);
+      if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -315,6 +379,16 @@ export const ProfileEditTab: React.FC = () => {
           <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadingAvatar} className="h-7 text-xs">
             {uploadingAvatar ? (<><Loader2 className="w-3 h-3 mr-1 animate-spin" />Enviando...</>) : (<><Upload className="w-3 h-3 mr-1" />Alterar foto</>)}
           </Button>
+          {avatarUrl && (
+            <button
+              type="button"
+              onClick={handleAvatarRemove}
+              disabled={uploadingAvatar}
+              className="mt-1 block text-[10px] text-red-600 transition-colors hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Excluir imagem
+            </button>
+          )}
           <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG ou GIF. Máx 2MB.</p>
         </div>
       </div>
@@ -413,6 +487,16 @@ export const ProfileEditTab: React.FC = () => {
                   <Button type="button" variant="outline" size="sm" onClick={() => coverFileInputRef.current?.click()} disabled={uploadingCover} className="h-7 text-xs">
                     {uploadingCover ? (<><Loader2 className="w-3 h-3 mr-1 animate-spin" />Enviando...</>) : (<><ImagePlus className="w-3 h-3 mr-1" />{coverUrl ? 'Alterar capa' : 'Adicionar capa'}</>)}
                   </Button>
+                  {coverUrl && (
+                    <button
+                      type="button"
+                      onClick={handleCoverRemove}
+                      disabled={uploadingCover}
+                      className="mt-1 block text-[10px] text-red-600 transition-colors hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Excluir imagem
+                    </button>
+                  )}
                   <p className="text-[10px] text-muted-foreground">Recomendado: 1200×400px. Máx 2MB.</p>
                 </div>
 
