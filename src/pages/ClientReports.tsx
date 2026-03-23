@@ -709,6 +709,15 @@ export const ClientReports: React.FC = () => {
             </CardContent>
           </Card>
 
+          {customMetrics.length > 0 && client && (
+            <CustomMetricsCard
+              metrics={customMetrics}
+              projects={projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
+              tasks={tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id }))}
+              projectColumns={projectColumns}
+            />
+          )}
+
           {visibleReportColumns.length > 0 && (
             <Card>
               <CardHeader>
