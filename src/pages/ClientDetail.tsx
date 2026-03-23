@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
 import { useData } from '@/contexts/DataContext';
@@ -60,10 +59,7 @@ import {
   Trash2,
   CalendarIcon,
   MoreVertical,
-  Settings,
 } from 'lucide-react';
-import { CustomMetricsConfigDialog } from '@/components/reports/CustomMetricsConfigDialog';
-import { CustomMetricsCard, CustomMetricConfig } from '@/components/reports/CustomMetricsCard';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
@@ -82,6 +78,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Project } from '@/types';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { AutoReportConfig } from '@/components/client/AutoReportConfig';
+import { CustomMetricsConfigDialog } from '@/components/reports/CustomMetricsConfigDialog';
+import { CustomMetricsCard } from '@/components/reports/CustomMetricsCard';
+import { Settings } from 'lucide-react';
 
 interface ProjectRequestHistory {
   id: string;
@@ -171,9 +170,8 @@ export const ClientDetail: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [reportShare, setReportShare] = useState<ReportShare | null>(null);
-  const [customMetricsOpen, setCustomMetricsOpen] = useState(false);
-  const [customMetrics, setCustomMetrics] = useState<CustomMetricConfig[]>([]);
-  const [kanbanStages, setKanbanStages] = useState<{ id: string; name: string }[]>([]);
+  const [customMetrics, setCustomMetrics] = useState<any[]>([]);
+  const [isMetricsConfigOpen, setIsMetricsConfigOpen] = useState(false);
 
   // Project management state
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
@@ -401,38 +399,33 @@ export const ClientDetail: React.FC = () => {
     }
   }, [clientId, activeTab, clientProjects.length, client?.email]);
 
-  // Fetch report share + custom metrics + kanban stages
+  // Fetch report share
   useEffect(() => {
-    const fetchReportData = async () => {
+    const fetchShare = async () => {
       if (!clientId) return;
-      const [shareResult, metricsResult, stagesResult] = await Promise.all([
-        supabase.from('report_shares').select('*').eq('client_id', clientId).maybeSingle(),
-        supabase.from('report_custom_metrics').select('*').eq('client_id', clientId).order('sort_order', { ascending: true }),
-        supabase.from('kanban_stages').select('id, name').order('order_position', { ascending: true }),
-      ]);
-      setReportShare(shareResult.data);
-      setCustomMetrics((metricsResult.data || []).map((m: any) => ({
-        id: m.id, label: m.label, entity_type: m.entity_type, category_source: m.category_source,
-        category_field_id: m.category_field_id, category_value: m.category_value,
-        display_type: m.display_type, sort_order: m.sort_order,
-      })));
-      setKanbanStages((stagesResult.data || []).map((s: any) => ({ id: s.id, name: s.name })));
+      const { data: shareData } = await supabase
+        .from('report_shares')
+        .select('*')
+        .eq('client_id', clientId)
+        .maybeSingle();
+      setReportShare(shareData);
     };
     
     if (activeTab === 'reports') {
-      fetchReportData();
+      fetchShare();
+      fetchCustomMetrics();
     }
   }, [clientId, activeTab]);
 
-  const refreshCustomMetrics = useCallback(async () => {
+  const fetchCustomMetrics = async () => {
     if (!clientId) return;
-    const { data } = await supabase.from('report_custom_metrics').select('*').eq('client_id', clientId).order('sort_order', { ascending: true });
-    setCustomMetrics((data || []).map((m: any) => ({
-      id: m.id, label: m.label, entity_type: m.entity_type, category_source: m.category_source,
-      category_field_id: m.category_field_id, category_value: m.category_value,
-      display_type: m.display_type, sort_order: m.sort_order,
-    })));
-  }, [clientId]);
+    const { data: metricsData } = await supabase
+      .from('report_custom_metrics')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('sort_order');
+    setCustomMetrics(metricsData || []);
+  };
 
   // Generate month options
   const monthOptions = useMemo(() => {
@@ -1468,7 +1461,7 @@ export const ClientDetail: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-end gap-2">
-                <Button variant="outline" size="icon" onClick={() => setCustomMetricsOpen(true)} className="h-8 w-8 rounded-lg" title="Métricas personalizadas">
+                <Button variant="outline" size="icon" onClick={() => setIsMetricsConfigOpen(true)} className="h-8 w-8 rounded-lg" title="Métricas personalizadas">
                   <Settings className="w-3.5 h-3.5" />
                 </Button>
                 <Button variant="outline" size="icon" onClick={() => setExportDialogOpen(true)} className="h-8 w-8 rounded-lg" title="Exportar relatório">
@@ -1513,7 +1506,7 @@ export const ClientDetail: React.FC = () => {
                 </TabsList>
 
                 <div className="flex items-center justify-end gap-2">
-                  <Button variant="outline" size="icon" onClick={() => setCustomMetricsOpen(true)} className="h-8 w-8 rounded-lg" title="Métricas personalizadas">
+                  <Button variant="outline" size="icon" onClick={() => setIsMetricsConfigOpen(true)} className="h-8 w-8 rounded-lg" title="Métricas personalizadas">
                     <Settings className="w-3.5 h-3.5" />
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => setExportDialogOpen(true)} className="h-8 w-8 rounded-lg" title="Exportar relatório">
@@ -1581,20 +1574,15 @@ export const ClientDetail: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <CustomMetricsCard
-                metrics={customMetrics}
-                projects={clientProjects}
-                tasks={data.tasks.filter(t => clientProjects.some(p => p.id === t.project_id))}
-              />
-
-              <CustomMetricsConfigDialog
-                open={customMetricsOpen}
-                onOpenChange={setCustomMetricsOpen}
-                clientId={clientId!}
-                projectColumns={getClientColumns(clientId!)}
-                kanbanStages={kanbanStages}
-                onMetricsChange={refreshCustomMetrics}
-              />
+              {customMetrics.length > 0 && (
+                <CustomMetricsCard
+                  metrics={customMetrics}
+                  projects={reportData.projects.map(p => ({ id: p.id, name: p.name, status: data.projects.find(dp => dp.id === p.id)?.status || 'active', custom_fields: data.projects.find(dp => dp.id === p.id)?.custom_fields as Record<string, string> | null }))}
+                  tasks={data.tasks.filter(t => clientProjects.some(p => p.id === t.project_id)).map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id }))}
+                  kanbanStages={data.kanbanStages}
+                  projectColumns={clientId ? getClientColumns(clientId) : []}
+                />
+              )}
 
               {reportData.projects.length === 0 ? (
                 <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground">Nenhuma hora registrada neste período.</p></CardContent></Card>
@@ -1661,6 +1649,18 @@ export const ClientDetail: React.FC = () => {
               )}
             </TabsContent>
           </Tabs>
+
+          {clientId && user && (
+            <CustomMetricsConfigDialog
+              open={isMetricsConfigOpen}
+              onOpenChange={setIsMetricsConfigOpen}
+              clientId={clientId}
+              ownerId={user.id}
+              projectColumns={getClientColumns(clientId)}
+              kanbanStages={data.kanbanStages}
+              onMetricsChange={fetchCustomMetrics}
+            />
+          )}
         </TabsContent>
 
         {/* Team Tab */}

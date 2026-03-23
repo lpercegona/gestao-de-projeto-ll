@@ -1,15 +1,15 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3 } from 'lucide-react';
 
-export interface CustomMetricConfig {
+interface CustomMetric {
   id?: string;
   label: string;
-  entity_type: 'projects' | 'tasks';
-  category_source: 'status' | 'custom_field' | 'kanban_stage';
+  entity_type: string;
+  category_source: string;
   category_field_id: string | null;
   category_value: string;
-  display_type: 'count' | 'percentage';
+  display_type: string;
   sort_order: number;
 }
 
@@ -27,68 +27,92 @@ interface Task {
   project_id: string;
 }
 
-interface Props {
-  metrics: CustomMetricConfig[];
-  projects: Project[];
-  tasks: Task[];
+interface KanbanStage {
+  id: string;
+  name: string;
 }
 
-export const CustomMetricsCard: React.FC<Props> = ({ metrics, projects, tasks }) => {
-  const computedMetrics = useMemo(() => {
-    return metrics.map(metric => {
-      const items = metric.entity_type === 'projects' ? projects : tasks;
-      const totalItems = items.length;
+interface ProjectColumn {
+  id: string;
+  name: string;
+  type: string;
+  options: string[] | null;
+}
 
-      let matchCount = 0;
+interface Props {
+  metrics: CustomMetric[];
+  projects: Project[];
+  tasks: Task[];
+  kanbanStages?: KanbanStage[];
+  projectColumns?: ProjectColumn[];
+}
 
-      if (metric.category_source === 'status') {
-        matchCount = items.filter(item => item.status === metric.category_value).length;
-      } else if (metric.category_source === 'custom_field' && metric.category_field_id) {
-        // Only applies to projects (tasks don't have custom_fields)
+export const CustomMetricsCard: React.FC<Props> = ({
+  metrics,
+  projects,
+  tasks,
+  kanbanStages = [],
+  projectColumns = [],
+}) => {
+  if (!metrics.length) return null;
+
+  const computeMetric = (metric: CustomMetric) => {
+    const items = metric.entity_type === 'projects' ? projects : tasks;
+    const totalItems = items.length;
+
+    let matchCount = 0;
+
+    if (metric.category_source === 'status') {
+      matchCount = items.filter(item => item.status === metric.category_value).length;
+    } else if (metric.category_source === 'kanban_stage') {
+      // Kanban stages apply to projects only
+      const stage = kanbanStages.find(s => s.name === metric.category_value);
+      if (stage) {
+        matchCount = projects.filter(p => p.status === stage.name || p.status === stage.id).length;
+      }
+    } else if (metric.category_source === 'custom_field' && metric.category_field_id) {
+      const col = projectColumns.find(c => c.id === metric.category_field_id);
+      if (col) {
         if (metric.entity_type === 'projects') {
           matchCount = projects.filter(p => {
-            const fields = p.custom_fields || {};
-            return fields[metric.category_field_id!] === metric.category_value;
+            const fields = p.custom_fields as Record<string, string> | null;
+            return fields?.[col.name] === metric.category_value;
           }).length;
-        }
-      } else if (metric.category_source === 'kanban_stage') {
-        // Kanban stages map to project status
-        if (metric.entity_type === 'projects') {
-          matchCount = projects.filter(p => p.status === metric.category_value).length;
         } else {
-          matchCount = tasks.filter(t => t.status === metric.category_value).length;
+          // For tasks, check parent project's custom fields
+          const matchingProjectIds = new Set(
+            projects
+              .filter(p => {
+                const fields = p.custom_fields as Record<string, string> | null;
+                return fields?.[col.name] === metric.category_value;
+              })
+              .map(p => p.id)
+          );
+          matchCount = tasks.filter(t => matchingProjectIds.has(t.project_id)).length;
         }
       }
+    }
 
-      const displayValue = metric.display_type === 'percentage'
-        ? totalItems > 0 ? `${((matchCount / totalItems) * 100).toFixed(1)}%` : '0%'
-        : String(matchCount);
-
-      return {
-        ...metric,
-        displayValue,
-        matchCount,
-        totalItems,
-      };
-    });
-  }, [metrics, projects, tasks]);
-
-  if (metrics.length === 0) return null;
+    if (metric.display_type === 'percentage') {
+      return totalItems > 0 ? `${((matchCount / totalItems) * 100).toFixed(1)}%` : '0%';
+    }
+    return String(matchCount);
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <BarChart3 className="w-4 h-4" />
-          Métricas Personalizadas
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          <CardTitle className="text-base">Métricas Personalizadas</CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {computedMetrics.map((metric, index) => (
-            <div key={metric.id || index}>
+          {metrics.map((metric, i) => (
+            <div key={metric.id || i}>
               <p className="text-xs text-muted-foreground">{metric.label}</p>
-              <p className="text-lg font-semibold text-foreground">{metric.displayValue}</p>
+              <p className="text-lg font-semibold text-foreground">{computeMetric(metric)}</p>
             </div>
           ))}
         </div>

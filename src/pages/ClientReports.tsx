@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -25,7 +24,7 @@ import { ReportShare } from "@/components/reports/ReportShareDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
 import { toast } from "sonner";
-import { CustomMetricsCard, CustomMetricConfig } from "@/components/reports/CustomMetricsCard";
+import { CustomMetricsCard } from "@/components/reports/CustomMetricsCard";
 
 interface ProjectRequestHistory {
   id: string;
@@ -61,7 +60,7 @@ export const ClientReports: React.FC = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [projectRequestsHistory, setProjectRequestsHistory] = useState<ProjectRequestHistory[]>([]);
   const [editRequestsHistory, setEditRequestsHistory] = useState<EditRequestHistory[]>([]);
-  const [customMetrics, setCustomMetrics] = useState<CustomMetricConfig[]>([]);
+  const [customMetrics, setCustomMetrics] = useState<any[]>([]);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -85,22 +84,28 @@ export const ClientReports: React.FC = () => {
   const timeEntries = data.timeEntries;
   const projectColumns = client ? getClientColumns(client.id) : [];
 
-  // Fetch report share settings + custom metrics
+  // Fetch report share settings
   useEffect(() => {
     const fetchShareSettings = async () => {
       if (!client) return;
-      const [shareResult, metricsResult] = await Promise.all([
-        supabase.from("report_shares").select("*").eq("client_id", client.id).maybeSingle(),
-        supabase.from("report_custom_metrics").select("*").eq("client_id", client.id).order("sort_order", { ascending: true }),
-      ]);
-      setReportShare(shareResult.data);
-      setCustomMetrics((metricsResult.data || []).map((m: any) => ({
-        id: m.id, label: m.label, entity_type: m.entity_type, category_source: m.category_source,
-        category_field_id: m.category_field_id, category_value: m.category_value,
-        display_type: m.display_type, sort_order: m.sort_order,
-      })));
+      const { data: shareData } = await supabase
+        .from("report_shares")
+        .select("*")
+        .eq("client_id", client.id)
+        .maybeSingle();
+      setReportShare(shareData);
     };
     fetchShareSettings();
+    const fetchCustomMetrics = async () => {
+      if (!client) return;
+      const { data: metricsData } = await supabase
+        .from('report_custom_metrics')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('sort_order');
+      setCustomMetrics(metricsData || []);
+    };
+    fetchCustomMetrics();
   }, [client]);
 
   useEffect(() => {
@@ -704,11 +709,14 @@ export const ClientReports: React.FC = () => {
             </CardContent>
           </Card>
 
-          <CustomMetricsCard
-            metrics={customMetrics}
-            projects={projects}
-            tasks={tasks}
-          />
+          {customMetrics.length > 0 && client && (
+            <CustomMetricsCard
+              metrics={customMetrics}
+              projects={projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
+              tasks={tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id }))}
+              projectColumns={projectColumns}
+            />
+          )}
 
           {visibleReportColumns.length > 0 && (
             <Card>

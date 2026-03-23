@@ -15,8 +15,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { formatHours } from "@/lib/formatHours";
 import orasLogo from "@/assets/logo-oras.svg";
 import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
-import { CustomMetricsCard, CustomMetricConfig } from "@/components/reports/CustomMetricsCard";
 import { toast } from "sonner";
+import { CustomMetricsCard } from "@/components/reports/CustomMetricsCard";
 
 interface ProjectColumn {
   id: string;
@@ -82,8 +82,7 @@ export const SharedReport: React.FC = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
   const [requests, setRequests] = useState<SharedRequestItem[]>([]);
-  const [customMetrics, setCustomMetrics] = useState<CustomMetricConfig[]>([]);
-
+  const [customMetrics, setCustomMetrics] = useState<any[]>([]);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
@@ -205,7 +204,7 @@ export const SharedReport: React.FC = () => {
             supabase.rpc("get_shared_report_tasks", { p_token: token }),
             supabase.rpc("get_shared_report_time_entries", { p_token: token }),
             supabase.rpc("get_shared_report_requests" as any, { p_token: token }),
-            supabase.rpc("get_shared_report_custom_metrics" as any, { p_token: token }),
+            supabase.rpc("get_shared_report_custom_metrics", { p_token: token }),
           ]);
 
         const projectsData = projectsResult.status === "fulfilled" ? projectsResult.value.data : [];
@@ -213,7 +212,6 @@ export const SharedReport: React.FC = () => {
         const tasksData = tasksResult.status === "fulfilled" ? tasksResult.value.data : [];
         const entriesData = entriesResult.status === "fulfilled" ? entriesResult.value.data : [];
         const requestsData = requestsResult.status === "fulfilled" ? (requestsResult.value as any).data : [];
-        const metricsData = metricsResult.status === "fulfilled" ? (metricsResult.value as any).data : [];
 
         setProjects(
           (projectsData || []).map((p: any) => ({
@@ -271,6 +269,20 @@ export const SharedReport: React.FC = () => {
           })).sort(
             (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
           ),
+        );
+
+        const metricsData = metricsResult.status === "fulfilled" ? (metricsResult.value as any).data : [];
+        setCustomMetrics(
+          ((metricsData || []) as any[]).map((m: any) => ({
+            id: m.metric_id,
+            label: m.label,
+            entity_type: m.entity_type,
+            category_source: m.category_source,
+            category_field_id: m.category_field_id,
+            category_value: m.category_value,
+            display_type: m.display_type,
+            sort_order: m.sort_order,
+          })),
         );
       } catch (error) {
         console.error("Error fetching shared report:", error);
@@ -662,11 +674,14 @@ export const SharedReport: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <CustomMetricsCard
-                metrics={customMetrics}
-                projects={projects.map(p => ({ ...p, status: p.status, custom_fields: p.custom_fields }))}
-                tasks={tasks.map(t => ({ ...t, status: '', project_id: t.project_id }))}
-              />
+              {customMetrics.length > 0 && (
+                <CustomMetricsCard
+                  metrics={customMetrics}
+                  projects={projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
+                  tasks={tasks.map(t => ({ id: t.id, name: t.name, status: 'pending', project_id: t.project_id }))}
+                  projectColumns={projectColumns}
+                />
+              )}
 
               {isMonthly && totalMonthHours > availableHours && (
                 <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
