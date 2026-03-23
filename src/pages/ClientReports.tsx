@@ -95,6 +95,16 @@ export const ClientReports: React.FC = () => {
       setReportShare(shareData);
     };
     fetchShareSettings();
+    const fetchCustomMetrics = async () => {
+      if (!client) return;
+      const { data: metricsData } = await supabase
+        .from('report_custom_metrics')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('sort_order');
+      setCustomMetrics(metricsData || []);
+    };
+    fetchCustomMetrics();
   }, [client]);
 
   useEffect(() => {
