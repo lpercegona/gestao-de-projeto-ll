@@ -236,6 +236,7 @@ export const SharedReport: React.FC = () => {
             id: t.task_id as string,
             name: t.task_name as string,
             description: t.task_description as string,
+            status: (t as any).task_status as string || 'pending',
             project_id: t.project_id as string,
           })),
         );
