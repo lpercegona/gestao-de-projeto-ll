@@ -270,6 +270,20 @@ export const SharedReport: React.FC = () => {
             (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
           ),
         );
+
+        const metricsData = metricsResult.status === "fulfilled" ? (metricsResult.value as any).data : [];
+        setCustomMetrics(
+          ((metricsData || []) as any[]).map((m: any) => ({
+            id: m.metric_id,
+            label: m.label,
+            entity_type: m.entity_type,
+            category_source: m.category_source,
+            category_field_id: m.category_field_id,
+            category_value: m.category_value,
+            display_type: m.display_type,
+            sort_order: m.sort_order,
+          })),
+        );
       } catch (error) {
         console.error("Error fetching shared report:", error);
       } finally {
