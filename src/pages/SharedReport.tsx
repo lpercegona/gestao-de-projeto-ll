@@ -197,13 +197,14 @@ export const SharedReport: React.FC = () => {
           is_public: clientData.is_public as boolean,
         });
 
-        const [projectsResult, columnsResult, tasksResult, entriesResult, requestsResult] =
+        const [projectsResult, columnsResult, tasksResult, entriesResult, requestsResult, metricsResult] =
           await Promise.allSettled([
             supabase.rpc("get_shared_report_projects", { p_token: token }),
             supabase.rpc("get_shared_report_project_columns", { p_token: token }),
             supabase.rpc("get_shared_report_tasks", { p_token: token }),
             supabase.rpc("get_shared_report_time_entries", { p_token: token }),
             supabase.rpc("get_shared_report_requests" as any, { p_token: token }),
+            supabase.rpc("get_shared_report_custom_metrics", { p_token: token }),
           ]);
 
         const projectsData = projectsResult.status === "fulfilled" ? projectsResult.value.data : [];
