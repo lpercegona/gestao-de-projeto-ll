@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { formatHours } from "@/lib/formatHours";
 import orasLogo from "@/assets/logo-oras.svg";
 import { WysiwygContent } from "@/components/ui/wysiwyg-editor";
+import { CustomMetricsCard, CustomMetricConfig } from "@/components/reports/CustomMetricsCard";
 import { toast } from "sonner";
 
 interface ProjectColumn {
