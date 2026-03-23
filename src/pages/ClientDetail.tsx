@@ -78,6 +78,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Project } from '@/types';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { AutoReportConfig } from '@/components/client/AutoReportConfig';
+import { CustomMetricsConfigDialog } from '@/components/reports/CustomMetricsConfigDialog';
+import { CustomMetricsCard } from '@/components/reports/CustomMetricsCard';
+import { Settings } from 'lucide-react';
 
 interface ProjectRequestHistory {
   id: string;
