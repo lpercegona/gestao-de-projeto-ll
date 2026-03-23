@@ -1506,6 +1506,9 @@ export const ClientDetail: React.FC = () => {
                 </TabsList>
 
                 <div className="flex items-center justify-end gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setIsMetricsConfigOpen(true)} className="h-8 w-8 rounded-lg" title="Métricas personalizadas">
+                    <Settings className="w-3.5 h-3.5" />
+                  </Button>
                   <Button variant="outline" size="icon" onClick={() => setExportDialogOpen(true)} className="h-8 w-8 rounded-lg" title="Exportar relatório">
                     <Download className="w-3.5 h-3.5" />
                   </Button>
