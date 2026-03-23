@@ -61,6 +61,7 @@ export const ClientReports: React.FC = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [projectRequestsHistory, setProjectRequestsHistory] = useState<ProjectRequestHistory[]>([]);
   const [editRequestsHistory, setEditRequestsHistory] = useState<EditRequestHistory[]>([]);
+  const [customMetrics, setCustomMetrics] = useState<CustomMetricConfig[]>([]);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
