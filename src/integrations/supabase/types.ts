@@ -1137,6 +1137,63 @@ export type Database = {
           },
         ]
       }
+      report_custom_metrics: {
+        Row: {
+          category_field_id: string | null
+          category_source: string
+          category_value: string
+          client_id: string
+          created_at: string
+          display_type: string
+          entity_type: string
+          id: string
+          label: string
+          owner_id: string
+          sort_order: number
+        }
+        Insert: {
+          category_field_id?: string | null
+          category_source?: string
+          category_value: string
+          client_id: string
+          created_at?: string
+          display_type?: string
+          entity_type?: string
+          id?: string
+          label: string
+          owner_id: string
+          sort_order?: number
+        }
+        Update: {
+          category_field_id?: string | null
+          category_source?: string
+          category_value?: string
+          client_id?: string
+          created_at?: string
+          display_type?: string
+          entity_type?: string
+          id?: string
+          label?: string
+          owner_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_custom_metrics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_custom_metrics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_limited"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_shares: {
         Row: {
           client_id: string
@@ -1799,6 +1856,19 @@ export type Database = {
           contract_type: string
           contracted_hours: number
           is_public: boolean
+        }[]
+      }
+      get_shared_report_custom_metrics: {
+        Args: { p_token: string }
+        Returns: {
+          category_field_id: string
+          category_source: string
+          category_value: string
+          display_type: string
+          entity_type: string
+          label: string
+          metric_id: string
+          sort_order: number
         }[]
       }
       get_shared_report_project_columns: {
