@@ -130,7 +130,7 @@ export const ForClients = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-lg sm:text-3xl font-bold text-foreground">
-              ​Gestão completa de trabalhos criativos  
+              Gestão completa de trabalhos criativos  
             </h2>
             <p className="mt-2 sm:mt-3 text-xs sm:text-base text-muted-foreground max-w-xl mx-auto">
               Ferramentas que garantem gestão e visibilidade sobre cada etapa de trabalhos criativos.
