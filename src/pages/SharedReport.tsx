@@ -36,6 +36,7 @@ interface Task {
   id: string;
   name: string;
   description: string | null;
+  status: string;
   project_id: string;
 }
 
@@ -236,6 +237,7 @@ export const SharedReport: React.FC = () => {
             id: t.task_id as string,
             name: t.task_name as string,
             description: t.task_description as string,
+            status: t.task_status as string || 'pending',
             project_id: t.project_id as string,
           })),
         );
@@ -677,8 +679,8 @@ export const SharedReport: React.FC = () => {
               {customMetrics.length > 0 && (
                 <CustomMetricsCard
                   metrics={customMetrics}
-                  projects={projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
-                  tasks={tasks.map(t => ({ id: t.id, name: t.name, status: 'pending', project_id: t.project_id }))}
+                  projects={reportData.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
+                  tasks={reportData.flatMap(p => p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id })))}
                   projectColumns={projectColumns}
                 />
               )}
