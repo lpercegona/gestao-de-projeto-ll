@@ -82,7 +82,7 @@ export const SharedReport: React.FC = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [projectColumns, setProjectColumns] = useState<ProjectColumn[]>([]);
   const [requests, setRequests] = useState<SharedRequestItem[]>([]);
-
+  const [customMetrics, setCustomMetrics] = useState<any[]>([]);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
