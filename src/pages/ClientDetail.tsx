@@ -413,8 +413,19 @@ export const ClientDetail: React.FC = () => {
     
     if (activeTab === 'reports') {
       fetchShare();
+      fetchCustomMetrics();
     }
   }, [clientId, activeTab]);
+
+  const fetchCustomMetrics = async () => {
+    if (!clientId) return;
+    const { data: metricsData } = await supabase
+      .from('report_custom_metrics')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('sort_order');
+    setCustomMetrics(metricsData || []);
+  };
 
   // Generate month options
   const monthOptions = useMemo(() => {
