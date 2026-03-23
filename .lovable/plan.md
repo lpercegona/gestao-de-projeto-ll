@@ -1,84 +1,65 @@
 
 
-## Plano: Métricas Personalizadas nos Relatórios
+## Plano: Corrigir Cálculos de Métricas Personalizadas nos Relatórios
 
-### Conceito
+### Problemas Identificados
 
-Criar uma tabela `report_custom_metrics` que armazena métricas configuráveis por cliente. Cada métrica define: um label, a entidade-alvo (projetos ou tarefas), um campo de categoria (pré-definido como `status` ou baseado em `project_columns`/`kanban_stages` do cliente), um valor de categoria específico, e o tipo de exibição (contagem ou porcentagem). O admin configura essas métricas via diálogo acessível na aba Relatórios do perfil do cliente. O card "Métricas Personalizadas" aparece nos 3 contextos de relatório.
+1. **Dados não filtrados por mês**: O `CustomMetricsCard` recebe TODOS os projetos e tarefas do cliente, sem filtrar pelo período selecionado. A contagem/porcentagem deveria considerar apenas itens com atividade no mês escolhido.
 
-### 1. Nova tabela: `report_custom_metrics`
+2. **ClientDetail.tsx (linha 1581)**: Passa `data.tasks` completo (todas as tarefas do cliente), sem filtro de mês. Os projetos vêm de `reportData.projects` (filtrados por mês), mas as tarefas não.
 
-```sql
-CREATE TABLE public.report_custom_metrics (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
-  label text NOT NULL,
-  entity_type text NOT NULL DEFAULT 'projects',  -- 'projects' | 'tasks'
-  category_source text NOT NULL DEFAULT 'status', -- 'status' | 'custom_field' | 'kanban_stage'
-  category_field_id uuid NULL,  -- references project_columns.id when source='custom_field'
-  category_value text NOT NULL, -- the specific category value to count/percentage
-  display_type text NOT NULL DEFAULT 'count', -- 'count' | 'percentage'
-  sort_order integer NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  owner_id uuid NOT NULL
+3. **ClientReports.tsx (linha 715-716)**: Passa todos os projetos e tarefas do cliente sem filtro de mês.
+
+4. **SharedReport.tsx (linha 681)**: Hardcoda `status: 'pending'` para todas as tarefas, tornando métricas de status de tarefas sempre incorretas. A RPC `get_shared_report_tasks` não retorna o campo `status`.
+
+5. **Sem kanbanStages**: `ClientReports.tsx` e `SharedReport.tsx` não passam `kanbanStages` ao componente, impedindo métricas baseadas em estágios Kanban.
+
+### Solução
+
+#### 1. Filtrar dados pelo mês selecionado nos 3 contextos
+
+Em cada página, passar ao `CustomMetricsCard` apenas os projetos e tarefas que tiveram horas registradas no mês selecionado (consistente com o "Resumo do Mês").
+
+**ClientDetail.tsx**: Usar `reportData.projects` para projetos E extrair as tarefas de `reportData.projects[].tasks` (já filtradas por mês).
+
+**ClientReports.tsx**: Aplicar a mesma lógica — filtrar projetos e tarefas que tenham time_entries no período selecionado.
+
+**SharedReport.tsx**: Idem — usar os dados já processados de `reportData` para filtrar.
+
+#### 2. Corrigir RPC `get_shared_report_tasks` para incluir `task_status`
+
+Criar migração para alterar a função RPC adicionando `t.status as task_status` no retorno.
+
+#### 3. Passar `kanbanStages` nos contextos faltantes
+
+- **ClientReports.tsx**: Buscar kanban_stages do Supabase e passar ao componente.
+- **SharedReport.tsx**: Criar RPC ou buscar kanban_stages e passar ao componente. Alternativa simples: não suportar kanban_stages em relatórios compartilhados (escopo limitado).
+
+### Arquivos a Alterar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/ClientDetail.tsx` | Filtrar tasks passadas ao CustomMetricsCard usando `reportData.projects` |
+| `src/pages/ClientReports.tsx` | Filtrar projects/tasks pelo mês selecionado; passar kanbanStages |
+| `src/pages/SharedReport.tsx` | Filtrar projects/tasks pelo mês; usar status real das tasks |
+| Migração SQL | Alterar `get_shared_report_tasks` para retornar `task_status` |
+
+### Lógica de Filtragem (exemplo)
+
+```typescript
+// Projetos com atividade no mês = projetos presentes no reportData
+const monthProjects = reportData.projects.map(p => ({
+  id: p.id,
+  name: p.name,
+  status: p.status,
+  custom_fields: p.custom_fields,
+}));
+
+// Tarefas com atividade no mês = tarefas dos projetos do reportData
+const monthTasks = reportData.projects.flatMap(p =>
+  p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id }))
 );
-
-ALTER TABLE public.report_custom_metrics ENABLE ROW LEVEL SECURITY;
-
--- Admin can manage metrics for own clients
-CREATE POLICY "Admin can manage own client metrics" ON public.report_custom_metrics
-  FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'admin') AND owner_id = auth.uid())
-  WITH CHECK (has_role(auth.uid(), 'admin') AND owner_id = auth.uid());
-
--- Master admin full access
-CREATE POLICY "Master admin can manage all metrics" ON public.report_custom_metrics
-  FOR ALL TO authenticated
-  USING (is_master_admin(auth.uid()));
-
--- Clients can view own metrics
-CREATE POLICY "Clients can view own metrics" ON public.report_custom_metrics
-  FOR SELECT TO authenticated
-  USING (has_role(auth.uid(), 'client') AND client_id = get_user_client_id(auth.uid()));
 ```
 
-### 2. RPC para relatório compartilhado
-
-Criar função `get_shared_report_custom_metrics(p_token text)` que retorna as métricas do cliente vinculado ao token, similar às outras funções `get_shared_report_*`.
-
-### 3. Diálogo de configuração (Admin)
-
-**Arquivo novo**: `src/components/reports/CustomMetricsConfigDialog.tsx`
-
-- Botão de settings (ícone engrenagem) na mesma linha dos botões Download e Share, na aba Relatórios do `ClientDetail.tsx`
-- Abre diálogo com lista das métricas existentes e botão "Adicionar métrica"
-- Formulário por métrica: Label, Entidade (projetos/tarefas), Fonte da categoria (Status / Campo personalizado / Estágio Kanban), Valor da categoria (select com opções dinâmicas), Tipo de exibição (contagem/porcentagem)
-- As opções de "Valor da categoria" são populadas dinamicamente:
-  - Status: ['active', 'completed', 'paused', 'cancelled', ...]
-  - Campo personalizado: options do `project_columns` do tipo `select`
-  - Estágio Kanban: nomes dos `kanban_stages`
-
-### 4. Card "Métricas Personalizadas" nos Relatórios
-
-**Componente novo**: `src/components/reports/CustomMetricsCard.tsx`
-
-- Recebe: lista de métricas configuradas, projetos, tarefas, project_columns, kanban_stages
-- Para cada métrica, calcula contagem ou porcentagem filtrado pelo mês selecionado
-- Renderizado como Card com grid similar aos cards de resumo existentes
-
-**Integrar em 3 locais**:
-1. `ClientDetail.tsx` — após card "Resumo do Mês" na aba Relatórios (+ botão settings no header)
-2. `ClientReports.tsx` — após card "Resumo do Mês" (sem botão settings)
-3. `SharedReport.tsx` — após card "Resumo do Mês" (sem botão settings, busca via RPC)
-
-### 5. Arquivos
-
-| Ação | Arquivo |
-|------|---------|
-| Criar | `src/components/reports/CustomMetricsConfigDialog.tsx` |
-| Criar | `src/components/reports/CustomMetricsCard.tsx` |
-| Migração | Nova tabela `report_custom_metrics` + RLS + RPC |
-| Editar | `src/pages/ClientDetail.tsx` — botão settings + card |
-| Editar | `src/pages/ClientReports.tsx` — card |
-| Editar | `src/pages/SharedReport.tsx` — card + fetch via RPC |
+Isso garante que contagem e porcentagem reflitam apenas o período selecionado.
 
