@@ -211,6 +211,16 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs">Título do bloco</Label>
+                    <Input
+                      value={metric.block_title}
+                      onChange={e => updateMetric(index, 'block_title', e.target.value)}
+                      placeholder="Ex: Indicadores de desempenho"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
                   <div>
                     <Label className="text-xs">Label</Label>
                     <Input
