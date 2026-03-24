@@ -17,6 +17,7 @@ interface CustomMetric {
   category_value: string;
   display_type: string;
   sort_order: number;
+  block_title: string;
 }
 
 interface ProjectColumn {
