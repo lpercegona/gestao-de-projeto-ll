@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CustomMetric {
@@ -18,6 +18,11 @@ interface CustomMetric {
   display_type: string;
   sort_order: number;
   block_title: string;
+}
+
+interface Block {
+  title: string;
+  metrics: CustomMetric[];
 }
 
 interface ProjectColumn {
@@ -56,6 +61,17 @@ const TASK_STATUSES = [
   { value: 'cancelled', label: 'Cancelada' },
 ];
 
+const createEmptyMetric = (blockTitle: string, sortOrder: number): CustomMetric => ({
+  label: '',
+  entity_type: 'projects',
+  category_source: 'status',
+  category_field_id: null,
+  category_value: '',
+  display_type: 'count',
+  sort_order: sortOrder,
+  block_title: blockTitle,
+});
+
 export const CustomMetricsConfigDialog: React.FC<Props> = ({
   open,
   onOpenChange,
@@ -65,7 +81,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
   kanbanStages,
   onMetricsChange,
 }) => {
-  const [metrics, setMetrics] = useState<CustomMetric[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -82,7 +98,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
       .order('sort_order');
 
     if (!error && data) {
-      setMetrics(data.map(m => ({
+      const metricsData: CustomMetric[] = data.map(m => ({
         id: m.id,
         label: m.label,
         entity_type: m.entity_type,
@@ -92,41 +108,74 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
         display_type: m.display_type,
         sort_order: m.sort_order,
         block_title: (m as any).block_title || '',
-      })));
+      }));
+
+      // Group into blocks preserving order
+      const blockMap = new Map<string, CustomMetric[]>();
+      const blockOrder: string[] = [];
+      metricsData.forEach(m => {
+        const key = m.block_title;
+        if (!blockMap.has(key)) {
+          blockMap.set(key, []);
+          blockOrder.push(key);
+        }
+        blockMap.get(key)!.push(m);
+      });
+
+      setBlocks(blockOrder.map(title => ({ title, metrics: blockMap.get(title)! })));
+    } else {
+      setBlocks([]);
     }
     setLoading(false);
   };
 
-  const addMetric = () => {
-    setMetrics(prev => [...prev, {
-      label: '',
-      entity_type: 'projects',
-      category_source: 'status',
-      category_field_id: null,
-      category_value: '',
-      display_type: 'count',
-      sort_order: prev.length,
-      block_title: prev.length > 0 ? prev[prev.length - 1].block_title : '',
-    }]);
+  const addBlock = () => {
+    const newTitle = `Bloco ${blocks.length + 1}`;
+    setBlocks(prev => [...prev, { title: newTitle, metrics: [createEmptyMetric(newTitle, 0)] }]);
   };
 
-  const removeMetric = (index: number) => {
-    setMetrics(prev => prev.filter((_, i) => i !== index));
+  const removeBlock = (blockIndex: number) => {
+    setBlocks(prev => prev.filter((_, i) => i !== blockIndex));
   };
 
-  const updateMetric = (index: number, field: keyof CustomMetric, value: string | null) => {
-    setMetrics(prev => prev.map((m, i) => {
-      if (i !== index) return m;
-      const updated = { ...m, [field]: value };
-      // Reset dependent fields when source changes
-      if (field === 'category_source') {
-        updated.category_value = '';
-        updated.category_field_id = null;
-      }
-      if (field === 'entity_type') {
-        updated.category_value = '';
-      }
-      return updated;
+  const updateBlockTitle = (blockIndex: number, newTitle: string) => {
+    setBlocks(prev => prev.map((b, i) => {
+      if (i !== blockIndex) return b;
+      return { title: newTitle, metrics: b.metrics.map(m => ({ ...m, block_title: newTitle })) };
+    }));
+  };
+
+  const addMetricToBlock = (blockIndex: number) => {
+    setBlocks(prev => prev.map((b, i) => {
+      if (i !== blockIndex) return b;
+      return { ...b, metrics: [...b.metrics, createEmptyMetric(b.title, b.metrics.length)] };
+    }));
+  };
+
+  const removeMetric = (blockIndex: number, metricIndex: number) => {
+    setBlocks(prev => prev.map((b, i) => {
+      if (i !== blockIndex) return b;
+      const newMetrics = b.metrics.filter((_, mi) => mi !== metricIndex);
+      return { ...b, metrics: newMetrics };
+    }).filter(b => b.metrics.length > 0));
+  };
+
+  const updateMetric = (blockIndex: number, metricIndex: number, field: keyof CustomMetric, value: string | null) => {
+    setBlocks(prev => prev.map((b, i) => {
+      if (i !== blockIndex) return b;
+      const newMetrics = b.metrics.map((m, mi) => {
+        if (mi !== metricIndex) return m;
+        const updated = { ...m, [field]: value };
+        if (field === 'category_source') {
+          updated.category_value = '';
+          updated.category_field_id = null;
+        }
+        if (field === 'entity_type') {
+          updated.category_value = '';
+        }
+        return updated;
+      });
+      return { ...b, metrics: newMetrics };
     }));
   };
 
@@ -147,7 +196,8 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
   const selectColumns = projectColumns.filter(c => c.type === 'select' && c.options?.length);
 
   const handleSave = async () => {
-    const invalid = metrics.some(m => !m.label || !m.category_value);
+    const allMetrics = blocks.flatMap(b => b.metrics);
+    const invalid = allMetrics.some(m => !m.label || !m.category_value);
     if (invalid) {
       toast.error('Preencha todos os campos de cada métrica.');
       return;
@@ -155,22 +205,24 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
 
     setSaving(true);
     try {
-      // Delete existing
       await supabase.from('report_custom_metrics').delete().eq('client_id', clientId);
 
-      if (metrics.length > 0) {
-        const rows = metrics.map((m, i) => ({
-          client_id: clientId,
-          owner_id: ownerId,
-          label: m.label,
-          entity_type: m.entity_type,
-          category_source: m.category_source,
-          category_field_id: m.category_source === 'custom_field' ? m.category_field_id : null,
-          category_value: m.category_value,
-          display_type: m.display_type,
-          sort_order: i,
-          block_title: m.block_title || '',
-        }));
+      if (allMetrics.length > 0) {
+        let sortCounter = 0;
+        const rows = blocks.flatMap(b =>
+          b.metrics.map(m => ({
+            client_id: clientId,
+            owner_id: ownerId,
+            label: m.label,
+            entity_type: m.entity_type,
+            category_source: m.category_source,
+            category_field_id: m.category_source === 'custom_field' ? m.category_field_id : null,
+            category_value: m.category_value,
+            display_type: m.display_type,
+            sort_order: sortCounter++,
+            block_title: b.title,
+          }))
+        );
 
         const { error } = await supabase.from('report_custom_metrics').insert(rows);
         if (error) throw error;
@@ -192,7 +244,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Métricas Personalizadas</DialogTitle>
-          <DialogDescription>Configure indicadores personalizados que aparecerão nos relatórios deste cliente.</DialogDescription>
+          <DialogDescription>Crie blocos com indicadores personalizados para os relatórios deste cliente.</DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -201,102 +253,46 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {metrics.map((metric, index) => (
-              <div key={index} className="rounded-lg border border-border p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">Métrica {index + 1}</span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeMetric(index)}>
+            {blocks.map((block, blockIndex) => (
+              <div key={blockIndex} className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                {/* Block header */}
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input
+                    value={block.title}
+                    onChange={e => updateBlockTitle(blockIndex, e.target.value)}
+                    placeholder="Título do bloco"
+                    className="h-8 text-sm font-semibold flex-1"
+                  />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeBlock(blockIndex)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <Label className="text-xs">Título do bloco</Label>
-                    <Input
-                      value={metric.block_title}
-                      onChange={e => updateMetric(index, 'block_title', e.target.value)}
-                      placeholder="Ex: Indicadores de desempenho"
-                      className="h-8 text-sm"
-                    />
-                  </div>
+                {/* Metrics inside block */}
+                {block.metrics.map((metric, metricIndex) => (
+                  <MetricRow
+                    key={metricIndex}
+                    metric={metric}
+                    index={metricIndex}
+                    selectColumns={selectColumns}
+                    kanbanStages={kanbanStages}
+                    getCategoryOptions={getCategoryOptions}
+                    onUpdate={(field, value) => updateMetric(blockIndex, metricIndex, field, value)}
+                    onRemove={() => removeMetric(blockIndex, metricIndex)}
+                  />
+                ))}
 
-                  <div>
-                    <Label className="text-xs">Label</Label>
-                    <Input
-                      value={metric.label}
-                      onChange={e => updateMetric(index, 'label', e.target.value)}
-                      placeholder="Ex: Projetos ativos"
-                      className="h-8 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Tipo de exibição</Label>
-                    <Select value={metric.display_type} onValueChange={v => updateMetric(index, 'display_type', v)}>
-                      <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="count">Contagem</SelectItem>
-                        <SelectItem value="percentage">Porcentagem</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Entidade</Label>
-                    <Select value={metric.entity_type} onValueChange={v => updateMetric(index, 'entity_type', v)}>
-                      <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="projects">Projetos</SelectItem>
-                        <SelectItem value="tasks">Tarefas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Fonte da categoria</Label>
-                    <Select value={metric.category_source} onValueChange={v => updateMetric(index, 'category_source', v)}>
-                      <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="status">Status</SelectItem>
-                        {selectColumns.length > 0 && <SelectItem value="custom_field">Campo personalizado</SelectItem>}
-                        {kanbanStages.length > 0 && <SelectItem value="kanban_stage">Estágio Kanban</SelectItem>}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {metric.category_source === 'custom_field' && (
-                    <div>
-                      <Label className="text-xs">Campo</Label>
-                      <Select value={metric.category_field_id || ''} onValueChange={v => updateMetric(index, 'category_field_id', v)}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecionar campo" /></SelectTrigger>
-                        <SelectContent>
-                          {selectColumns.map(col => (
-                            <SelectItem key={col.id} value={col.id}>{col.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div>
-                    <Label className="text-xs">Valor da categoria</Label>
-                    <Select value={metric.category_value} onValueChange={v => updateMetric(index, 'category_value', v)}>
-                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecionar valor" /></SelectTrigger>
-                      <SelectContent>
-                        {getCategoryOptions(metric).map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                <Button variant="outline" size="sm" onClick={() => addMetricToBlock(blockIndex)} className="w-full text-xs">
+                  <Plus className="mr-1 h-3 w-3" />
+                  Adicionar métrica ao bloco
+                </Button>
               </div>
             ))}
 
-            <Button variant="outline" size="sm" onClick={addMetric} className="w-full">
+            <Button variant="outline" size="sm" onClick={addBlock} className="w-full">
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Adicionar métrica
+              Adicionar bloco
             </Button>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -312,3 +308,93 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
     </Dialog>
   );
 };
+
+/* ---- Metric Row sub-component ---- */
+
+interface MetricRowProps {
+  metric: CustomMetric;
+  index: number;
+  selectColumns: { id: string; name: string; type: string; options: string[] | null }[];
+  kanbanStages: { id: string; name: string }[];
+  getCategoryOptions: (m: CustomMetric) => { value: string; label: string }[];
+  onUpdate: (field: keyof CustomMetric, value: string | null) => void;
+  onRemove: () => void;
+}
+
+const MetricRow: React.FC<MetricRowProps> = ({ metric, index, selectColumns, kanbanStages, getCategoryOptions, onUpdate, onRemove }) => (
+  <div className="rounded-md border border-border bg-background p-3 space-y-2">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-medium text-muted-foreground">Métrica {index + 1}</span>
+      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onRemove}>
+        <Trash2 className="h-3 w-3 text-destructive" />
+      </Button>
+    </div>
+
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div>
+        <Label className="text-xs">Label</Label>
+        <Input value={metric.label} onChange={e => onUpdate('label', e.target.value)} placeholder="Ex: Projetos ativos" className="h-8 text-sm" />
+      </div>
+
+      <div>
+        <Label className="text-xs">Tipo de exibição</Label>
+        <Select value={metric.display_type} onValueChange={v => onUpdate('display_type', v)}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="count">Contagem</SelectItem>
+            <SelectItem value="percentage">Porcentagem</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-xs">Entidade</Label>
+        <Select value={metric.entity_type} onValueChange={v => onUpdate('entity_type', v)}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="projects">Projetos</SelectItem>
+            <SelectItem value="tasks">Tarefas</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-xs">Fonte da categoria</Label>
+        <Select value={metric.category_source} onValueChange={v => onUpdate('category_source', v)}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="status">Status</SelectItem>
+            {selectColumns.length > 0 && <SelectItem value="custom_field">Campo personalizado</SelectItem>}
+            {kanbanStages.length > 0 && <SelectItem value="kanban_stage">Estágio Kanban</SelectItem>}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {metric.category_source === 'custom_field' && (
+        <div>
+          <Label className="text-xs">Campo</Label>
+          <Select value={metric.category_field_id || ''} onValueChange={v => onUpdate('category_field_id', v)}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecionar campo" /></SelectTrigger>
+            <SelectContent>
+              {selectColumns.map(col => (
+                <SelectItem key={col.id} value={col.id}>{col.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div>
+        <Label className="text-xs">Valor da categoria</Label>
+        <Select value={metric.category_value} onValueChange={v => onUpdate('category_value', v)}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecionar valor" /></SelectTrigger>
+          <SelectContent>
+            {getCategoryOptions(metric).map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  </div>
+);
