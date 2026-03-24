@@ -284,6 +284,7 @@ export const SharedReport: React.FC = () => {
             category_value: m.category_value,
             display_type: m.display_type,
             sort_order: m.sort_order,
+            block_title: m.block_title || '',
           })),
         );
       } catch (error) {
