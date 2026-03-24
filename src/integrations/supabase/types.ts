@@ -1861,6 +1861,7 @@ export type Database = {
       get_shared_report_custom_metrics: {
         Args: { p_token: string }
         Returns: {
+          block_title: string
           category_field_id: string
           category_source: string
           category_value: string
