@@ -169,6 +169,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
           category_value: m.category_value,
           display_type: m.display_type,
           sort_order: i,
+          block_title: m.block_title || '',
         }));
 
         const { error } = await supabase.from('report_custom_metrics').insert(rows);
