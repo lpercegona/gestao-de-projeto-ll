@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3 } from 'lucide-react';
 
 interface CustomMetric {
   id?: string;
@@ -11,6 +10,7 @@ interface CustomMetric {
   category_value: string;
   display_type: string;
   sort_order: number;
+  block_title?: string;
 }
 
 interface Project {
@@ -65,7 +65,6 @@ export const CustomMetricsCard: React.FC<Props> = ({
     if (metric.category_source === 'status') {
       matchCount = items.filter(item => item.status === metric.category_value).length;
     } else if (metric.category_source === 'kanban_stage') {
-      // Kanban stages apply to projects only
       const stage = kanbanStages.find(s => s.name === metric.category_value);
       if (stage) {
         matchCount = projects.filter(p => p.status === stage.name || p.status === stage.id).length;
@@ -79,7 +78,6 @@ export const CustomMetricsCard: React.FC<Props> = ({
             return fields?.[col.id] === metric.category_value;
           }).length;
         } else {
-          // For tasks, check parent project's custom fields
           const matchingProjectIds = new Set(
             projects
               .filter(p => {
@@ -99,24 +97,35 @@ export const CustomMetricsCard: React.FC<Props> = ({
     return String(matchCount);
   };
 
+  // Group metrics by block_title
+  const groups: Record<string, CustomMetric[]> = {};
+  metrics.forEach(metric => {
+    const key = metric.block_title || '';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(metric);
+  });
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-primary" />
-          <CardTitle className="text-base">Métricas Personalizadas</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {metrics.map((metric, i) => (
-            <div key={metric.id || i}>
-              <p className="text-xs text-muted-foreground">{metric.label}</p>
-              <p className="text-lg font-semibold text-foreground">{computeMetric(metric)}</p>
+    <>
+      {Object.entries(groups).map(([blockTitle, blockMetrics]) => (
+        <Card key={blockTitle}>
+          {blockTitle && (
+            <CardHeader>
+              <CardTitle className="text-base">{blockTitle}</CardTitle>
+            </CardHeader>
+          )}
+          <CardContent className={blockTitle ? '' : 'pt-4'}>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {blockMetrics.map((metric, i) => (
+                <div key={metric.id || i}>
+                  <p className="text-xs text-muted-foreground">{metric.label}</p>
+                  <p className="text-lg font-semibold text-foreground">{computeMetric(metric)}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      ))}
+    </>
   );
 };

@@ -17,6 +17,7 @@ interface CustomMetric {
   category_value: string;
   display_type: string;
   sort_order: number;
+  block_title: string;
 }
 
 interface ProjectColumn {
@@ -90,6 +91,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
         category_value: m.category_value,
         display_type: m.display_type,
         sort_order: m.sort_order,
+        block_title: (m as any).block_title || '',
       })));
     }
     setLoading(false);
@@ -104,6 +106,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
       category_value: '',
       display_type: 'count',
       sort_order: prev.length,
+      block_title: prev.length > 0 ? prev[prev.length - 1].block_title : '',
     }]);
   };
 
@@ -166,6 +169,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
           category_value: m.category_value,
           display_type: m.display_type,
           sort_order: i,
+          block_title: m.block_title || '',
         }));
 
         const { error } = await supabase.from('report_custom_metrics').insert(rows);
@@ -207,6 +211,16 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs">Título do bloco</Label>
+                    <Input
+                      value={metric.block_title}
+                      onChange={e => updateMetric(index, 'block_title', e.target.value)}
+                      placeholder="Ex: Indicadores de desempenho"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
                   <div>
                     <Label className="text-xs">Label</Label>
                     <Input
