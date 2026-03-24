@@ -1139,6 +1139,7 @@ export type Database = {
       }
       report_custom_metrics: {
         Row: {
+          block_title: string
           category_field_id: string | null
           category_source: string
           category_value: string
@@ -1152,6 +1153,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          block_title?: string
           category_field_id?: string | null
           category_source?: string
           category_value: string
@@ -1165,6 +1167,7 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          block_title?: string
           category_field_id?: string | null
           category_source?: string
           category_value?: string
