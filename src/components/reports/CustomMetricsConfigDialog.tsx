@@ -91,6 +91,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
         category_value: m.category_value,
         display_type: m.display_type,
         sort_order: m.sort_order,
+        block_title: (m as any).block_title || '',
       })));
     }
     setLoading(false);
