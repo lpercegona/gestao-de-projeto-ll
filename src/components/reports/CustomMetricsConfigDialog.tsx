@@ -106,6 +106,7 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
       category_value: '',
       display_type: 'count',
       sort_order: prev.length,
+      block_title: prev.length > 0 ? prev[prev.length - 1].block_title : '',
     }]);
   };
 
