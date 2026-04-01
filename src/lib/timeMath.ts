@@ -13,4 +13,4 @@ export const toHours = (minutes: number): number => minutes / 60;
 
 /** Soma um array de horas decimais retornando minutos inteiros */
 export const sumHoursAsMinutes = (hoursArray: (number | string)[]): number =>
-  hoursArray.reduce((sum, h) => sum + toMinutes(h), 0);
+  hoursArray.reduce<number>((sum, h) => sum + toMinutes(h), 0);
