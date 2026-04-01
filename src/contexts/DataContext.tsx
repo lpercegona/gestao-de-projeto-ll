@@ -949,9 +949,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Utility functions
   const getTaskHours = (taskId: string): number => {
-    return data.timeEntries
+    const totalMinutes = data.timeEntries
       .filter(e => e.task_id === taskId)
-      .reduce((sum, e) => sum + Number(e.hours), 0);
+      .reduce((sum, e) => sum + Math.round(Number(e.hours) * 60), 0);
+    return totalMinutes / 60;
   };
 
   const getProjectHours = (projectId: string): number => {
