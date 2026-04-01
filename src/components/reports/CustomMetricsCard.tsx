@@ -18,6 +18,7 @@ interface Project {
   name: string;
   status: string;
   custom_fields?: Record<string, string> | null;
+  monthHours?: number;
 }
 
 interface Task {
@@ -25,6 +26,7 @@ interface Task {
   name: string;
   status: string;
   project_id: string;
+  monthHours?: number;
 }
 
 interface KanbanStage {
@@ -57,43 +59,50 @@ export const CustomMetricsCard: React.FC<Props> = ({
   if (!metrics.length) return null;
 
   const computeMetric = (metric: CustomMetric) => {
-    const items = metric.entity_type === 'projects' ? projects : tasks;
-    const totalItems = items.length;
+    const isProjectEntity = metric.entity_type === 'projects';
+    const items = isProjectEntity ? projects : tasks;
 
-    let matchCount = 0;
-
-    if (metric.category_source === 'status') {
-      matchCount = items.filter(item => item.status === metric.category_value).length;
-    } else if (metric.category_source === 'kanban_stage') {
-      const stage = kanbanStages.find(s => s.name === metric.category_value);
-      if (stage) {
-        matchCount = projects.filter(p => p.status === stage.name || p.status === stage.id).length;
+    // --- Helper: check if an item matches the metric filter ---
+    const itemMatches = (item: typeof items[number]): boolean => {
+      if (metric.category_source === 'status') {
+        return item.status === metric.category_value;
       }
-    } else if (metric.category_source === 'custom_field' && metric.category_field_id) {
-      const col = projectColumns.find(c => c.id === metric.category_field_id);
-      if (col) {
-        if (metric.entity_type === 'projects') {
-          matchCount = projects.filter(p => {
-            const fields = p.custom_fields as Record<string, string> | null;
-            return fields?.[col.id] === metric.category_value;
-          }).length;
+      if (metric.category_source === 'kanban_stage') {
+        const stage = kanbanStages.find(s => s.name === metric.category_value);
+        if (!stage) return false;
+        return item.status === stage.name || item.status === stage.id;
+      }
+      if (metric.category_source === 'custom_field' && metric.category_field_id) {
+        const col = projectColumns.find(c => c.id === metric.category_field_id);
+        if (!col) return false;
+        if (isProjectEntity) {
+          const fields = (item as Project).custom_fields as Record<string, string> | null;
+          return fields?.[col.id] === metric.category_value;
         } else {
-          const matchingProjectIds = new Set(
-            projects
-              .filter(p => {
-                const fields = p.custom_fields as Record<string, string> | null;
-                return fields?.[col.id] === metric.category_value;
-              })
-              .map(p => p.id)
-          );
-          matchCount = tasks.filter(t => matchingProjectIds.has(t.project_id)).length;
+          // For tasks, check the parent project's custom_fields
+          const parentProject = projects.find(p => p.id === (item as Task).project_id);
+          const fields = parentProject?.custom_fields as Record<string, string> | null;
+          return fields?.[col.id] === metric.category_value;
         }
       }
-    }
+      return false;
+    };
 
     if (metric.display_type === 'percentage') {
-      return totalItems > 0 ? `${((matchCount / totalItems) * 100).toFixed(1)}%` : '0%';
+      // Hours-based percentage
+      if (isProjectEntity) {
+        const totalHours = projects.reduce((sum, p) => sum + (p.monthHours || 0), 0);
+        const matchHours = projects.filter(p => itemMatches(p)).reduce((sum, p) => sum + (p.monthHours || 0), 0);
+        return totalHours > 0 ? `${((matchHours / totalHours) * 100).toFixed(1)}%` : '0%';
+      } else {
+        const totalHours = tasks.reduce((sum, t) => sum + (t.monthHours || 0), 0);
+        const matchHours = tasks.filter(t => itemMatches(t)).reduce((sum, t) => sum + (t.monthHours || 0), 0);
+        return totalHours > 0 ? `${((matchHours / totalHours) * 100).toFixed(1)}%` : '0%';
+      }
     }
+
+    // Count mode
+    const matchCount = items.filter(item => itemMatches(item)).length;
     return String(matchCount);
   };
 
