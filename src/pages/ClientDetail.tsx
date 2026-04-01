@@ -443,14 +443,15 @@ export const ClientDetail: React.FC = () => {
 
   // Calculate hours for a specific month
   const getMonthHours = (taskId: string, monthStart: Date, monthEnd: Date, entryType?: 'task' | 'meeting') => {
-    return data.timeEntries
+    const totalMinutes = data.timeEntries
       .filter(te => {
         if (te.task_id !== taskId) return false;
         if (entryType && te.entry_type !== entryType) return false;
         const entryDate = parseISO(te.date);
         return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
       })
-      .reduce((sum, te) => sum + Number(te.hours), 0);
+      .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0);
+    return totalMinutes / 60;
   };
 
   // Report data for selected month
