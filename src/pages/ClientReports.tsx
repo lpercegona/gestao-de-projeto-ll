@@ -181,16 +181,16 @@ export const ClientReports: React.FC = () => {
               return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
             });
 
-            const monthHours = taskEntries.reduce((sum, te) => sum + Number(te.hours), 0);
+            const monthHours = taskEntries.reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
             const monthTaskHours = taskEntries
               .filter((te) => te.entry_type === "task")
-              .reduce((sum, te) => sum + Number(te.hours), 0);
+              .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
             const monthMeetingHours = taskEntries
               .filter((te) => te.entry_type === "meeting")
-              .reduce((sum, te) => sum + Number(te.hours), 0);
+              .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
             const totalHours = timeEntries
               .filter((te) => te.task_id === task.id)
-              .reduce((sum, te) => sum + Number(te.hours), 0);
+              .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
 
             return {
               ...task,
