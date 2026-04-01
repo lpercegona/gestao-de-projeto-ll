@@ -408,7 +408,7 @@ export const SharedReport: React.FC = () => {
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
   const totalMonthTaskHours = reportData.reduce((sum, p) => sum + p.monthTaskHours, 0);
   const totalMonthMeetingHours = reportData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
-  const totalAllHours = timeEntries.reduce((sum, te) => sum + te.hours, 0);
+  const totalAllHours = timeEntries.reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
 
   const previousOverflow = useMemo(() => {
     if (!clientInfo || !isMonthly) return 0;
