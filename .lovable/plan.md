@@ -1,57 +1,46 @@
 
-## Plano: corrigir arredondamento de 1 minuto no saldo mensal
 
-### Diagnóstico (causa raiz)
-- O sistema soma horas em decimal (`Number(e.hours)`) e só converte para minutos na exibição.
-- Em pontos críticos, ainda há arredondamento para **2 casas decimais** (`getClientMonthlyHours` e `getClientPreviousMonthOverflow`).
-- Como **1 minuto = 0,016666...h**, essa base decimal gera resíduos e “flip” de 1 minuto no saldo (carry-over mensal).
-- Existem cálculos duplicados em páginas de relatório que ainda somam `hours` decimais diretamente, causando inconsistência entre telas.
+## Plano: Filtrar Métricas Personalizadas pelo Mês Selecionado
 
-### Implementação proposta
-1. **Padronizar cálculos em minutos inteiros**
-   - Criar helper (ex.: `src/lib/timeMath.ts`) com:
-     - `toMinutes(hours) => Math.round(Number(hours) * 60)`
-     - `toHours(minutes) => minutes / 60`
-     - utilitário de soma por entradas em minutos.
-   - Regra: toda regra de negócio (usado/disponível/saldo) roda em minutos; converte para horas apenas no retorno/render.
+### Problema
 
-2. **Refatorar DataContext (fonte principal de saldo)**
-   - Atualizar `getTaskHours`, `getProjectHours`, `getClientHours`, `getClientMonthlyHours` para somar por minutos.
-   - Reescrever `getClientPreviousMonthOverflow` com `overflowMinutes` no loop mensal:
-     - `availableMinutes = contractedMinutes - overflowMinutes`
-     - `overflowMinutes = usedMinutes - availableMinutes`
-   - Remover arredondamento por 2 casas nesses fluxos.
+Em todas as 3 páginas de relatório (`ClientDetail`, `ClientReports`, `SharedReport`), o `CustomMetricsCard` recebe **todos** os projetos e tarefas do cliente, ignorando o filtro de mês. Enquanto o card "Resumo do Mês" usa `reportData` (filtrado por período), as métricas personalizadas passam `data.projects` / `data.tasks` sem filtro.
 
-3. **Alinhar formatação final**
-   - Ajustar `formatHours` para calcular a string a partir de `totalMinutes = Math.round(abs(hours) * 60)`, evitando dupla interpretação da fração decimal.
+### Solução
 
-4. **Unificar cálculo nas telas de relatório**
-   - Trocar somas `reduce(... + Number(te.hours))` por helper de minutos em:
-     - `src/pages/ClientDetail.tsx`
-     - `src/pages/ClientReports.tsx`
-     - `src/pages/Reports.tsx`
-     - `src/pages/SharedReport.tsx` (incluindo overflow local)
-   - Garantir que Dashboard, Perfil do Cliente e relatórios usem a mesma lógica.
+Substituir os dados passados ao `CustomMetricsCard` pelos projetos e tarefas já filtrados pelo mês em `reportData`.
 
-### Validação (caso Box Group)
-- Mês anterior com horas executadas = disponíveis → saldo do mês seguinte deve ficar **0h** (sem +1min fantasma).
-- Ao adicionar +1min em lançamento: saldo varia exatamente -1min.
-- Ao retirar -1min no mesmo lançamento: saldo retorna exatamente +1min.
-- Conferir paridade dos números entre Dashboard, ClientDetail, ClientReports e SharedReport.
+### Alterações
 
-### Arquivos previstos
-- `src/lib/timeMath.ts` (novo)
-- `src/contexts/DataContext.tsx`
-- `src/lib/formatHours.ts`
-- `src/pages/ClientDetail.tsx`
-- `src/pages/ClientReports.tsx`
-- `src/pages/Reports.tsx`
-- `src/pages/SharedReport.tsx`
+#### 1. `src/pages/ClientDetail.tsx` (linha 1582-1583)
 
-### Detalhes técnicos
-- Unidade canônica: **minutos inteiros**.
-- Conversões:
-  - Entrada decimal/hh:mm → `toMinutes`
-  - Cálculo interno → inteiro
-  - Saída UI → `toHours` + `formatHours`
-- Sem mudança de banco nesta etapa; a correção fica na camada de cálculo para estabilizar o arredondamento no produto inteiro.
+Trocar:
+- `(data.projects || []).filter(p => p.client_id === clientId)` → projetos do `reportData.projects`
+- `(data.tasks || []).filter(...)` → tarefas extraídas de `reportData.projects`
+
+```tsx
+<CustomMetricsCard
+  metrics={customMetrics}
+  projects={reportData.projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
+  tasks={reportData.projects.flatMap(p => p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id })))}
+  kanbanStages={data.kanbanStages}
+  projectColumns={clientId ? getClientColumns(clientId) : []}
+/>
+```
+
+#### 2. `src/pages/ClientReports.tsx` (linhas 715-716)
+
+Mesmo padrão — usar `reportData` (que neste arquivo é o array filtrado por mês) em vez de `projects.filter(...)`.
+
+#### 3. `src/pages/SharedReport.tsx` (linhas 684-685)
+
+Mesmo padrão — usar `reportData` filtrado.
+
+### Arquivos
+
+| Ação | Arquivo |
+|------|---------|
+| Editar | `src/pages/ClientDetail.tsx` — linhas 1582-1583 |
+| Editar | `src/pages/ClientReports.tsx` — linhas 715-716 |
+| Editar | `src/pages/SharedReport.tsx` — linhas 684-685 |
+
