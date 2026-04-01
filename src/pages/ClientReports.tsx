@@ -181,16 +181,16 @@ export const ClientReports: React.FC = () => {
               return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
             });
 
-            const monthHours = taskEntries.reduce((sum, te) => sum + Number(te.hours), 0);
+            const monthHours = taskEntries.reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
             const monthTaskHours = taskEntries
               .filter((te) => te.entry_type === "task")
-              .reduce((sum, te) => sum + Number(te.hours), 0);
+              .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
             const monthMeetingHours = taskEntries
               .filter((te) => te.entry_type === "meeting")
-              .reduce((sum, te) => sum + Number(te.hours), 0);
+              .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
             const totalHours = timeEntries
               .filter((te) => te.task_id === task.id)
-              .reduce((sum, te) => sum + Number(te.hours), 0);
+              .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
 
             return {
               ...task,
@@ -232,7 +232,7 @@ export const ClientReports: React.FC = () => {
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
   const totalMonthTaskHours = reportData.reduce((sum, p) => sum + p.monthTaskHours, 0);
   const totalMonthMeetingHours = reportData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
-  const totalAllHours = timeEntries.reduce((sum, te) => sum + Number(te.hours), 0);
+  const totalAllHours = timeEntries.reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
 
   const remainingHours = Math.max(0, availableHours - totalMonthHours);
 

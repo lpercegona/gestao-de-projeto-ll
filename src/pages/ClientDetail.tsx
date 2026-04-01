@@ -443,14 +443,15 @@ export const ClientDetail: React.FC = () => {
 
   // Calculate hours for a specific month
   const getMonthHours = (taskId: string, monthStart: Date, monthEnd: Date, entryType?: 'task' | 'meeting') => {
-    return data.timeEntries
+    const totalMinutes = data.timeEntries
       .filter(te => {
         if (te.task_id !== taskId) return false;
         if (entryType && te.entry_type !== entryType) return false;
         const entryDate = parseISO(te.date);
         return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
       })
-      .reduce((sum, te) => sum + Number(te.hours), 0);
+      .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0);
+    return totalMinutes / 60;
   };
 
   // Report data for selected month
@@ -737,9 +738,10 @@ export const ClientDetail: React.FC = () => {
   const totalContractHoursAllMonths = isMonthly
     ? client.contracted_hours * monthlyContractMonths
     : client.contracted_hours;
-  const totalAllHours = data.timeEntries
+  const totalAllMinutes = data.timeEntries
     .filter((te) => data.tasks.some((task) => task.id === te.task_id && clientProjects.some((p) => p.id === task.project_id)))
-    .reduce((sum, te) => sum + Number(te.hours), 0);
+    .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0);
+  const totalAllHours = totalAllMinutes / 60;
   const totalMonthHours = reportData.totalHours;
   const totalMonthTaskHours = reportData.taskHours;
   const totalMonthMeetingHours = reportData.meetingHours;

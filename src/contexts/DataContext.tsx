@@ -949,9 +949,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Utility functions
   const getTaskHours = (taskId: string): number => {
-    return data.timeEntries
+    const totalMinutes = data.timeEntries
       .filter(e => e.task_id === taskId)
-      .reduce((sum, e) => sum + Number(e.hours), 0);
+      .reduce((sum, e) => sum + Math.round(Number(e.hours) * 60), 0);
+    return totalMinutes / 60;
   };
 
   const getProjectHours = (projectId: string): number => {
@@ -976,14 +977,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const projectIds = new Set(clientProjects.map(p => p.id));
     const clientTaskIds = new Set(data.tasks.filter(t => projectIds.has(t.project_id)).map(t => t.id));
     
-    const raw = data.timeEntries
+    const totalMinutes = data.timeEntries
       .filter(e => {
         if (!clientTaskIds.has(e.task_id)) return false;
         const entryDate = new Date(e.date);
         return entryDate >= monthStart && entryDate <= monthEnd;
       })
-      .reduce((sum, e) => sum + Number(e.hours), 0);
-    return Math.round(raw * 100) / 100;
+      .reduce((sum, e) => sum + Math.round(Number(e.hours) * 60), 0);
+    return totalMinutes / 60;
   };
 
   const getClientColumns = (clientId: string): ProjectColumn[] => {
@@ -1015,7 +1016,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const MAX_LOOKBACK_MONTHS = 120;
     const firstMonthToEvaluate = Math.max(0, targetMonthIndex - MAX_LOOKBACK_MONTHS);
 
-    let overflow = 0;
+    let overflowMinutes = 0;
     for (let monthIndex = firstMonthToEvaluate; monthIndex < targetMonthIndex; monthIndex += 1) {
       if (startDate) {
         const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
@@ -1024,12 +1025,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const monthYear = Math.floor(monthIndex / 12);
       const monthNumber = (monthIndex % 12) + 1;
-      const usedHours = getClientMonthlyHours(clientId, monthYear, monthNumber);
-      const availableHours = Math.max(0, client.contracted_hours - overflow);
-      overflow = Math.round((usedHours - availableHours) * 100) / 100;
+      const usedMinutes = Math.round(getClientMonthlyHours(clientId, monthYear, monthNumber) * 60);
+      const contractedMinutes = Math.round(client.contracted_hours * 60);
+      const availableMinutes = Math.max(0, contractedMinutes - overflowMinutes);
+      overflowMinutes = usedMinutes - availableMinutes;
     }
 
-    return overflow;
+    return overflowMinutes / 60;
   };
 
   // Kanban stages operations

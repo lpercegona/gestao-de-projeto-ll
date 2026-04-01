@@ -2,14 +2,10 @@
  * Formata horas de forma padronizada (ex: 2.5 vira "2h30")
  */
 export const formatHours = (decimalHours: number): string => {
-  const hours = Math.floor(Math.abs(decimalHours));
-  const minutes = Math.round((Math.abs(decimalHours) - hours) * 60);
+  const totalMinutes = Math.round(Math.abs(decimalHours) * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   const sign = decimalHours < 0 ? '-' : '';
-
-  // Trata o caso onde o arredondamento chega a 60 minutos
-  if (minutes === 60) {
-    return `${sign}${hours + 1}h`;
-  }
 
   if (minutes === 0) {
     return `${sign}${hours}h`;

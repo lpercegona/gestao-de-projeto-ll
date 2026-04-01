@@ -357,12 +357,12 @@ export const SharedReport: React.FC = () => {
               return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
             });
 
-            const monthHours = taskEntries.reduce((sum, te) => sum + te.hours, 0);
-            const monthTaskHours = taskEntries.filter((te) => te.entry_type === "task").reduce((sum, te) => sum + te.hours, 0);
+            const monthHours = taskEntries.reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
+            const monthTaskHours = taskEntries.filter((te) => te.entry_type === "task").reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
             const monthMeetingHours = taskEntries
               .filter((te) => te.entry_type === "meeting")
-              .reduce((sum, te) => sum + te.hours, 0);
-            const totalHours = timeEntries.filter((te) => te.task_id === task.id).reduce((sum, te) => sum + te.hours, 0);
+              .reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
+            const totalHours = timeEntries.filter((te) => te.task_id === task.id).reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
 
             return { ...task, monthHours, monthTaskHours, monthMeetingHours, totalHours };
           })
@@ -408,7 +408,7 @@ export const SharedReport: React.FC = () => {
   const totalMonthHours = reportData.reduce((sum, p) => sum + p.monthHours, 0);
   const totalMonthTaskHours = reportData.reduce((sum, p) => sum + p.monthTaskHours, 0);
   const totalMonthMeetingHours = reportData.reduce((sum, p) => sum + p.monthMeetingHours, 0);
-  const totalAllHours = timeEntries.reduce((sum, te) => sum + te.hours, 0);
+  const totalAllHours = timeEntries.reduce((sum, te) => sum + Math.round(Number(te.hours) * 60), 0) / 60;
 
   const previousOverflow = useMemo(() => {
     if (!clientInfo || !isMonthly) return 0;
@@ -424,7 +424,7 @@ export const SharedReport: React.FC = () => {
     const MAX_LOOKBACK_MONTHS = 120;
     const firstMonthToEvaluate = Math.max(0, targetMonthIndex - MAX_LOOKBACK_MONTHS);
 
-    let overflow = 0;
+    let overflowMinutes = 0;
     for (let monthIndex = firstMonthToEvaluate; monthIndex < targetMonthIndex; monthIndex += 1) {
       if (startDate) {
         const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
@@ -436,18 +436,19 @@ export const SharedReport: React.FC = () => {
       const monthStart = startOfMonth(new Date(monthYear, monthNumber - 1));
       const monthEnd = endOfMonth(new Date(monthYear, monthNumber - 1));
 
-      const usedHours = timeEntries
+      const usedMinutes = timeEntries
         .filter((entry) => {
           const entryDate = parseISO(entry.date);
           return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
         })
-        .reduce((sum, entry) => sum + entry.hours, 0);
+        .reduce((sum, entry) => sum + Math.round(Number(entry.hours) * 60), 0);
 
-      const availableMonthHours = Math.max(0, clientInfo.contracted_hours - overflow);
-      overflow = usedHours - availableMonthHours;
+      const contractedMinutes = Math.round(clientInfo.contracted_hours * 60);
+      const availableMinutes = Math.max(0, contractedMinutes - overflowMinutes);
+      overflowMinutes = usedMinutes - availableMinutes;
     }
 
-    return overflow;
+    return overflowMinutes / 60;
   }, [clientInfo, isMonthly, timeEntries, year, month]);
 
   const availableHours = clientInfo
