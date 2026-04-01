@@ -1,35 +1,40 @@
 
 
-## Plano: Corrigir Erro de `block_title` e Reestruturar UX de Blocos
+## Plano: Corrigir Arredondamento de 1 Minuto no Cálculo de Saldo
 
 ### Problema
 
-1. **Erro de banco**: A coluna `block_title` não existe na tabela `report_custom_metrics`. A migração anterior apenas atualizou a RPC mas não executou o `ALTER TABLE ADD COLUMN`.
-2. **UX inadequada**: O fluxo atual é "adicionar métrica avulsa com campo de título de bloco". O usuário espera criar um **bloco** (com título) e dentro dele adicionar métricas.
+O cálculo de horas acumula valores `float` via `reduce((sum, e) => sum + Number(e.hours), 0)` sem arredondamento. Erros de ponto flutuante (ex: `0.1 + 0.2 = 0.30000000000000004`) se propagam pelo loop iterativo de saldo em `getClientPreviousMonthOverflow`, onde o overflow de cada mês alimenta o próximo. Após vários meses, o erro acumulado ultrapassa `0.008333...` (0.5 minuto em decimal), fazendo `Math.round(fraction * 60)` pular 1 minuto a mais no `formatHours`.
 
 ### Solução
 
-#### 1. Migração SQL — Adicionar coluna `block_title`
+Arredondar para 2 casas decimais em dois pontos críticos:
 
-```sql
-ALTER TABLE public.report_custom_metrics 
-  ADD COLUMN IF NOT EXISTS block_title text NOT NULL DEFAULT '';
+1. **`getClientMonthlyHours`** (linha 985): arredondar o resultado do reduce
+2. **`getClientPreviousMonthOverflow`** (linha 1028): arredondar o overflow a cada iteração do loop
+
+### Alterações
+
+**Arquivo**: `src/contexts/DataContext.tsx`
+
+**Linha 979-985** — Arredondar soma:
+```typescript
+const raw = data.timeEntries
+  .filter(...)
+  .reduce((sum, e) => sum + Number(e.hours), 0);
+return Math.round(raw * 100) / 100;
 ```
 
-#### 2. Reestruturar `CustomMetricsConfigDialog.tsx`
+**Linha 1028** — Arredondar overflow a cada iteração:
+```typescript
+overflow = Math.round((usedHours - availableHours) * 100) / 100;
+```
 
-Novo fluxo de UX:
-- Métricas são exibidas **agrupadas por `block_title`**
-- Cada grupo é um card visual com o título do bloco editável no topo
-- Dentro de cada bloco, botão "Adicionar métrica" para adicionar ao bloco
-- Botão principal "Adicionar bloco" cria um novo grupo com título vazio e uma métrica em branco
-- Botão de remover bloco (remove todas as métricas do bloco)
-- Botão de remover métrica individual dentro do bloco
+Isso elimina a propagação de erros de ponto flutuante e garante que o saldo e o resumo reflitam os valores corretos.
 
-### Arquivos
+### Arquivo
 
 | Ação | Arquivo |
 |------|---------|
-| Migração | `ALTER TABLE ... ADD COLUMN block_title` |
-| Editar | `src/components/reports/CustomMetricsConfigDialog.tsx` — reestruturar para fluxo bloco → métricas |
+| Editar | `src/contexts/DataContext.tsx` — linhas 985 e 1028 |
 
