@@ -712,8 +712,8 @@ export const ClientReports: React.FC = () => {
           {customMetrics.length > 0 && client && (
             <CustomMetricsCard
               metrics={customMetrics}
-              projects={reportData.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: (projects.find(pp => pp.id === p.id)?.custom_fields || null) as Record<string, string> | null }))}
-              tasks={reportData.flatMap(p => p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: p.id })))}
+              projects={reportData.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: (projects.find(pp => pp.id === p.id)?.custom_fields || null) as Record<string, string> | null, monthHours: p.monthHours }))}
+              tasks={reportData.flatMap(p => p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: p.id, monthHours: t.monthHours })))}
               projectColumns={projectColumns}
             />
           )}
