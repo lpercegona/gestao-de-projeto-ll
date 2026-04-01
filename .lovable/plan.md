@@ -1,46 +1,55 @@
 
 
-## Plano: Filtrar Métricas Personalizadas pelo Mês Selecionado
+## Plano: Corrigir Cálculo de Porcentagem — Baseado em Horas, Não Contagem
 
 ### Problema
 
-Em todas as 3 páginas de relatório (`ClientDetail`, `ClientReports`, `SharedReport`), o `CustomMetricsCard` recebe **todos** os projetos e tarefas do cliente, ignorando o filtro de mês. Enquanto o card "Resumo do Mês" usa `reportData` (filtrado por período), as métricas personalizadas passam `data.projects` / `data.tasks` sem filtro.
+O `CustomMetricsCard.computeMetric` calcula porcentagem como `matchCount / totalItems` — ou seja, conta **quantidade de projetos/tarefas**. No caso "% de esforço por vertical Box group", isso dá 57.1% (ex: 4 de 7 projetos). Mas o usuário espera a porcentagem baseada em **horas trabalhadas no período** (68.03%).
+
+Para métricas de "esforço", a porcentagem precisa ser: `horasDosProjetos_matching / horasTotais_no_mês`.
 
 ### Solução
 
-Substituir os dados passados ao `CustomMetricsCard` pelos projetos e tarefas já filtrados pelo mês em `reportData`.
+Passar os `timeEntries` filtrados pelo mês ao `CustomMetricsCard` e usar horas para calcular porcentagens.
 
 ### Alterações
 
-#### 1. `src/pages/ClientDetail.tsx` (linha 1582-1583)
+#### 1. `CustomMetricsCard.tsx` — Adicionar prop `timeEntries` e recalcular
 
-Trocar:
-- `(data.projects || []).filter(p => p.client_id === clientId)` → projetos do `reportData.projects`
-- `(data.tasks || []).filter(...)` → tarefas extraídas de `reportData.projects`
+- Nova interface `TimeEntry` com `{ task_id, hours, project_id }`
+- Nova prop `timeEntries` no componente
+- No `computeMetric`, quando `display_type === 'percentage'`:
+  - Calcular `totalHours` = soma de todas as horas dos timeEntries
+  - Calcular `matchHours` = soma das horas dos timeEntries cujos projetos/tarefas correspondem ao filtro da métrica
+  - Retornar `(matchHours / totalHours * 100).toFixed(1)%`
+- Para `display_type === 'count'`, manter a lógica atual (contagem de itens)
+
+#### 2. `ClientDetail.tsx` — Passar timeEntries filtrados
+
+Adicionar prop `timeEntries` ao `CustomMetricsCard` com os time entries do mês, enriquecidos com `project_id`:
 
 ```tsx
-<CustomMetricsCard
-  metrics={customMetrics}
-  projects={reportData.projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
-  tasks={reportData.projects.flatMap(p => p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id })))}
-  kanbanStages={data.kanbanStages}
-  projectColumns={clientId ? getClientColumns(clientId) : []}
-/>
+timeEntries={data.timeEntries
+  .filter(te => {
+    const d = new Date(te.date);
+    return d >= monthStart && d <= monthEnd &&
+      reportData.projects.some(p => p.id === /* project do te */);
+  })
+  .map(te => ({ task_id: te.task_id, hours: Number(te.hours), project_id: /* lookup */ }))}
 ```
 
-#### 2. `src/pages/ClientReports.tsx` (linhas 715-716)
+Para resolver o `project_id` de cada time entry, fazer lookup via `data.tasks`.
 
-Mesmo padrão — usar `reportData` (que neste arquivo é o array filtrado por mês) em vez de `projects.filter(...)`.
+#### 3. `ClientReports.tsx` e `SharedReport.tsx` — Mesmo padrão
 
-#### 3. `src/pages/SharedReport.tsx` (linhas 684-685)
-
-Mesmo padrão — usar `reportData` filtrado.
+Passar `timeEntries` filtrados pelo mês ao componente.
 
 ### Arquivos
 
 | Ação | Arquivo |
 |------|---------|
-| Editar | `src/pages/ClientDetail.tsx` — linhas 1582-1583 |
-| Editar | `src/pages/ClientReports.tsx` — linhas 715-716 |
-| Editar | `src/pages/SharedReport.tsx` — linhas 684-685 |
+| Editar | `src/components/reports/CustomMetricsCard.tsx` — adicionar prop timeEntries, usar horas para % |
+| Editar | `src/pages/ClientDetail.tsx` — passar timeEntries filtrados |
+| Editar | `src/pages/ClientReports.tsx` — passar timeEntries filtrados |
+| Editar | `src/pages/SharedReport.tsx` — passar timeEntries filtrados |
 
