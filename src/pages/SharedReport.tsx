@@ -424,7 +424,7 @@ export const SharedReport: React.FC = () => {
     const MAX_LOOKBACK_MONTHS = 120;
     const firstMonthToEvaluate = Math.max(0, targetMonthIndex - MAX_LOOKBACK_MONTHS);
 
-    let overflow = 0;
+    let overflowMinutes = 0;
     for (let monthIndex = firstMonthToEvaluate; monthIndex < targetMonthIndex; monthIndex += 1) {
       if (startDate) {
         const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
@@ -448,7 +448,7 @@ export const SharedReport: React.FC = () => {
       overflowMinutes = usedMinutes - availableMinutes;
     }
 
-    return overflow;
+    return overflowMinutes / 60;
   }, [clientInfo, isMonthly, timeEntries, year, month]);
 
   const availableHours = clientInfo
