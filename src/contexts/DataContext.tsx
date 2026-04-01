@@ -1016,7 +1016,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const MAX_LOOKBACK_MONTHS = 120;
     const firstMonthToEvaluate = Math.max(0, targetMonthIndex - MAX_LOOKBACK_MONTHS);
 
-    let overflow = 0;
+    let overflowMinutes = 0;
     for (let monthIndex = firstMonthToEvaluate; monthIndex < targetMonthIndex; monthIndex += 1) {
       if (startDate) {
         const startMonthIndex = startDate.getFullYear() * 12 + startDate.getMonth();
@@ -1025,12 +1025,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const monthYear = Math.floor(monthIndex / 12);
       const monthNumber = (monthIndex % 12) + 1;
-      const usedHours = getClientMonthlyHours(clientId, monthYear, monthNumber);
-      const availableHours = Math.max(0, client.contracted_hours - overflow);
-      overflow = Math.round((usedHours - availableHours) * 100) / 100;
+      const usedMinutes = Math.round(getClientMonthlyHours(clientId, monthYear, monthNumber) * 60);
+      const contractedMinutes = Math.round(client.contracted_hours * 60);
+      const availableMinutes = Math.max(0, contractedMinutes - overflowMinutes);
+      overflowMinutes = usedMinutes - availableMinutes;
     }
 
-    return overflow;
+    return overflowMinutes / 60;
   };
 
   // Kanban stages operations

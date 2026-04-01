@@ -436,15 +436,16 @@ export const SharedReport: React.FC = () => {
       const monthStart = startOfMonth(new Date(monthYear, monthNumber - 1));
       const monthEnd = endOfMonth(new Date(monthYear, monthNumber - 1));
 
-      const usedHours = timeEntries
+      const usedMinutes = timeEntries
         .filter((entry) => {
           const entryDate = parseISO(entry.date);
           return isWithinInterval(entryDate, { start: monthStart, end: monthEnd });
         })
-        .reduce((sum, entry) => sum + entry.hours, 0);
+        .reduce((sum, entry) => sum + Math.round(Number(entry.hours) * 60), 0);
 
-      const availableMonthHours = Math.max(0, clientInfo.contracted_hours - overflow);
-      overflow = usedHours - availableMonthHours;
+      const contractedMinutes = Math.round(clientInfo.contracted_hours * 60);
+      const availableMinutes = Math.max(0, contractedMinutes - overflowMinutes);
+      overflowMinutes = usedMinutes - availableMinutes;
     }
 
     return overflow;
