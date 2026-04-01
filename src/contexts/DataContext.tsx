@@ -976,13 +976,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const projectIds = new Set(clientProjects.map(p => p.id));
     const clientTaskIds = new Set(data.tasks.filter(t => projectIds.has(t.project_id)).map(t => t.id));
     
-    return data.timeEntries
+    const raw = data.timeEntries
       .filter(e => {
         if (!clientTaskIds.has(e.task_id)) return false;
         const entryDate = new Date(e.date);
         return entryDate >= monthStart && entryDate <= monthEnd;
       })
       .reduce((sum, e) => sum + Number(e.hours), 0);
+    return Math.round(raw * 100) / 100;
   };
 
   const getClientColumns = (clientId: string): ProjectColumn[] => {
