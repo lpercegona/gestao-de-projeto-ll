@@ -1579,8 +1579,8 @@ export const ClientDetail: React.FC = () => {
               {customMetrics.length > 0 && (
                 <CustomMetricsCard
                   metrics={customMetrics}
-                  projects={(data.projects || []).filter(p => p.client_id === clientId).map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
-                  tasks={(data.tasks || []).filter(t => (data.projects || []).filter(p => p.client_id === clientId).some(p => p.id === t.project_id)).map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id }))}
+                  projects={reportData.projects.map(p => ({ id: p.id, name: p.name, status: p.status, custom_fields: p.custom_fields as Record<string, string> | null }))}
+                  tasks={reportData.projects.flatMap(p => p.tasks.map(t => ({ id: t.id, name: t.name, status: t.status, project_id: t.project_id })))}
                   kanbanStages={data.kanbanStages}
                   projectColumns={clientId ? getClientColumns(clientId) : []}
                 />
