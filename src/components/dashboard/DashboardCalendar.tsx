@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Maximize2, FolderKanban, ListTodo, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Maximize2, FolderKanban, ListTodo, Bell, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -34,7 +34,7 @@ export const DashboardCalendar: React.FC = () => {
       }
     });
 
-    data.reminders.forEach((r) => {
+    data.reminders.filter((r) => r.status !== 'completed').forEach((r) => {
       reminderDates.push(parseISO(r.reminder_date));
     });
 
@@ -61,7 +61,7 @@ export const DashboardCalendar: React.FC = () => {
       }
     });
 
-    data.reminders.forEach((r) => {
+    data.reminders.filter((r) => r.status !== 'completed').forEach((r) => {
       if (isSameDay(parseISO(r.reminder_date), date)) {
         const due = parseISO(r.reminder_date);
         items.push({ type: 'reminder', name: r.title, id: r.id, isOverdue: isPast(due) && !isToday(due) });
