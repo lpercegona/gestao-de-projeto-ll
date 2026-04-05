@@ -346,6 +346,18 @@ export const CalendarPage: React.FC = () => {
       }
         
         {item.type === 'reminder' && isAdminOrMaster &&
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-green-600 shrink-0"
+          title="Concluir lembrete"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCompleteReminder(item.originalReminderId || item.id);
+          }}>
+          <CheckCircle2 className="h-4 w-4" />
+        </Button>
       <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
