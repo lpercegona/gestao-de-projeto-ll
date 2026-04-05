@@ -1076,7 +1076,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Reminder operations
-  const createReminder = async (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => {
+  const createReminder = async (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id' | 'completed_dates'>) => {
     if (!user) return null;
     const { data: newReminder, error } = await supabase
       .from('reminders')
