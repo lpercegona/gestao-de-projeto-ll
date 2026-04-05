@@ -163,7 +163,20 @@ export const DashboardCalendar: React.FC = () => {
                       Atrasado
                     </span>
               }
-                  <span className="break-words line-clamp-1 min-w-0">{item.name}</span>
+                  <span className="break-words line-clamp-1 min-w-0 flex-1">{item.name}</span>
+                  {item.type === 'reminder' &&
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 shrink-0 text-muted-foreground hover:text-green-600"
+                      title="Concluir lembrete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCompleteReminder(item.id);
+                      }}>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    </Button>
+                  }
                 </div>
             )}
               {selectedDateItems.length > 3 &&
