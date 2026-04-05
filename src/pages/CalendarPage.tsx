@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, addYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus, Bell, CalendarIcon, MoreVertical, Pencil, Trash2, Repeat } from 'lucide-react';
+import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus, Bell, CalendarIcon, MoreVertical, Pencil, Trash2, Repeat, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
@@ -121,7 +121,8 @@ export const CalendarPage: React.FC = () => {
       reminder_date: format(reminderDate, 'yyyy-MM-dd'),
       description: reminderDescription.trim() || null,
       client_id: reminderClientId && reminderClientId !== 'none' ? reminderClientId : null,
-      recurrence: reminderRecurrence
+      recurrence: reminderRecurrence,
+      status: 'pending' as const
     };
 
     if (editingReminderId) {
@@ -152,6 +153,15 @@ export const CalendarPage: React.FC = () => {
       toast.error('Erro ao excluir lembrete');
     }
     setDeleteConfirmId(null);
+  };
+
+  const handleCompleteReminder = async (reminderId: string) => {
+    const result = await updateReminder(reminderId, { status: 'completed' });
+    if (result) {
+      toast.success('Lembrete concluído!');
+    } else {
+      toast.error('Erro ao concluir lembrete');
+    }
   };
 
   // Get all items with deadlines, expanding recurring reminders
@@ -197,7 +207,7 @@ export const CalendarPage: React.FC = () => {
 
     // Add reminders with recurrence expansion (only for admin/master_admin)
     if (!isClient) {
-      data.reminders.forEach((r) => {
+      data.reminders.filter((r) => r.status !== 'completed').forEach((r) => {
         const client = r.client_id ? data.clients.find((c) => c.id === r.client_id) : null;
         const clientName = client ? (client as any)?.company || client?.name : undefined;
         const baseDate = parseISO(r.reminder_date);
@@ -336,6 +346,18 @@ export const CalendarPage: React.FC = () => {
       }
         
         {item.type === 'reminder' && isAdminOrMaster &&
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-green-600 shrink-0"
+          title="Concluir lembrete"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCompleteReminder(item.originalReminderId || item.id);
+          }}>
+          <CheckCircle2 className="h-4 w-4" />
+        </Button>
       <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -365,6 +387,7 @@ export const CalendarPage: React.FC = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+      </>
       }
       </div>
     </div>;

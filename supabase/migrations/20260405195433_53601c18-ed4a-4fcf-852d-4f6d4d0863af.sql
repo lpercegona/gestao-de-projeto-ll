@@ -1,0 +1,1 @@
+ALTER TABLE public.reminders ADD COLUMN status text NOT NULL DEFAULT 'pending';

@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Maximize2, FolderKanban, ListTodo, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Maximize2, FolderKanban, ListTodo, Bell, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { useData } from '@/contexts/DataContext';
+import { supabase } from '@/integrations/supabase/client';
 import { isSameDay, parseISO, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -12,7 +13,12 @@ import { cn } from '@/lib/utils';
 export const DashboardCalendar: React.FC = () => {
   const navigate = useNavigate();
   const [date, setDate] = useState<Date>(new Date());
-  const { data } = useData();
+  const { data, refreshData } = useData();
+
+  const handleCompleteReminder = async (reminderId: string) => {
+    await supabase.from('reminders').update({ status: 'completed' }).eq('id', reminderId);
+    refreshData();
+  };
 
   // Separate dates by type for dot indicators
   const { datesWithProjectsOrTasks, datesWithReminders } = useMemo(() => {
@@ -34,7 +40,7 @@ export const DashboardCalendar: React.FC = () => {
       }
     });
 
-    data.reminders.forEach((r) => {
+    data.reminders.filter((r) => r.status !== 'completed').forEach((r) => {
       reminderDates.push(parseISO(r.reminder_date));
     });
 
@@ -61,7 +67,7 @@ export const DashboardCalendar: React.FC = () => {
       }
     });
 
-    data.reminders.forEach((r) => {
+    data.reminders.filter((r) => r.status !== 'completed').forEach((r) => {
       if (isSameDay(parseISO(r.reminder_date), date)) {
         const due = parseISO(r.reminder_date);
         items.push({ type: 'reminder', name: r.title, id: r.id, isOverdue: isPast(due) && !isToday(due) });
@@ -157,7 +163,20 @@ export const DashboardCalendar: React.FC = () => {
                       Atrasado
                     </span>
               }
-                  <span className="break-words line-clamp-1 min-w-0">{item.name}</span>
+                  <span className="break-words line-clamp-1 min-w-0 flex-1">{item.name}</span>
+                  {item.type === 'reminder' &&
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 shrink-0 text-muted-foreground hover:text-green-600"
+                      title="Concluir lembrete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCompleteReminder(item.id);
+                      }}>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    </Button>
+                  }
                 </div>
             )}
               {selectedDateItems.length > 3 &&
