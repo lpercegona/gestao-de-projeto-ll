@@ -15,8 +15,16 @@ export const DashboardCalendar: React.FC = () => {
   const [date, setDate] = useState<Date>(new Date());
   const { data, refreshData } = useData();
 
-  const handleCompleteReminder = async (reminderId: string) => {
-    await supabase.from('reminders').update({ status: 'completed' }).eq('id', reminderId);
+  const handleCompleteReminder = async (reminderId: string, occurrenceDate?: string) => {
+    const reminder = data.reminders.find((r) => r.id === reminderId);
+    if (!reminder) return;
+
+    if (reminder.recurrence !== 'none' && occurrenceDate) {
+      const newDates = [...(reminder.completed_dates || []), occurrenceDate];
+      await supabase.from('reminders').update({ completed_dates: newDates }).eq('id', reminderId);
+    } else {
+      await supabase.from('reminders').update({ status: 'completed' }).eq('id', reminderId);
+    }
     refreshData();
   };
 
@@ -41,7 +49,26 @@ export const DashboardCalendar: React.FC = () => {
     });
 
     data.reminders.filter((r) => r.status !== 'completed').forEach((r) => {
-      reminderDates.push(parseISO(r.reminder_date));
+      const baseDate = parseISO(r.reminder_date);
+      if (r.recurrence === 'monthly') {
+        for (let i = 0; i < 13; i++) {
+          const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
+          const dateStr = d.toISOString().slice(0, 10);
+          if (!r.completed_dates?.includes(dateStr)) {
+            reminderDates.push(d);
+          }
+        }
+      } else if (r.recurrence === 'yearly') {
+        for (let i = 0; i < 3; i++) {
+          const d = new Date(baseDate.getFullYear() + i, baseDate.getMonth(), baseDate.getDate());
+          const dateStr = d.toISOString().slice(0, 10);
+          if (!r.completed_dates?.includes(dateStr)) {
+            reminderDates.push(d);
+          }
+        }
+      } else {
+        reminderDates.push(baseDate);
+      }
     });
 
     return { datesWithProjectsOrTasks: projTaskDates, datesWithReminders: reminderDates };
