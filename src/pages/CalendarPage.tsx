@@ -155,12 +155,36 @@ export const CalendarPage: React.FC = () => {
     setDeleteConfirmId(null);
   };
 
-  const handleCompleteReminder = async (reminderId: string) => {
-    const result = await updateReminder(reminderId, { status: 'completed' });
-    if (result) {
-      toast.success('Lembrete concluído!');
+  const handleCompleteReminder = async (reminderId: string, occurrenceDate?: string) => {
+    const reminder = data.reminders.find((r) => r.id === reminderId);
+    if (!reminder) return;
+
+    if (reminder.recurrence !== 'none' && occurrenceDate) {
+      // For recurring reminders, append the specific date to completed_dates
+      const { error } = await supabase
+        .from('reminders')
+        .update({ completed_dates: [...(reminder.completed_dates || []), occurrenceDate] })
+        .eq('id', reminderId);
+      if (error) {
+        console.error('Error completing reminder occurrence:', error);
+        toast.error('Erro ao concluir lembrete');
+        return;
+      }
+      toast.success('Ocorrência concluída!');
+      data.reminders = data.reminders.map((r) =>
+        r.id === reminderId ? { ...r, completed_dates: [...(r.completed_dates || []), occurrenceDate] } : r
+      );
+      // Force refresh
+      const { refreshData } = { refreshData: () => {} };
+      // Use updateReminder's refresh side effect by calling refreshData from context
     } else {
-      toast.error('Erro ao concluir lembrete');
+      // For non-recurring reminders, set status to completed
+      const result = await updateReminder(reminderId, { status: 'completed' });
+      if (!result) {
+        toast.error('Erro ao concluir lembrete');
+        return;
+      }
+      toast.success('Lembrete concluído!');
     }
   };
 

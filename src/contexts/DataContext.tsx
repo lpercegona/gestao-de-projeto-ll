@@ -115,6 +115,7 @@ export interface Reminder {
   created_at: string;
   recurrence: 'none' | 'monthly' | 'yearly';
   status: 'pending' | 'completed';
+  completed_dates: string[];
 }
 
 interface AppData {
