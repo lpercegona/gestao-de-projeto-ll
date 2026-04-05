@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
-import { isSameDay, parseISO, isPast, isToday } from 'date-fns';
+import { isSameDay, parseISO, isPast, isToday, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -209,7 +209,7 @@ export const DashboardCalendar: React.FC = () => {
                       title="Concluir lembrete"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleCompleteReminder(item.id);
+                        handleCompleteReminder(item.id, item.reminderDate);
                       }}>
                       <CheckCircle2 className="h-3.5 w-3.5" />
                     </Button>
