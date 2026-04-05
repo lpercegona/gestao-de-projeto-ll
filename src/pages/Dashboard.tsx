@@ -212,7 +212,11 @@ export const Dashboard: React.FC = () => {
 
   // Filter data based on role
   const activeProjects = data.projects.filter((p) => p.status === "active");
-  const pendingTasks = data.tasks.filter((t) => t.status === "pending" || t.status === "in_progress");
+  const pendingTasks = data.tasks.filter((t) => {
+    const project = data.projects.find((p) => p.id === t.project_id);
+    return (t.status === "pending" || t.status === "in_progress") &&
+      !!project && project.status !== "archived";
+  });
 
   // Request statistics for clients
   const pendingRequests = projectRequests.filter((r) => r.status === "pending");
