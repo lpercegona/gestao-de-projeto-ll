@@ -387,6 +387,7 @@ export const CalendarPage: React.FC = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+      </>
       }
       </div>
     </div>;
