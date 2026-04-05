@@ -155,6 +155,15 @@ export const CalendarPage: React.FC = () => {
     setDeleteConfirmId(null);
   };
 
+  const handleCompleteReminder = async (reminderId: string) => {
+    const result = await updateReminder(reminderId, { status: 'completed' });
+    if (result) {
+      toast.success('Lembrete concluído!');
+    } else {
+      toast.error('Erro ao concluir lembrete');
+    }
+  };
+
   // Get all items with deadlines, expanding recurring reminders
   const allItems = useMemo((): CalendarItem[] => {
     const items: CalendarItem[] = [];
