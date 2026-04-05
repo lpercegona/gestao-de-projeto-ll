@@ -40,7 +40,7 @@ interface CalendarItem {
 }
 
 export const CalendarPage: React.FC = () => {
-  const { data, createReminder, updateReminder, deleteReminder, getProjectHours, getTaskHours, getCreatorName, getClientColumns } = useData();
+  const { data, createReminder, updateReminder, deleteReminder, refreshData, getProjectHours, getTaskHours, getCreatorName, getClientColumns } = useData();
   const { isClient, isAdminOrMaster, user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -160,25 +160,18 @@ export const CalendarPage: React.FC = () => {
     if (!reminder) return;
 
     if (reminder.recurrence !== 'none' && occurrenceDate) {
-      // For recurring reminders, append the specific date to completed_dates
+      const newDates = [...(reminder.completed_dates || []), occurrenceDate];
       const { error } = await supabase
         .from('reminders')
-        .update({ completed_dates: [...(reminder.completed_dates || []), occurrenceDate] })
+        .update({ completed_dates: newDates })
         .eq('id', reminderId);
       if (error) {
-        console.error('Error completing reminder occurrence:', error);
         toast.error('Erro ao concluir lembrete');
         return;
       }
       toast.success('Ocorrência concluída!');
-      data.reminders = data.reminders.map((r) =>
-        r.id === reminderId ? { ...r, completed_dates: [...(r.completed_dates || []), occurrenceDate] } : r
-      );
-      // Force refresh
-      const { refreshData } = { refreshData: () => {} };
-      // Use updateReminder's refresh side effect by calling refreshData from context
+      refreshData();
     } else {
-      // For non-recurring reminders, set status to completed
       const result = await updateReminder(reminderId, { status: 'completed' });
       if (!result) {
         toast.error('Erro ao concluir lembrete');
@@ -238,6 +231,8 @@ export const CalendarPage: React.FC = () => {
         const recurrence = r.recurrence || 'none';
 
         const addReminderItem = (dateStr: string, keySuffix: string) => {
+          // Skip if this specific occurrence is completed
+          if (r.completed_dates?.includes(dateStr)) return;
           const status = getDeadlineStatus(dateStr);
           items.push({
             id: `${r.id}${keySuffix}`,
@@ -252,13 +247,11 @@ export const CalendarPage: React.FC = () => {
         };
 
         if (recurrence === 'monthly') {
-          // Original + 12 months ahead
           for (let i = 0; i < 13; i++) {
             const d = addMonths(baseDate, i);
             addReminderItem(format(d, 'yyyy-MM-dd'), i === 0 ? '' : `-m${i}`);
           }
         } else if (recurrence === 'yearly') {
-          // Original + 2 years ahead
           for (let i = 0; i < 3; i++) {
             const d = addYears(baseDate, i);
             addReminderItem(format(d, 'yyyy-MM-dd'), i === 0 ? '' : `-y${i}`);
@@ -378,7 +371,7 @@ export const CalendarPage: React.FC = () => {
           title="Concluir lembrete"
           onClick={(e) => {
             e.stopPropagation();
-            handleCompleteReminder(item.originalReminderId || item.id);
+            handleCompleteReminder(item.originalReminderId || item.id, item.due_date);
           }}>
           <CheckCircle2 className="h-4 w-4" />
         </Button>
