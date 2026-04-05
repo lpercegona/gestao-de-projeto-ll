@@ -197,7 +197,7 @@ export const CalendarPage: React.FC = () => {
 
     // Add reminders with recurrence expansion (only for admin/master_admin)
     if (!isClient) {
-      data.reminders.forEach((r) => {
+      data.reminders.filter((r) => r.status !== 'completed').forEach((r) => {
         const client = r.client_id ? data.clients.find((c) => c.id === r.client_id) : null;
         const clientName = client ? (client as any)?.company || client?.name : undefined;
         const baseDate = parseISO(r.reminder_date);

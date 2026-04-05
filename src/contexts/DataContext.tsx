@@ -114,6 +114,7 @@ export interface Reminder {
   owner_id: string;
   created_at: string;
   recurrence: 'none' | 'monthly' | 'yearly';
+  status: 'pending' | 'completed';
 }
 
 interface AppData {
