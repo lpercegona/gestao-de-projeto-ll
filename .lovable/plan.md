@@ -1,55 +1,48 @@
 
 
-## Plano: Corrigir Cálculo de Porcentagem — Baseado em Horas, Não Contagem
+## Plano: Excluir tarefas de projetos arquivados das contagens do painel
 
 ### Problema
 
-O `CustomMetricsCard.computeMetric` calcula porcentagem como `matchCount / totalItems` — ou seja, conta **quantidade de projetos/tarefas**. No caso "% de esforço por vertical Box group", isso dá 57.1% (ex: 4 de 7 projetos). Mas o usuário espera a porcentagem baseada em **horas trabalhadas no período** (68.03%).
+Tarefas pertencentes a projetos com status `archived` ainda são contadas nos painéis do Dashboard:
 
-Para métricas de "esforço", a porcentagem precisa ser: `horasDosProjetos_matching / horasTotais_no_mês`.
+1. **Dashboard.tsx (linha 215)**: `pendingTasks` conta todas as tarefas pending/in_progress sem verificar o status do projeto pai
+2. **DashboardCalendar.tsx (linhas 28-30 e 55-57)**: Exibe tarefas de projetos arquivados no calendário (filtra `task.status !== 'archived'` mas não verifica `project.status`)
 
-### Solução
-
-Passar os `timeEntries` filtrados pelo mês ao `CustomMetricsCard` e usar horas para calcular porcentagens.
+**Nota**: O `ProximasEntregasPanel` já filtra corretamente via `ALLOWED_STATUSES`.
 
 ### Alterações
 
-#### 1. `CustomMetricsCard.tsx` — Adicionar prop `timeEntries` e recalcular
+#### 1. `src/pages/Dashboard.tsx` — linha 215
 
-- Nova interface `TimeEntry` com `{ task_id, hours, project_id }`
-- Nova prop `timeEntries` no componente
-- No `computeMetric`, quando `display_type === 'percentage'`:
-  - Calcular `totalHours` = soma de todas as horas dos timeEntries
-  - Calcular `matchHours` = soma das horas dos timeEntries cujos projetos/tarefas correspondem ao filtro da métrica
-  - Retornar `(matchHours / totalHours * 100).toFixed(1)%`
-- Para `display_type === 'count'`, manter a lógica atual (contagem de itens)
-
-#### 2. `ClientDetail.tsx` — Passar timeEntries filtrados
-
-Adicionar prop `timeEntries` ao `CustomMetricsCard` com os time entries do mês, enriquecidos com `project_id`:
+Adicionar verificação do status do projeto pai:
 
 ```tsx
-timeEntries={data.timeEntries
-  .filter(te => {
-    const d = new Date(te.date);
-    return d >= monthStart && d <= monthEnd &&
-      reportData.projects.some(p => p.id === /* project do te */);
-  })
-  .map(te => ({ task_id: te.task_id, hours: Number(te.hours), project_id: /* lookup */ }))}
+const pendingTasks = data.tasks.filter((t) => {
+  const project = data.projects.find((p) => p.id === t.project_id);
+  return (t.status === "pending" || t.status === "in_progress") &&
+    !!project && project.status !== "archived";
+});
 ```
 
-Para resolver o `project_id` de cada time entry, fazer lookup via `data.tasks`.
+#### 2. `src/components/dashboard/DashboardCalendar.tsx` — linhas 28-30 e 55-57
 
-#### 3. `ClientReports.tsx` e `SharedReport.tsx` — Mesmo padrão
+Adicionar `project.status !== 'archived'` nas duas iterações de tarefas:
 
-Passar `timeEntries` filtrados pelo mês ao componente.
+```tsx
+// Nas duas ocorrências de data.tasks.forEach:
+if (t.due_date && t.status !== 'completed' && t.status !== 'archived') {
+  const project = data.projects.find((p) => p.id === t.project_id);
+  if (project && project.status !== 'archived') { // ← adicionar esta verificação
+    ...
+  }
+}
+```
 
 ### Arquivos
 
 | Ação | Arquivo |
 |------|---------|
-| Editar | `src/components/reports/CustomMetricsCard.tsx` — adicionar prop timeEntries, usar horas para % |
-| Editar | `src/pages/ClientDetail.tsx` — passar timeEntries filtrados |
-| Editar | `src/pages/ClientReports.tsx` — passar timeEntries filtrados |
-| Editar | `src/pages/SharedReport.tsx` — passar timeEntries filtrados |
+| Editar | `src/pages/Dashboard.tsx` — linha 215 |
+| Editar | `src/components/dashboard/DashboardCalendar.tsx` — linhas 28-30 e 55-57 |
 
