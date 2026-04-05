@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay, parseISO, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, addYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus, Bell, CalendarIcon, MoreVertical, Pencil, Trash2, Repeat } from 'lucide-react';
+import { FolderKanban, ListTodo, ChevronLeft, ChevronRight, Plus, Bell, CalendarIcon, MoreVertical, Pencil, Trash2, Repeat, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDeadlineStatus } from '@/lib/deadlineUtils';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
@@ -121,7 +121,8 @@ export const CalendarPage: React.FC = () => {
       reminder_date: format(reminderDate, 'yyyy-MM-dd'),
       description: reminderDescription.trim() || null,
       client_id: reminderClientId && reminderClientId !== 'none' ? reminderClientId : null,
-      recurrence: reminderRecurrence
+      recurrence: reminderRecurrence,
+      status: 'pending' as const
     };
 
     if (editingReminderId) {
