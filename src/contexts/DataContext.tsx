@@ -185,7 +185,7 @@ interface DataContextType {
   // Kanban stages
   saveKanbanStages: (stages: Omit<KanbanStage, 'id' | 'is_default' | 'owner_id'>[]) => Promise<void>;
   // Reminders
-  createReminder: (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => Promise<Reminder | null>;
+  createReminder: (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id' | 'completed_dates'>) => Promise<Reminder | null>;
   updateReminder: (id: string, updates: Partial<Reminder>) => Promise<Reminder | null>;
   deleteReminder: (id: string) => Promise<boolean>;
   // Utilities
