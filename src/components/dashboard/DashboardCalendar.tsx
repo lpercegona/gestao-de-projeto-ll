@@ -13,7 +13,12 @@ import { cn } from '@/lib/utils';
 export const DashboardCalendar: React.FC = () => {
   const navigate = useNavigate();
   const [date, setDate] = useState<Date>(new Date());
-  const { data } = useData();
+  const { data, refreshData } = useData();
+
+  const handleCompleteReminder = async (reminderId: string) => {
+    await supabase.from('reminders').update({ status: 'completed' }).eq('id', reminderId);
+    refreshData();
+  };
 
   // Separate dates by type for dot indicators
   const { datesWithProjectsOrTasks, datesWithReminders } = useMemo(() => {
