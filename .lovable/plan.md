@@ -1,44 +1,55 @@
 
 
-## Plano: Adicionar botão "Concluído" aos lembretes no calendário
+## Plano: Completar Lembretes Recorrentes por Data Específica
 
 ### Problema
 
-Lembretes não possuem campo `status` — quando estão atrasados, exibem o badge "Atrasado" mas não há como marcá-los como concluídos.
+Ao marcar um lembrete mensal como "concluído", o sistema atualiza `status = 'completed'` no registro inteiro, ocultando **todas** as ocorrências futuras. O comportamento correto é concluir apenas a ocorrência daquela data específica, mantendo as próximas visíveis.
 
 ### Solução
 
-1. **Migração**: Adicionar coluna `status` (default `'pending'`) à tabela `reminders`
-2. **Interface**: Atualizar `Reminder` no `DataContext` para incluir `status`
-3. **Botão de concluir**: Adicionar ícone `CheckCircle2` nos cards de lembrete (DashboardCalendar e CalendarPage) que atualiza o status para `'completed'`
-4. **Filtros**: Lembretes com status `'completed'` são ocultados das listagens e dots do calendário
+Adicionar uma coluna `completed_dates` (array de datas) à tabela `reminders`. Ao concluir uma ocorrência de lembrete recorrente, a data é adicionada ao array em vez de alterar o `status` global. O `status = 'completed'` continua válido apenas para lembretes sem recorrência.
 
 ### Alterações
 
 #### 1. Migração SQL
+
 ```sql
 ALTER TABLE public.reminders 
-  ADD COLUMN status text NOT NULL DEFAULT 'pending';
+  ADD COLUMN completed_dates date[] NOT NULL DEFAULT '{}';
 ```
 
 #### 2. `src/contexts/DataContext.tsx`
-- Adicionar `status: 'pending' | 'completed'` à interface `Reminder`
-- Filtrar lembretes com `status !== 'completed'` no fetch (ou manter e filtrar na UI)
+
+- Adicionar `completed_dates: string[]` à interface `Reminder`
 
 #### 3. `src/pages/CalendarPage.tsx`
-- No card de lembrete (linha ~338), antes do dropdown de ações, adicionar botão icon-only com `Check` que chama `supabase.from('reminders').update({ status: 'completed' })` e recarrega os dados
-- Filtrar lembretes concluídos da listagem `allItems`
+
+- Na expansão de recorrência (linha 210): manter lembretes recorrentes visíveis mesmo com `status !== 'completed'` (já funciona), mas filtrar ocorrências cujas datas estejam em `completed_dates`
+- No `handleCompleteReminder`: se o lembrete for recorrente, fazer `UPDATE reminders SET completed_dates = array_append(completed_dates, 'YYYY-MM-DD')` em vez de `status = 'completed'`
+- Para lembretes sem recorrência, manter o comportamento atual (`status = 'completed'`)
 
 #### 4. `src/components/dashboard/DashboardCalendar.tsx`
-- No card de lembrete (linha ~138), adicionar botão icon-only `Check` com a mesma lógica
-- Filtrar lembretes concluídos dos dots e da lista de itens selecionados
+
+- Mesmo ajuste: filtrar ocorrências cujas datas estejam em `completed_dates`
+- No `handleCompleteReminder`: verificar se é recorrente antes de decidir se atualiza `status` ou `completed_dates`
+
+### Lógica de Filtragem
+
+```typescript
+// Para lembretes recorrentes, verificar se a data da ocorrência está em completed_dates
+const isOccurrenceCompleted = (reminder, occurrenceDate) => {
+  if (reminder.recurrence === 'none') return reminder.status === 'completed';
+  return reminder.completed_dates?.includes(format(occurrenceDate, 'yyyy-MM-dd'));
+};
+```
 
 ### Arquivos
 
 | Ação | Arquivo |
 |------|---------|
-| Migração | `ALTER TABLE reminders ADD COLUMN status` |
+| Migração | `ALTER TABLE reminders ADD COLUMN completed_dates` |
 | Editar | `src/contexts/DataContext.tsx` — interface Reminder |
-| Editar | `src/pages/CalendarPage.tsx` — botão concluir + filtro |
-| Editar | `src/components/dashboard/DashboardCalendar.tsx` — botão concluir + filtro |
+| Editar | `src/pages/CalendarPage.tsx` — filtragem e conclusão por data |
+| Editar | `src/components/dashboard/DashboardCalendar.tsx` — filtragem e conclusão por data |
 
