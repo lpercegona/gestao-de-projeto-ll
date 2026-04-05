@@ -115,6 +115,7 @@ export interface Reminder {
   created_at: string;
   recurrence: 'none' | 'monthly' | 'yearly';
   status: 'pending' | 'completed';
+  completed_dates: string[];
 }
 
 interface AppData {
@@ -184,7 +185,7 @@ interface DataContextType {
   // Kanban stages
   saveKanbanStages: (stages: Omit<KanbanStage, 'id' | 'is_default' | 'owner_id'>[]) => Promise<void>;
   // Reminders
-  createReminder: (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => Promise<Reminder | null>;
+  createReminder: (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id' | 'completed_dates'>) => Promise<Reminder | null>;
   updateReminder: (id: string, updates: Partial<Reminder>) => Promise<Reminder | null>;
   deleteReminder: (id: string) => Promise<boolean>;
   // Utilities
@@ -1075,7 +1076,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Reminder operations
-  const createReminder = async (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id'>) => {
+  const createReminder = async (reminder: Omit<Reminder, 'id' | 'created_at' | 'owner_id' | 'completed_dates'>) => {
     if (!user) return null;
     const { data: newReminder, error } = await supabase
       .from('reminders')

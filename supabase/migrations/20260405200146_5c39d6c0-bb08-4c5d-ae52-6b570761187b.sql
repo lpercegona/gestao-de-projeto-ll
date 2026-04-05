@@ -1,0 +1,1 @@
+ALTER TABLE public.reminders ADD COLUMN completed_dates date[] NOT NULL DEFAULT '{}';

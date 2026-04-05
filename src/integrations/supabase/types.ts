@@ -1092,6 +1092,7 @@ export type Database = {
       reminders: {
         Row: {
           client_id: string | null
+          completed_dates: string[]
           created_at: string
           description: string | null
           id: string
@@ -1103,6 +1104,7 @@ export type Database = {
         }
         Insert: {
           client_id?: string | null
+          completed_dates?: string[]
           created_at?: string
           description?: string | null
           id?: string
@@ -1114,6 +1116,7 @@ export type Database = {
         }
         Update: {
           client_id?: string | null
+          completed_dates?: string[]
           created_at?: string
           description?: string | null
           id?: string
