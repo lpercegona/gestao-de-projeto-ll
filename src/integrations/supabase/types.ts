@@ -1098,6 +1098,7 @@ export type Database = {
           owner_id: string
           recurrence: string
           reminder_date: string
+          status: string
           title: string
         }
         Insert: {
@@ -1108,6 +1109,7 @@ export type Database = {
           owner_id: string
           recurrence?: string
           reminder_date: string
+          status?: string
           title: string
         }
         Update: {
@@ -1118,6 +1120,7 @@ export type Database = {
           owner_id?: string
           recurrence?: string
           reminder_date?: string
+          status?: string
           title?: string
         }
         Relationships: [
