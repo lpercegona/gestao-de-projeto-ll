@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProjectRequestForm } from "@/components/client/ProjectRequestForm";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
@@ -221,12 +221,24 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
         </CardContent>
       </Card>
 
-      <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={taskDialogOpen}
+        onOpenChange={setTaskDialogOpen}
+        title="Solicitar Nova Tarefa"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTaskDialogOpen(false)} disabled={taskSubmitting}>Cancelar</Button>
+            <Button
+              onClick={handleSubmitTaskRequest}
+              disabled={taskSubmitting || projectOptions.length === 0 || !selectedProjectId || !taskForm.name.trim()}
+            >
+              {taskSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Enviar solicitação
+            </Button>
+          </>
+        }
+      >
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="task-request-project">Projeto</Label>
               <select
@@ -276,18 +288,7 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskDialogOpen(false)} disabled={taskSubmitting}>Cancelar</Button>
-            <Button
-              onClick={handleSubmitTaskRequest}
-              disabled={taskSubmitting || projectOptions.length === 0 || !selectedProjectId || !taskForm.name.trim()}
-            >
-              {taskSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Enviar solicitação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <ProjectRequestForm open={isFormOpen} onOpenChange={setIsFormOpen} onSubmit={handleSubmitRequest} />
     </>

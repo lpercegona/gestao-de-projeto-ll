@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -240,14 +240,21 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Métricas Personalizadas</DialogTitle>
-          <DialogDescription>Crie blocos com indicadores personalizados para os relatórios deste cliente.</DialogDescription>
-        </DialogHeader>
-
-        {loading ? (
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Métricas Personalizadas"
+      description="Crie blocos com indicadores personalizados para os relatórios deste cliente."
+      footer={
+        <>
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+            Salvar
+          </Button>
+        </>
+      }
+    >
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
