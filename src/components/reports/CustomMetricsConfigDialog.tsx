@@ -302,17 +302,9 @@ export const CustomMetricsConfigDialog: React.FC<Props> = ({
               Adicionar bloco
             </Button>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                Salvar
-              </Button>
-            </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   );
 };
 
