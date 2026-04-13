@@ -14,7 +14,7 @@ import { formatHours } from "@/lib/formatHours";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -425,13 +425,24 @@ export const Clients: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingClient ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+      <FormSheet
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingClient ? "Editar Cliente" : "Novo Cliente"}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" form="client-form" disabled={submitting}>
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {editingClient ? "Salvar" : "Criar"}
+            </Button>
+          </>
+        }
+      >
+          <form id="client-form" onSubmit={handleSubmit}>
+            <div className="space-y-4">
               {/* Dados Básicos */}
               <div className="space-y-4">
                 <h4 className="font-medium text-sm text-muted-foreground">Dados Básicos</h4>
@@ -567,18 +578,8 @@ export const Clients: React.FC = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {editingClient ? "Salvar" : "Criar"}
-              </Button>
-            </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

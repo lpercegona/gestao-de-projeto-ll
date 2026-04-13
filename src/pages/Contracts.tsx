@@ -10,14 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -845,13 +839,21 @@ export const Contracts: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Contract Dialog */}
-      <Dialog open={contractDialogOpen} onOpenChange={setContractDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingContract ? 'Editar Contrato' : 'Novo Contrato'}</DialogTitle>
-            <DialogDescription>Preencha os dados do contrato</DialogDescription>
-          </DialogHeader>
+      <FormSheet
+        open={contractDialogOpen}
+        onOpenChange={setContractDialogOpen}
+        title={editingContract ? 'Editar Contrato' : 'Novo Contrato'}
+        description="Preencha os dados do contrato"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setContractDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveContract} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingContract ? 'Salvar' : 'Criar Contrato'}
+            </Button>
+          </>
+        }
+      >
 
           <div className="space-y-6">
             {/* Client selection */}
@@ -1057,24 +1059,23 @@ export const Contracts: React.FC = () => {
             </div>
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setContractDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveContract} disabled={saving}>
+      </FormSheet>
+
+      <FormSheet
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        title={editingTemplate ? 'Editar Template' : 'Novo Template'}
+        description="Crie um modelo reutilizável para seus contratos"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveTemplate} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingContract ? 'Salvar' : 'Criar Contrato'}
+              {editingTemplate ? 'Salvar' : 'Criar Template'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Template Dialog */}
-      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingTemplate ? 'Editar Template' : 'Novo Template'}</DialogTitle>
-            <DialogDescription>Crie um modelo reutilizável para seus contratos</DialogDescription>
-          </DialogHeader>
-
+          </>
+        }
+      >
           <div className="space-y-6">
             <div className="space-y-2">
               <Label>Nome do Template *</Label>
@@ -1106,16 +1107,7 @@ export const Contracts: React.FC = () => {
               </p>
             </div>
           </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveTemplate} disabled={saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingTemplate ? 'Salvar' : 'Criar Template'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Admin Signature Dialog */}
       <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>

@@ -22,14 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -516,15 +509,29 @@ export const Users: React.FC = () => {
         </>
       )}
 
-      {/* Create User Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo Usuário</DialogTitle>
-            <DialogDescription>
-              Crie um novo usuário preenchendo as informações abaixo.
-            </DialogDescription>
-          </DialogHeader>
+      <FormSheet
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        title="Novo Usuário"
+        description="Crie um novo usuário preenchendo as informações abaixo."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={creating}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateUser} disabled={creating}>
+              {creating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                'Criar Usuário'
+              )}
+            </Button>
+          </>
+        }
+      >
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -583,23 +590,7 @@ export const Users: React.FC = () => {
             </div>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={creating}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateUser} disabled={creating}>
-              {creating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Criando...
-                </>
-              ) : (
-                'Criar Usuário'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Edit Dialog - using reusable UserEditDialog component */}
       <UserEditDialog

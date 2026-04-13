@@ -12,14 +12,7 @@ import { Contracts } from '@/pages/Contracts';
 import { PortfolioTab } from '@/components/services/PortfolioTab';
 import { Layers3, Search, Plus, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle } from
-'@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import {
@@ -707,14 +700,22 @@ export const Services: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={createItemOpen} onOpenChange={setCreateItemOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingItemId ? 'Editar item de serviço' : 'Adicionar item de serviço'}</DialogTitle>
-            <DialogDescription>
-              Preencha os dados para incluir um novo item na listagem de serviços.
-            </DialogDescription>
-          </DialogHeader>
+      <FormSheet
+        open={createItemOpen}
+        onOpenChange={setCreateItemOpen}
+        title={editingItemId ? 'Editar item de serviço' : 'Adicionar item de serviço'}
+        description="Preencha os dados para incluir um novo item na listagem de serviços."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => {setCreateItemOpen(false);resetNewItem();}}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveItem} disabled={!newItem.service.trim() || savingItem}>
+              {savingItem ? 'Salvando...' : editingItemId ? 'Salvar alterações' : 'Adicionar item'}
+            </Button>
+          </>
+        }
+      >
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -781,16 +782,7 @@ export const Services: React.FC = () => {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {setCreateItemOpen(false);resetNewItem();}}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveItem} disabled={!newItem.service.trim() || savingItem}>
-              {savingItem ? 'Salvando...' : editingItemId ? 'Salvar alterações' : 'Adicionar item'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
     </div>);
 
 };

@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -455,11 +456,19 @@ export const ProjectDetail: React.FC = () => {
         )}
       </div>
 
-      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-lg">
-          <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitTask}>
-            <div className="space-y-4 py-4 max-h-[50vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={isTaskDialogOpen}
+        onOpenChange={setIsTaskDialogOpen}
+        title={editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsTaskDialogOpen(false)} disabled={submitting}>Cancelar</Button>
+            <Button type="submit" form="task-form-pd" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTask ? 'Salvar' : 'Criar'}</Button>
+          </>
+        }
+      >
+          <form id="task-form-pd" onSubmit={handleSubmitTask}>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="taskName">Nome da Tarefa</Label>
                 <Input id="taskName" value={taskForm.name} onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })} required disabled={submitting} />
@@ -481,19 +490,34 @@ export const ProjectDetail: React.FC = () => {
                 </Select>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsTaskDialogOpen(false)} disabled={submitting}>Cancelar</Button>
-              <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTask ? 'Salvar' : 'Criar'}</Button>
-            </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitTime}>
-            <div className="space-y-4 py-4 max-h-[50vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={isTimeDialogOpen}
+        onOpenChange={setIsTimeDialogOpen}
+        title={editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}
+        footer={
+          <>
+            {editingTimeEntryId && (
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={() => setIsDeleteTimeEntryDialogOpen(true)} 
+                disabled={submitting}
+                className="w-full sm:w-auto sm:mr-auto"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Excluir
+              </Button>
+            )}
+            <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button>
+            <Button type="submit" form="time-form-pd" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
+          </>
+        }
+      >
+          <form id="time-form-pd" onSubmit={handleSubmitTime}>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="time">Tempo (HH:mm)</Label>
                 <Input 
@@ -527,27 +551,8 @@ export const ProjectDetail: React.FC = () => {
                 <Input id="timeDescription" value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} placeholder="O que foi feito?" disabled={submitting} />
               </div>
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              {editingTimeEntryId && (
-                <Button 
-                  type="button" 
-                  variant="destructive" 
-                  onClick={() => setIsDeleteTimeEntryDialogOpen(true)} 
-                  disabled={submitting}
-                  className="w-full sm:w-auto sm:mr-auto"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Excluir
-                </Button>
-              )}
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting} className="flex-1 sm:flex-initial">Cancelar</Button>
-                <Button type="submit" disabled={submitting} className="flex-1 sm:flex-initial">{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
-              </div>
-            </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <AlertDialog open={isDeleteTimeEntryDialogOpen} onOpenChange={setIsDeleteTimeEntryDialogOpen}>
         <AlertDialogContent>

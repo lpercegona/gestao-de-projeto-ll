@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import { Plus, Users, FileCheck, Play, Pause, Square, Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useData } from "@/contexts/DataContext";
@@ -180,16 +180,23 @@ export const QuickActionsPanel: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Quick Client Dialog */}
-      <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Novo Cliente</DialogTitle>
-            <DialogDescription>
-              Adicione um novo cliente rapidamente. Você pode completar os dados depois.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+      <FormSheet
+        open={clientDialogOpen}
+        onOpenChange={setClientDialogOpen}
+        title="Novo Cliente"
+        description="Adicione um novo cliente rapidamente. Você pode completar os dados depois."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setClientDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateClient} disabled={isCreating}>
+              {isCreating ? "Criando..." : "Criar Cliente"}
+            </Button>
+          </>
+        }
+      >
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="client-name">Nome</Label>
               <Input
@@ -210,16 +217,7 @@ export const QuickActionsPanel: React.FC = () => {
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setClientDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateClient} disabled={isCreating}>
-              {isCreating ? "Criando..." : "Criar Cliente"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <ExpandedTimerModal open={expandedTimerOpen} onOpenChange={setExpandedTimerOpen} />
 
