@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useEditingLock } from '@/hooks/useEditingLock';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -120,13 +120,82 @@ export const KanbanStagesDialog: React.FC<KanbanStagesDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Gerenciar Etapas do Kanban</DialogTitle>
-        </DialogHeader>
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Gerenciar Etapas do Kanban"
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Salvar
+          </Button>
+        </>
+      }
+    >
+          {localStages.map((stage, index) => (
+            <div key={index} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+              <div className="flex flex-col gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => moveStage(index, 'up')}
+                  disabled={index === 0}
+                >
+                  <GripVertical className="w-4 h-4" />
+                </Button>
+              </div>
 
-        <div className="space-y-4 py-4 max-h-[50vh] overflow-y-auto">
+              <div className="flex-1 grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Nome</Label>
+                  <Input
+                    value={stage.name}
+                    onChange={(e) => updateStage(index, 'name', e.target.value)}
+                    placeholder="Nome da etapa"
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Cor</Label>
+                  <Select value={stage.color} onValueChange={(v) => updateStage(index, 'color', v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COLORS.map((color) => (
+                        <SelectItem key={color.value} value={color.value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded ${color.value}`} />
+                            {color.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-destructive hover:text-destructive"
+                onClick={() => removeStage(index)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+
+          <Button variant="outline" onClick={addStage} className="w-full">
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar Etapa
+          </Button>
+        <div className="space-y-4">
           {localStages.map((stage, index) => (
             <div key={index} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
               <div className="flex flex-col gap-1">
@@ -187,17 +256,6 @@ export const KanbanStagesDialog: React.FC<KanbanStagesDialogProps> = ({
             Adicionar Etapa
           </Button>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Salvar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   );
 };

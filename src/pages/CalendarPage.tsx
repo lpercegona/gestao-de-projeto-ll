@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -589,11 +589,19 @@ export const CalendarPage: React.FC = () => {
       }
 
       {/* Reminder Dialog for admins (create/edit) */}
-      <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingReminderId ? 'Editar Lembrete' : 'Novo Lembrete'}</DialogTitle>
-          </DialogHeader>
+      <FormSheet
+        open={showReminderDialog}
+        onOpenChange={setShowReminderDialog}
+        title={editingReminderId ? 'Editar Lembrete' : 'Novo Lembrete'}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowReminderDialog(false)}>Cancelar</Button>
+            <Button onClick={handleSaveReminder}>
+              {editingReminderId ? 'Salvar' : 'Criar Lembrete'}
+            </Button>
+          </>
+        }
+      >
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="reminder-title">Título *</Label>
@@ -671,14 +679,7 @@ export const CalendarPage: React.FC = () => {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReminderDialog(false)}>Cancelar</Button>
-            <Button onClick={handleSaveReminder}>
-              {editingReminderId ? 'Salvar' : 'Criar Lembrete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
