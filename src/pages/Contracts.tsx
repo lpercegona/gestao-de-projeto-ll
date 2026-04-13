@@ -1076,6 +1076,14 @@ export const Contracts: React.FC = () => {
           </>
         }
       >
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label>Nome do Template *</Label>
+              <Input
+                value={templateFormData.name}
+                onChange={(e) => setTemplateFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Contrato Padrão de Serviços"
+              />
             </div>
             <div className="space-y-2">
               <Label>Descrição</Label>
@@ -1099,16 +1107,7 @@ export const Contracts: React.FC = () => {
               </p>
             </div>
           </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveTemplate} disabled={saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingTemplate ? 'Salvar' : 'Criar Template'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Admin Signature Dialog */}
       <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
