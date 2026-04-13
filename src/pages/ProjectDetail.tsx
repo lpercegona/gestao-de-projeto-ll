@@ -468,7 +468,6 @@ export const ProjectDetail: React.FC = () => {
         }
       >
           <form id="task-form-pd" onSubmit={handleSubmitTask}>
-          <form id="task-form-pd" onSubmit={handleSubmitTask}>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="taskName">Nome da Tarefa</Label>
