@@ -1094,49 +1094,13 @@ export const ClientProjects: React.FC = () => {
           </div>
       </FormSheet>
 
-      {/* Direct project edit dialog (own projects) */}
-      <Dialog open={projectEditDialogOpen} onOpenChange={setProjectEditDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Editar Projeto</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label>Nome do projeto</Label>
-              <Input
-                value={projectEditForm.name}
-                onChange={(e) => setProjectEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={projectEditSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={projectEditForm.description}
-                onChange={(value) => setProjectEditForm((prev) => ({ ...prev, description: value }))}
-                disabled={projectEditSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo</Label>
-              <Input
-                type="date"
-                value={projectEditForm.due_date}
-                onChange={(e) => setProjectEditForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={projectEditSubmitting}
-              />
-            </div>
+      <FormSheet open={projectEditDialogOpen} onOpenChange={setProjectEditDialogOpen} title="Editar Projeto" footer={<><Button variant="outline" onClick={() => setProjectEditDialogOpen(false)} disabled={projectEditSubmitting}>Cancelar</Button><Button onClick={handleSubmitDirectEditProject} disabled={projectEditSubmitting || !projectEditForm.name.trim()}>{projectEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome do projeto</Label><Input value={projectEditForm.name} onChange={(e) => setProjectEditForm((prev) => ({ ...prev, name: e.target.value }))} disabled={projectEditSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={projectEditForm.description} onChange={(value) => setProjectEditForm((prev) => ({ ...prev, description: value }))} disabled={projectEditSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={projectEditForm.due_date} onChange={(e) => setProjectEditForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={projectEditSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProjectEditDialogOpen(false)} disabled={projectEditSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitDirectEditProject} disabled={projectEditSubmitting || !projectEditForm.name.trim()}>
-              {projectEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete own project confirmation */}
       <AlertDialog open={projectDeleteDialogOpen} onOpenChange={(open) => { setProjectDeleteDialogOpen(open); if (!open) setProjectToDelete(null); }}>
