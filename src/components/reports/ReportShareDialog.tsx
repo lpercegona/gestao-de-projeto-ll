@@ -216,7 +216,12 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
       {triggerButton ? (
         <span onClick={() => setIsOpen(true)}>{triggerButton}</span>
       ) : (
-        <span onClick={() => setIsOpen(true)}>{defaultTrigger}</span>
+        <span onClick={() => setIsOpen(true)}>
+          <Button variant="ghost" size="sm" className="gap-1.5 px-2 sm:px-3">
+            <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Compartilhar</span>
+          </Button>
+        </span>
       )}
       <FormSheet
         open={isOpen}

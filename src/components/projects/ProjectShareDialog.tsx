@@ -237,15 +237,11 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
-            Compartilhar Projeto
-          </DialogTitle>
-        </DialogHeader>
-
+    <FormSheet
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="Compartilhar Projeto"
+    >
         {canManageShare && (
           <div className="flex gap-2">
             <Input
@@ -269,7 +265,7 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
           </div>
         )}
 
-        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+        <div className="space-y-2 mt-4">
           {loading ? (
             <div className="flex justify-center py-4">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -329,7 +325,6 @@ export const ProjectShareDialog: React.FC<ProjectShareDialogProps> = ({
             })
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   );
 };
