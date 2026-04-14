@@ -1135,93 +1135,21 @@ export const ClientProjects: React.FC = () => {
           </div>
       </FormSheet>
 
-      {/* Edit own task dialog */}
-      <Dialog open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Editar Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Nome da tarefa</Label>
-              <Input
-                value={taskEditForm.name}
-                onChange={(e) => setTaskEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={taskEditSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={taskEditForm.description}
-                onChange={(value) => setTaskEditForm((prev) => ({ ...prev, description: value }))}
-                disabled={taskEditSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo</Label>
-              <Input
-                type="date"
-                value={taskEditForm.due_date}
-                onChange={(e) => setTaskEditForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskEditSubmitting}
-              />
-            </div>
+      <FormSheet open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen} title="Editar Tarefa" footer={<><Button variant="outline" onClick={() => setTaskEditDialogOpen(false)} disabled={taskEditSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskEdit} disabled={taskEditSubmitting}>{taskEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome da tarefa</Label><Input value={taskEditForm.name} onChange={(e) => setTaskEditForm((prev) => ({ ...prev, name: e.target.value }))} disabled={taskEditSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskEditForm.description} onChange={(value) => setTaskEditForm((prev) => ({ ...prev, description: value }))} disabled={taskEditSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={taskEditForm.due_date} onChange={(e) => setTaskEditForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskEditSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskEditDialogOpen(false)} disabled={taskEditSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskEdit} disabled={taskEditSubmitting}>
-              {taskEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      {/* Request edit for admin tasks dialog */}
-      <Dialog open={taskEditRequestDialogOpen} onOpenChange={setTaskEditRequestDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Solicitar Edição da Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Nome da tarefa</Label>
-              <Input
-                value={taskEditRequestForm.name}
-                onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={taskEditRequestSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={taskEditRequestForm.description}
-                onChange={(value) => setTaskEditRequestForm((prev) => ({ ...prev, description: value }))}
-                disabled={taskEditRequestSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo</Label>
-              <Input
-                type="date"
-                value={taskEditRequestForm.due_date}
-                onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskEditRequestSubmitting}
-              />
-            </div>
+      <FormSheet open={taskEditRequestDialogOpen} onOpenChange={setTaskEditRequestDialogOpen} title="Solicitar Edição da Tarefa" footer={<><Button variant="outline" onClick={() => setTaskEditRequestDialogOpen(false)} disabled={taskEditRequestSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskEditRequest} disabled={taskEditRequestSubmitting}>{taskEditRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Enviar Solicitação</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome da tarefa</Label><Input value={taskEditRequestForm.name} onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, name: e.target.value }))} disabled={taskEditRequestSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskEditRequestForm.description} onChange={(value) => setTaskEditRequestForm((prev) => ({ ...prev, description: value }))} disabled={taskEditRequestSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={taskEditRequestForm.due_date} onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskEditRequestSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskEditRequestDialogOpen(false)} disabled={taskEditRequestSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskEditRequest} disabled={taskEditRequestSubmitting}>
-              {taskEditRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Enviar Solicitação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete own task confirmation */}
       <AlertDialog open={taskDeleteDialogOpen} onOpenChange={(open) => { setTaskDeleteDialogOpen(open); if (!open) setTaskToDelete(null); }}>
