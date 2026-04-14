@@ -1119,50 +1119,13 @@ export const ClientProjects: React.FC = () => {
       </AlertDialog>
 
       {/* Task request dialog (for admin-owned projects) */}
-      <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label>Nome da tarefa</Label>
-              <Input
-                value={taskRequestForm.name}
-                onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Criar arte para campanha"
-                disabled={taskRequestSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={taskRequestForm.description}
-                onChange={(value) => setTaskRequestForm((prev) => ({ ...prev, description: value }))}
-                placeholder="Descreva o que precisa ser feito"
-                disabled={taskRequestSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo (opcional)</Label>
-              <Input
-                type="date"
-                value={taskRequestForm.due_date}
-                onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskRequestSubmitting}
-              />
-            </div>
+      <FormSheet open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen} title="Solicitar Nova Tarefa" footer={<><Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>{taskRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Enviar Solicitação</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome da tarefa</Label><Input value={taskRequestForm.name} onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Criar arte para campanha" disabled={taskRequestSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskRequestForm.description} onChange={(value) => setTaskRequestForm((prev) => ({ ...prev, description: value }))} placeholder="Descreva o que precisa ser feito" disabled={taskRequestSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo (opcional)</Label><Input type="date" value={taskRequestForm.due_date} onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskRequestSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>
-              {taskRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Enviar Solicitação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Direct task creation dialog */}
       <Dialog open={taskCreateDialogOpen} onOpenChange={setTaskCreateDialogOpen}>
