@@ -12,14 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -185,17 +178,33 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(value) => {
-      if (!value) resetForm();
-      onOpenChange(value);
-    }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
+    <FormSheet
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) resetForm();
+        onOpenChange(value);
+      }}
+      title={title}
+      description={description}
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
+            Cancelar
+          </Button>
+          <Button onClick={handleCreate} disabled={creating}>
+            {creating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Criando...
+              </>
+            ) : (
+              'Criar Usuário'
+            )}
+          </Button>
+        </>
+      }
+    >
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="create-name">Nome Completo *</Label>
             <Input
@@ -237,7 +246,6 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
               value={role}
               onValueChange={(value) => {
                 setRole(value as AppRole | 'none');
-                // Limpar seleção de cliente se mudar de função
                 if (value !== 'client') {
                   setSelectedClientId('');
                 }
@@ -257,7 +265,6 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
             </Select>
           </div>
 
-          {/* Seletor de empresa obrigatório para função Cliente */}
           {role === 'client' && !defaultClientId && (
             <div className="space-y-2">
               <Label htmlFor="create-client">Empresa Vinculada *</Label>
@@ -283,7 +290,6 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
             </div>
           )}
 
-          {/* Mostrar empresa pré-selecionada quando defaultClientId */}
           {role === 'client' && defaultClientId && (
             <div className="space-y-2">
               <Label>Empresa Vinculada</Label>
@@ -293,23 +299,6 @@ export const UserCreateDialog: React.FC<UserCreateDialogProps> = ({
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
-            Cancelar
-          </Button>
-          <Button onClick={handleCreate} disabled={creating}>
-            {creating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Criando...
-              </>
-            ) : (
-              'Criar Usuário'
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   );
 };

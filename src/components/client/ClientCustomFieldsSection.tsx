@@ -6,13 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -317,15 +311,24 @@ export const ClientCustomFieldsSection: React.FC<ClientCustomFieldsSectionProps>
       )}
 
       {/* Create/Edit Column Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}
-            </DialogTitle>
-          </DialogHeader>
+      <FormSheet
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }} disabled={submitting}>
+              {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {editingColumn ? 'Salvar' : 'Criar'}
+            </Button>
+          </>
+        }
+      >
           <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="column-name">Nome do Campo</Label>
                 <Input
@@ -411,19 +414,8 @@ export const ClientCustomFieldsSection: React.FC<ClientCustomFieldsSectionProps>
                 />
               </div>
             </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                {editingColumn ? 'Salvar' : 'Criar'}
-              </Button>
-            </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

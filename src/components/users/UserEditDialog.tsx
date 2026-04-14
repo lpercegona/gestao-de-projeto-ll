@@ -15,14 +15,7 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { Loader2, User, Globe, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -434,15 +427,29 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Editar Usuário</DialogTitle>
-          <DialogDescription>
-            Atualize as informações e preferências do usuário.
-          </DialogDescription>
-        </DialogHeader>
-
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Editar Usuário"
+      description="Atualize as informações e preferências do usuário."
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar'
+            )}
+          </Button>
+        </>
+      }
+    >
         {showTabs ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -465,28 +472,11 @@ export const UserEditDialog: React.FC<UserEditDialogProps> = ({
             </TabsContent>
           </Tabs>
         ) : (
-          <div className="space-y-4 py-4">
+          <div className="space-y-4">
             {renderProfileFields()}
             {showPreferences && renderPreferencesFields()}
           </div>
         )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              'Salvar'
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   );
 };

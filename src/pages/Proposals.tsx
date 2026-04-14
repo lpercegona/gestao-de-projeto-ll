@@ -16,8 +16,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import {
   Select,
   SelectContent,
@@ -1430,17 +1430,24 @@ export const Proposals: React.FC = () => {
       </div>
 
       {/* Proposal Dialog */}
-      <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingProposal ? 'Editar Proposta' : 'Nova Proposta'}
-            </DialogTitle>
-            <DialogDescription>
-              Preencha os dados da proposta comercial
-            </DialogDescription>
-          </DialogHeader>
-
+      <FormSheet
+        open={proposalDialogOpen}
+        onOpenChange={setProposalDialogOpen}
+        title={editingProposal ? 'Editar Proposta' : 'Nova Proposta'}
+        description="Preencha os dados da proposta comercial"
+        className="sm:w-[40vw] sm:min-w-[500px] sm:max-w-[700px]"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setProposalDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveProposal} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingProposal ? 'Salvar' : 'Criar Proposta'}
+            </Button>
+          </>
+        }
+      >
           <div className="space-y-6">
             {/* Client selection */}
             <div className="space-y-2">
@@ -1471,7 +1478,7 @@ export const Proposals: React.FC = () => {
             </div>
 
             {/* Recipient info */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <div className="space-y-2">
                 <Label>Nome do Destinatário *</Label>
                 <Input
@@ -1560,7 +1567,7 @@ export const Proposals: React.FC = () => {
                 <Label>Itens da Proposta</Label>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <div className="grid gap-2">
                 <Select value={selectedCatalogItemId} onValueChange={setSelectedCatalogItemId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um item da lista de serviços" />
@@ -1607,7 +1614,7 @@ export const Proposals: React.FC = () => {
                         </Button>
                       )}
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3">
                       <div className="space-y-2">
                         <Label>Serviço</Label>
                         <Input
@@ -1677,18 +1684,7 @@ export const Proposals: React.FC = () => {
               </Card>
             </div>
           </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setProposalDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveProposal} disabled={saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingProposal ? 'Salvar' : 'Criar Proposta'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <Dialog open={!!previewingProposal} onOpenChange={(open) => !open && setPreviewingProposal(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto dialog-scrollbar-hide">

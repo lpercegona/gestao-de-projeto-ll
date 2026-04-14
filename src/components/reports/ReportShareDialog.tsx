@@ -5,14 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -213,30 +206,30 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
     setTimeout(() => setCopiedToken(false), 2000);
   };
 
-  const defaultTrigger = (
-    <Button variant="ghost" size="sm" className="gap-1.5 px-2 sm:px-3">
-      <Share2 className="w-4 h-4" />
-      <span className="hidden sm:inline">Compartilhar</span>
-    </Button>
-  );
+  const handleOpenChange = (newOpen: boolean) => {
+    setIsOpen(newOpen);
+    if (!newOpen) setSharePassword('');
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(newOpen) => {
-      setIsOpen(newOpen);
-      if (!newOpen) setSharePassword('');
-    }}>
-      <DialogTrigger asChild>
-        {triggerButton || defaultTrigger}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Compartilhar Relatório</DialogTitle>
-          <DialogDescription>
-            Gere um link protegido por senha para compartilhar o relatório de {clientName}.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 pt-4">
+    <>
+      {triggerButton ? (
+        <span onClick={() => setIsOpen(true)}>{triggerButton}</span>
+      ) : (
+        <span onClick={() => setIsOpen(true)}>
+          <Button variant="ghost" size="sm" className="gap-1.5 px-2 sm:px-3">
+            <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Compartilhar</span>
+          </Button>
+        </span>
+      )}
+      <FormSheet
+        open={isOpen}
+        onOpenChange={handleOpenChange}
+        title="Compartilhar Relatório"
+        description={`Gere um link protegido por senha para compartilhar o relatório de ${clientName}.`}
+      >
+        <div className="space-y-4">
           {!share ? (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -437,7 +430,7 @@ export const ReportShareDialog: React.FC<ReportShareDialogProps> = ({
             </>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </FormSheet>
+    </>
   );
 };

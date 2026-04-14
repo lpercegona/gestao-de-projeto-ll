@@ -5,7 +5,7 @@ import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1022,11 +1022,7 @@ export const ClientProjects: React.FC = () => {
         />
       )}
 
-      <Dialog open={isAddProjectOptionDialogOpen} onOpenChange={setIsAddProjectOptionDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Como você deseja criar o projeto?</DialogTitle>
-          </DialogHeader>
+      <FormSheet open={isAddProjectOptionDialogOpen} onOpenChange={setIsAddProjectOptionDialogOpen} title="Como você deseja criar o projeto?">
           <div className="space-y-3">
             <Button variant="outline" className="w-full justify-start" onClick={handleOpenProjectRequestDialog}>
               Solicitar novo projeto
@@ -1035,58 +1031,30 @@ export const ClientProjects: React.FC = () => {
               Adicionar novo projeto
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      <Dialog open={isDirectProjectDialogOpen} onOpenChange={setIsDirectProjectDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Adicionar Novo Projeto</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+      <FormSheet open={isDirectProjectDialogOpen} onOpenChange={setIsDirectProjectDialogOpen} title="Adicionar Novo Projeto" footer={<><Button variant="outline" onClick={() => setIsDirectProjectDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button><Button onClick={handleSubmitDirectProject} disabled={projectCreateSubmitting || !projectCreateForm.name.trim()}>{projectCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar Projeto</Button></>}>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="project-create-name">Nome do projeto</Label>
-              <Input
-                id="project-create-name"
-                value={projectCreateForm.name}
-                onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Campanha de lançamento"
-                disabled={projectCreateSubmitting}
-              />
+              <Input id="project-create-name" value={projectCreateForm.name} onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Campanha de lançamento" disabled={projectCreateSubmitting} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="project-create-description">Descrição</Label>
-              <WysiwygEditor
-                value={projectCreateForm.description}
-                onChange={(value) => setProjectCreateForm((prev) => ({ ...prev, description: value }))}
-                placeholder="Descreva os objetivos do projeto"
-                disabled={projectCreateSubmitting}
-                minHeight="120px"
-              />
+              <WysiwygEditor value={projectCreateForm.description} onChange={(value) => setProjectCreateForm((prev) => ({ ...prev, description: value }))} placeholder="Descreva os objetivos do projeto" disabled={projectCreateSubmitting} minHeight="120px" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="project-create-due-date">Prazo (opcional)</Label>
-              <Input
-                id="project-create-due-date"
-                type="date"
-                value={projectCreateForm.due_date}
-                onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={projectCreateSubmitting}
-              />
+              <Input id="project-create-due-date" type="date" value={projectCreateForm.due_date} onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={projectCreateSubmitting} />
             </div>
-
             <div className="space-y-3 rounded-lg border border-border p-3">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
                   <p className="text-xs text-muted-foreground">Adicione tarefas iniciais para este projeto proprietário.</p>
                 </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => setProjectTaskDialogOpen(true)} disabled={projectCreateSubmitting}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova tarefa
-                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setProjectTaskDialogOpen(true)} disabled={projectCreateSubmitting}><Plus className="mr-2 h-4 w-4" />Nova tarefa</Button>
               </div>
-
               {projectTasks.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Nenhuma tarefa adicionada.</p>
               ) : (
@@ -1098,9 +1066,7 @@ export const ClientProjects: React.FC = () => {
                           <p className="text-sm font-medium truncate">{task.name}</p>
                           <p className="text-xs text-muted-foreground">Prazo: {task.due_date || 'Não informado'}</p>
                         </div>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => handleRemoveProjectTask(index)} disabled={projectCreateSubmitting}>
-                          Remover
-                        </Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => handleRemoveProjectTask(index)} disabled={projectCreateSubmitting}>Remover</Button>
                       </div>
                     </div>
                   ))}
@@ -1108,104 +1074,32 @@ export const ClientProjects: React.FC = () => {
               )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDirectProjectDialogOpen(false)} disabled={projectCreateSubmitting}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmitDirectProject} disabled={projectCreateSubmitting || !projectCreateForm.name.trim()}>
-              {projectCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Criar Projeto
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      <Dialog open={projectTaskDialogOpen} onOpenChange={setProjectTaskDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Nova tarefa do projeto</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
+      <FormSheet open={projectTaskDialogOpen} onOpenChange={setProjectTaskDialogOpen} title="Nova tarefa do projeto" footer={<><Button variant="outline" onClick={() => setProjectTaskDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button><Button onClick={handleAddProjectTask} disabled={projectCreateSubmitting || !projectTaskForm.name.trim()}>Adicionar tarefa</Button></>}>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="project-task-name">Nome da tarefa</Label>
-              <Input
-                id="project-task-name"
-                value={projectTaskForm.name}
-                onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Definir cronograma"
-                disabled={projectCreateSubmitting}
-              />
+              <Input id="project-task-name" value={projectTaskForm.name} onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Definir cronograma" disabled={projectCreateSubmitting} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="project-task-description">Descrição</Label>
-              <WysiwygEditor
-                value={projectTaskForm.description}
-                onChange={(value) => setProjectTaskForm((prev) => ({ ...prev, description: value }))}
-                disabled={projectCreateSubmitting}
-                minHeight="120px"
-              />
+              <WysiwygEditor value={projectTaskForm.description} onChange={(value) => setProjectTaskForm((prev) => ({ ...prev, description: value }))} disabled={projectCreateSubmitting} minHeight="120px" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="project-task-due-date">Prazo (opcional)</Label>
-              <Input
-                id="project-task-due-date"
-                type="date"
-                value={projectTaskForm.due_date}
-                onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={projectCreateSubmitting}
-              />
+              <Input id="project-task-due-date" type="date" value={projectTaskForm.due_date} onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={projectCreateSubmitting} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProjectTaskDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button>
-            <Button onClick={handleAddProjectTask} disabled={projectCreateSubmitting || !projectTaskForm.name.trim()}>Adicionar tarefa</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      {/* Direct project edit dialog (own projects) */}
-      <Dialog open={projectEditDialogOpen} onOpenChange={setProjectEditDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Editar Projeto</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label>Nome do projeto</Label>
-              <Input
-                value={projectEditForm.name}
-                onChange={(e) => setProjectEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={projectEditSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={projectEditForm.description}
-                onChange={(value) => setProjectEditForm((prev) => ({ ...prev, description: value }))}
-                disabled={projectEditSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo</Label>
-              <Input
-                type="date"
-                value={projectEditForm.due_date}
-                onChange={(e) => setProjectEditForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={projectEditSubmitting}
-              />
-            </div>
+      <FormSheet open={projectEditDialogOpen} onOpenChange={setProjectEditDialogOpen} title="Editar Projeto" footer={<><Button variant="outline" onClick={() => setProjectEditDialogOpen(false)} disabled={projectEditSubmitting}>Cancelar</Button><Button onClick={handleSubmitDirectEditProject} disabled={projectEditSubmitting || !projectEditForm.name.trim()}>{projectEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome do projeto</Label><Input value={projectEditForm.name} onChange={(e) => setProjectEditForm((prev) => ({ ...prev, name: e.target.value }))} disabled={projectEditSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={projectEditForm.description} onChange={(value) => setProjectEditForm((prev) => ({ ...prev, description: value }))} disabled={projectEditSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={projectEditForm.due_date} onChange={(e) => setProjectEditForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={projectEditSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProjectEditDialogOpen(false)} disabled={projectEditSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitDirectEditProject} disabled={projectEditSubmitting || !projectEditForm.name.trim()}>
-              {projectEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete own project confirmation */}
       <AlertDialog open={projectDeleteDialogOpen} onOpenChange={(open) => { setProjectDeleteDialogOpen(open); if (!open) setProjectToDelete(null); }}>
@@ -1224,186 +1118,37 @@ export const ClientProjects: React.FC = () => {
       </AlertDialog>
 
       {/* Task request dialog (for admin-owned projects) */}
-      <Dialog open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Solicitar Nova Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label>Nome da tarefa</Label>
-              <Input
-                value={taskRequestForm.name}
-                onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Criar arte para campanha"
-                disabled={taskRequestSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={taskRequestForm.description}
-                onChange={(value) => setTaskRequestForm((prev) => ({ ...prev, description: value }))}
-                placeholder="Descreva o que precisa ser feito"
-                disabled={taskRequestSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo (opcional)</Label>
-              <Input
-                type="date"
-                value={taskRequestForm.due_date}
-                onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskRequestSubmitting}
-              />
-            </div>
+      <FormSheet open={taskRequestDialogOpen} onOpenChange={setTaskRequestDialogOpen} title="Solicitar Nova Tarefa" footer={<><Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>{taskRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Enviar Solicitação</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome da tarefa</Label><Input value={taskRequestForm.name} onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Criar arte para campanha" disabled={taskRequestSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskRequestForm.description} onChange={(value) => setTaskRequestForm((prev) => ({ ...prev, description: value }))} placeholder="Descreva o que precisa ser feito" disabled={taskRequestSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo (opcional)</Label><Input type="date" value={taskRequestForm.due_date} onChange={(e) => setTaskRequestForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskRequestSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskRequestDialogOpen(false)} disabled={taskRequestSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskRequest} disabled={taskRequestSubmitting || !taskRequestForm.name.trim()}>
-              {taskRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Enviar Solicitação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      {/* Direct task creation dialog */}
-      <Dialog open={taskCreateDialogOpen} onOpenChange={setTaskCreateDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Nova Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label htmlFor="task-create-name">Nome da tarefa</Label>
-              <Input
-                id="task-create-name"
-                value={taskCreateForm.name}
-                onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Criar arte para campanha"
-                disabled={taskCreateSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-create-description">Descrição</Label>
-              <WysiwygEditor
-                value={taskCreateForm.description}
-                onChange={(value) => setTaskCreateForm((prev) => ({ ...prev, description: value }))}
-                placeholder="Descreva o que precisa ser feito"
-                disabled={taskCreateSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-create-due-date">Prazo (opcional)</Label>
-              <Input
-                id="task-create-due-date"
-                type="date"
-                value={taskCreateForm.due_date}
-                onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskCreateSubmitting}
-              />
-            </div>
+      <FormSheet open={taskCreateDialogOpen} onOpenChange={setTaskCreateDialogOpen} title="Nova Tarefa" footer={<><Button variant="outline" onClick={() => setTaskCreateDialogOpen(false)} disabled={taskCreateSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskCreate} disabled={taskCreateSubmitting || !taskCreateForm.name.trim()}>{taskCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar Tarefa</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label htmlFor="task-create-name">Nome da tarefa</Label><Input id="task-create-name" value={taskCreateForm.name} onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Criar arte para campanha" disabled={taskCreateSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="task-create-description">Descrição</Label><WysiwygEditor value={taskCreateForm.description} onChange={(value) => setTaskCreateForm((prev) => ({ ...prev, description: value }))} placeholder="Descreva o que precisa ser feito" disabled={taskCreateSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label htmlFor="task-create-due-date">Prazo (opcional)</Label><Input id="task-create-due-date" type="date" value={taskCreateForm.due_date} onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskCreateSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskCreateDialogOpen(false)} disabled={taskCreateSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskCreate} disabled={taskCreateSubmitting || !taskCreateForm.name.trim()}>
-              {taskCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Criar Tarefa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      {/* Edit own task dialog */}
-      <Dialog open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Editar Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Nome da tarefa</Label>
-              <Input
-                value={taskEditForm.name}
-                onChange={(e) => setTaskEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={taskEditSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={taskEditForm.description}
-                onChange={(value) => setTaskEditForm((prev) => ({ ...prev, description: value }))}
-                disabled={taskEditSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo</Label>
-              <Input
-                type="date"
-                value={taskEditForm.due_date}
-                onChange={(e) => setTaskEditForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskEditSubmitting}
-              />
-            </div>
+      <FormSheet open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen} title="Editar Tarefa" footer={<><Button variant="outline" onClick={() => setTaskEditDialogOpen(false)} disabled={taskEditSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskEdit} disabled={taskEditSubmitting}>{taskEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome da tarefa</Label><Input value={taskEditForm.name} onChange={(e) => setTaskEditForm((prev) => ({ ...prev, name: e.target.value }))} disabled={taskEditSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskEditForm.description} onChange={(value) => setTaskEditForm((prev) => ({ ...prev, description: value }))} disabled={taskEditSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={taskEditForm.due_date} onChange={(e) => setTaskEditForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskEditSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskEditDialogOpen(false)} disabled={taskEditSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskEdit} disabled={taskEditSubmitting}>
-              {taskEditSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      {/* Request edit for admin tasks dialog */}
-      <Dialog open={taskEditRequestDialogOpen} onOpenChange={setTaskEditRequestDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Solicitar Edição da Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Nome da tarefa</Label>
-              <Input
-                value={taskEditRequestForm.name}
-                onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={taskEditRequestSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <WysiwygEditor
-                value={taskEditRequestForm.description}
-                onChange={(value) => setTaskEditRequestForm((prev) => ({ ...prev, description: value }))}
-                disabled={taskEditRequestSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Prazo</Label>
-              <Input
-                type="date"
-                value={taskEditRequestForm.due_date}
-                onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskEditRequestSubmitting}
-              />
-            </div>
+      <FormSheet open={taskEditRequestDialogOpen} onOpenChange={setTaskEditRequestDialogOpen} title="Solicitar Edição da Tarefa" footer={<><Button variant="outline" onClick={() => setTaskEditRequestDialogOpen(false)} disabled={taskEditRequestSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskEditRequest} disabled={taskEditRequestSubmitting}>{taskEditRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Enviar Solicitação</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Nome da tarefa</Label><Input value={taskEditRequestForm.name} onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, name: e.target.value }))} disabled={taskEditRequestSubmitting} /></div>
+            <div className="space-y-2"><Label>Descrição</Label><WysiwygEditor value={taskEditRequestForm.description} onChange={(value) => setTaskEditRequestForm((prev) => ({ ...prev, description: value }))} disabled={taskEditRequestSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label>Prazo</Label><Input type="date" value={taskEditRequestForm.due_date} onChange={(e) => setTaskEditRequestForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskEditRequestSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskEditRequestDialogOpen(false)} disabled={taskEditRequestSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskEditRequest} disabled={taskEditRequestSubmitting}>
-              {taskEditRequestSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Enviar Solicitação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete own task confirmation */}
       <AlertDialog open={taskDeleteDialogOpen} onOpenChange={(open) => { setTaskDeleteDialogOpen(open); if (!open) setTaskToDelete(null); }}>
@@ -1463,12 +1208,9 @@ export const ClientProjects: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Time Entry Dialog */}
-      <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitTime}>
-            <div className="space-y-4 py-4">
+      <FormSheet open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen} title={editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'} footer={<div className="flex flex-col sm:flex-row gap-2 w-full">{editingTimeEntryId && (<Button type="button" variant="destructive" onClick={() => setIsDeleteTimeEntryDialogOpen(true)} disabled={submitting} className="w-full sm:w-auto"><Trash2 className="w-4 h-4 mr-2" />Excluir</Button>)}<div className="flex gap-2 w-full sm:w-auto sm:ml-auto"><Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button type="button" onClick={(e) => { e.preventDefault(); const form = document.getElementById('time-entry-form') as HTMLFormElement; form?.requestSubmit(); }} disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button></div></div>}>
+          <form id="time-entry-form" onSubmit={handleSubmitTime}>
+            <div className="space-y-4">
               <div className="space-y-2"><Label>Tempo (HH:mm)</Label><Input type="time" value={timeForm.time} onChange={(e) => setTimeForm({ ...timeForm, time: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Data</Label><Input type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2">
@@ -1480,24 +1222,11 @@ export const ClientProjects: React.FC = () => {
               </div>
               <div className="space-y-2"><Label>Descrição (opcional)</Label><Textarea value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} rows={2} disabled={submitting} /></div>
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              {editingTimeEntryId && (
-                <Button type="button" variant="destructive" onClick={() => setIsDeleteTimeEntryDialogOpen(true)} disabled={submitting} className="w-full sm:w-auto"><Trash2 className="w-4 h-4 mr-2" />Excluir</Button>
-              )}
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button>
-                <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
-              </div>
-            </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      {/* Complete Timer Dialog */}
-      <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
+      <FormSheet open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen} title="Concluir Registro" footer={<div className="flex flex-col sm:flex-row gap-2 w-full"><Button variant="ghost" onClick={handleDiscardTimer} className="text-destructive hover:text-destructive sm:mr-auto">Descartar</Button><div className="flex gap-2 w-full sm:w-auto"><Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button><Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button></div></div>}>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Tipo de Registro</Label>
               <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
@@ -1507,15 +1236,7 @@ export const ClientProjects: React.FC = () => {
             </div>
             <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="ghost" onClick={handleDiscardTimer} className="text-destructive hover:text-destructive sm:mr-auto">Descartar</Button>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button>
-              <Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete Time Entry Confirmation */}
       <AlertDialog open={isDeleteTimeEntryDialogOpen} onOpenChange={setIsDeleteTimeEntryDialogOpen}>
