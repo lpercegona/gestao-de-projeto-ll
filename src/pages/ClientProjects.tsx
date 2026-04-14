@@ -1077,48 +1077,22 @@ export const ClientProjects: React.FC = () => {
           </div>
       </FormSheet>
 
-      <Dialog open={projectTaskDialogOpen} onOpenChange={setProjectTaskDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Nova tarefa do projeto</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
+      <FormSheet open={projectTaskDialogOpen} onOpenChange={setProjectTaskDialogOpen} title="Nova tarefa do projeto" footer={<><Button variant="outline" onClick={() => setProjectTaskDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button><Button onClick={handleAddProjectTask} disabled={projectCreateSubmitting || !projectTaskForm.name.trim()}>Adicionar tarefa</Button></>}>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="project-task-name">Nome da tarefa</Label>
-              <Input
-                id="project-task-name"
-                value={projectTaskForm.name}
-                onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Definir cronograma"
-                disabled={projectCreateSubmitting}
-              />
+              <Input id="project-task-name" value={projectTaskForm.name} onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Definir cronograma" disabled={projectCreateSubmitting} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="project-task-description">Descrição</Label>
-              <WysiwygEditor
-                value={projectTaskForm.description}
-                onChange={(value) => setProjectTaskForm((prev) => ({ ...prev, description: value }))}
-                disabled={projectCreateSubmitting}
-                minHeight="120px"
-              />
+              <WysiwygEditor value={projectTaskForm.description} onChange={(value) => setProjectTaskForm((prev) => ({ ...prev, description: value }))} disabled={projectCreateSubmitting} minHeight="120px" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="project-task-due-date">Prazo (opcional)</Label>
-              <Input
-                id="project-task-due-date"
-                type="date"
-                value={projectTaskForm.due_date}
-                onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={projectCreateSubmitting}
-              />
+              <Input id="project-task-due-date" type="date" value={projectTaskForm.due_date} onChange={(e) => setProjectTaskForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={projectCreateSubmitting} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProjectTaskDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button>
-            <Button onClick={handleAddProjectTask} disabled={projectCreateSubmitting || !projectTaskForm.name.trim()}>Adicionar tarefa</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Direct project edit dialog (own projects) */}
       <Dialog open={projectEditDialogOpen} onOpenChange={setProjectEditDialogOpen}>
