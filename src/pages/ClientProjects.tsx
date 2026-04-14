@@ -1209,12 +1209,9 @@ export const ClientProjects: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Time Entry Dialog */}
-      <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>{editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitTime}>
-            <div className="space-y-4 py-4">
+      <FormSheet open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen} title={editingTimeEntryId ? 'Editar Registro' : 'Registrar Horas'} footer={<div className="flex flex-col sm:flex-row gap-2 w-full">{editingTimeEntryId && (<Button type="button" variant="destructive" onClick={() => setIsDeleteTimeEntryDialogOpen(true)} disabled={submitting} className="w-full sm:w-auto"><Trash2 className="w-4 h-4 mr-2" />Excluir</Button>)}<div className="flex gap-2 w-full sm:w-auto sm:ml-auto"><Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button type="button" onClick={(e) => { e.preventDefault(); const form = document.getElementById('time-entry-form') as HTMLFormElement; form?.requestSubmit(); }} disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button></div></div>}>
+          <form id="time-entry-form" onSubmit={handleSubmitTime}>
+            <div className="space-y-4">
               <div className="space-y-2"><Label>Tempo (HH:mm)</Label><Input type="time" value={timeForm.time} onChange={(e) => setTimeForm({ ...timeForm, time: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2"><Label>Data</Label><Input type="date" value={timeForm.date} onChange={(e) => setTimeForm({ ...timeForm, date: e.target.value })} required disabled={submitting} /></div>
               <div className="space-y-2">
@@ -1226,24 +1223,11 @@ export const ClientProjects: React.FC = () => {
               </div>
               <div className="space-y-2"><Label>Descrição (opcional)</Label><Textarea value={timeForm.description} onChange={(e) => setTimeForm({ ...timeForm, description: e.target.value })} rows={2} disabled={submitting} /></div>
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              {editingTimeEntryId && (
-                <Button type="button" variant="destructive" onClick={() => setIsDeleteTimeEntryDialogOpen(true)} disabled={submitting} className="w-full sm:w-auto"><Trash2 className="w-4 h-4 mr-2" />Excluir</Button>
-              )}
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button type="button" variant="outline" onClick={() => setIsTimeDialogOpen(false)} disabled={submitting}>Cancelar</Button>
-                <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTimeEntryId ? 'Salvar' : 'Registrar'}</Button>
-              </div>
-            </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
-      {/* Complete Timer Dialog */}
-      <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
+      <FormSheet open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen} title="Concluir Registro" footer={<div className="flex flex-col sm:flex-row gap-2 w-full"><Button variant="ghost" onClick={handleDiscardTimer} className="text-destructive hover:text-destructive sm:mr-auto">Descartar</Button><div className="flex gap-2 w-full sm:w-auto"><Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button><Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button></div></div>}>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Tipo de Registro</Label>
               <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
@@ -1253,15 +1237,7 @@ export const ClientProjects: React.FC = () => {
             </div>
             <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="ghost" onClick={handleDiscardTimer} className="text-destructive hover:text-destructive sm:mr-auto">Descartar</Button>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button>
-              <Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete Time Entry Confirmation */}
       <AlertDialog open={isDeleteTimeEntryDialogOpen} onOpenChange={setIsDeleteTimeEntryDialogOpen}>
