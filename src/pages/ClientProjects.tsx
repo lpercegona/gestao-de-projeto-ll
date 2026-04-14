@@ -1127,53 +1127,13 @@ export const ClientProjects: React.FC = () => {
           </div>
       </FormSheet>
 
-      {/* Direct task creation dialog */}
-      <Dialog open={taskCreateDialogOpen} onOpenChange={setTaskCreateDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Nova Tarefa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label htmlFor="task-create-name">Nome da tarefa</Label>
-              <Input
-                id="task-create-name"
-                value={taskCreateForm.name}
-                onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Criar arte para campanha"
-                disabled={taskCreateSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-create-description">Descrição</Label>
-              <WysiwygEditor
-                value={taskCreateForm.description}
-                onChange={(value) => setTaskCreateForm((prev) => ({ ...prev, description: value }))}
-                placeholder="Descreva o que precisa ser feito"
-                disabled={taskCreateSubmitting}
-                minHeight="120px"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-create-due-date">Prazo (opcional)</Label>
-              <Input
-                id="task-create-due-date"
-                type="date"
-                value={taskCreateForm.due_date}
-                onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, due_date: e.target.value }))}
-                disabled={taskCreateSubmitting}
-              />
-            </div>
+      <FormSheet open={taskCreateDialogOpen} onOpenChange={setTaskCreateDialogOpen} title="Nova Tarefa" footer={<><Button variant="outline" onClick={() => setTaskCreateDialogOpen(false)} disabled={taskCreateSubmitting}>Cancelar</Button><Button onClick={handleSubmitTaskCreate} disabled={taskCreateSubmitting || !taskCreateForm.name.trim()}>{taskCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar Tarefa</Button></>}>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label htmlFor="task-create-name">Nome da tarefa</Label><Input id="task-create-name" value={taskCreateForm.name} onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Criar arte para campanha" disabled={taskCreateSubmitting} /></div>
+            <div className="space-y-2"><Label htmlFor="task-create-description">Descrição</Label><WysiwygEditor value={taskCreateForm.description} onChange={(value) => setTaskCreateForm((prev) => ({ ...prev, description: value }))} placeholder="Descreva o que precisa ser feito" disabled={taskCreateSubmitting} minHeight="120px" /></div>
+            <div className="space-y-2"><Label htmlFor="task-create-due-date">Prazo (opcional)</Label><Input id="task-create-due-date" type="date" value={taskCreateForm.due_date} onChange={(e) => setTaskCreateForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={taskCreateSubmitting} /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTaskCreateDialogOpen(false)} disabled={taskCreateSubmitting}>Cancelar</Button>
-            <Button onClick={handleSubmitTaskCreate} disabled={taskCreateSubmitting || !taskCreateForm.name.trim()}>
-              {taskCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Criar Tarefa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Edit own task dialog */}
       <Dialog open={taskEditDialogOpen} onOpenChange={setTaskEditDialogOpen}>
