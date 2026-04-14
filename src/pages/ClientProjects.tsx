@@ -1023,11 +1023,7 @@ export const ClientProjects: React.FC = () => {
         />
       )}
 
-      <Dialog open={isAddProjectOptionDialogOpen} onOpenChange={setIsAddProjectOptionDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Como você deseja criar o projeto?</DialogTitle>
-          </DialogHeader>
+      <FormSheet open={isAddProjectOptionDialogOpen} onOpenChange={setIsAddProjectOptionDialogOpen} title="Como você deseja criar o projeto?">
           <div className="space-y-3">
             <Button variant="outline" className="w-full justify-start" onClick={handleOpenProjectRequestDialog}>
               Solicitar novo projeto
@@ -1036,8 +1032,7 @@ export const ClientProjects: React.FC = () => {
               Adicionar novo projeto
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <Dialog open={isDirectProjectDialogOpen} onOpenChange={setIsDirectProjectDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
