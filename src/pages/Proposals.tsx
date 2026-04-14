@@ -16,8 +16,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import {
   Select,
   SelectContent,
