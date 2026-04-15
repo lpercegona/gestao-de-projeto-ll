@@ -1686,10 +1686,25 @@ export const Projects: React.FC = () => {
       </FormSheet>
 
       {/* Complete Timer Dialog */}
-      <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={isPauseDialogOpen}
+        onOpenChange={setIsPauseDialogOpen}
+        title="Concluir Registro"
+        footer={
+          <>
+            <Button 
+              variant="ghost" 
+              onClick={handleDiscardTimer} 
+              className="text-destructive hover:text-destructive sm:mr-auto"
+            >
+              Descartar
+            </Button>
+            <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmPause}>Registrar</Button>
+          </>
+        }
+      >
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Tipo de Registro</Label>
               <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
@@ -1699,21 +1714,7 @@ export const Projects: React.FC = () => {
             </div>
             <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button 
-              variant="ghost" 
-              onClick={handleDiscardTimer} 
-              className="text-destructive hover:text-destructive sm:mr-auto"
-            >
-              Descartar
-            </Button>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button>
-              <Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Column Dialog */}
       <Dialog open={isColumnDialogOpen} onOpenChange={setIsColumnDialogOpen}>
