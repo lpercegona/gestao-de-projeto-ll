@@ -4,7 +4,7 @@ import { TaskDetailDialogContent } from "./TaskDetailDialogContent";
 import { useEditingLock } from "@/hooks/useEditingLock";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
