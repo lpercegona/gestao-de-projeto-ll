@@ -333,12 +333,7 @@ export const ClientProjects: React.FC = () => {
     toast.success('Solicitação enviada com sucesso!');
   };
 
-  const handleOpenAddProjectOptions = () => {
-    setIsAddProjectOptionDialogOpen(true);
-  };
-
   const handleOpenProjectRequestDialog = () => {
-    setIsAddProjectOptionDialogOpen(false);
     setIsFormOpen(true);
   };
 
@@ -346,8 +341,22 @@ export const ClientProjects: React.FC = () => {
     setProjectCreateForm({ name: '', description: '', due_date: '' });
     setProjectTasks([]);
     setProjectTaskForm({ name: '', description: '', due_date: '' });
-    setIsAddProjectOptionDialogOpen(false);
     setIsDirectProjectDialogOpen(true);
+  };
+
+  const handleOpenStandaloneTask = () => {
+    setStandaloneTaskDialogOpen(true);
+    setStandaloneTaskProjectId('');
+  };
+
+  const handleSelectProjectForTask = (projectId: string) => {
+    setStandaloneTaskDialogOpen(false);
+    const project = filteredProjects.find(p => p.id === projectId);
+    if (project && isOwnProject(project)) {
+      handleOpenTaskCreate(projectId);
+    } else {
+      handleOpenTaskRequest(projectId);
+    }
   };
 
   const handleAddProjectTask = () => {
