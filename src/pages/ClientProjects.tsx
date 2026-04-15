@@ -15,7 +15,7 @@ import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { ProjectTableView } from '@/components/projects/ProjectTableView';
-import { Plus, FolderKanban, Loader2, Trash2, ClipboardList, Users as UsersIcon } from 'lucide-react';
+import { Plus, FolderKanban, Loader2, Trash2, ClipboardList, Users as UsersIcon, FileText, ListTodo } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
