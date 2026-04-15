@@ -15,7 +15,7 @@ import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { ProjectTableView } from '@/components/projects/ProjectTableView';
-import { Plus, FolderKanban, Loader2, Trash2, ClipboardList, Users as UsersIcon, FileText, ListTodo } from 'lucide-react';
+import { Plus, FolderKanban, Loader2, Trash2, ClipboardList, Users as UsersIcon, ListTodo } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
@@ -82,6 +82,7 @@ export const ClientProjects: React.FC = () => {
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [projectMode, setProjectMode] = useState<'own' | 'request'>('own');
   const [standaloneTaskDialogOpen, setStandaloneTaskDialogOpen] = useState(false);
   const [standaloneTaskProjectId, setStandaloneTaskProjectId] = useState('');
   const [isDirectProjectDialogOpen, setIsDirectProjectDialogOpen] = useState(false);
@@ -334,10 +335,20 @@ export const ClientProjects: React.FC = () => {
   };
 
   const handleOpenProjectRequestDialog = () => {
+    setProjectMode('request');
     setIsFormOpen(true);
   };
 
   const handleOpenDirectProjectDialog = () => {
+    setProjectCreateForm({ name: '', description: '', due_date: '' });
+    setProjectTasks([]);
+    setProjectTaskForm({ name: '', description: '', due_date: '' });
+    setProjectMode('own');
+    setIsDirectProjectDialogOpen(true);
+  };
+
+  const handleOpenProjectDialog = () => {
+    setProjectMode('own');
     setProjectCreateForm({ name: '', description: '', due_date: '' });
     setProjectTasks([]);
     setProjectTaskForm({ name: '', description: '', due_date: '' });
@@ -837,9 +848,8 @@ export const ClientProjects: React.FC = () => {
         showViewToggle
         showAddButton
         addOptions={[
-          { label: 'Solicitar novo projeto', icon: <FileText className="h-4 w-4 mr-2" />, onClick: handleOpenProjectRequestDialog },
-          { label: 'Adicionar novo projeto', icon: <FolderKanban className="h-4 w-4 mr-2" />, onClick: handleOpenDirectProjectDialog },
-          { label: 'Nova tarefa', icon: <ListTodo className="h-4 w-4 mr-2" />, onClick: handleOpenStandaloneTask },
+          { label: 'Projeto', icon: <FolderKanban className="h-4 w-4 mr-2" />, onClick: handleOpenProjectDialog },
+          { label: 'Tarefa', icon: <ListTodo className="h-4 w-4 mr-2" />, onClick: handleOpenStandaloneTask },
         ]}
       />
 
@@ -848,7 +858,7 @@ export const ClientProjects: React.FC = () => {
           <CardContent className="py-12 text-center">
             <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-4">Nenhum projeto encontrado para os filtros selecionados.</p>
-            <Button onClick={handleOpenProjectRequestDialog} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+            <Button onClick={handleOpenProjectDialog} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </CardContent>
@@ -1058,46 +1068,84 @@ export const ClientProjects: React.FC = () => {
         </div>
       </FormSheet>
 
-      <FormSheet open={isDirectProjectDialogOpen} onOpenChange={setIsDirectProjectDialogOpen} title="Adicionar Novo Projeto" footer={<><Button variant="outline" onClick={() => setIsDirectProjectDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button><Button onClick={handleSubmitDirectProject} disabled={projectCreateSubmitting || !projectCreateForm.name.trim()}>{projectCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar Projeto</Button></>}>
+      <FormSheet
+        open={isDirectProjectDialogOpen}
+        onOpenChange={(open) => {
+          setIsDirectProjectDialogOpen(open);
+          if (!open) setProjectMode('own');
+        }}
+        title="Novo Projeto"
+        footer={projectMode === 'own' ? (
+          <>
+            <Button variant="outline" onClick={() => setIsDirectProjectDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button>
+            <Button onClick={handleSubmitDirectProject} disabled={projectCreateSubmitting || !projectCreateForm.name.trim()}>{projectCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar Projeto</Button>
+          </>
+        ) : undefined}
+      >
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="project-create-name">Nome do projeto</Label>
-              <Input id="project-create-name" value={projectCreateForm.name} onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Campanha de lançamento" disabled={projectCreateSubmitting} />
+              <Label>Tipo</Label>
+              <ToggleGroup type="single" value={projectMode} onValueChange={(v) => { if (v) setProjectMode(v as 'own' | 'request'); }} className="w-full">
+                <ToggleGroupItem value="own" className="flex-1">Projeto próprio</ToggleGroupItem>
+                <ToggleGroupItem value="request" className="flex-1">Solicitar ao admin</ToggleGroupItem>
+              </ToggleGroup>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="project-create-description">Descrição</Label>
-              <WysiwygEditor value={projectCreateForm.description} onChange={(value) => setProjectCreateForm((prev) => ({ ...prev, description: value }))} placeholder="Descreva os objetivos do projeto" disabled={projectCreateSubmitting} minHeight="120px" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="project-create-due-date">Prazo (opcional)</Label>
-              <Input id="project-create-due-date" type="date" value={projectCreateForm.due_date} onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={projectCreateSubmitting} />
-            </div>
-            <div className="space-y-3 rounded-lg border border-border p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
-                  <p className="text-xs text-muted-foreground">Adicione tarefas iniciais para este projeto proprietário.</p>
-                </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => setProjectTaskDialogOpen(true)} disabled={projectCreateSubmitting}><Plus className="mr-2 h-4 w-4" />Nova tarefa</Button>
-              </div>
-              {projectTasks.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhuma tarefa adicionada.</p>
-              ) : (
+
+            {projectMode === 'own' ? (
+              <>
                 <div className="space-y-2">
-                  {projectTasks.map((task, index) => (
-                    <div key={`${task.name}-${index}`} className="rounded-md border border-border p-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{task.name}</p>
-                          <p className="text-xs text-muted-foreground">Prazo: {task.due_date || 'Não informado'}</p>
-                        </div>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => handleRemoveProjectTask(index)} disabled={projectCreateSubmitting}>Remover</Button>
-                      </div>
-                    </div>
-                  ))}
+                  <Label htmlFor="project-create-name">Nome do projeto</Label>
+                  <Input id="project-create-name" value={projectCreateForm.name} onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Ex: Campanha de lançamento" disabled={projectCreateSubmitting} />
                 </div>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="project-create-description">Descrição</Label>
+                  <WysiwygEditor value={projectCreateForm.description} onChange={(value) => setProjectCreateForm((prev) => ({ ...prev, description: value }))} placeholder="Descreva os objetivos do projeto" disabled={projectCreateSubmitting} minHeight="120px" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="project-create-due-date">Prazo (opcional)</Label>
+                  <Input id="project-create-due-date" type="date" value={projectCreateForm.due_date} onChange={(e) => setProjectCreateForm((prev) => ({ ...prev, due_date: e.target.value }))} disabled={projectCreateSubmitting} />
+                </div>
+                <div className="space-y-3 rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
+                      <p className="text-xs text-muted-foreground">Adicione tarefas iniciais para este projeto.</p>
+                    </div>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setProjectTaskDialogOpen(true)} disabled={projectCreateSubmitting}><Plus className="mr-2 h-4 w-4" />Nova tarefa</Button>
+                  </div>
+                  {projectTasks.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhuma tarefa adicionada.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {projectTasks.map((task, index) => (
+                        <div key={`${task.name}-${index}`} className="rounded-md border border-border p-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{task.name}</p>
+                              <p className="text-xs text-muted-foreground">Prazo: {task.due_date || 'Não informado'}</p>
+                            </div>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => handleRemoveProjectTask(index)} disabled={projectCreateSubmitting}>Remover</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                <p className="mb-3">Ao solicitar, o administrador receberá seu pedido e poderá convertê-lo em um projeto.</p>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setIsDirectProjectDialogOpen(false);
+                    setIsFormOpen(true);
+                  }}
+                >
+                  Abrir formulário de solicitação
+                </Button>
+              </div>
+            )}
           </div>
       </FormSheet>
 
