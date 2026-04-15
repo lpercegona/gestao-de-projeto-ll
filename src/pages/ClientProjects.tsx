@@ -1148,8 +1148,6 @@ export const ClientProjects: React.FC = () => {
             )}
           </div>
       </FormSheet>
-          </div>
-      </FormSheet>
 
       <FormSheet open={projectTaskDialogOpen} onOpenChange={setProjectTaskDialogOpen} title="Nova tarefa do projeto" footer={<><Button variant="outline" onClick={() => setProjectTaskDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button><Button onClick={handleAddProjectTask} disabled={projectCreateSubmitting || !projectTaskForm.name.trim()}>Adicionar tarefa</Button></>}>
           <div className="space-y-4">
