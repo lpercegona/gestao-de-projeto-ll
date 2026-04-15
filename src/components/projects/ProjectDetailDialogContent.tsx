@@ -199,7 +199,7 @@ export const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProp
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { onClose(); if (isClientMode) { onEditRequest?.(project); } else { onEditProject(project); } }}>
+              <DropdownMenuItem onClick={() => { if (isClientMode) { onClose(); onEditRequest?.(project); } else { onEditProject(project); } }}>
                 <Pencil className="w-4 h-4 mr-2" />
                 {isClientMode ? 'Solicitar Edição' : 'Editar'}
               </DropdownMenuItem>
