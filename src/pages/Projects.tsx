@@ -1717,11 +1717,14 @@ export const Projects: React.FC = () => {
       </FormSheet>
 
       {/* Column Dialog */}
-      <Dialog open={isColumnDialogOpen} onOpenChange={setIsColumnDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>{editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitColumn}>
-            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={isColumnDialogOpen}
+        onOpenChange={setIsColumnDialogOpen}
+        title={editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}
+        footer={<><Button type="button" variant="outline" onClick={() => setIsColumnDialogOpen(false)} disabled={submittingColumn}>Cancelar</Button><Button type="button" onClick={(e) => { const form = document.getElementById('column-form') as HTMLFormElement; form?.requestSubmit(); }} disabled={submittingColumn}>{submittingColumn && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingColumn ? 'Salvar' : 'Criar'}</Button></>}
+      >
+          <form id="column-form" onSubmit={handleSubmitColumn}>
+            <div className="space-y-4">
               <div className="space-y-2"><Label>Nome do Campo</Label><Input value={columnFormData.name} onChange={(e) => setColumnFormData({ ...columnFormData, name: e.target.value })} placeholder="Ex: Categoria" required disabled={submittingColumn} /></div>
               <div className="space-y-2"><Label>Tipo</Label><Select value={columnFormData.type} onValueChange={(v: 'text' | 'select') => setColumnFormData({ ...columnFormData, type: v })} disabled={submittingColumn}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="text">Texto livre</SelectItem><SelectItem value="select">Lista de opções</SelectItem></SelectContent></Select></div>
               {columnFormData.type === 'select' && (
@@ -1732,10 +1735,8 @@ export const Projects: React.FC = () => {
                 </div>
               )}
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setIsColumnDialogOpen(false)} disabled={submittingColumn}>Cancelar</Button><Button type="submit" disabled={submittingColumn}>{submittingColumn && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingColumn ? 'Salvar' : 'Criar'}</Button></DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete Column Dialog */}
       <AlertDialog open={isDeleteColumnDialogOpen} onOpenChange={setIsDeleteColumnDialogOpen}>
