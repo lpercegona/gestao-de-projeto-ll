@@ -848,9 +848,8 @@ export const ClientProjects: React.FC = () => {
         showViewToggle
         showAddButton
         addOptions={[
-          { label: 'Solicitar novo projeto', icon: <FileText className="h-4 w-4 mr-2" />, onClick: handleOpenProjectRequestDialog },
-          { label: 'Adicionar novo projeto', icon: <FolderKanban className="h-4 w-4 mr-2" />, onClick: handleOpenDirectProjectDialog },
-          { label: 'Nova tarefa', icon: <ListTodo className="h-4 w-4 mr-2" />, onClick: handleOpenStandaloneTask },
+          { label: 'Projeto', icon: <FolderKanban className="h-4 w-4 mr-2" />, onClick: handleOpenProjectDialog },
+          { label: 'Tarefa', icon: <ListTodo className="h-4 w-4 mr-2" />, onClick: handleOpenStandaloneTask },
         ]}
       />
 
