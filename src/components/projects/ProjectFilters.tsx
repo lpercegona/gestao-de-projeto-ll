@@ -6,6 +6,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Filter, LayoutList, Columns3, ClipboardList, Plus, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,12 @@ interface Client {
 interface ProjectStatusOption {
   value: string;
   label: string;
+}
+
+interface AddOption {
+  label: string;
+  icon?: React.ReactNode;
+  onClick: () => void;
 }
 
 interface ProjectFiltersProps {
@@ -46,6 +53,7 @@ interface ProjectFiltersProps {
   showRequestsFilter?: boolean;
   showViewToggle?: boolean;
   showAddButton?: boolean;
+  addOptions?: AddOption[];
 }
 
 export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
