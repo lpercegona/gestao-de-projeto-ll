@@ -623,70 +623,78 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
         })}
       </div>
 
-      {/* Detail Dialog - replicates ProjectListView card layout */}
-      <Dialog open={!!detailDialog} onOpenChange={(open) => !open && setDetailDialog(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          {detailDialog?.type === 'project' && (
-            <ProjectDetailDialogContent
-              project={detailDialog.data as Project}
-              clients={clients}
-              tasks={tasks}
-              timeEntries={timeEntries}
-              projectColumns={projectColumns}
-              kanbanStages={kanbanStages}
-              taskTimers={taskTimers}
-              projectAccess={projectAccess}
-              profilesByUserId={profilesByUserId}
-              projectMembers={projectMembersByProjectId[detailDialog.data.id] || []}
-              isAdminOrMaster={isAdminOrMaster}
-              isClientMode={isClientMode}
-              hasPerTaskPermissions={hasPerTaskPermissions}
-              currentUserId={currentUserId}
-              getProjectHours={getProjectHours}
-              getTaskHours={getTaskHours}
-              getCreatorName={getCreatorName}
-              getClientColumns={getClientColumns}
-              getActiveTimer={getActiveTimer}
-              getStatusLabel={getStatusLabel}
-              getStatusColor={getStatusColor}
-              onEditProject={onEditProject}
-              onDeleteProject={onDeleteProject}
-              onArchiveProject={onArchiveProject}
-              onCreateTask={onCreateTask}
-              onEditTask={onEditTask}
-              onDeleteTask={onDeleteTask}
-              onRegisterTime={onRegisterTime}
-              onStartTimer={onStartTimer}
-              onStopTimer={onStopTimer}
-              onCompleteTask={onCompleteTask}
-              onRequestTaskEdit={onRequestTaskEdit}
-              onEditRequest={onEditRequest}
-              onClose={() => setDetailDialog(null)}
-            />
-          )}
-          {detailDialog?.type === 'task' && (
-            <TaskDetailDialogContent
-              task={detailDialog.data as Task}
-              timeEntries={timeEntries}
-              kanbanStages={kanbanStages}
-              isAdminOrMaster={isAdminOrMaster}
-              isClientMode={isClientMode}
-              currentUserId={currentUserId}
-              getTaskHours={getTaskHours}
-              getCreatorName={getCreatorName}
-              getActiveTimer={getActiveTimer}
-              onEditTask={onEditTask}
-              onDeleteTask={onDeleteTask}
-              onRegisterTime={onRegisterTime}
-              onStartTimer={onStartTimer}
-              onStopTimer={onStopTimer}
-              onCompleteTask={onCompleteTask}
-              onRequestTaskEdit={onRequestTaskEdit}
-              onClose={() => setDetailDialog(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Detail FormSheet */}
+      {detailDialog?.type === 'project' && (
+        <FormSheet
+          open={!!detailDialog}
+          onOpenChange={(open) => !open && setDetailDialog(null)}
+          title="Detalhes do Projeto"
+        >
+          <ProjectDetailDialogContent
+            project={detailDialog.data as Project}
+            clients={clients}
+            tasks={tasks}
+            timeEntries={timeEntries}
+            projectColumns={projectColumns}
+            kanbanStages={kanbanStages}
+            taskTimers={taskTimers}
+            projectAccess={projectAccess}
+            profilesByUserId={profilesByUserId}
+            projectMembers={projectMembersByProjectId[detailDialog.data.id] || []}
+            isAdminOrMaster={isAdminOrMaster}
+            isClientMode={isClientMode}
+            hasPerTaskPermissions={hasPerTaskPermissions}
+            currentUserId={currentUserId}
+            getProjectHours={getProjectHours}
+            getTaskHours={getTaskHours}
+            getCreatorName={getCreatorName}
+            getClientColumns={getClientColumns}
+            getActiveTimer={getActiveTimer}
+            getStatusLabel={getStatusLabel}
+            getStatusColor={getStatusColor}
+            onEditProject={onEditProject}
+            onDeleteProject={onDeleteProject}
+            onArchiveProject={onArchiveProject}
+            onCreateTask={onCreateTask}
+            onEditTask={onEditTask}
+            onDeleteTask={onDeleteTask}
+            onRegisterTime={onRegisterTime}
+            onStartTimer={onStartTimer}
+            onStopTimer={onStopTimer}
+            onCompleteTask={onCompleteTask}
+            onRequestTaskEdit={onRequestTaskEdit}
+            onEditRequest={onEditRequest}
+            onClose={() => setDetailDialog(null)}
+          />
+        </FormSheet>
+      )}
+      {detailDialog?.type === 'task' && (
+        <FormSheet
+          open={!!detailDialog}
+          onOpenChange={(open) => !open && setDetailDialog(null)}
+          title="Detalhes da Tarefa"
+        >
+          <TaskDetailDialogContent
+            task={detailDialog.data as Task}
+            timeEntries={timeEntries}
+            kanbanStages={kanbanStages}
+            isAdminOrMaster={isAdminOrMaster}
+            isClientMode={isClientMode}
+            currentUserId={currentUserId}
+            getTaskHours={getTaskHours}
+            getCreatorName={getCreatorName}
+            getActiveTimer={getActiveTimer}
+            onEditTask={onEditTask}
+            onDeleteTask={onDeleteTask}
+            onRegisterTime={onRegisterTime}
+            onStartTimer={onStartTimer}
+            onStopTimer={onStopTimer}
+            onCompleteTask={onCompleteTask}
+            onRequestTaskEdit={onRequestTaskEdit}
+            onClose={() => setDetailDialog(null)}
+          />
+        </FormSheet>
+      )}
     </>
   );
 };
