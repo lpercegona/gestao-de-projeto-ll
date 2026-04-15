@@ -858,7 +858,7 @@ export const ClientProjects: React.FC = () => {
           <CardContent className="py-12 text-center">
             <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-4">Nenhum projeto encontrado para os filtros selecionados.</p>
-            <Button onClick={handleOpenProjectRequestDialog} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+            <Button onClick={handleOpenProjectDialog} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </CardContent>
