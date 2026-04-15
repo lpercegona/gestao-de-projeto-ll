@@ -77,6 +77,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   showRequestsFilter = true,
   showViewToggle = true,
   showAddButton = isAdminOrMaster,
+  addOptions,
 }) => {
   const [filterOpen, setFilterOpen] = useState(false);
 
