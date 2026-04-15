@@ -830,12 +830,17 @@ export const ClientProjects: React.FC = () => {
         onShowOnlyRequestsChange={() => {}}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onAddProject={handleOpenAddProjectOptions}
+        onAddProject={() => {}}
         isAdminOrMaster={false}
         showClientFilter={false}
         showRequestsFilter={false}
         showViewToggle
         showAddButton
+        addOptions={[
+          { label: 'Solicitar novo projeto', icon: <FileText className="h-4 w-4 mr-2" />, onClick: handleOpenProjectRequestDialog },
+          { label: 'Adicionar novo projeto', icon: <FolderKanban className="h-4 w-4 mr-2" />, onClick: handleOpenDirectProjectDialog },
+          { label: 'Nova tarefa', icon: <ListTodo className="h-4 w-4 mr-2" />, onClick: handleOpenStandaloneTask },
+        ]}
       />
 
       {filteredProjects.length === 0 ? (
@@ -843,7 +848,7 @@ export const ClientProjects: React.FC = () => {
           <CardContent className="py-12 text-center">
             <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-4">Nenhum projeto encontrado para os filtros selecionados.</p>
-            <Button onClick={handleOpenAddProjectOptions} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+            <Button onClick={handleOpenProjectRequestDialog} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </CardContent>
