@@ -1379,14 +1379,26 @@ export const Projects: React.FC = () => {
         />
       )}
       
-      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Solicitação de Projeto</DialogTitle>
-          </DialogHeader>
-
+      <FormSheet
+        open={isRequestDialogOpen}
+        onOpenChange={setIsRequestDialogOpen}
+        title="Solicitação de Projeto"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => handleUpdateRequest('in_review')} disabled={!selectedRequest || updatingRequest}>
+              Em análise
+            </Button>
+            <Button variant="destructive" onClick={() => handleUpdateRequest('rejected')} disabled={!selectedRequest || updatingRequest}>
+              Rejeitar
+            </Button>
+            <Button onClick={() => handleUpdateRequest('approved')} disabled={!selectedRequest || updatingRequest}>
+              Aprovar
+            </Button>
+          </>
+        }
+      >
           {selectedRequest && (
-            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Título</p>
                 <p className="font-medium">{selectedRequest.title}</p>
@@ -1449,20 +1461,7 @@ export const Projects: React.FC = () => {
               </div>
             </div>
           )}
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => handleUpdateRequest('in_review')} disabled={!selectedRequest || updatingRequest}>
-              Em análise
-            </Button>
-            <Button variant="destructive" onClick={() => handleUpdateRequest('rejected')} disabled={!selectedRequest || updatingRequest}>
-              Rejeitar
-            </Button>
-            <Button onClick={() => handleUpdateRequest('approved')} disabled={!selectedRequest || updatingRequest}>
-              Aprovar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       <Dialog open={isEditRequestDialogOpen} onOpenChange={setIsEditRequestDialogOpen}>
         <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
