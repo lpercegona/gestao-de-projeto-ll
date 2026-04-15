@@ -8,9 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
@@ -307,15 +305,21 @@ export const PortfolioTab: React.FC = () => {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Editar Projeto' : 'Novo Projeto'}</DialogTitle>
-            <DialogDescription>Preencha as informações do projeto do portfólio.</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={editingId ? 'Editar Projeto' : 'Novo Projeto'}
+        description="Preencha as informações do projeto do portfólio."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={!form.title.trim() || saving}>
+              {saving ? 'Salvando...' : editingId ? 'Salvar' : 'Criar'}
+            </Button>
+          </>
+        }
+      >
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Título *</Label>
               <Input value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} placeholder="Nome do projeto" />
@@ -379,15 +383,7 @@ export const PortfolioTab: React.FC = () => {
               <input id="portfolio-images-input" type="file" accept="image/*" multiple className="hidden" onChange={handleAddImages} />
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={!form.title.trim() || saving}>
-              {saving ? 'Salvando...' : editingId ? 'Salvar' : 'Criar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
