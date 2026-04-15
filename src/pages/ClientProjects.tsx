@@ -335,10 +335,20 @@ export const ClientProjects: React.FC = () => {
   };
 
   const handleOpenProjectRequestDialog = () => {
+    setProjectMode('request');
     setIsFormOpen(true);
   };
 
   const handleOpenDirectProjectDialog = () => {
+    setProjectCreateForm({ name: '', description: '', due_date: '' });
+    setProjectTasks([]);
+    setProjectTaskForm({ name: '', description: '', due_date: '' });
+    setProjectMode('own');
+    setIsDirectProjectDialogOpen(true);
+  };
+
+  const handleOpenProjectDialog = () => {
+    setProjectMode('own');
     setProjectCreateForm({ name: '', description: '', due_date: '' });
     setProjectTasks([]);
     setProjectTaskForm({ name: '', description: '', due_date: '' });
