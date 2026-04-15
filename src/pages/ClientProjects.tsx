@@ -82,7 +82,8 @@ export const ClientProjects: React.FC = () => {
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isAddProjectOptionDialogOpen, setIsAddProjectOptionDialogOpen] = useState(false);
+  const [standaloneTaskDialogOpen, setStandaloneTaskDialogOpen] = useState(false);
+  const [standaloneTaskProjectId, setStandaloneTaskProjectId] = useState('');
   const [isDirectProjectDialogOpen, setIsDirectProjectDialogOpen] = useState(false);
   const [projectCreateSubmitting, setProjectCreateSubmitting] = useState(false);
   const [projectCreateForm, setProjectCreateForm] = useState({
