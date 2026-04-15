@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FolderKanban, Users, ListTodo, FileCheck } from "lucide-react";
+import { Search, FolderKanban, Users, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
@@ -12,13 +12,14 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { useData } from "@/contexts/DataContext";
+import { ProjectDetailSheet } from "@/components/projects/ProjectDetailSheet";
 
 export const UniversalSearchBar: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { data } = useData();
   const navigate = useNavigate();
+  const [detailProjectId, setDetailProjectId] = useState<string | null>(null);
 
-  // Listen for keyboard shortcut
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -26,7 +27,6 @@ export const UniversalSearchBar: React.FC = () => {
         setOpen(true);
       }
     };
-
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
@@ -35,16 +35,15 @@ export const UniversalSearchBar: React.FC = () => {
     setOpen(false);
     switch (type) {
       case "project":
-        navigate(`/projects/${id}`);
+        setDetailProjectId(id);
         break;
       case "client":
         navigate(`/clients/${id}`);
         break;
       case "task":
-        // Find the project for this task and navigate there
         const task = data.tasks.find((t) => t.id === id);
         if (task) {
-          navigate(`/projects/${task.project_id}`);
+          setDetailProjectId(task.project_id);
         }
         break;
     }
@@ -63,7 +62,6 @@ export const UniversalSearchBar: React.FC = () => {
     shadow-none hover:bg-white hover:text-[#64748b]"
       >
         <Search className="h-4 w-4 sm:mr-1" />
-
         <span className="hidden sm:inline-flex">Em qual projeto trabalhará hoje?</span>
         <kbd className="pointer-events-none absolute right-3 top-1/2 hidden h-5 -translate-y-1/2 select-none items-center gap-1 rounded border border-[#e2e8f0] bg-white px-1.5 font-mono text-[10px] font-medium text-[#64748b] opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K
@@ -142,6 +140,12 @@ export const UniversalSearchBar: React.FC = () => {
           )}
         </CommandList>
       </CommandDialog>
+
+      <ProjectDetailSheet
+        projectId={detailProjectId}
+        open={!!detailProjectId}
+        onOpenChange={(open) => !open && setDetailProjectId(null)}
+      />
     </>
   );
 };

@@ -125,9 +125,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/projects/:projectId" element={
-                <ProtectedRoute requiredRole="collaborator">
-                  <ProjectDetail />
-                </ProtectedRoute>
+                <Navigate to="/projects" replace />
               } />
               
               {/* Collaborator Dashboard */}
