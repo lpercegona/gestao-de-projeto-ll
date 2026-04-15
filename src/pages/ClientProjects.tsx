@@ -15,7 +15,7 @@ import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { ProjectTableView } from '@/components/projects/ProjectTableView';
-import { Plus, FolderKanban, Loader2, Trash2, ClipboardList, Users as UsersIcon } from 'lucide-react';
+import { Plus, FolderKanban, Loader2, Trash2, ClipboardList, Users as UsersIcon, FileText, ListTodo } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
@@ -82,7 +82,8 @@ export const ClientProjects: React.FC = () => {
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isAddProjectOptionDialogOpen, setIsAddProjectOptionDialogOpen] = useState(false);
+  const [standaloneTaskDialogOpen, setStandaloneTaskDialogOpen] = useState(false);
+  const [standaloneTaskProjectId, setStandaloneTaskProjectId] = useState('');
   const [isDirectProjectDialogOpen, setIsDirectProjectDialogOpen] = useState(false);
   const [projectCreateSubmitting, setProjectCreateSubmitting] = useState(false);
   const [projectCreateForm, setProjectCreateForm] = useState({
@@ -332,12 +333,7 @@ export const ClientProjects: React.FC = () => {
     toast.success('Solicitação enviada com sucesso!');
   };
 
-  const handleOpenAddProjectOptions = () => {
-    setIsAddProjectOptionDialogOpen(true);
-  };
-
   const handleOpenProjectRequestDialog = () => {
-    setIsAddProjectOptionDialogOpen(false);
     setIsFormOpen(true);
   };
 
@@ -345,8 +341,22 @@ export const ClientProjects: React.FC = () => {
     setProjectCreateForm({ name: '', description: '', due_date: '' });
     setProjectTasks([]);
     setProjectTaskForm({ name: '', description: '', due_date: '' });
-    setIsAddProjectOptionDialogOpen(false);
     setIsDirectProjectDialogOpen(true);
+  };
+
+  const handleOpenStandaloneTask = () => {
+    setStandaloneTaskDialogOpen(true);
+    setStandaloneTaskProjectId('');
+  };
+
+  const handleSelectProjectForTask = (projectId: string) => {
+    setStandaloneTaskDialogOpen(false);
+    const project = filteredProjects.find(p => p.id === projectId);
+    if (project && isOwnProject(project)) {
+      handleOpenTaskCreate(projectId);
+    } else {
+      handleOpenTaskRequest(projectId);
+    }
   };
 
   const handleAddProjectTask = () => {
@@ -820,12 +830,17 @@ export const ClientProjects: React.FC = () => {
         onShowOnlyRequestsChange={() => {}}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onAddProject={handleOpenAddProjectOptions}
+        onAddProject={() => {}}
         isAdminOrMaster={false}
         showClientFilter={false}
         showRequestsFilter={false}
         showViewToggle
         showAddButton
+        addOptions={[
+          { label: 'Solicitar novo projeto', icon: <FileText className="h-4 w-4 mr-2" />, onClick: handleOpenProjectRequestDialog },
+          { label: 'Adicionar novo projeto', icon: <FolderKanban className="h-4 w-4 mr-2" />, onClick: handleOpenDirectProjectDialog },
+          { label: 'Nova tarefa', icon: <ListTodo className="h-4 w-4 mr-2" />, onClick: handleOpenStandaloneTask },
+        ]}
       />
 
       {filteredProjects.length === 0 ? (
@@ -833,7 +848,7 @@ export const ClientProjects: React.FC = () => {
           <CardContent className="py-12 text-center">
             <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-4">Nenhum projeto encontrado para os filtros selecionados.</p>
-            <Button onClick={handleOpenAddProjectOptions} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
+            <Button onClick={handleOpenProjectRequestDialog} size="icon" className="h-8 w-8 shrink-0 rounded-lg">
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </CardContent>
@@ -1022,15 +1037,25 @@ export const ClientProjects: React.FC = () => {
         />
       )}
 
-      <FormSheet open={isAddProjectOptionDialogOpen} onOpenChange={setIsAddProjectOptionDialogOpen} title="Como você deseja criar o projeto?">
-          <div className="space-y-3">
-            <Button variant="outline" className="w-full justify-start" onClick={handleOpenProjectRequestDialog}>
-              Solicitar novo projeto
-            </Button>
-            <Button className="w-full justify-start" onClick={handleOpenDirectProjectDialog}>
-              Adicionar novo projeto
-            </Button>
-          </div>
+      {/* Standalone task: pick project first */}
+      <FormSheet open={standaloneTaskDialogOpen} onOpenChange={setStandaloneTaskDialogOpen} title="Selecionar Projeto" description="Escolha o projeto para adicionar uma nova tarefa.">
+        <div className="space-y-2">
+          {filteredProjects.filter(p => !p.is_request).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum projeto disponível.</p>
+          ) : (
+            filteredProjects.filter(p => !p.is_request).map((project) => (
+              <Button
+                key={project.id}
+                variant="outline"
+                className="w-full justify-start text-left"
+                onClick={() => handleSelectProjectForTask(project.id)}
+              >
+                <FolderKanban className="h-4 w-4 mr-2 shrink-0" />
+                <span className="truncate">{project.name}</span>
+              </Button>
+            ))
+          )}
+        </div>
       </FormSheet>
 
       <FormSheet open={isDirectProjectDialogOpen} onOpenChange={setIsDirectProjectDialogOpen} title="Adicionar Novo Projeto" footer={<><Button variant="outline" onClick={() => setIsDirectProjectDialogOpen(false)} disabled={projectCreateSubmitting}>Cancelar</Button><Button onClick={handleSubmitDirectProject} disabled={projectCreateSubmitting || !projectCreateForm.name.trim()}>{projectCreateSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Criar Projeto</Button></>}>

@@ -6,6 +6,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Filter, LayoutList, Columns3, ClipboardList, Plus, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,12 @@ interface Client {
 interface ProjectStatusOption {
   value: string;
   label: string;
+}
+
+interface AddOption {
+  label: string;
+  icon?: React.ReactNode;
+  onClick: () => void;
 }
 
 interface ProjectFiltersProps {
@@ -46,6 +53,7 @@ interface ProjectFiltersProps {
   showRequestsFilter?: boolean;
   showViewToggle?: boolean;
   showAddButton?: boolean;
+  addOptions?: AddOption[];
 }
 
 export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
@@ -69,6 +77,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   showRequestsFilter = true,
   showViewToggle = true,
   showAddButton = isAdminOrMaster,
+  addOptions,
 }) => {
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -347,18 +356,52 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         )}
 
         {/* Mobile only: Add button */}
-        {showAddButton && (
+        {showAddButton && !addOptions && (
           <Button onClick={onAddProject} size="icon" className="sm:hidden h-8 w-8 shrink-0 rounded-lg">
             <Plus className="w-3.5 h-3.5" />
           </Button>
         )}
+        {showAddButton && addOptions && addOptions.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" className="sm:hidden h-8 w-8 shrink-0 rounded-lg">
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {addOptions.map((option) => (
+                <DropdownMenuItem key={option.label} onClick={option.onClick}>
+                  {option.icon}
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Desktop only: Add button */}
-      {showAddButton && (
+      {showAddButton && !addOptions && (
         <Button onClick={onAddProject} size="icon" className="hidden sm:flex h-8 w-8 shrink-0 rounded-lg">
           <Plus className="w-3.5 h-3.5" />
         </Button>
+      )}
+      {showAddButton && addOptions && addOptions.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" className="hidden sm:flex h-8 w-8 shrink-0 rounded-lg">
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {addOptions.map((option) => (
+              <DropdownMenuItem key={option.label} onClick={option.onClick}>
+                {option.icon}
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );
