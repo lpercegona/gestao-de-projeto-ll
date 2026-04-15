@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ProjectDetailSheet } from '@/components/projects/ProjectDetailSheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -2399,6 +2400,12 @@ export const ClientDetail: React.FC = () => {
         defaultRole="collaborator"
         title="Novo Colaborador"
         description="Crie um novo colaborador que será vinculado aos projetos deste cliente."
+      />
+
+      <ProjectDetailSheet
+        projectId={detailSheetProjectId}
+        open={!!detailSheetProjectId}
+        onOpenChange={(open) => !open && setDetailSheetProjectId(null)}
       />
     </div>
   );
