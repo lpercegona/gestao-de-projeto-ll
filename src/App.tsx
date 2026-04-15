@@ -14,7 +14,7 @@ import { CollaboratorDashboard } from "@/pages/CollaboratorDashboard";
 import { Clients } from "@/pages/Clients";
 import { ClientDetail } from "@/pages/ClientDetail";
 import { Projects } from "@/pages/Projects";
-import { ProjectDetail } from "@/pages/ProjectDetail";
+import { ProjectDetail } from "@/pages/ProjectDetail"; // kept for potential future use
 import { Reports } from "@/pages/Reports";
 import { Users } from "@/pages/Users";
 import { ClientReports } from "@/pages/ClientReports";
@@ -125,9 +125,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/projects/:projectId" element={
-                <ProtectedRoute requiredRole="collaborator">
-                  <ProjectDetail />
-                </ProtectedRoute>
+                <Navigate to="/projects" replace />
               } />
               
               {/* Collaborator Dashboard */}

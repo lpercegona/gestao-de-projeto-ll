@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalTimer } from '@/contexts/GlobalTimerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ProjectDetailSheet } from '@/components/projects/ProjectDetailSheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -628,16 +629,15 @@ export const ClientDetail: React.FC = () => {
     }
   };
 
-  const navigateToTaskProject = (taskId: string, action: string) => {
-    const task = data.tasks.find((item) => item.id === taskId);
+  const [detailSheetProjectId, setDetailSheetProjectId] = useState<string | null>(null);
 
+  const navigateToTaskProject = (taskId: string, _action: string) => {
+    const task = data.tasks.find((item) => item.id === taskId);
     if (!task) {
       toast.error('Não foi possível localizar a tarefa selecionada.');
       return;
     }
-
-    navigate(`/projects/${task.project_id}`);
-    toast.info(`Você foi redirecionado para ${action} no projeto.`);
+    setDetailSheetProjectId(task.project_id);
   };
 
   const getRequestStatusLabel = (status: string) => {
@@ -1324,9 +1324,9 @@ export const ClientDetail: React.FC = () => {
                 setIsDeleteProjectDialogOpen(true);
               }}
               onArchiveProject={handleArchiveProject}
-              onCreateTask={(projectId) => navigate(`/projects/${projectId}`)}
-              onEditTask={(task) => navigate(`/projects/${task.project_id}`)}
-              onDeleteTask={(task) => navigate(`/projects/${task.project_id}`)}
+              onCreateTask={(projectId) => setDetailSheetProjectId(projectId)}
+              onEditTask={(task) => setDetailSheetProjectId(task.project_id)}
+              onDeleteTask={(task) => setDetailSheetProjectId(task.project_id)}
               onRegisterTime={(taskId) => navigateToTaskProject(taskId, 'registrar horas')}
               onStartTimer={async (taskId) => {
                 const task = data.tasks.find((item) => item.id === taskId);
@@ -2400,6 +2400,12 @@ export const ClientDetail: React.FC = () => {
         defaultRole="collaborator"
         title="Novo Colaborador"
         description="Crie um novo colaborador que será vinculado aos projetos deste cliente."
+      />
+
+      <ProjectDetailSheet
+        projectId={detailSheetProjectId}
+        open={!!detailSheetProjectId}
+        onOpenChange={(open) => !open && setDetailSheetProjectId(null)}
       />
     </div>
   );
