@@ -356,18 +356,52 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
         )}
 
         {/* Mobile only: Add button */}
-        {showAddButton && (
+        {showAddButton && !addOptions && (
           <Button onClick={onAddProject} size="icon" className="sm:hidden h-8 w-8 shrink-0 rounded-lg">
             <Plus className="w-3.5 h-3.5" />
           </Button>
         )}
+        {showAddButton && addOptions && addOptions.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" className="sm:hidden h-8 w-8 shrink-0 rounded-lg">
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {addOptions.map((option) => (
+                <DropdownMenuItem key={option.label} onClick={option.onClick}>
+                  {option.icon}
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Desktop only: Add button */}
-      {showAddButton && (
+      {showAddButton && !addOptions && (
         <Button onClick={onAddProject} size="icon" className="hidden sm:flex h-8 w-8 shrink-0 rounded-lg">
           <Plus className="w-3.5 h-3.5" />
         </Button>
+      )}
+      {showAddButton && addOptions && addOptions.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" className="hidden sm:flex h-8 w-8 shrink-0 rounded-lg">
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {addOptions.map((option) => (
+              <DropdownMenuItem key={option.label} onClick={option.onClick}>
+                {option.icon}
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );
