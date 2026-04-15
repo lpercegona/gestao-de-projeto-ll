@@ -1463,12 +1463,21 @@ export const Projects: React.FC = () => {
           )}
       </FormSheet>
 
-      <Dialog open={isEditRequestDialogOpen} onOpenChange={setIsEditRequestDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Revisar solicitação de edição</DialogTitle>
-          </DialogHeader>
-
+      <FormSheet
+        open={isEditRequestDialogOpen}
+        onOpenChange={setIsEditRequestDialogOpen}
+        title="Revisar solicitação de edição"
+        footer={
+          <>
+            <Button variant="destructive" onClick={() => handleProcessEditRequest('rejected')} disabled={!selectedEditRequest || processingEditRequest}>
+              Rejeitar
+            </Button>
+            <Button onClick={() => handleProcessEditRequest('approved')} disabled={!selectedEditRequest || processingEditRequest}>
+              Aprovar
+            </Button>
+          </>
+        }
+      >
           {selectedEditRequest && (() => {
             const proposed = selectedEditRequest.proposed_data || {};
             const original = selectedEditRequest.original_data || {};
@@ -1501,7 +1510,7 @@ export const Projects: React.FC = () => {
             const fieldsToShow = Object.keys(proposed).filter(k => k !== 'request_type');
 
             return (
-            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
                 <span className="text-xs text-muted-foreground">
@@ -1522,11 +1531,11 @@ export const Projects: React.FC = () => {
                       {hasChanged ? (
                         <div className="space-y-1.5">
                           <div className="flex items-start gap-2">
-                            <span className="shrink-0 mt-0.5 text-xs font-medium text-red-500 dark:text-red-400">Atual</span>
+                            <span className="shrink-0 mt-0.5 text-xs font-medium text-destructive">Atual</span>
                             <p className="text-sm text-muted-foreground line-through whitespace-pre-wrap break-words">{originalVal}</p>
                           </div>
                           <div className="flex items-start gap-2">
-                            <span className="shrink-0 mt-0.5 text-xs font-medium text-green-600 dark:text-green-400">Novo</span>
+                            <span className="shrink-0 mt-0.5 text-xs font-medium text-primary">Novo</span>
                             <p className="text-sm font-medium whitespace-pre-wrap break-words">{proposedVal}</p>
                           </div>
                         </div>
@@ -1551,17 +1560,7 @@ export const Projects: React.FC = () => {
             </div>
             );
           })()}
-
-          <DialogFooter className="gap-2">
-            <Button variant="destructive" onClick={() => handleProcessEditRequest('rejected')} disabled={!selectedEditRequest || processingEditRequest}>
-              Rejeitar
-            </Button>
-            <Button onClick={() => handleProcessEditRequest('approved')} disabled={!selectedEditRequest || processingEditRequest}>
-              Aprovar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Project Dialog */}
       <FormSheet open={isDialogOpen} onOpenChange={setIsDialogOpen} title={editingProject ? 'Editar Projeto' : 'Novo Projeto'} footer={<><Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button onClick={handleSubmit} disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingProject ? 'Salvar' : 'Criar'}</Button></>}>
