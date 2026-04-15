@@ -12,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { WysiwygEditor, WysiwygContent } from '@/components/ui/wysiwyg-editor';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+
+
 import { FormSheet } from '@/components/ui/form-sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -1379,14 +1380,26 @@ export const Projects: React.FC = () => {
         />
       )}
       
-      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Solicitação de Projeto</DialogTitle>
-          </DialogHeader>
-
+      <FormSheet
+        open={isRequestDialogOpen}
+        onOpenChange={setIsRequestDialogOpen}
+        title="Solicitação de Projeto"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => handleUpdateRequest('in_review')} disabled={!selectedRequest || updatingRequest}>
+              Em análise
+            </Button>
+            <Button variant="destructive" onClick={() => handleUpdateRequest('rejected')} disabled={!selectedRequest || updatingRequest}>
+              Rejeitar
+            </Button>
+            <Button onClick={() => handleUpdateRequest('approved')} disabled={!selectedRequest || updatingRequest}>
+              Aprovar
+            </Button>
+          </>
+        }
+      >
           {selectedRequest && (
-            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Título</p>
                 <p className="font-medium">{selectedRequest.title}</p>
@@ -1449,27 +1462,23 @@ export const Projects: React.FC = () => {
               </div>
             </div>
           )}
+      </FormSheet>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => handleUpdateRequest('in_review')} disabled={!selectedRequest || updatingRequest}>
-              Em análise
-            </Button>
-            <Button variant="destructive" onClick={() => handleUpdateRequest('rejected')} disabled={!selectedRequest || updatingRequest}>
+      <FormSheet
+        open={isEditRequestDialogOpen}
+        onOpenChange={setIsEditRequestDialogOpen}
+        title="Revisar solicitação de edição"
+        footer={
+          <>
+            <Button variant="destructive" onClick={() => handleProcessEditRequest('rejected')} disabled={!selectedEditRequest || processingEditRequest}>
               Rejeitar
             </Button>
-            <Button onClick={() => handleUpdateRequest('approved')} disabled={!selectedRequest || updatingRequest}>
+            <Button onClick={() => handleProcessEditRequest('approved')} disabled={!selectedEditRequest || processingEditRequest}>
               Aprovar
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isEditRequestDialogOpen} onOpenChange={setIsEditRequestDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Revisar solicitação de edição</DialogTitle>
-          </DialogHeader>
-
+          </>
+        }
+      >
           {selectedEditRequest && (() => {
             const proposed = selectedEditRequest.proposed_data || {};
             const original = selectedEditRequest.original_data || {};
@@ -1502,7 +1511,7 @@ export const Projects: React.FC = () => {
             const fieldsToShow = Object.keys(proposed).filter(k => k !== 'request_type');
 
             return (
-            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
                 <span className="text-xs text-muted-foreground">
@@ -1523,11 +1532,11 @@ export const Projects: React.FC = () => {
                       {hasChanged ? (
                         <div className="space-y-1.5">
                           <div className="flex items-start gap-2">
-                            <span className="shrink-0 mt-0.5 text-xs font-medium text-red-500 dark:text-red-400">Atual</span>
+                            <span className="shrink-0 mt-0.5 text-xs font-medium text-destructive">Atual</span>
                             <p className="text-sm text-muted-foreground line-through whitespace-pre-wrap break-words">{originalVal}</p>
                           </div>
                           <div className="flex items-start gap-2">
-                            <span className="shrink-0 mt-0.5 text-xs font-medium text-green-600 dark:text-green-400">Novo</span>
+                            <span className="shrink-0 mt-0.5 text-xs font-medium text-primary">Novo</span>
                             <p className="text-sm font-medium whitespace-pre-wrap break-words">{proposedVal}</p>
                           </div>
                         </div>
@@ -1552,17 +1561,7 @@ export const Projects: React.FC = () => {
             </div>
             );
           })()}
-
-          <DialogFooter className="gap-2">
-            <Button variant="destructive" onClick={() => handleProcessEditRequest('rejected')} disabled={!selectedEditRequest || processingEditRequest}>
-              Rejeitar
-            </Button>
-            <Button onClick={() => handleProcessEditRequest('approved')} disabled={!selectedEditRequest || processingEditRequest}>
-              Aprovar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Project Dialog */}
       <FormSheet open={isDialogOpen} onOpenChange={setIsDialogOpen} title={editingProject ? 'Editar Projeto' : 'Novo Projeto'} footer={<><Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button onClick={handleSubmit} disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingProject ? 'Salvar' : 'Criar'}</Button></>}>
@@ -1687,10 +1686,25 @@ export const Projects: React.FC = () => {
       </FormSheet>
 
       {/* Complete Timer Dialog */}
-      <Dialog open={isPauseDialogOpen} onOpenChange={setIsPauseDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>Concluir Registro</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={isPauseDialogOpen}
+        onOpenChange={setIsPauseDialogOpen}
+        title="Concluir Registro"
+        footer={
+          <>
+            <Button 
+              variant="ghost" 
+              onClick={handleDiscardTimer} 
+              className="text-destructive hover:text-destructive sm:mr-auto"
+            >
+              Descartar
+            </Button>
+            <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmPause}>Registrar</Button>
+          </>
+        }
+      >
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Tipo de Registro</Label>
               <ToggleGroup type="single" value={pauseEntryType} onValueChange={(v) => v && setPauseEntryType(v as 'task' | 'meeting')} className="justify-start">
@@ -1700,28 +1714,17 @@ export const Projects: React.FC = () => {
             </div>
             <div className="space-y-2"><Label>Descrição do trabalho (opcional)</Label><Textarea value={pauseDescription} onChange={(e) => setPauseDescription(e.target.value)} placeholder="O que você fez durante este período?" rows={3} /></div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button 
-              variant="ghost" 
-              onClick={handleDiscardTimer} 
-              className="text-destructive hover:text-destructive sm:mr-auto"
-            >
-              Descartar
-            </Button>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setIsPauseDialogOpen(false)} className="flex-1 sm:flex-initial">Cancelar</Button>
-              <Button onClick={handleConfirmPause} className="flex-1 sm:flex-initial">Registrar</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Column Dialog */}
-      <Dialog open={isColumnDialogOpen} onOpenChange={setIsColumnDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-hidden">
-          <DialogHeader><DialogTitle>{editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitColumn}>
-            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
+      <FormSheet
+        open={isColumnDialogOpen}
+        onOpenChange={setIsColumnDialogOpen}
+        title={editingColumn ? 'Editar Campo' : 'Novo Campo Personalizado'}
+        footer={<><Button type="button" variant="outline" onClick={() => setIsColumnDialogOpen(false)} disabled={submittingColumn}>Cancelar</Button><Button type="button" onClick={(e) => { const form = document.getElementById('column-form') as HTMLFormElement; form?.requestSubmit(); }} disabled={submittingColumn}>{submittingColumn && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingColumn ? 'Salvar' : 'Criar'}</Button></>}
+      >
+          <form id="column-form" onSubmit={handleSubmitColumn}>
+            <div className="space-y-4">
               <div className="space-y-2"><Label>Nome do Campo</Label><Input value={columnFormData.name} onChange={(e) => setColumnFormData({ ...columnFormData, name: e.target.value })} placeholder="Ex: Categoria" required disabled={submittingColumn} /></div>
               <div className="space-y-2"><Label>Tipo</Label><Select value={columnFormData.type} onValueChange={(v: 'text' | 'select') => setColumnFormData({ ...columnFormData, type: v })} disabled={submittingColumn}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="text">Texto livre</SelectItem><SelectItem value="select">Lista de opções</SelectItem></SelectContent></Select></div>
               {columnFormData.type === 'select' && (
@@ -1732,10 +1735,8 @@ export const Projects: React.FC = () => {
                 </div>
               )}
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setIsColumnDialogOpen(false)} disabled={submittingColumn}>Cancelar</Button><Button type="submit" disabled={submittingColumn}>{submittingColumn && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingColumn ? 'Salvar' : 'Criar'}</Button></DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </FormSheet>
 
       {/* Delete Column Dialog */}
       <AlertDialog open={isDeleteColumnDialogOpen} onOpenChange={setIsDeleteColumnDialogOpen}>
