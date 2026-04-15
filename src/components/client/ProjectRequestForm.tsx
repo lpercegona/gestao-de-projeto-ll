@@ -1,12 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useEditingLock } from '@/hooks/useEditingLock';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { FormSheet } from '@/components/ui/form-sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -106,24 +100,6 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
   const getContentText = (content: string) => content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
-  const buildBriefingPayload = () => {
-    let enrichedBriefing = briefing;
-
-    if (requestedTasks.length > 0) {
-      const tasksSection = requestedTasks
-        .map((task, index) => {
-          const description = task.description.trim() || 'Sem descrição';
-          const dueDate = task.dueDate || 'Não informado';
-          return `<li><p><strong>Tarefa ${index + 1}:</strong> ${task.title}</p><p><strong>Descrição:</strong> ${description}</p><p><strong>Prazo:</strong> ${dueDate}</p></li>`;
-        })
-        .join('');
-
-      enrichedBriefing += `<hr /><p><strong>Tarefas solicitadas para o projeto:</strong></p><ul>${tasksSection}</ul>`;
-    }
-
-    return enrichedBriefing;
-  };
-
   const handleAddTask = () => {
     if (!taskForm.title.trim()) return;
 
@@ -167,13 +143,38 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   const minDate = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>Solicitar Novo Projeto</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="max-h-[60vh] overflow-y-auto pr-1">
-          <div className="space-y-4 py-4">
+    <>
+      <FormSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Solicitar Novo Projeto"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                const form = document.getElementById('project-request-form') as HTMLFormElement;
+                form?.requestSubmit();
+              }}
+              disabled={submitting || !title.trim() || !getContentText(briefing)}
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Enviar Solicitação
+            </Button>
+          </>
+        }
+      >
+        <form id="project-request-form" onSubmit={handleSubmit}>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título do Projeto *</Label>
               <Input
@@ -301,64 +302,51 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
               )}
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={submitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={submitting || !title.trim() || !getContentText(briefing)}>
-              {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Enviar Solicitação
-            </Button>
-          </DialogFooter>
         </form>
+      </FormSheet>
 
-        <Dialog open={taskModalOpen} onOpenChange={setTaskModalOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Nova tarefa vinculada ao projeto</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="taskTitle">Título da tarefa *</Label>
-                <Input
-                  id="taskTitle"
-                  value={taskForm.title}
-                  onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Ex: Criar layout da landing page"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="taskDescription">Descrição</Label>
-                <Textarea
-                  id="taskDescription"
-                  value={taskForm.description}
-                  onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))}
-                  placeholder="Detalhes e contexto da tarefa"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="taskDueDate">Prazo</Label>
-                <Input
-                  id="taskDueDate"
-                  type="date"
-                  value={taskForm.dueDate}
-                  onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
-                  min={minDate}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setTaskModalOpen(false)}>Cancelar</Button>
-              <Button type="button" onClick={handleAddTask} disabled={!taskForm.title.trim()}>Adicionar tarefa</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </DialogContent>
-    </Dialog>
+      <FormSheet
+        open={taskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        title="Nova tarefa vinculada ao projeto"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setTaskModalOpen(false)}>Cancelar</Button>
+            <Button type="button" onClick={handleAddTask} disabled={!taskForm.title.trim()}>Adicionar tarefa</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="taskTitle">Título da tarefa *</Label>
+            <Input
+              id="taskTitle"
+              value={taskForm.title}
+              onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder="Ex: Criar layout da landing page"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="taskDescription">Descrição</Label>
+            <Textarea
+              id="taskDescription"
+              value={taskForm.description}
+              onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Detalhes e contexto da tarefa"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="taskDueDate">Prazo</Label>
+            <Input
+              id="taskDueDate"
+              type="date"
+              value={taskForm.dueDate}
+              onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+              min={minDate}
+            />
+          </div>
+        </div>
+      </FormSheet>
+    </>
   );
 };
