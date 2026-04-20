@@ -274,6 +274,48 @@ export const PublicProjectRequest: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={taskModalOpen} onOpenChange={setTaskModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova tarefa vinculada ao projeto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="taskTitle">Título da tarefa *</Label>
+              <Input
+                id="taskTitle"
+                value={taskForm.title}
+                onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Ex: Criar layout da landing page"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="taskDescription">Descrição</Label>
+              <Textarea
+                id="taskDescription"
+                value={taskForm.description}
+                onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Detalhes e contexto da tarefa"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="taskDueDate">Prazo</Label>
+              <Input
+                id="taskDueDate"
+                type="date"
+                value={taskForm.dueDate}
+                onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+                min={minDate}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setTaskModalOpen(false)}>Cancelar</Button>
+            <Button type="button" onClick={handleAddTask} disabled={!taskForm.title.trim()}>Adicionar tarefa</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
