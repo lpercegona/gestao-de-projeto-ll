@@ -10,6 +10,7 @@ import { Loader2, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { RequestAttachmentsUploader, RequestAttachment } from '@/components/client/RequestAttachmentsUploader';
 
 interface ProjectColumn {
   id: string;
@@ -27,7 +28,14 @@ interface RequestedTask {
 interface ProjectRequestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string, requestedTasks?: RequestedTask[]) => Promise<void>;
+  onSubmit: (
+    title: string,
+    briefing: string,
+    customFields: Record<string, string>,
+    desiredDeadline?: string,
+    requestedTasks?: RequestedTask[],
+    attachments?: RequestAttachment[],
+  ) => Promise<void>;
 }
 
 export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
@@ -49,6 +57,8 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   const [taskForm, setTaskForm] = useState<RequestedTask>({ title: '', description: '', dueDate: '' });
   const [submitting, setSubmitting] = useState(false);
   const [loadingFields, setLoadingFields] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<RequestAttachment[]>([]);
 
   useEffect(() => {
     if (!open || !user) return;
@@ -62,6 +72,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
         ]);
 
         const resolvedClientId = client?.id || clientUser?.client_id;
+        setClientId(resolvedClientId || null);
         if (!resolvedClientId) {
           setProjectColumns([]);
           setCustomFields({});
@@ -126,13 +137,21 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), briefing, selectedCustomFields, desiredDeadline || undefined, requestedTasks.length > 0 ? requestedTasks : undefined);
+      await onSubmit(
+        title.trim(),
+        briefing,
+        selectedCustomFields,
+        desiredDeadline || undefined,
+        requestedTasks.length > 0 ? requestedTasks : undefined,
+        attachments.length > 0 ? attachments : undefined,
+      );
       setTitle('');
       setBriefing('');
       setCustomFields({});
       setDesiredDeadline('');
       setRequestedTasks([]);
       setExpandedTasks([]);
+      setAttachments([]);
       onOpenChange(false);
     } finally {
       setSubmitting(false);
