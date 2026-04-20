@@ -135,6 +135,7 @@ export const PublicProjectRequest: React.FC = () => {
         title: title.trim(),
         briefing,
         desired_deadline: deadline || null,
+        requested_tasks: requestedTasks.length > 0 ? requestedTasks : undefined,
         attachments: publicAttachments.map((a) => ({ name: a.name, contentBase64: a.contentBase64, mime: a.mime })),
       },
     });
