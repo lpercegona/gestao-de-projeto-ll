@@ -39,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Shield, User, UserCog, Users as UsersIcon, Pencil, Trash2, Plus, MoreVertical } from 'lucide-react';
+import { Loader2, Shield, User, UserCog, Users as UsersIcon, Pencil, Trash2, Plus, MoreVertical, KeyRound } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -101,6 +101,9 @@ export const UserManagementTab: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Track which user is currently having a password-reset email sent
+  const [sendingResetUserId, setSendingResetUserId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -376,6 +379,34 @@ export const UserManagementTab: React.FC = () => {
     return false;
   };
 
+  const canSendPasswordReset = (targetUser: UserProfile): boolean => {
+    if (!user || !targetUser.email) return false;
+    if (targetUser.user_id === user.id) return false;
+    if (isMasterAdmin) return true;
+    if (isAdmin && targetUser.owner_id === user.id) return true;
+    return false;
+  };
+
+  const handleSendPasswordReset = async (targetUser: UserProfile) => {
+    if (!targetUser.email) {
+      toast.error('Usuário sem email cadastrado');
+      return;
+    }
+    setSendingResetUserId(targetUser.user_id);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(targetUser.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success(`Email de redefinição enviado para ${targetUser.email}`);
+    } catch (error: any) {
+      console.error('Error sending reset email:', error);
+      toast.error('Erro ao enviar email: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setSendingResetUserId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -464,6 +495,19 @@ export const UserManagementTab: React.FC = () => {
                                   Editar
                                 </DropdownMenuItem>
                               )}
+                              {canSendPasswordReset(u) && (
+                                <DropdownMenuItem
+                                  onClick={() => handleSendPasswordReset(u)}
+                                  disabled={sendingResetUserId === u.user_id}
+                                >
+                                  {sendingResetUserId === u.user_id ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <KeyRound className="w-4 h-4 mr-2" />
+                                  )}
+                                  Enviar redefinição de senha
+                                </DropdownMenuItem>
+                              )}
                               {canDeleteUser(u) && (
                                 <DropdownMenuItem
                                   className="text-destructive"
@@ -504,6 +548,19 @@ export const UserManagementTab: React.FC = () => {
                             <DropdownMenuItem onClick={() => openEditDialog(u)}>
                               <Pencil className="w-4 h-4 mr-2" />
                               Editar
+                            </DropdownMenuItem>
+                          )}
+                          {canSendPasswordReset(u) && (
+                            <DropdownMenuItem
+                              onClick={() => handleSendPasswordReset(u)}
+                              disabled={sendingResetUserId === u.user_id}
+                            >
+                              {sendingResetUserId === u.user_id ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <KeyRound className="w-4 h-4 mr-2" />
+                              )}
+                              Enviar redefinição de senha
                             </DropdownMenuItem>
                           )}
                           {canDeleteUser(u) && (
