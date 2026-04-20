@@ -180,6 +180,57 @@ export const PublicProjectRequest: React.FC = () => {
               <div className="space-y-2"><Label>Título do projeto *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
               <div className="space-y-2"><Label>Briefing detalhado *</Label><WysiwygEditor value={briefing} onChange={setBriefing} minHeight="120px" /></div>
               <div className="space-y-2"><Label>Prazo desejado (opcional)</Label><Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
+                    <p className="text-xs text-muted-foreground">Adicione uma ou mais tarefas vinculadas a esta solicitação.</p>
+                  </div>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setTaskModalOpen(true)} disabled={submitting}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova tarefa
+                  </Button>
+                </div>
+                {requestedTasks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma tarefa adicionada ainda.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {requestedTasks.map((task, index) => {
+                      const isExpanded = expandedTasks.includes(index);
+                      return (
+                        <div key={`${task.title}-${index}`} className="rounded-md border border-border bg-muted/20 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <button
+                              type="button"
+                              className="flex flex-1 items-center justify-between text-left"
+                              onClick={() => toggleTaskExpansion(index)}
+                            >
+                              <span className="text-sm font-medium">{task.title}</span>
+                              {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                            </button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => handleRemoveTask(index)}
+                              disabled={submitting}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {isExpanded && (
+                            <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                              <p><span className="font-medium text-foreground">Descrição:</span> {task.description || "Sem descrição"}</p>
+                              <p><span className="font-medium text-foreground">Prazo:</span> {task.dueDate || "Não informado"}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label>Imagens de apoio (opcional)</Label>
                 <div className="flex flex-wrap items-start gap-2">
