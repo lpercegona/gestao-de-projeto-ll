@@ -224,6 +224,7 @@ export const ClientProjects: React.FC = () => {
         request_status: request.status,
         request_id: request.id,
         desired_deadline: request.desired_deadline || null,
+        request_attachments: Array.isArray(request.attachments) ? request.attachments : [],
       }));
   }, [requests, viewMode]);
 
@@ -276,7 +277,7 @@ export const ClientProjects: React.FC = () => {
         const [{ data: requestsData, error: requestError }, { data: pendingTaskData, error: pendingTaskError }] = await Promise.all([
           supabase
             .from('project_requests')
-            .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+            .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at, attachments')
             .eq('client_id', resolvedClientId)
             .order('created_at', { ascending: false }),
           supabase
@@ -333,7 +334,7 @@ export const ClientProjects: React.FC = () => {
         requester_name: profileData?.full_name || user.email || null,
         attachments: (attachments || []) as unknown as import('@/integrations/supabase/types').Json,
       })
-      .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
+      .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at, attachments')
       .single();
     if (error) {
       console.error('Error creating request:', error);

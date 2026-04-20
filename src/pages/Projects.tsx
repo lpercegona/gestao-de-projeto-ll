@@ -85,6 +85,7 @@ interface ProjectRequest {
   source?: string | null;
   requester_name?: string | null;
   requester_email?: string | null;
+  attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }> | null;
 }
 
 type UnifiedProject = Project & {
@@ -94,6 +95,7 @@ type UnifiedProject = Project & {
   request_label?: string;
   request_kind?: 'new_project' | 'edit_request';
   edit_request_id?: string;
+  request_attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }>;
 };
 
 export const Projects: React.FC = () => {
@@ -249,7 +251,7 @@ export const Projects: React.FC = () => {
 
       const { data: requestsData, error } = await supabase
         .from('project_requests')
-        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id, requested_tasks, source, requester_name, requester_email')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id, requested_tasks, source, requester_name, requester_email, attachments')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -370,6 +372,7 @@ export const Projects: React.FC = () => {
         request_id: request.id,
         request_label: label,
         request_kind: 'new_project',
+        request_attachments: Array.isArray(request.attachments) ? request.attachments : [],
       } as UnifiedProject;
     });
   }, [isAdminOrMaster, requestProjects, filterClientId]);
@@ -645,9 +648,18 @@ export const Projects: React.FC = () => {
       const request = requestProjects.find((item) => item.id === project.request_id);
       if (!request || request.status !== 'pending') return;
 
+      const atts = Array.isArray(request.attachments) ? request.attachments : [];
+      let finalDescription = request.briefing || '';
+      if (atts.length > 0) {
+        const list = atts
+          .map((a) => `<li><a href="${a.url}" target="_blank" rel="noopener noreferrer">${a.name}</a></li>`) 
+          .join('');
+        finalDescription += `<p><strong>Imagens de apoio:</strong></p><ul>${list}</ul>`;
+      }
+
       const createdProject = await createProject({
         name: request.title,
-        description: request.briefing || '',
+        description: finalDescription,
         client_id: request.client_id,
         status: 'active',
         due_date: request.desired_deadline || null,
