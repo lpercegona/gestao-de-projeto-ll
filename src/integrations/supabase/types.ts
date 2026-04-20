@@ -782,6 +782,10 @@ export type Database = {
           desired_deadline: string | null
           id: string
           requested_tasks: Json | null
+          requester_email: string | null
+          requester_ip: string | null
+          requester_name: string | null
+          source: string
           status: string
           title: string
           updated_at: string
@@ -796,6 +800,10 @@ export type Database = {
           desired_deadline?: string | null
           id?: string
           requested_tasks?: Json | null
+          requester_email?: string | null
+          requester_ip?: string | null
+          requester_name?: string | null
+          source?: string
           status?: string
           title: string
           updated_at?: string
@@ -810,6 +818,10 @@ export type Database = {
           desired_deadline?: string | null
           id?: string
           requested_tasks?: Json | null
+          requester_email?: string | null
+          requester_ip?: string | null
+          requester_name?: string | null
+          source?: string
           status?: string
           title?: string
           updated_at?: string
@@ -1250,6 +1262,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      request_link_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          owner_id: string
+          share_token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          owner_id: string
+          share_token?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          owner_id?: string
+          share_token?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       service_catalog: {
         Row: {
@@ -1852,6 +1891,13 @@ export type Database = {
           service: string
         }[]
       }
+      get_public_request_link: {
+        Args: { p_token: string }
+        Returns: {
+          is_enabled: boolean
+          owner_id: string
+        }[]
+      }
       get_shared_report: {
         Args: { p_token: string }
         Returns: {
@@ -1993,6 +2039,13 @@ export type Database = {
           p_identity_guidelines?: string
         }
         Returns: undefined
+      }
+      validate_request_email: {
+        Args: { p_email: string; p_token: string }
+        Returns: {
+          client_id: string
+          client_name: string
+        }[]
       }
       verify_report_password: {
         Args: { p_password: string; p_token: string }

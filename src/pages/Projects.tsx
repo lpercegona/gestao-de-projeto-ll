@@ -82,6 +82,9 @@ interface ProjectRequest {
   updated_at?: string;
   converted_project_id?: string | null;
   requested_tasks?: Array<{ title?: string; description?: string; dueDate?: string }> | null;
+  source?: string | null;
+  requester_name?: string | null;
+  requester_email?: string | null;
 }
 
 type UnifiedProject = Project & {
@@ -246,7 +249,7 @@ export const Projects: React.FC = () => {
 
       const { data: requestsData, error } = await supabase
         .from('project_requests')
-        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id, requested_tasks')
+        .select('id, client_id, title, briefing, status, desired_deadline, admin_notes, created_at, updated_at, converted_project_id, requested_tasks, source, requester_name, requester_email')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -346,7 +349,13 @@ export const Projects: React.FC = () => {
       filteredRequests = filteredRequests.filter((request) => request.client_id === filterClientId);
     }
 
-    return filteredRequests.map((request) => ({
+    return filteredRequests.map((request) => {
+      const who = request.requester_name || request.requester_email || '';
+      const isPublic = request.source === 'public_link';
+      const label = isPublic
+        ? `Solicitação (link público)${who ? ' — ' + who : ''}`
+        : `Solicitação${who ? ' — ' + who : ' de novo projeto'}`;
+      return {
         id: `request-${request.id}`,
         client_id: request.client_id,
         name: request.title,
@@ -359,9 +368,10 @@ export const Projects: React.FC = () => {
         is_request: true,
         request_status: request.status,
         request_id: request.id,
-        request_label: 'Solicitação de novo projeto',
+        request_label: label,
         request_kind: 'new_project',
-      } as UnifiedProject));
+      } as UnifiedProject;
+    });
   }, [isAdminOrMaster, requestProjects, filterClientId]);
 
 

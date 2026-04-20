@@ -313,6 +313,12 @@ export const ClientProjects: React.FC = () => {
       return;
     }
     if (!clientId) setClientId(resolvedClientId);
+    // Resolve requester profile name
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('user_id', user.id)
+      .maybeSingle();
     const { data: newRequest, error } = await supabase
       .from('project_requests')
       .insert({
@@ -322,6 +328,9 @@ export const ClientProjects: React.FC = () => {
         desired_deadline: desiredDeadline || null,
         created_by: user.id,
         requested_tasks: (requestedTasks || []) as unknown as import('@/integrations/supabase/types').Json,
+        source: 'authenticated',
+        requester_email: user.email || profileData?.email || null,
+        requester_name: profileData?.full_name || user.email || null,
       })
       .select('id, client_id, title, briefing, status, desired_deadline, converted_project_id, created_at, updated_at')
       .single();

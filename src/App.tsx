@@ -29,6 +29,7 @@ import { Landing } from "@/pages/Landing";
 import { FirstAccess } from "@/pages/FirstAccess";
 import { PublicProposal } from "@/pages/PublicProposal";
 import { PublicContract } from "@/pages/PublicContract";
+import { PublicProjectRequest } from "@/pages/PublicProjectRequest";
 import { PublicProfile } from "@/pages/PublicProfile";
 import { PublicPortfolioProject } from "@/pages/PublicPortfolioProject";
 import { PublicExplore } from "@/pages/PublicExplore";
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="/report/:token" element={<SharedReport />} />
               <Route path="/proposal/:token" element={<PublicProposal />} />
               <Route path="/contract/:token" element={<PublicContract />} />
+              <Route path="/request/:token" element={<PublicProjectRequest />} />
               <Route path="/list" element={<PublicExplore />} />
               <Route path="/criativos" element={<ForCreatives />} />
               <Route path="/clientes" element={<ForClients />} />

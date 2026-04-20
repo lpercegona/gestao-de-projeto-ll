@@ -3,13 +3,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Globe, User, Lock, Users, Palette, Bell, Loader, History } from "lucide-react";
+import { Globe, User, Lock, Users, Palette, Bell, Loader, History, Inbox } from "lucide-react";
 import { ProfileEditTab } from "@/components/settings/ProfileEditTab";
 import { SecuritySection } from "@/components/settings/SecuritySection";
 import { PlatformCustomizationTab } from "@/components/settings/PlatformCustomizationTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
 import { NotificationTemplatesTab } from "@/components/settings/NotificationTemplatesTab";
 import { ActivityLogTab } from "@/components/settings/ActivityLogTab";
+import { RequestsSettingsTab } from "@/components/settings/RequestsSettingsTab";
 import { ThemeSettings } from "@/components/settings/ThemeSettings";
 import { Label } from "@/components/ui/label";
 import {
@@ -216,6 +217,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
           { id: "users", label: "Usuários", icon: Users, adminOnly: true },
           { id: "platform", label: "Personalização", icon: Palette, adminOnly: true },
           { id: "notifications", label: "Notificações", icon: Bell, adminOnly: true },
+          { id: "requests", label: "Solicitações", icon: Inbox, adminOnly: true },
           { id: "activity-log", label: "Atividades", icon: History, adminOnly: true },
         ]
       : []),
@@ -249,6 +251,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onOpenChan
         return showAdminSections ? <ThemeSettings /> : null;
       case "notifications":
         return showAdminSections ? <NotificationTemplatesTab /> : null;
+      case "requests":
+        return showAdminSections ? <RequestsSettingsTab /> : null;
       case "activity-log":
         return showAdminSections ? <ActivityLogTab /> : null;
       default:
