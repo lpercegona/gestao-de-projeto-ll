@@ -774,6 +774,7 @@ export type Database = {
       project_requests: {
         Row: {
           admin_notes: string | null
+          attachments: Json
           briefing: string
           client_id: string
           converted_project_id: string | null
@@ -792,6 +793,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          attachments?: Json
           briefing: string
           client_id: string
           converted_project_id?: string | null
@@ -810,6 +812,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          attachments?: Json
           briefing?: string
           client_id?: string
           converted_project_id?: string | null
