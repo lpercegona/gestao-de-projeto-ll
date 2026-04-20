@@ -1,101 +1,49 @@
-## Anexos de imagens em solicitações de projeto
 
-Adicionar upload de imagens aos formulários de solicitação, exibir nos detalhes e disponibilizar em uma pasta "Solicitações" dentro de "Arquivos" do cliente.
 
-### 1. Banco de dados (migração)
+## Adicionar tarefas ao formulário público de solicitação
 
-**Adicionar coluna em `project_requests`:**
+Replicar o bloco "Tarefas do projeto" (já existente no fluxo autenticado em `ProjectRequestForm.tsx`) na página pública `/request/:token`.
 
-- `attachments` jsonb default `'[]'` — array de `{ name, url, uploaded_at }`
+### Mudanças em `src/pages/PublicProjectRequest.tsx`
 
-**Novo bucket público `request-attachments**` (insert em `storage.buckets`), com políticas RLS em `storage.objects`:
+**Novo estado:**
+- `requestedTasks: { title: string; description: string; dueDate: string }[]`
+- `taskModalOpen: boolean`
+- `expandedTasks: number[]`
+- `taskForm: { title, description, dueDate }`
 
-- Leitura pública (bucket é public)
-- Admin pode gerenciar objetos cuja primeira pasta do path seja de clients do seu `owner_id`
-- Cliente autenticado pode inserir objetos em pastas onde a primeira pasta corresponda ao seu próprio `client_id` (via `get_user_client_id`)
-- Submissão pública via edge function usa service role (bypass)
+**Nova UI** (entre "Prazo desejado" e "Imagens de apoio"):
+- Bloco "Tarefas do projeto (opcional)" com header e botão "Nova tarefa" (ícone `Plus`).
+- Lista de tarefas adicionadas:
+  - Linha clicável que expande/colapsa (`ChevronDown`/`ChevronUp`).
+  - Botão remover (`Trash2`).
+  - Quando expandida: mostra Descrição e Prazo formatado.
+- Mensagem "Nenhuma tarefa adicionada ainda" quando vazio.
 
-Estrutura de pastas: `<client_id>/<request_id ou uuid temporário>/<timestamp>-<nome>.ext`.
+**Novo `Dialog` "Nova tarefa":**
+- Usa `Dialog` do shadcn (já que a página pública não usa `FormSheet`/AppLayout).
+- Campos: Título (obrigatório), Descrição (Textarea), Prazo (Input date com `min` = amanhã).
+- Botões: Cancelar / Adicionar tarefa.
+- Ao adicionar: faz push em `requestedTasks`, fecha modal e reseta `taskForm`.
 
-### 2. Formulários de solicitação — botão "Anexar imagens"
+**Atualização do submit:**
+- Incluir `requested_tasks: requestedTasks.length > 0 ? requestedTasks : undefined` no body do `submit-public-project-request`.
 
-Editar `**src/components/client/ProjectRequestForm.tsx**`:
+### Backend e admin — sem mudanças
 
-- Nova seção "Imagens de apoio (opcional)" com botão `Anexar imagens` (input file accept=`image/*` multiple, limite sugerido 10 arquivos / 2MB cada).
-- Upload imediato para `request-attachments/<client_id>/tmp-<uuid>/…` (resolve `client_id` do mesmo jeito que o form já faz para `project_columns`).
-- Preview em grid (thumbnails 80x80) com botão remover (deleta do storage).
-- Ao submeter, passar `attachments: [{ name, url, uploaded_at }]` no callback `onSubmit`.
-- Ampliar assinatura `onSubmit` para incluir `attachments`.
+- A edge function `submit-public-project-request` já valida e persiste `requested_tasks` (campo `TaskSchema` no zod já existe).
+- A coluna `project_requests.requested_tasks` (jsonb) já existe.
+- A exibição em `Projects.tsx` / `ProjectDetailDialogContent.tsx` e a conversão em projeto/tarefas já funcionam para solicitações públicas (mesma origem de dados das autenticadas).
 
-Atualizar os 3 callers autenticados para gravar em `project_requests.attachments`:
+### Verificação
 
-- `src/pages/ClientProjects.tsx` — `handleSubmitRequest`
-- `src/components/dashboard/QuickRequestCard.tsx` — `handleSubmitRequest`
-- `src/pages/CalendarPage.tsx` — `handleSubmitRequest`
+1. Abrir `/request/:token` em janela anônima → validar e-mail.
+2. Adicionar 2 tarefas (uma com prazo, uma sem), expandir/colapsar, remover uma.
+3. Anexar imagens, enviar → ver tela "Solicitação enviada".
+4. Como admin: abrir o card da solicitação em Projetos → confirmar tarefas listadas no bloco existente.
+5. Aprovar a solicitação → tarefas devem ser criadas no projeto convertido.
 
-### 3. Fluxo público (`/request/:token`)
+### Arquivo editado
 
-Editar `**src/pages/PublicProjectRequest.tsx**`:
+- `src/pages/PublicProjectRequest.tsx` (única alteração)
 
-- Mesma UI de upload. Como não autenticado, enviar arquivos como base64 (ou multipart) no corpo para a edge function.
-- Limite reduzido: 10 arquivos, 2MB cada (validado no cliente e na função).
-
-Editar `**supabase/functions/submit-public-project-request/index.ts**`:
-
-- Aceitar `attachments: Array<{ name: string, contentBase64: string, mime: string }>` no payload (zod).
-- Após inserir o `project_request`, usar service role para fazer upload em `request-attachments/<client_id>/<request_id>/…`, coletar URLs públicas e gravar em `project_requests.attachments`.
-
-### 4. Exibição nas solicitações/detalhes
-
-Editar `**src/components/projects/ProjectDetailDialogContent.tsx**`:
-
-- Quando `project.is_request === true` e houver anexos (novo campo `project.request_attachments`), renderizar bloco "Imagens" com grid de thumbnails clicáveis (abre em nova aba).
-
-Propagar `request_attachments` no shape `UnifiedProject`:
-
-- `src/pages/Projects.tsx` — no `SELECT` de `project_requests` incluir `attachments`; mapear para `request_attachments` no item unificado.
-- `src/pages/ClientProjects.tsx` — idem.
-- `src/components/projects/ProjectDetailSheet.tsx` e tipos `Project` correlatos — aceitar `request_attachments?: Array<{name,url,uploaded_at}>`.
-
-Ao **converter solicitação em projeto** (`Projects.tsx` `handleQuickApproveRequest`), anexar as imagens à descrição do projeto criado preservando links (append de um bloco HTML `<p>Imagens:</p><ul><li><a href="...">nome</a></li>…</ul>`) OU salvar em novo campo `projects.attachments` — escolher o append no `description` para evitar migração adicional.
-
-### 5. Pasta "Solicitações" em Arquivos do cliente
-
-Editar `**src/components/clients/ProposalsTab.tsx**`:
-
-- Adicionar nova pasta fixa `requests` (label: "Solicitações") no `rootItems`.
-- Nova prop/hook que recebe `clientId` (componente hoje não recebe — passar via `Clients.tsx` ou carregar do contexto). Ajustar `ProposalsTab` para aceitar `clientId?: string` opcional.
-- Carregar `project_requests` do cliente filtrando por `client_id` e expandir `attachments` em itens de lista (um item por imagem, exibindo nome do arquivo, data e link "Abrir").
-- Breadcrumbs: `['Arquivos', 'Solicitações']`.
-- Agrupamento visual: sub-accordion por título da solicitação OU lista linear com coluna "Solicitação de origem" — usar lista linear com coluna de origem para manter o padrão atual da tabela.
-
-A pasta aparece em todos os clientes (vazia quando não há solicitações com anexos).
-
-### 6. Verificação
-
-1. Como cliente logado, criar solicitação com 2 imagens → ver preview, enviar.
-2. Abrir painel admin → Projetos → card de solicitação → detalhes mostram as imagens.
-3. Admin vai em Clientes → cliente X → aba Arquivos → pasta "Solicitações" lista os 3 anexos.
-4. Aprovar solicitação → projeto convertido mantém os links na descrição.
-5. Abrir link público `/request/:token` em janela anônima, anexar imagens, enviar → aparece igual no admin.
-6. Testar limites (arquivo > 2MB, > 10 arquivos) exibe erro no formulário.
-
-### Arquivos criados/editados
-
-**Criar:**
-
-- `supabase/migrations/<timestamp>_request_attachments.sql` (coluna + bucket + policies)
-
-**Editar:**
-
-- `src/components/client/ProjectRequestForm.tsx`
-- `src/pages/PublicProjectRequest.tsx`
-- `supabase/functions/submit-public-project-request/index.ts`
-- `src/pages/ClientProjects.tsx`
-- `src/components/dashboard/QuickRequestCard.tsx`
-- `src/pages/CalendarPage.tsx`
-- `src/pages/Projects.tsx`
-- `src/components/projects/ProjectDetailDialogContent.tsx`
-- `src/components/projects/ProjectDetailSheet.tsx` (tipo)
-- `src/components/clients/ProposalsTab.tsx`
-- `src/pages/Clients.tsx` (passar `clientId` quando selecionado, se aplicável — ou ajustar carregamento global)
