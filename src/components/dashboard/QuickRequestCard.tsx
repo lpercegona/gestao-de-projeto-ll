@@ -115,6 +115,12 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
         throw new Error("Cliente não encontrado");
       }
 
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
       const { data: createdRequest, error } = await supabase
         .from("project_requests")
         .insert({
@@ -125,7 +131,8 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
           created_by: user.id,
           status: "pending",
           source: "authenticated",
-          requester_email: user.email || null,
+          requester_email: user.email || profileData?.email || null,
+          requester_name: profileData?.full_name || user.email || null,
           attachments: (attachments || []) as unknown as import('@/integrations/supabase/types').Json,
         })
         .select("id, client_id, title, briefing, status, admin_notes, created_at")
