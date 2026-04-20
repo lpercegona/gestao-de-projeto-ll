@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, FileText, FileSignature, Plus, Eye, ExternalLink, Folder, Upload, Search, ChevronRight } from 'lucide-react';
+import { Loader2, FileText, FileSignature, Plus, Eye, ExternalLink, Folder, Upload, Search, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,12 +59,13 @@ interface CustomFolder {
   created_at: string;
 }
 
-type ExplorerFolderKey = 'root' | 'proposals' | 'contracts' | 'uploads' | 'custom';
+type ExplorerFolderKey = 'root' | 'proposals' | 'contracts' | 'uploads' | 'requests' | 'custom';
 
 type ExplorerItem =
   | { id: string; title: string; kind: 'folder'; folderKey: ExplorerFolderKey; status: string; createdAt: string }
   | { id: string; title: string; kind: 'proposal' | 'contract'; status: string; createdAt: string; shareToken: string }
-  | { id: string; title: string; kind: 'upload'; status: string; createdAt: string };
+  | { id: string; title: string; kind: 'upload'; status: string; createdAt: string }
+  | { id: string; title: string; kind: 'request-image'; status: string; createdAt: string; url: string; requestTitle: string };
 
 const getStatusBadge = (status: string) => {
   const normalized = status.toLowerCase();
@@ -89,18 +90,37 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
   const [contracts, setContracts] = useState<ContractFile[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [customFolders, setCustomFolders] = useState<CustomFolder[]>([]);
+  const [requestImages, setRequestImages] = useState<Array<{ id: string; name: string; url: string; uploaded_at: string; request_title: string }>>([]);
 
   useEffect(() => {
     const fetchDocuments = async () => {
       setLoading(true);
       try {
-        const [{ data: proposalsData }, { data: contractsData }] = await Promise.all([
+        const [{ data: proposalsData }, { data: contractsData }, { data: requestsData }] = await Promise.all([
           supabase.from('proposals').select('id, title, status, created_at, share_token, client_id').order('created_at', { ascending: false }),
           supabase.from('contracts').select('id, title, status, created_at, share_token, client_id').order('created_at', { ascending: false }),
+          supabase.from('project_requests').select('id, title, attachments, created_at').order('created_at', { ascending: false }),
         ]);
 
         setProposals(proposalsData || []);
         setContracts(contractsData || []);
+
+        const imgs: Array<{ id: string; name: string; url: string; uploaded_at: string; request_title: string }> = [];
+        (requestsData || []).forEach((req: { id: string; title: string; attachments: unknown; created_at: string }) => {
+          const atts = Array.isArray(req.attachments) ? req.attachments as Array<{ name?: string; url?: string; uploaded_at?: string }> : [];
+          atts.forEach((a, idx) => {
+            if (a.url) {
+              imgs.push({
+                id: `${req.id}-${idx}`,
+                name: a.name || 'imagem',
+                url: a.url,
+                uploaded_at: a.uploaded_at || req.created_at,
+                request_title: req.title,
+              });
+            }
+          });
+        });
+        setRequestImages(imgs);
       } finally {
         setLoading(false);
       }
@@ -119,8 +139,8 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
   }, [contracts, proposals]);
 
   useEffect(() => {
-    onDocumentsCountChange?.(allDocuments.length + uploadedFiles.length);
-  }, [allDocuments.length, onDocumentsCountChange, uploadedFiles.length]);
+    onDocumentsCountChange?.(allDocuments.length + uploadedFiles.length + requestImages.length);
+  }, [allDocuments.length, onDocumentsCountChange, uploadedFiles.length, requestImages.length]);
 
   const rootItems = useMemo<ExplorerItem[]>(() => {
     const latestDate = (items: { created_at: string }[]) => items[0]?.created_at ?? new Date().toISOString();
@@ -143,6 +163,14 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
         createdAt: latestDate(contracts),
       },
       {
+        id: 'folder-requests',
+        title: 'Solicitações',
+        kind: 'folder',
+        folderKey: 'requests',
+        status: `${requestImages.length} itens`,
+        createdAt: requestImages[0]?.uploaded_at ?? new Date().toISOString(),
+      },
+      {
         id: 'folder-uploads',
         title: 'Uploads',
         kind: 'folder',
@@ -162,7 +190,7 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
     }));
 
     return [...baseFolders, ...dynamicFolders];
-  }, [contracts, customFolders, proposals, uploadedFiles]);
+  }, [contracts, customFolders, proposals, uploadedFiles, requestImages]);
 
   const currentItems = useMemo<ExplorerItem[]>(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -201,6 +229,16 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
         status: 'Enviado',
         createdAt: file.created_at,
       }));
+    } else if (activeFolder === 'requests') {
+      rawItems = requestImages.map((img) => ({
+        id: img.id,
+        title: img.name,
+        kind: 'request-image' as const,
+        status: img.request_title,
+        createdAt: img.uploaded_at,
+        url: img.url,
+        requestTitle: img.request_title,
+      }));
     } else {
       rawItems = [];
     }
@@ -216,7 +254,7 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
     });
 
     return folderFiltered.filter((item) => !normalizedSearch || item.title.toLowerCase().includes(normalizedSearch));
-  }, [activeFolder, allDocuments, filter, rootItems, searchTerm, uploadedFiles]);
+  }, [activeFolder, allDocuments, filter, rootItems, searchTerm, uploadedFiles, requestImages]);
 
   const breadcrumbs = useMemo(() => {
     const map: Record<ExplorerFolderKey, string[]> = {
@@ -224,6 +262,7 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
       proposals: ['Arquivos', 'Propostas'],
       contracts: ['Arquivos', 'Contratos'],
       uploads: ['Arquivos', 'Uploads'],
+      requests: ['Arquivos', 'Solicitações'],
       custom: ['Arquivos', 'Pastas'],
     };
 
