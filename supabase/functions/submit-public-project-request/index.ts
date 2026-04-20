@@ -12,6 +12,12 @@ const TaskSchema = z.object({
   dueDate: z.string().max(20).optional(),
 });
 
+const AttachmentSchema = z.object({
+  name: z.string().min(1).max(255),
+  contentBase64: z.string().min(1).max(5_000_000),
+  mime: z.string().min(1).max(100),
+});
+
 const BodySchema = z.object({
   token: z.string().min(1).max(255),
   email: z.string().trim().email().max(255),
@@ -21,6 +27,7 @@ const BodySchema = z.object({
   desired_deadline: z.string().nullable().optional(),
   requested_tasks: z.array(TaskSchema).max(50).optional(),
   custom_fields: z.record(z.string()).optional(),
+  attachments: z.array(AttachmentSchema).max(10).optional(),
 });
 
 Deno.serve(async (req) => {
@@ -88,6 +95,44 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: insertErr.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Handle attachments via service role upload
+    const requestId = inserted?.id as string;
+    const uploaded: Array<{ name: string; url: string; uploaded_at: string; path: string }> = [];
+    if (requestId && body.attachments && body.attachments.length > 0) {
+      const MAX_BYTES = 2 * 1024 * 1024;
+      for (const att of body.attachments) {
+        if (!att.mime.startsWith('image/')) continue;
+        // Decode base64
+        let bytes: Uint8Array;
+        try {
+          const binary = atob(att.contentBase64);
+          bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        } catch {
+          continue;
+        }
+        if (bytes.byteLength > MAX_BYTES) continue;
+        const safe = att.name.replace(/[^\w.-]+/g, '_');
+        const path = `${clientId}/${requestId}/${Date.now()}-${safe}`;
+        const { error: upErr } = await supabase.storage
+          .from('request-attachments')
+          .upload(path, bytes, { contentType: att.mime, cacheControl: '3600', upsert: false });
+        if (upErr) {
+          console.error('Upload error:', upErr);
+          continue;
+        }
+        const { data: pub } = supabase.storage.from('request-attachments').getPublicUrl(path);
+        uploaded.push({ name: att.name, url: pub.publicUrl, uploaded_at: new Date().toISOString(), path });
+      }
+
+      if (uploaded.length > 0) {
+        await supabase
+          .from('project_requests')
+          .update({ attachments: uploaded as unknown as Record<string, unknown>[] })
+          .eq('id', requestId);
+      }
     }
 
     return new Response(JSON.stringify({ success: true, id: inserted?.id }), {

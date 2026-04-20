@@ -57,13 +57,20 @@ export const CalendarPage: React.FC = () => {
   const [detailDialogItem, setDetailDialogItem] = useState<CalendarItem | null>(null);
 
   // Handle project request submission for clients
-  const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
+  const handleSubmitRequest = async (
+    title: string,
+    briefing: string,
+    customFields: Record<string, string>,
+    desiredDeadline?: string,
+    requestedTasks?: Array<{ title: string; description: string; dueDate: string }>,
+    attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }>,
+  ) => {
     if (!user) return;
 
     const [{ data: clientData }, { data: clientUserData }] = await Promise.all([
-    supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
-    supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle()]
-    );
+      supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('client_users').select('client_id').eq('user_id', user.id).maybeSingle(),
+    ]);
 
     const resolvedClientId = clientData?.id || clientUserData?.client_id;
 
@@ -72,15 +79,26 @@ export const CalendarPage: React.FC = () => {
       return;
     }
 
-    const { error } = await supabase.
-    from('project_requests').
-    insert({
-      client_id: resolvedClientId,
-      title,
-      briefing,
-      desired_deadline: desiredDeadline || null,
-      created_by: user.id
-    });
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const { error } = await supabase
+      .from('project_requests')
+      .insert({
+        client_id: resolvedClientId,
+        title,
+        briefing,
+        desired_deadline: desiredDeadline || null,
+        created_by: user.id,
+        requested_tasks: (requestedTasks || []) as unknown as import('@/integrations/supabase/types').Json,
+        source: 'authenticated',
+        requester_email: user.email || profileData?.email || null,
+        requester_name: profileData?.full_name || user.email || null,
+        attachments: (attachments || []) as unknown as import('@/integrations/supabase/types').Json,
+      });
 
     if (error) {
       console.error('Error creating request:', error);
