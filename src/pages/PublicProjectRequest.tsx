@@ -6,15 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, ImagePlus, X } from "lucide-react";
+import { Loader2, ImagePlus, X, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { format } from "date-fns";
 
 interface PublicAttachment {
   name: string;
   contentBase64: string;
   mime: string;
   previewUrl: string;
+}
+
+interface RequestedTask {
+  title: string;
+  description: string;
+  dueDate: string;
 }
 
 export const PublicProjectRequest: React.FC = () => {
@@ -31,9 +39,35 @@ export const PublicProjectRequest: React.FC = () => {
   const [deadline, setDeadline] = useState("");
   const [publicAttachments, setPublicAttachments] = useState<PublicAttachment[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [requestedTasks, setRequestedTasks] = useState<RequestedTask[]>([]);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [expandedTasks, setExpandedTasks] = useState<number[]>([]);
+  const [taskForm, setTaskForm] = useState<RequestedTask>({ title: "", description: "", dueDate: "" });
 
   const MAX_FILES = 10;
   const MAX_SIZE_MB = 2;
+  const minDate = format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
+
+  const handleAddTask = () => {
+    if (!taskForm.title.trim()) return;
+    setRequestedTasks((prev) => [...prev, { ...taskForm, title: taskForm.title.trim() }]);
+    setExpandedTasks((prev) => [...prev, requestedTasks.length]);
+    setTaskForm({ title: "", description: "", dueDate: "" });
+    setTaskModalOpen(false);
+  };
+
+  const handleRemoveTask = (index: number) => {
+    setRequestedTasks((prev) => prev.filter((_, i) => i !== index));
+    setExpandedTasks((prev) =>
+      prev.filter((i) => i !== index).map((i) => (i > index ? i - 1 : i)),
+    );
+  };
+
+  const toggleTaskExpansion = (index: number) => {
+    setExpandedTasks((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
+    );
+  };
 
   const handleFilesPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
