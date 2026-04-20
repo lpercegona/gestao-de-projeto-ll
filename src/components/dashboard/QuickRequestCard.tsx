@@ -85,7 +85,14 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
     return resolvedClientId;
   };
 
-  const handleSubmitRequest = async (title: string, briefing: string, customFields: Record<string, string>, desiredDeadline?: string) => {
+  const handleSubmitRequest = async (
+    title: string,
+    briefing: string,
+    customFields: Record<string, string>,
+    desiredDeadline?: string,
+    requestedTasks?: Array<{ title: string; description: string; dueDate: string }>,
+    attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }>,
+  ) => {
     if (!user) return;
 
     try {
@@ -117,6 +124,9 @@ export const QuickRequestCard: React.FC<QuickRequestCardProps> = ({ pendingCount
           desired_deadline: desiredDeadline || null,
           created_by: user.id,
           status: "pending",
+          source: "authenticated",
+          requester_email: user.email || null,
+          attachments: (attachments || []) as unknown as import('@/integrations/supabase/types').Json,
         })
         .select("id, client_id, title, briefing, status, admin_notes, created_at")
         .single();
