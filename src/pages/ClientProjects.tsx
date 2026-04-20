@@ -34,6 +34,7 @@ interface ProjectRequest {
   converted_project_id: string | null;
   created_at: string;
   updated_at?: string;
+  attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }> | null;
 }
 
 interface PendingTaskRequest {
