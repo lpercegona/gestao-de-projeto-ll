@@ -325,7 +325,14 @@ export const ProposalsTab: React.FC<ProposalsTabProps> = ({ onDocumentsCountChan
       return;
     }
 
-    window.open(item.kind === 'proposal' ? `/proposal/${item.shareToken}` : `/contract/${item.shareToken}`, '_blank');
+    if (item.kind === 'request-image') {
+      window.open(item.url, '_blank');
+      return;
+    }
+
+    if (item.kind === 'proposal' || item.kind === 'contract') {
+      window.open(item.kind === 'proposal' ? `/proposal/${item.shareToken}` : `/contract/${item.shareToken}`, '_blank');
+    }
   };
 
   return (
