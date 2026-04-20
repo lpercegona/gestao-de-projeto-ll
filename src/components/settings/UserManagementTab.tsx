@@ -495,6 +495,19 @@ export const UserManagementTab: React.FC = () => {
                                   Editar
                                 </DropdownMenuItem>
                               )}
+                              {canSendPasswordReset(u) && (
+                                <DropdownMenuItem
+                                  onClick={() => handleSendPasswordReset(u)}
+                                  disabled={sendingResetUserId === u.user_id}
+                                >
+                                  {sendingResetUserId === u.user_id ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <KeyRound className="w-4 h-4 mr-2" />
+                                  )}
+                                  Enviar redefinição de senha
+                                </DropdownMenuItem>
+                              )}
                               {canDeleteUser(u) && (
                                 <DropdownMenuItem
                                   className="text-destructive"
