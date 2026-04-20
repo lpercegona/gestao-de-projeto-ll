@@ -320,6 +320,15 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
                 </div>
               )}
             </div>
+
+            <div className="rounded-lg border border-border p-3">
+              <RequestAttachmentsUploader
+                clientId={clientId}
+                attachments={attachments}
+                onChange={setAttachments}
+                disabled={submitting}
+              />
+            </div>
           </div>
         </form>
       </FormSheet>
