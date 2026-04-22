@@ -207,14 +207,14 @@ export const PublicProjectRequest: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-2"><Label>Título do projeto *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
               <div className="space-y-2"><Label>Briefing detalhado *</Label><WysiwygEditor value={briefing} onChange={setBriefing} minHeight="120px" /></div>
-              <div className="space-y-2"><Label>Prazo desejado (opcional)</Label><Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Prazo desejado (opcional)</Label><Input type="date" min={minDate} value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
               <div className="space-y-3 rounded-lg border border-border p-3">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
                     <p className="text-xs text-muted-foreground">Adicione uma ou mais tarefas vinculadas a esta solicitação.</p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setTaskModalOpen(true)} disabled={submitting}>
+                  <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setTaskModalOpen(true)} disabled={submitting}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nova tarefa
                   </Button>
@@ -250,7 +250,7 @@ export const PublicProjectRequest: React.FC = () => {
                           {isExpanded && (
                             <div className="mt-3 space-y-2 text-xs text-muted-foreground">
                               <p><span className="font-medium text-foreground">Descrição:</span> {task.description || "Sem descrição"}</p>
-                              <p><span className="font-medium text-foreground">Prazo:</span> {task.dueDate || "Não informado"}</p>
+                              <p><span className="font-medium text-foreground">Prazo:</span> {formatDueDate(task.dueDate)}</p>
                             </div>
                           )}
                         </div>
