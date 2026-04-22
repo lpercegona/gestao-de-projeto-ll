@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import logoOras from "@/assets/logo-oras.svg";
 
 interface PublicAttachment {
   name: string;
@@ -47,6 +49,25 @@ export const PublicProjectRequest: React.FC = () => {
   const MAX_FILES = 10;
   const MAX_SIZE_MB = 2;
   const minDate = format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
+
+  const formatDueDate = (iso: string) => {
+    if (!iso) return "Não informado";
+    try {
+      return format(new Date(iso + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return iso;
+    }
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setBriefing("");
+    setDeadline("");
+    setRequestedTasks([]);
+    setExpandedTasks([]);
+    setPublicAttachments([]);
+    setStep("form");
+  };
 
   const handleAddTask = () => {
     if (!taskForm.title.trim()) return;
@@ -151,27 +172,34 @@ export const PublicProjectRequest: React.FC = () => {
 
   if (!linkValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="max-w-md"><CardContent className="p-6 text-center space-y-2">
-          <h1 className="text-lg font-semibold">Link indisponível</h1>
-          <p className="text-sm text-muted-foreground">Este link de solicitação não está ativo no momento.</p>
-        </CardContent></Card>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-muted/30">
+        <img src={logoOras} alt="Oras" className="h-10 mb-6" />
+        <Card className="w-full max-w-md">
+          <CardContent className="p-4 sm:p-6 text-center space-y-2">
+            <h1 className="text-lg font-semibold">Link indisponível</h1>
+            <p className="text-sm text-muted-foreground">Este link de solicitação não está ativo no momento.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-muted/30">
+      <img src={logoOras} alt="Oras" className="h-10 mb-6" />
       <Card className="w-full max-w-2xl">
-        <CardContent className="p-6 space-y-4">
-          <h1 className="text-xl font-semibold">Solicitar novo projeto</h1>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold">Solicitar novo projeto</h1>
+            <p className="text-sm text-muted-foreground">Preencha os campos abaixo para enviar sua solicitação.</p>
+          </div>
 
           {step === "email" && (
             <form onSubmit={handleValidate} className="space-y-3">
               <p className="text-sm text-muted-foreground">Informe seu e-mail e nome para acessar o formulário. Apenas e-mails vinculados a clientes cadastrados são autorizados.</p>
-              <div className="space-y-2"><Label>Nome *</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
-              <div className="space-y-2"><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-              <Button type="submit" disabled={validating || !email || !name}>{validating && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Continuar</Button>
+              <div className="space-y-2"><Label>Nome *</Label><Input autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+              <div className="space-y-2"><Label>E-mail *</Label><Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+              <Button type="submit" className="w-full sm:w-auto" disabled={validating || !email || !name}>{validating && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Continuar</Button>
             </form>
           )}
 
@@ -179,14 +207,14 @@ export const PublicProjectRequest: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-2"><Label>Título do projeto *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
               <div className="space-y-2"><Label>Briefing detalhado *</Label><WysiwygEditor value={briefing} onChange={setBriefing} minHeight="120px" /></div>
-              <div className="space-y-2"><Label>Prazo desejado (opcional)</Label><Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Prazo desejado (opcional)</Label><Input type="date" min={minDate} value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
               <div className="space-y-3 rounded-lg border border-border p-3">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
                     <p className="text-xs text-muted-foreground">Adicione uma ou mais tarefas vinculadas a esta solicitação.</p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setTaskModalOpen(true)} disabled={submitting}>
+                  <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setTaskModalOpen(true)} disabled={submitting}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nova tarefa
                   </Button>
@@ -222,7 +250,7 @@ export const PublicProjectRequest: React.FC = () => {
                           {isExpanded && (
                             <div className="mt-3 space-y-2 text-xs text-muted-foreground">
                               <p><span className="font-medium text-foreground">Descrição:</span> {task.description || "Sem descrição"}</p>
-                              <p><span className="font-medium text-foreground">Prazo:</span> {task.dueDate || "Não informado"}</p>
+                              <p><span className="font-medium text-foreground">Prazo:</span> {formatDueDate(task.dueDate)}</p>
                             </div>
                           )}
                         </div>
@@ -262,21 +290,24 @@ export const PublicProjectRequest: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Até {MAX_FILES} imagens, máx. {MAX_SIZE_MB}MB cada.</p>
                 <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFilesPicked} />
               </div>
-              <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Enviar solicitação</Button>
+              <Button type="submit" className="w-full sm:w-auto" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Enviar solicitação</Button>
             </form>
           )}
 
           {step === "done" && (
-            <div className="text-center space-y-2 py-6">
+            <div className="text-center space-y-3 py-6">
               <h2 className="text-lg font-semibold">Solicitação enviada!</h2>
               <p className="text-sm text-muted-foreground">Recebemos seu pedido. A equipe entrará em contato em breve.</p>
+              <Button type="button" variant="outline" onClick={resetForm} className="w-full sm:w-auto mt-2">
+                Enviar nova solicitação
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={taskModalOpen} onOpenChange={setTaskModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nova tarefa vinculada ao projeto</DialogTitle>
           </DialogHeader>

@@ -269,12 +269,12 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
             )}
 
             <div className="space-y-3 rounded-lg border border-border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                   <p className="text-sm font-medium">Tarefas do projeto (opcional)</p>
                   <p className="text-xs text-muted-foreground">Adicione uma ou mais tarefas vinculadas a esta solicitação.</p>
                 </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => setTaskModalOpen(true)} disabled={submitting}>
+                <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setTaskModalOpen(true)} disabled={submitting}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nova tarefa
                 </Button>
