@@ -1,49 +1,47 @@
 
 
-## Adicionar tarefas ao formulário público de solicitação
+## Correção urgente: build quebrado por `date-fns` ausente
 
-Replicar o bloco "Tarefas do projeto" (já existente no fluxo autenticado em `ProjectRequestForm.tsx`) na página pública `/request/:token`.
+O build atual está falhando com **57 erros TS2307** porque o pacote `date-fns` não está mais resolvendo (provavelmente removido do `bun.lock` em uma edição anterior). Antes de qualquer melhoria de UI, é preciso restaurar a dependência — sem ela a plataforma inteira não compila e nada renderiza.
 
-### Mudanças em `src/pages/PublicProjectRequest.tsx`
+### Etapa 1 — Restaurar `date-fns` (bloqueante)
 
-**Novo estado:**
-- `requestedTasks: { title: string; description: string; dueDate: string }[]`
-- `taskModalOpen: boolean`
-- `expandedTasks: number[]`
-- `taskForm: { title, description, dueDate }`
+- Reinstalar `date-fns` (versão `^3.6.0`, compatível com `react-day-picker` 8 e o resto do projeto) via `package.json` + lockfile.
+- Validar que `bun install` regenera `bun.lock` com a entrada correta.
+- Verificar que os 57 arquivos listados no erro voltam a compilar (imports `from 'date-fns'` e `from 'date-fns/locale'`).
 
-**Nova UI** (entre "Prazo desejado" e "Imagens de apoio"):
-- Bloco "Tarefas do projeto (opcional)" com header e botão "Nova tarefa" (ícone `Plus`).
-- Lista de tarefas adicionadas:
-  - Linha clicável que expande/colapsa (`ChevronDown`/`ChevronUp`).
-  - Botão remover (`Trash2`).
-  - Quando expandida: mostra Descrição e Prazo formatado.
-- Mensagem "Nenhuma tarefa adicionada ainda" quando vazio.
+Sem isso, qualquer outra correção visual é inútil — a aplicação não roda.
 
-**Novo `Dialog` "Nova tarefa":**
-- Usa `Dialog` do shadcn (já que a página pública não usa `FormSheet`/AppLayout).
-- Campos: Título (obrigatório), Descrição (Textarea), Prazo (Input date com `min` = amanhã).
-- Botões: Cancelar / Adicionar tarefa.
-- Ao adicionar: faz push em `requestedTasks`, fecha modal e reseta `taskForm`.
+### Etapa 2 — Auditoria de UI (após build verde)
 
-**Atualização do submit:**
-- Incluir `requested_tasks: requestedTasks.length > 0 ? requestedTasks : undefined` no body do `submit-public-project-request`.
+Depois que o build voltar, faço varredura focada nos pontos historicamente problemáticos da plataforma, mantendo o estilo atual (Shadcn flat, fundo branco, sem sombras, FormSheet para edição):
 
-### Backend e admin — sem mudanças
+1. **Responsividade mobile (360px — viewport atual do usuário):**
+   - Modais sem `max-w-[95vw]` (padrão da memória `style/mobile-responsiveness-standards-v2`).
+   - Botões de ação primária sem `w-full sm:w-auto` em mobile.
+   - Headers de bloco com `flex justify-between` que comprimem em telas estreitas (precisam de `flex-col sm:flex-row`).
 
-- A edge function `submit-public-project-request` já valida e persiste `requested_tasks` (campo `TaskSchema` no zod já existe).
-- A coluna `project_requests.requested_tasks` (jsonb) já existe.
-- A exibição em `Projects.tsx` / `ProjectDetailDialogContent.tsx` e a conversão em projeto/tarefas já funcionam para solicitações públicas (mesma origem de dados das autenticadas).
+2. **Formatação de data inconsistente:**
+   - Locais que exibem ISO cru (`2026-04-25`) em vez de `dd/MM/yyyy` com `date-fns`/`ptBR`.
 
-### Verificação
+3. **Inputs `type="date"` sem `min`:**
+   - Campos de prazo que aceitam datas no passado.
 
-1. Abrir `/request/:token` em janela anônima → validar e-mail.
-2. Adicionar 2 tarefas (uma com prazo, uma sem), expandir/colapsar, remover uma.
-3. Anexar imagens, enviar → ver tela "Solicitação enviada".
-4. Como admin: abrir o card da solicitação em Projetos → confirmar tarefas listadas no bloco existente.
-5. Aprovar a solicitação → tarefas devem ser criadas no projeto convertido.
+4. **Páginas públicas sem branding:**
+   - `PublicProjectRequest`, telas de erro/indisponibilidade sem logo Oras (consistência com Login/ResetPassword).
 
-### Arquivo editado
+5. **Telas de sucesso sem ação de saída:**
+   - Fluxos que terminam em "done" sem botão para continuar/reiniciar.
 
-- `src/pages/PublicProjectRequest.tsx` (única alteração)
+### Como vou proceder
+
+1. Aplicar **apenas** a correção do `date-fns` primeiro (etapa 1).
+2. Após confirmar o build, gerar **novo plano** com a lista exata de arquivos/linhas a ajustar na auditoria de UI (etapa 2), para você aprovar separadamente.
+
+Isso evita misturar uma correção crítica de build com mudanças visuais opcionais.
+
+### Arquivos editados nesta etapa
+
+- `package.json` (adicionar `date-fns: ^3.6.0` em `dependencies`)
+- `bun.lock` (regenerado automaticamente)
 
