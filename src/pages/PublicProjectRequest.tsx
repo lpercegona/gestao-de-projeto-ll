@@ -290,21 +290,24 @@ export const PublicProjectRequest: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Até {MAX_FILES} imagens, máx. {MAX_SIZE_MB}MB cada.</p>
                 <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFilesPicked} />
               </div>
-              <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Enviar solicitação</Button>
+              <Button type="submit" className="w-full sm:w-auto" disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Enviar solicitação</Button>
             </form>
           )}
 
           {step === "done" && (
-            <div className="text-center space-y-2 py-6">
+            <div className="text-center space-y-3 py-6">
               <h2 className="text-lg font-semibold">Solicitação enviada!</h2>
               <p className="text-sm text-muted-foreground">Recebemos seu pedido. A equipe entrará em contato em breve.</p>
+              <Button type="button" variant="outline" onClick={resetForm} className="w-full sm:w-auto mt-2">
+                Enviar nova solicitação
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
       <Dialog open={taskModalOpen} onOpenChange={setTaskModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nova tarefa vinculada ao projeto</DialogTitle>
           </DialogHeader>
