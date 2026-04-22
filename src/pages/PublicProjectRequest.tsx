@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import logoOras from "@/assets/logo-oras.svg";
 
 interface PublicAttachment {
   name: string;
@@ -47,6 +49,25 @@ export const PublicProjectRequest: React.FC = () => {
   const MAX_FILES = 10;
   const MAX_SIZE_MB = 2;
   const minDate = format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
+
+  const formatDueDate = (iso: string) => {
+    if (!iso) return "Não informado";
+    try {
+      return format(new Date(iso + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return iso;
+    }
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setBriefing("");
+    setDeadline("");
+    setRequestedTasks([]);
+    setExpandedTasks([]);
+    setPublicAttachments([]);
+    setStep("form");
+  };
 
   const handleAddTask = () => {
     if (!taskForm.title.trim()) return;
@@ -151,27 +172,34 @@ export const PublicProjectRequest: React.FC = () => {
 
   if (!linkValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-        <Card className="max-w-md"><CardContent className="p-6 text-center space-y-2">
-          <h1 className="text-lg font-semibold">Link indisponível</h1>
-          <p className="text-sm text-muted-foreground">Este link de solicitação não está ativo no momento.</p>
-        </CardContent></Card>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-muted/30">
+        <img src={logoOras} alt="Oras" className="h-10 mb-6" />
+        <Card className="w-full max-w-md">
+          <CardContent className="p-4 sm:p-6 text-center space-y-2">
+            <h1 className="text-lg font-semibold">Link indisponível</h1>
+            <p className="text-sm text-muted-foreground">Este link de solicitação não está ativo no momento.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-muted/30">
+      <img src={logoOras} alt="Oras" className="h-10 mb-6" />
       <Card className="w-full max-w-2xl">
-        <CardContent className="p-6 space-y-4">
-          <h1 className="text-xl font-semibold">Solicitar novo projeto</h1>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold">Solicitar novo projeto</h1>
+            <p className="text-sm text-muted-foreground">Preencha os campos abaixo para enviar sua solicitação.</p>
+          </div>
 
           {step === "email" && (
             <form onSubmit={handleValidate} className="space-y-3">
               <p className="text-sm text-muted-foreground">Informe seu e-mail e nome para acessar o formulário. Apenas e-mails vinculados a clientes cadastrados são autorizados.</p>
-              <div className="space-y-2"><Label>Nome *</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
-              <div className="space-y-2"><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-              <Button type="submit" disabled={validating || !email || !name}>{validating && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Continuar</Button>
+              <div className="space-y-2"><Label>Nome *</Label><Input autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+              <div className="space-y-2"><Label>E-mail *</Label><Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+              <Button type="submit" className="w-full sm:w-auto" disabled={validating || !email || !name}>{validating && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Continuar</Button>
             </form>
           )}
 
