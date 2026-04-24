@@ -111,7 +111,7 @@ export const DashboardCalendar: React.FC = () => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-0 px-2">
+        <CardContent className="pt-0 px-2 pb-[12px]">
           <Calendar
             mode="single"
             selected={date}
@@ -138,7 +138,7 @@ export const DashboardCalendar: React.FC = () => {
           />
 
           {selectedDateItems.length > 0 &&
-            <div className="mt-3 pt-3 border-t space-y-2">
+            <div className="mt-3 pt-3 border-t space-y-2 pl-[12px]">
               <p className="text-xs font-medium text-muted-foreground">Entregas nesta data:</p>
               <div className="space-y-1.5">
                 {selectedDateItems.slice(0, 3).map((item) =>
