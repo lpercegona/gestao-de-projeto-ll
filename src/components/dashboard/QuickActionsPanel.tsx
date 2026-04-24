@@ -110,7 +110,7 @@ export const QuickActionsPanel: React.FC = () => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-2 pb-[8px]">
           {/* Botões na mesma linha */}
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" className="justify-start gap-2" onClick={() => setClientDialogOpen(true)}>
@@ -124,7 +124,7 @@ export const QuickActionsPanel: React.FC = () => {
           </div>
 
           {/* Timer inline (sem título separado) */}
-          <div className="flex flex-col items-center gap-3 pt-4 border-t">
+          <div className="flex flex-col items-center gap-3 pt-4 border-t mt-[8px]">
             <div
               className={`text-3xl font-mono tabular-nums font-bold text-foreground ${isRunning ? "animate-pulse" : ""}`}
             >
