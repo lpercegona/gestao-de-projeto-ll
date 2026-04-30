@@ -13,7 +13,17 @@ import { useEditingLock } from '@/hooks/useEditingLock';
 import { useData } from '@/contexts/DataContext';
 import { RequestAttachmentsUploader, RequestAttachment } from '@/components/client/RequestAttachmentsUploader';
 import { RequestedTasksBlock, DraftTask } from '@/components/projects/RequestedTasksBlock';
-import type { Project, ProjectColumn } from '@/types';
+import type { Project } from '@/types';
+
+// Accept the loose shape from DataContext (type is `string`).
+type LoosePColumn = {
+  id: string;
+  name: string;
+  type: string;
+  options?: string[] | null;
+  client_id?: string | null;
+  show_in_report?: boolean;
+};
 
 export interface ProjectFormPayload {
   name: string;
@@ -51,8 +61,8 @@ interface ProjectFormSheetProps {
   /** When true, shows column management actions (admin only). */
   showColumnManagement?: boolean;
   onCreateColumn?: () => void;
-  onEditColumn?: (column: ProjectColumn) => void;
-  onDeleteColumn?: (column: ProjectColumn) => void;
+  onEditColumn?: (column: LoosePColumn) => void;
+  onDeleteColumn?: (column: LoosePColumn) => void;
 
   /** Called with the assembled payload on submit. */
   onSubmit: (payload: ProjectFormPayload) => Promise<void> | void;
