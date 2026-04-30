@@ -114,20 +114,32 @@ export const QuickActionsPanel: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4 px-2 pb-[8px]">
           {/* Botões na mesma linha */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="justify-start gap-2" onClick={() => setClientDialogOpen(true)}>
-              <Users className="h-4 w-4" />
-              Cliente
+          <div className={`grid ${isAdminOrMaster ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
+            <Button
+              variant="outline"
+              className="flex-col h-auto py-3 gap-1"
+              onClick={() => setClientDialogOpen(true)}
+            >
+              <Users className="h-5 w-5" />
+              <span className="text-[11px] leading-tight">Cliente</span>
             </Button>
             {isAdminOrMaster && (
-              <Button variant="outline" className="justify-start gap-2" onClick={() => navigate("/projects?new=1")}>
-                <FolderPlus className="h-4 w-4" />
-                Projeto
+              <Button
+                variant="outline"
+                className="flex-col h-auto py-3 gap-1"
+                onClick={() => navigate("/projects?new=1")}
+              >
+                <FolderPlus className="h-5 w-5" />
+                <span className="text-[11px] leading-tight">Projeto</span>
               </Button>
             )}
-            <Button variant="outline" className="justify-start gap-2" onClick={() => navigate("/proposals")}>
-              <FileCheck className="h-4 w-4" />
-              Proposta
+            <Button
+              variant="outline"
+              className="flex-col h-auto py-3 gap-1"
+              onClick={() => navigate("/proposals")}
+            >
+              <FileCheck className="h-5 w-5" />
+              <span className="text-[11px] leading-tight">Proposta</span>
             </Button>
           </div>
 
