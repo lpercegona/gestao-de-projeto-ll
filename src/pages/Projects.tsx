@@ -303,6 +303,18 @@ export const Projects: React.FC = () => {
     }
   }, [isAdminOrMaster, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (searchParams.get('new') === '1' && isAdminOrMaster) {
+      handleOpenDialog();
+      setSearchParams((previousParams) => {
+        const nextParams = new URLSearchParams(previousParams);
+        nextParams.delete('new');
+        return nextParams;
+      }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminOrMaster, searchParams]);
+
   // Filter projects
   const visibleProjects = useMemo(() => {
     let projects = data.projects;
