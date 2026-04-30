@@ -1,59 +1,48 @@
+## Anexos em projetos criados por admins
 
+Hoje só **solicitações de projeto** (`project_requests`) suportam imagens de apoio via `RequestAttachmentsUploader` + bucket `request-attachments`. Quando o admin cria/edita um projeto direto pelo formulário de "Novo Projeto" não há essa opção. Vou trazer paridade.
 
-## Auditoria de UI — correção do build + ajustes finos
+### Mudanças
 
-O build ainda está quebrado: os 57 erros TS2307 de `date-fns` continuam porque a etapa anterior só anunciou a adição mas o pacote não foi efetivamente instalado. Vou tratar isso primeiro, depois aplicar os ajustes de UI numa única passada.
+**1. Banco de dados (migração)**
+- Adicionar coluna `attachments jsonb NOT NULL DEFAULT '[]'::jsonb` em `public.projects`.
+- Mesmo formato já usado em `project_requests.attachments` e `RequestAttachment` no front: `{ name, url, uploaded_at, path }`.
+- Sem mudança em RLS — políticas existentes já cobrem leitura/escrita por admins/colaboradores/clientes via `owner_id`/`user_project_access`.
 
-### Etapa 1 — Restaurar `date-fns` (bloqueante)
+**2. Storage**
+- Reutilizar bucket público existente `request-attachments` (mesma estrutura `<clientId>/<folder>/<file>`). Evita criar bucket novo e mantém consistência com anexos de solicitações.
+- Limites: até 10 imagens, 2 MB cada (igual ao uploader atual).
 
-- Adicionar `date-fns@^3.6.0` em `package.json` via `<lov-add-dependency>` para que o lockfile seja regenerado de fato.
-- Sem isso, nada renderiza.
+**3. UI — `src/pages/Projects.tsx`**
+- Estender `formData` com `attachments: RequestAttachment[]`.
+- No `FormSheet` de Novo/Editar Projeto (linhas ~1589–1670), adicionar bloco com `<RequestAttachmentsUploader>` logo abaixo do prazo, condicional a `formData.client_id` estar preenchido (uploader exige `clientId`).
+- Em editar: pré-popular com `editingProject.attachments`.
+- Em `handleSubmit`: enviar `attachments` no payload de `createProject`/`updateProject`.
+- Resetar `attachments` ao fechar/limpar o formulário.
 
-### Etapa 2 — Correções de UI (escopo focado e seguro)
+**4. DataContext**
+- `createProject` / `updateProject` já fazem spread do payload. Ajustar tipagens locais (`Project`) em `src/types/index.ts` e nas interfaces internas para incluir `attachments?: RequestAttachment[]` e fazer o cast `as unknown as Json` na escrita (padrão do projeto).
 
-Mantendo Shadcn flat, fundo branco, sem sombras. Mudanças cirúrgicas, sem refatoração de layout.
+**5. Visualização**
+- Em `ProjectDetailDialogContent.tsx`, generalizar o bloco "Imagens de apoio": além do caso `project.is_request`, mostrar também quando `project.attachments?.length > 0`. Mesma grade de thumbs com link para abrir em nova aba.
 
-**A. `src/pages/PublicProjectRequest.tsx`** (página pública, viewport atual do usuário em 360px)
+**6. Limpeza ao excluir projeto (best-effort)**
+- Em `deleteProject`, antes do delete no banco, tentar `supabase.storage.from('request-attachments').remove(paths)` para os anexos do projeto. Falhas são silenciosas (toast só no erro do delete principal).
 
-1. Logo Oras (`/logo-oras.svg`) centralizada acima do card, padrão das telas públicas (Login/ResetPassword).
-2. Título `text-xl font-semibold` → `text-2xl font-bold` + subtítulo `text-sm text-muted-foreground`.
-3. Card com padding responsivo: `p-6` → `p-4 sm:p-6`.
-4. Botões "Continuar" e "Enviar solicitação": adicionar `w-full sm:w-auto`.
-5. Header do bloco "Tarefas do projeto": `flex items-center justify-between` → `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`; botão "Nova tarefa" com `w-full sm:w-auto`.
-6. Prazo da tarefa expandida: formatar com `format(new Date(task.dueDate + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR })` em vez de ISO cru.
-7. Input "Prazo desejado" do projeto: adicionar `min={minDate}`.
-8. `<DialogContent>` do modal "Nova tarefa": `className="max-w-[95vw] sm:max-w-lg"`.
-9. Tela "done": adicionar botão "Enviar nova solicitação" que reseta `title`, `briefing`, `deadline`, `requestedTasks`, `expandedTasks`, `publicAttachments` e volta para `step="form"`.
-10. Tela "Link indisponível": adicionar logo Oras acima do card.
-11. Inputs de contato: `autoComplete="name"` e `autoComplete="email"`.
-
-**B. `src/components/client/ProjectRequestForm.tsx`** (mesmo formulário no fluxo autenticado — manter paridade)
-
-1. Header do bloco "Tarefas do projeto": aplicar mesmo `flex-col sm:flex-row` se ainda não tiver.
-2. Modal de nova tarefa: garantir `max-w-[95vw] sm:max-w-lg` no `DialogContent`.
-3. Botão "Nova tarefa" com `w-full sm:w-auto` no mobile.
-
-(Verifico antes de tocar — se já estiver no padrão, pulo.)
-
-### Fora de escopo (intencionalmente)
-
-- Edge functions, RPCs, lógica de submit, RLS — tudo funcionando, sem mudanças.
-- Outras páginas — não há reclamação concreta nem evidência de bug visual; mexer agora é risco sem ganho.
-- Refatoração de componentes — mantido o estilo atual conforme pedido.
-
-### Verificação
-
-1. Build compila sem erros TS2307.
-2. `/request/:token` em 360px: logo aparece, card respira, botões ocupam largura total, modal de tarefa não encosta nas bordas.
-3. Adicionar tarefa com prazo `2026-04-25` → card expandido mostra `25/04/2026`.
-4. Tentar prazo no passado em "Prazo desejado" → navegador bloqueia.
-5. Enviar → tela "done" tem botão "Enviar nova solicitação" funcional.
-6. Token inválido → tela "Link indisponível" com logo.
-7. Fluxo autenticado de solicitação de projeto continua idêntico em desktop, melhor em mobile.
+### Não incluso
+- Não vou tocar no fluxo de cliente (`ClientProjects.tsx`) — o pedido foi explicitamente para admins. Posso estender depois se quiser.
+- Não vou suportar arquivos não-imagem agora (mantendo paridade com `RequestAttachmentsUploader`).
 
 ### Arquivos editados
+- `supabase` migração: `ALTER TABLE projects ADD COLUMN attachments`
+- `src/pages/Projects.tsx`
+- `src/components/projects/ProjectDetailDialogContent.tsx`
+- `src/types/index.ts`
+- `src/contexts/DataContext.tsx` (ajuste de tipo + delete cleanup)
 
-- `package.json` (regenerar lockfile com `date-fns`)
-- `src/pages/PublicProjectRequest.tsx`
-- `src/components/client/ProjectRequestForm.tsx` (apenas se faltar paridade)
-
+### QA manual
+1. Admin cria novo projeto, anexa 2 imagens, salva → reabre projeto e vê thumbnails.
+2. Edita projeto, remove 1 imagem, adiciona outra, salva → estado persistido.
+3. Tentar anexar antes de selecionar cliente → botão desabilitado (uploader já trata).
+4. Excluir projeto com anexos → registros e arquivos do storage removidos.
+5. Cliente/colaborador acessa o projeto → vê os anexos somente leitura.

@@ -33,6 +33,7 @@ import { ProjectListView } from '@/components/projects/ProjectListView';
 import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { ProjectTableView } from '@/components/projects/ProjectTableView';
 import { KanbanStagesDialog } from '@/components/projects/KanbanStagesDialog';
+import { RequestAttachmentsUploader, type RequestAttachment } from '@/components/client/RequestAttachmentsUploader';
 
 interface Collaborator {
   user_id: string;
@@ -160,7 +161,7 @@ export const Projects: React.FC = () => {
   const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: '', description: '', client_id: '', status: 'active', due_date: '', custom_fields: {} as Record<string, string>,
+    name: '', description: '', client_id: '', status: 'active', due_date: '', custom_fields: {} as Record<string, string>, attachments: [] as RequestAttachment[],
   });
   
   // Task dialog state
@@ -989,7 +990,8 @@ export const Projects: React.FC = () => {
         client_id: project.client_id, 
         status: project.status, 
         due_date: project.due_date || '',
-        custom_fields: { ...project.custom_fields } 
+        custom_fields: { ...project.custom_fields },
+        attachments: Array.isArray((project as any).attachments) ? [...((project as any).attachments as RequestAttachment[])] : [],
       });
       const projectAccess = data.projectAccess.filter(a => a.project_id === project.id);
       setSelectedCollaborators(projectAccess.map(a => a.user_id));
@@ -999,7 +1001,7 @@ export const Projects: React.FC = () => {
       const clientCols = defaultClientId ? getClientColumns(defaultClientId) : [];
       const defaultCustomFields: Record<string, string> = {};
       clientCols.forEach(col => { defaultCustomFields[col.id] = col.options?.[0] || ''; });
-      setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', due_date: '', custom_fields: defaultCustomFields });
+      setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', due_date: '', custom_fields: defaultCustomFields, attachments: [] });
       setSelectedCollaborators([]);
     }
     setCustomFieldsOpen(false);
@@ -1596,7 +1598,17 @@ export const Projects: React.FC = () => {
                 <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem><SelectItem value="archived">Arquivo</SelectItem></SelectContent></Select></div>
               </div>
               <div className="space-y-2"><Label htmlFor="due_date">Prazo (opcional)</Label><Input id="due_date" type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} disabled={submitting} /></div>
-              
+
+              {formData.client_id && (
+                <RequestAttachmentsUploader
+                  clientId={formData.client_id}
+                  folderId={editingProject ? `project-${editingProject.id}` : undefined}
+                  attachments={formData.attachments}
+                  onChange={(next) => setFormData({ ...formData, attachments: next })}
+                  disabled={submitting}
+                />
+              )}
+
               {isAdminOrMaster && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Users className="w-4 h-4" />Colaboradores</Label>

@@ -30,6 +30,7 @@ export interface Project {
   custom_fields: Record<string, string> | null;
   created_at: string;
   updated_at?: string;
+  attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }> | null;
 }
 
 export interface Task {

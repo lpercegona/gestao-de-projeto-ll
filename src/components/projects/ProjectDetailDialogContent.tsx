@@ -32,6 +32,7 @@ interface Project {
   request_id?: string;
   edit_request_id?: string;
   request_attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }>;
+  attachments?: Array<{ name: string; url: string; uploaded_at: string; path?: string }> | null;
 }
 
 interface Task {
@@ -226,26 +227,32 @@ export const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProp
         <ExpandableDescription content={project.description} className="text-sm text-muted-foreground" />
       )}
 
-      {/* Request attachments (imagens de apoio) */}
-      {project.is_request && Array.isArray(project.request_attachments) && project.request_attachments.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-foreground">Imagens de apoio</h4>
-          <div className="flex flex-wrap gap-2">
-            {project.request_attachments.map((att) => (
-              <a
-                key={att.url}
-                href={att.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={att.name}
-                className="block h-20 w-20 overflow-hidden rounded-md border border-border bg-muted"
-              >
-                <img src={att.url} alt={att.name} className="h-full w-full object-cover" />
-              </a>
-            ))}
+      {/* Imagens de apoio (anexos da solicitação ou do projeto) */}
+      {(() => {
+        const atts = project.is_request && Array.isArray(project.request_attachments)
+          ? project.request_attachments
+          : Array.isArray(project.attachments) ? project.attachments : [];
+        if (!atts.length) return null;
+        return (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-foreground">Imagens de apoio</h4>
+            <div className="flex flex-wrap gap-2">
+              {atts.map((att) => (
+                <a
+                  key={att.url}
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={att.name}
+                  className="block h-20 w-20 overflow-hidden rounded-md border border-border bg-muted"
+                >
+                  <img src={att.url} alt={att.name} className="h-full w-full object-cover" />
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Info: Client, Tasks, Hours */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
