@@ -1598,7 +1598,17 @@ export const Projects: React.FC = () => {
                 <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem><SelectItem value="archived">Arquivo</SelectItem></SelectContent></Select></div>
               </div>
               <div className="space-y-2"><Label htmlFor="due_date">Prazo (opcional)</Label><Input id="due_date" type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} disabled={submitting} /></div>
-              
+
+              {formData.client_id && (
+                <RequestAttachmentsUploader
+                  clientId={formData.client_id}
+                  folderId={editingProject ? `project-${editingProject.id}` : undefined}
+                  attachments={formData.attachments}
+                  onChange={(next) => setFormData({ ...formData, attachments: next })}
+                  disabled={submitting}
+                />
+              )}
+
               {isAdminOrMaster && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Users className="w-4 h-4" />Colaboradores</Label>
