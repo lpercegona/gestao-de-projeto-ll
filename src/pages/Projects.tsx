@@ -192,7 +192,6 @@ export const Projects: React.FC = () => {
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
 
   // Custom fields management
-  const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   const [isColumnDialogOpen, setIsColumnDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ProjectColumn | null>(null);
   const [deletingColumn, setDeletingColumn] = useState<ProjectColumn | null>(null);
@@ -213,12 +212,6 @@ export const Projects: React.FC = () => {
   const [isEditRequestDialogOpen, setIsEditRequestDialogOpen] = useState(false);
   const [editRequestAdminNotes, setEditRequestAdminNotes] = useState('');
   const [processingEditRequest, setProcessingEditRequest] = useState(false);
-
-  // Get columns for selected client
-  const clientColumns = useMemo(() => {
-    if (!formData.client_id) return [];
-    return getClientColumns(formData.client_id);
-  }, [formData.client_id, getClientColumns, data.projectColumns]);
 
   // Fetch collaborators for admin
   useEffect(() => {
