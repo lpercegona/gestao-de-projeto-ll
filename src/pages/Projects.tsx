@@ -1010,7 +1010,6 @@ export const Projects: React.FC = () => {
       setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', due_date: '', custom_fields: defaultCustomFields, attachments: [] });
       setSelectedCollaborators([]);
     }
-    setCustomFieldsOpen(false);
     setIsDialogOpen(true);
   };
 
