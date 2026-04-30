@@ -1028,13 +1028,17 @@ export const Projects: React.FC = () => {
     setFormData({ ...formData, client_id: newClientId, custom_fields: newCustomFields });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleProjectFormSubmit = async (payload: ProjectFormPayload) => {
     setSubmitting(true);
     try {
       const projectData = {
-        ...formData,
-        due_date: formData.due_date || null,
+        name: payload.name,
+        description: payload.description,
+        client_id: payload.client_id,
+        status: payload.status,
+        due_date: payload.due_date || null,
+        custom_fields: payload.custom_fields,
+        attachments: payload.attachments,
       };
       let projectId: string | undefined;
       if (editingProject) {
@@ -1044,16 +1048,27 @@ export const Projects: React.FC = () => {
       } else {
         const newProject = await createProject(projectData);
         projectId = newProject?.id;
+        if (projectId && payload.tasks.length > 0) {
+          for (const t of payload.tasks) {
+            await createTask({
+              project_id: projectId,
+              name: t.title,
+              description: t.description || null,
+              due_date: t.dueDate || null,
+              status: 'pending',
+            });
+          }
+        }
         toast.success('Projeto criado!');
       }
       if (isAdminOrMaster && projectId) {
         const currentAccess = data.projectAccess.filter(a => a.project_id === projectId);
         const currentUserIds = currentAccess.map(a => a.user_id);
-        for (const userId of selectedCollaborators) {
+        for (const userId of payload.collaboratorIds) {
           if (!currentUserIds.includes(userId)) { await grantProjectAccess(userId, projectId, true); }
         }
         for (const userId of currentUserIds) {
-          if (!selectedCollaborators.includes(userId)) { await revokeProjectAccess(userId, projectId); }
+          if (!payload.collaboratorIds.includes(userId)) { await revokeProjectAccess(userId, projectId); }
         }
         await refreshData();
       }
