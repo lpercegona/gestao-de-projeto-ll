@@ -34,6 +34,7 @@ import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { ProjectTableView } from '@/components/projects/ProjectTableView';
 import { KanbanStagesDialog } from '@/components/projects/KanbanStagesDialog';
 import { RequestAttachmentsUploader, type RequestAttachment } from '@/components/client/RequestAttachmentsUploader';
+import { ProjectFormSheet, type ProjectFormPayload } from '@/components/projects/ProjectFormSheet';
 
 interface Collaborator {
   user_id: string;
@@ -191,7 +192,6 @@ export const Projects: React.FC = () => {
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
 
   // Custom fields management
-  const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   const [isColumnDialogOpen, setIsColumnDialogOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<ProjectColumn | null>(null);
   const [deletingColumn, setDeletingColumn] = useState<ProjectColumn | null>(null);
@@ -212,12 +212,6 @@ export const Projects: React.FC = () => {
   const [isEditRequestDialogOpen, setIsEditRequestDialogOpen] = useState(false);
   const [editRequestAdminNotes, setEditRequestAdminNotes] = useState('');
   const [processingEditRequest, setProcessingEditRequest] = useState(false);
-
-  // Get columns for selected client
-  const clientColumns = useMemo(() => {
-    if (!formData.client_id) return [];
-    return getClientColumns(formData.client_id);
-  }, [formData.client_id, getClientColumns, data.projectColumns]);
 
   // Fetch collaborators for admin
   useEffect(() => {
@@ -1016,7 +1010,6 @@ export const Projects: React.FC = () => {
       setFormData({ name: '', description: '', client_id: defaultClientId, status: 'active', due_date: '', custom_fields: defaultCustomFields, attachments: [] });
       setSelectedCollaborators([]);
     }
-    setCustomFieldsOpen(false);
     setIsDialogOpen(true);
   };
 
@@ -1027,13 +1020,17 @@ export const Projects: React.FC = () => {
     setFormData({ ...formData, client_id: newClientId, custom_fields: newCustomFields });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleProjectFormSubmit = async (payload: ProjectFormPayload) => {
     setSubmitting(true);
     try {
       const projectData = {
-        ...formData,
-        due_date: formData.due_date || null,
+        name: payload.name,
+        description: payload.description,
+        client_id: payload.client_id,
+        status: payload.status,
+        due_date: payload.due_date || null,
+        custom_fields: payload.custom_fields,
+        attachments: payload.attachments,
       };
       let projectId: string | undefined;
       if (editingProject) {
@@ -1043,16 +1040,27 @@ export const Projects: React.FC = () => {
       } else {
         const newProject = await createProject(projectData);
         projectId = newProject?.id;
+        if (projectId && payload.tasks.length > 0) {
+          for (const t of payload.tasks) {
+            await createTask({
+              project_id: projectId,
+              name: t.title,
+              description: t.description || null,
+              due_date: t.dueDate || null,
+              status: 'pending',
+            });
+          }
+        }
         toast.success('Projeto criado!');
       }
       if (isAdminOrMaster && projectId) {
         const currentAccess = data.projectAccess.filter(a => a.project_id === projectId);
         const currentUserIds = currentAccess.map(a => a.user_id);
-        for (const userId of selectedCollaborators) {
+        for (const userId of payload.collaboratorIds) {
           if (!currentUserIds.includes(userId)) { await grantProjectAccess(userId, projectId, true); }
         }
         for (const userId of currentUserIds) {
-          if (!selectedCollaborators.includes(userId)) { await revokeProjectAccess(userId, projectId); }
+          if (!payload.collaboratorIds.includes(userId)) { await revokeProjectAccess(userId, projectId); }
         }
         await refreshData();
       }
@@ -1600,98 +1608,23 @@ export const Projects: React.FC = () => {
       </FormSheet>
 
       {/* Project Dialog */}
-      <FormSheet open={isDialogOpen} onOpenChange={setIsDialogOpen} title={editingProject ? 'Editar Projeto' : 'Novo Projeto'} footer={<><Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button onClick={handleSubmit} disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingProject ? 'Salvar' : 'Criar'}</Button></>}>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div className="space-y-2"><Label htmlFor="name">Nome do Projeto</Label><Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required disabled={submitting} /></div>
-              <div className="space-y-2"><Label htmlFor="description">Descrição</Label><WysiwygEditor value={formData.description} onChange={(value) => setFormData({ ...formData, description: value })} disabled={submitting} minHeight="80px" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Cliente</Label><Select value={formData.client_id} onValueChange={handleClientChange} disabled={submitting}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{data.clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company || c.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} disabled={submitting}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="paused">Pausado</SelectItem><SelectItem value="completed">Concluído</SelectItem><SelectItem value="archived">Arquivo</SelectItem></SelectContent></Select></div>
-              </div>
-              <div className="space-y-2"><Label htmlFor="due_date">Prazo (opcional)</Label><Input id="due_date" type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} disabled={submitting} /></div>
-
-              {formData.client_id && (
-                <RequestAttachmentsUploader
-                  clientId={formData.client_id}
-                  folderId={editingProject ? `project-${editingProject.id}` : undefined}
-                  attachments={formData.attachments}
-                  onChange={(next) => setFormData({ ...formData, attachments: next })}
-                  disabled={submitting}
-                />
-              )}
-
-              {isAdminOrMaster && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Users className="w-4 h-4" />Colaboradores</Label>
-                  {loadingCollaborators ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
-                  ) : collaborators.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum colaborador cadastrado.</p>
-                  ) : (
-                    <div className="border rounded-md p-3 space-y-2 max-h-32 overflow-y-auto">
-                      {collaborators.map((collab) => (
-                        <div key={collab.user_id} className="flex items-center space-x-2">
-                          <Checkbox id={`collab-${collab.user_id}`} checked={selectedCollaborators.includes(collab.user_id)} onCheckedChange={() => toggleCollaborator(collab.user_id)} disabled={submitting} />
-                          <label htmlFor={`collab-${collab.user_id}`} className="text-sm font-medium leading-none cursor-pointer">{collab.full_name || collab.email || 'Sem nome'}</label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {isAdminOrMaster && formData.client_id && (
-                <Collapsible open={customFieldsOpen} onOpenChange={setCustomFieldsOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" type="button" className="w-full justify-between">
-                      <span className="flex items-center gap-2"><Settings className="w-4 h-4" />Campos Personalizados ({clientColumns.length})</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${customFieldsOpen ? 'rotate-180' : ''}`} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-4 space-y-4">
-                    {clientColumns.length > 0 && (
-                      <div className="space-y-3">
-                        {clientColumns.map((column) => (
-                          <div key={column.id} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label className="flex items-center gap-2">{column.name}<Badge variant="secondary" className="text-xs">{column.type === 'text' ? 'Texto' : 'Seleção'}</Badge></Label>
-                              <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" type="button" className="h-6 w-6" onClick={() => handleOpenColumnDialog(column)}><Pencil className="w-3 h-3" /></Button>
-                                <Button variant="ghost" size="icon" type="button" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => { setDeletingColumn(column); setIsDeleteColumnDialogOpen(true); }}><Trash2 className="w-3 h-3" /></Button>
-                              </div>
-                            </div>
-                            {column.type === 'select' && column.options ? (
-                              <Select value={formData.custom_fields[column.id] || ''} onValueChange={(v) => setFormData({ ...formData, custom_fields: { ...formData.custom_fields, [column.id]: v } })} disabled={submitting}><SelectTrigger><SelectValue placeholder={`Selecione ${column.name}`} /></SelectTrigger><SelectContent>{column.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                            ) : (
-                              <Input value={formData.custom_fields[column.id] || ''} onChange={(e) => setFormData({ ...formData, custom_fields: { ...formData.custom_fields, [column.id]: e.target.value } })} disabled={submitting} />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <Button type="button" variant="outline" size="sm" onClick={() => handleOpenColumnDialog()} className="w-full"><Plus className="w-4 h-4 mr-2" />Novo Campo para este Cliente</Button>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-              
-              {(!isAdminOrMaster || !customFieldsOpen) && clientColumns.length > 0 && (
-                <div className="space-y-4">
-                  {clientColumns.map((column) => (
-                    <div key={column.id} className="space-y-2">
-                      <Label>{column.name}</Label>
-                      {column.type === 'select' && column.options ? (
-                        <Select value={formData.custom_fields[column.id] || ''} onValueChange={(v) => setFormData({ ...formData, custom_fields: { ...formData.custom_fields, [column.id]: v } })} disabled={submitting}><SelectTrigger><SelectValue placeholder={`Selecione ${column.name}`} /></SelectTrigger><SelectContent>{column.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                      ) : (
-                        <Input value={formData.custom_fields[column.id] || ''} onChange={(e) => setFormData({ ...formData, custom_fields: { ...formData.custom_fields, [column.id]: e.target.value } })} disabled={submitting} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </form>
-      </FormSheet>
+      <ProjectFormSheet
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        mode={editingProject ? 'edit' : 'create'}
+        editingProject={editingProject}
+        initialCollaboratorIds={selectedCollaborators}
+        showCollaborators={isAdminOrMaster}
+        collaborators={collaborators}
+        loadingCollaborators={loadingCollaborators}
+        showColumnManagement={isAdminOrMaster}
+        onCreateColumn={() => handleOpenColumnDialog()}
+        onEditColumn={(col) => handleOpenColumnDialog(col as ProjectColumn)}
+        onDeleteColumn={(col) => { setDeletingColumn(col as ProjectColumn); setIsDeleteColumnDialogOpen(true); }}
+        onClientChange={(cid) => setFormData((prev) => ({ ...prev, client_id: cid }))}
+        onSubmit={handleProjectFormSubmit}
+        submitting={submitting}
+      />
 
       {/* Task Dialog */}
       <FormSheet open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen} title={editingTask ? 'Editar Tarefa' : 'Nova Tarefa'} footer={<><Button type="button" variant="outline" onClick={() => setIsTaskDialogOpen(false)} disabled={submitting}>Cancelar</Button><Button onClick={handleSubmitTask} disabled={submitting}>{submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}{editingTask ? 'Salvar' : 'Criar'}</Button></>}>
