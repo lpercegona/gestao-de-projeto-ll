@@ -117,7 +117,7 @@ export const QuickActionsPanel: React.FC = () => {
           <div className={`grid ${isAdminOrMaster ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
             <Button
               variant="outline"
-              className="flex-col aspect-square gap-1"
+              className="flex-col h-auto py-3 gap-1"
               onClick={() => setClientDialogOpen(true)}
             >
               <Users className="h-5 w-5" />
@@ -126,7 +126,7 @@ export const QuickActionsPanel: React.FC = () => {
             {isAdminOrMaster && (
               <Button
                 variant="outline"
-                className="flex-col aspect-square gap-1"
+                className="flex-col h-auto py-3 gap-1"
                 onClick={() => navigate("/projects?new=1")}
               >
                 <FolderPlus className="h-5 w-5" />
@@ -135,7 +135,7 @@ export const QuickActionsPanel: React.FC = () => {
             )}
             <Button
               variant="outline"
-              className="flex-col aspect-square gap-1"
+              className="flex-col h-auto py-3 gap-1"
               onClick={() => navigate("/proposals")}
             >
               <FileCheck className="h-5 w-5" />
