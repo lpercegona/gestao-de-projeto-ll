@@ -503,6 +503,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteProject = async (id: string) => {
+    // Best-effort: remove anexos do storage antes de excluir o projeto
+    try {
+      const project = data.projects.find(p => p.id === id);
+      const atts = (project as any)?.attachments;
+      if (Array.isArray(atts)) {
+        const paths = atts.map((a: any) => a?.path).filter((p: any): p is string => typeof p === 'string' && p.length > 0);
+        if (paths.length > 0) {
+          await supabase.storage.from('request-attachments').remove(paths).catch(() => {});
+        }
+      }
+    } catch {}
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (error) {
       console.error('Error deleting project:', error);
