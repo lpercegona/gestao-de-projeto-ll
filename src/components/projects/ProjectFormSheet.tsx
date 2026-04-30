@@ -67,6 +67,8 @@ interface ProjectFormSheetProps {
   /** Called with the assembled payload on submit. */
   onSubmit: (payload: ProjectFormPayload) => Promise<void> | void;
   submitting?: boolean;
+  /** Notifies parent when the active client changes (for column CRUD context). */
+  onClientChange?: (clientId: string) => void;
 }
 
 export const ProjectFormSheet: React.FC<ProjectFormSheetProps> = ({
@@ -85,6 +87,7 @@ export const ProjectFormSheet: React.FC<ProjectFormSheetProps> = ({
   onDeleteColumn,
   onSubmit,
   submitting = false,
+  onClientChange,
 }) => {
   const { data, getClientColumns } = useData();
   useEditingLock(open);
@@ -119,6 +122,7 @@ export const ProjectFormSheet: React.FC<ProjectFormSheetProps> = ({
       );
       setCollaboratorIds(initialCollaboratorIds);
       setTasks([]);
+      onClientChange?.(editingProject.client_id);
     } else {
       const cid = lockedClientId || data.clients[0]?.id || '';
       const cols = cid ? getClientColumns(cid) : [];
@@ -133,6 +137,7 @@ export const ProjectFormSheet: React.FC<ProjectFormSheetProps> = ({
       setAttachments([]);
       setCollaboratorIds([]);
       setTasks([]);
+      onClientChange?.(cid);
     }
     setCustomFieldsOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,6 +154,7 @@ export const ProjectFormSheet: React.FC<ProjectFormSheetProps> = ({
     cols.forEach((c) => { next[c.id] = customFields[c.id] || c.options?.[0] || ''; });
     setClientId(newClientId);
     setCustomFields(next);
+    onClientChange?.(newClientId);
   };
 
   const toggleCollaborator = (userId: string) => {
