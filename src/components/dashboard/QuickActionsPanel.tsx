@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Plus, Users, FileCheck, Play, Pause, Square, Expand } from "lucide-react";
+import { Plus, Users, FileCheck, FolderPlus, Play, Pause, Square, Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSheet } from "@/components/ui/form-sheet";
@@ -9,6 +9,7 @@ import { useData } from "@/contexts/DataContext";
 import { useGlobalTimer } from "@/contexts/GlobalTimerContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { GlobalTimerCompleteDialog } from "@/components/timer/GlobalTimerCompleteDialog";
 import { ExpandedTimerModal } from "@/components/timer/ExpandedTimerModal";
 import { useEditingLock } from "@/hooks/useEditingLock";
@@ -20,6 +21,7 @@ export const QuickActionsPanel: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [expandedTimerOpen, setExpandedTimerOpen] = useState(false);
   const { data, createClient } = useData();
+  const { isAdminOrMaster } = useAuth();
   const {
     timerState,
     startGlobalTimer,
@@ -117,6 +119,12 @@ export const QuickActionsPanel: React.FC = () => {
               <Users className="h-4 w-4" />
               Cliente
             </Button>
+            {isAdminOrMaster && (
+              <Button variant="outline" className="justify-start gap-2" onClick={() => navigate("/projects?new=1")}>
+                <FolderPlus className="h-4 w-4" />
+                Projeto
+              </Button>
+            )}
             <Button variant="outline" className="justify-start gap-2" onClick={() => navigate("/proposals")}>
               <FileCheck className="h-4 w-4" />
               Proposta
