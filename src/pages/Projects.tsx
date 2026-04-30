@@ -34,6 +34,7 @@ import { ProjectKanbanView } from '@/components/projects/ProjectKanbanView';
 import { ProjectTableView } from '@/components/projects/ProjectTableView';
 import { KanbanStagesDialog } from '@/components/projects/KanbanStagesDialog';
 import { RequestAttachmentsUploader, type RequestAttachment } from '@/components/client/RequestAttachmentsUploader';
+import { ProjectFormSheet, type ProjectFormPayload } from '@/components/projects/ProjectFormSheet';
 
 interface Collaborator {
   user_id: string;
