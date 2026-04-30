@@ -10,7 +10,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProjectRequestForm } from '@/components/client/ProjectRequestForm';
-import { ProjectFormSheet, type ProjectFormPayload } from '@/components/projects/ProjectFormSheet';
 import { ClientEditRequestForm } from '@/components/client/ClientEditRequestForm';
 import { ProjectFilters } from '@/components/projects/ProjectFilters';
 import { ProjectListView } from '@/components/projects/ProjectListView';
