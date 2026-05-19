@@ -14,8 +14,8 @@ const TaskSchema = z.object({
 
 const AttachmentSchema = z.object({
   name: z.string().min(1).max(255),
-  contentBase64: z.string().min(1).max(5_000_000),
-  mime: z.string().min(1).max(100),
+  contentBase64: z.string().min(1).max(20_000_000),
+  mime: z.string().min(1).max(150),
 });
 
 const BodySchema = z.object({
@@ -101,9 +101,12 @@ Deno.serve(async (req) => {
     const requestId = inserted?.id as string;
     const uploaded: Array<{ name: string; url: string; uploaded_at: string; path: string }> = [];
     if (requestId && body.attachments && body.attachments.length > 0) {
-      const MAX_BYTES = 2 * 1024 * 1024;
+      const MAX_BYTES = 10 * 1024 * 1024;
+      const ALLOWED_EXT = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv'];
       for (const att of body.attachments) {
-        if (!att.mime.startsWith('image/')) continue;
+        const ext = (att.name.split('.').pop() || '').toLowerCase();
+        const isImage = att.mime.startsWith('image/');
+        if (!isImage && !ALLOWED_EXT.includes(ext)) continue;
         // Decode base64
         let bytes: Uint8Array;
         try {
@@ -118,13 +121,13 @@ Deno.serve(async (req) => {
         const path = `${clientId}/${requestId}/${Date.now()}-${safe}`;
         const { error: upErr } = await supabase.storage
           .from('request-attachments')
-          .upload(path, bytes, { contentType: att.mime, cacheControl: '3600', upsert: false });
+          .upload(path, bytes, { contentType: att.mime || 'application/octet-stream', cacheControl: '3600', upsert: false });
         if (upErr) {
           console.error('Upload error:', upErr);
           continue;
         }
         const { data: pub } = supabase.storage.from('request-attachments').getPublicUrl(path);
-        uploaded.push({ name: att.name, url: pub.publicUrl, uploaded_at: new Date().toISOString(), path });
+        uploaded.push({ name: att.name, url: pub.publicUrl, uploaded_at: new Date().toISOString(), path, mime: att.mime } as never);
       }
 
       if (uploaded.length > 0) {
