@@ -227,7 +227,7 @@ export const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProp
         <ExpandableDescription content={project.description} className="text-sm text-muted-foreground" />
       )}
 
-      {/* Imagens de apoio (anexos da solicitação ou do projeto) */}
+      {/* Arquivos de apoio (anexos da solicitação ou do projeto) */}
       {(() => {
         const atts = project.is_request && Array.isArray(project.request_attachments)
           ? project.request_attachments
@@ -235,7 +235,7 @@ export const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProp
         if (!atts.length) return null;
         return (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-foreground">Imagens de apoio</h4>
+            <h4 className="text-sm font-medium text-foreground">Arquivos de apoio</h4>
             <div className="flex flex-wrap gap-2">
               {atts.map((att) => (
                 <a
@@ -246,7 +246,7 @@ export const ProjectDetailDialogContent: React.FC<ProjectDetailDialogContentProp
                   title={att.name}
                   className="block h-20 w-20 overflow-hidden rounded-md border border-border bg-muted"
                 >
-                  <img src={att.url} alt={att.name} className="h-full w-full object-cover" />
+                  <AttachmentThumbnail name={att.name} url={att.url} mime={(att as { mime?: string }).mime} />
                 </a>
               ))}
             </div>
