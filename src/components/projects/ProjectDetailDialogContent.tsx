@@ -13,6 +13,7 @@ import { formatHours } from "@/lib/formatHours";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AttachmentThumbnail } from "@/lib/fileThumbnail";
 
 interface Project {
   id: string;
