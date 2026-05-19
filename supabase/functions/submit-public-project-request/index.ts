@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
     // Handle attachments via service role upload
     const requestId = inserted?.id as string;
-    const uploaded: Array<{ name: string; url: string; uploaded_at: string; path: string }> = [];
+    const uploaded: Array<{ name: string; url: string; uploaded_at: string; path: string; mime?: string }> = [];
     if (requestId && body.attachments && body.attachments.length > 0) {
       const MAX_BYTES = 10 * 1024 * 1024;
       const ALLOWED_EXT = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv'];
