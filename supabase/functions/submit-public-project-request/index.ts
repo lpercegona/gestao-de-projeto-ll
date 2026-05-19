@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
           continue;
         }
         const { data: pub } = supabase.storage.from('request-attachments').getPublicUrl(path);
-        uploaded.push({ name: att.name, url: pub.publicUrl, uploaded_at: new Date().toISOString(), path, mime: att.mime } as never);
+        uploaded.push({ name: att.name, url: pub.publicUrl, uploaded_at: new Date().toISOString(), path, mime: att.mime });
       }
 
       if (uploaded.length > 0) {
