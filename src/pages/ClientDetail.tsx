@@ -826,7 +826,7 @@ export const ClientDetail: React.FC = () => {
         auto_report_day: editFormData.auto_report_day,
         auto_report_hour: editFormData.auto_report_hour,
         auto_report_minute: editFormData.auto_report_minute,
-      } as Partial<Client>;
+      } as Record<string, unknown>;
       const updated = await updateClient(clientId, payload);
       if (!updated) throw new Error('Não foi possível salvar as alterações.');
       toast.success('Cliente atualizado com sucesso!');
