@@ -804,12 +804,36 @@ export const ClientDetail: React.FC = () => {
     if (!clientId) return;
     setEditSubmitting(true);
     try {
-      await updateClient(clientId, editFormData);
+      // Sanitize: only send fields that actually exist on the `clients` table.
+      // Extra UI-only fields (cnpj, cpf_responsavel, endereco, responsavel_name)
+      // would cause PostgREST to reject the entire UPDATE, silently blocking
+      // saves to contract_start_date, contract_end_date and contract_months.
+      const payload = {
+        name: editFormData.name,
+        email: editFormData.email,
+        company: editFormData.company,
+        phone: editFormData.phone,
+        contracted_hours: editFormData.contracted_hours,
+        pipeline_status: editFormData.pipeline_status,
+        source: editFormData.source,
+        notes: editFormData.notes,
+        logo_url: editFormData.logo_url,
+        contract_type: editFormData.contract_type,
+        contract_start_date: editFormData.contract_start_date,
+        contract_end_date: editFormData.contract_end_date,
+        contract_months: editFormData.contract_months,
+        auto_report_enabled: editFormData.auto_report_enabled,
+        auto_report_day: editFormData.auto_report_day,
+        auto_report_hour: editFormData.auto_report_hour,
+        auto_report_minute: editFormData.auto_report_minute,
+      } as Record<string, unknown>;
+      const updated = await updateClient(clientId, payload as never);
+      if (!updated) throw new Error('Não foi possível salvar as alterações.');
       toast.success('Cliente atualizado com sucesso!');
       setIsEditDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating client:', error);
-      toast.error('Erro ao atualizar cliente');
+      toast.error(error?.message || 'Erro ao atualizar cliente');
     } finally {
       setEditSubmitting(false);
     }

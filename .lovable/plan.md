@@ -1,27 +1,43 @@
-# Ajuste visual dos botões de Ações Rápidas
+## Diagnóstico
 
-## Objetivo
-Para admins, exibir os 3 botões (Cliente, Projeto, Proposta) **lado a lado em uma única linha**, com ícone maior no topo e rótulo de texto menor abaixo. Para usuários não-admin (apenas 2 botões), aplicar o mesmo padrão visual.
+O modal de edição do cliente (`src/pages/ClientDetail.tsx`) envia o objeto inteiro `editFormData` para `updateClient(...)`, que executa `UPDATE` direto na tabela `clients`.
 
-## Mudanças
+O problema: o `editFormData` inclui 4 campos que **não existem** na tabela `clients` do banco:
 
-**Arquivo:** `src/components/dashboard/QuickActionsPanel.tsx`
+- `cnpj`
+- `cpf_responsavel`
+- `endereco`
+- `responsavel_name`
 
-1. Trocar o grid `grid-cols-2` por `grid-cols-3` (admins) / `grid-cols-2` (não-admins) usando classe dinâmica baseada em `isAdminOrMaster`.
-2. Reestilizar cada `Button`:
-   - Layout vertical: `flex-col` com `gap-1`
-   - Altura automática com padding vertical (`h-auto py-3`)
-   - Remover `justify-start` (centralizar conteúdo)
-   - Ícone maior: `h-5 w-5` (era `h-4 w-4`)
-   - Texto envolvido em `<span className="text-[11px] leading-tight">` para ficar menor que o tamanho padrão do botão.
+(Confirmado consultando `information_schema.columns` — a tabela `clients` tem apenas: name, email, company, phone, notes, source, pipeline_status, logo_url, contracted_hours, contract_type, contract_start_date, contract_end_date, contract_months, identity_*, auto_report_*, etc.)
 
-## Resultado visual
+Como o Supabase/PostgREST rejeita o `UPDATE` inteiro quando há colunas inexistentes no payload, **nenhuma** alteração é salva — incluindo `contract_start_date`, `contract_end_date` e `contract_months`. O usuário vê o toast genérico "Erro ao atualizar cliente" (linha 812) e o diálogo permanece sem persistir nada.
 
-```text
-┌────────┬────────┬────────┐
-│   👥   │   📁   │   ✓    │
-│Cliente │Projeto │Proposta│
-└────────┴────────┴────────┘
+Esses 4 campos parecem ter sido adicionados ao formulário pensando na memória "Business Identity Data", mas as colunas reais nunca foram criadas na tabela `clients` — campos fiscais de empresa moram em `profiles` (cnpj, cpf, company_address, etc.), não em `clients`.
+
+## Correção
+
+Sanitizar o payload em `handleEditClient` (`src/pages/ClientDetail.tsx`, ~linha 802) para enviar apenas colunas que existem em `clients`. Construir explicitamente o objeto a ser passado para `updateClient`:
+
+```ts
+const payload = {
+  name, email, company, phone,
+  contracted_hours, pipeline_status, source, notes, logo_url,
+  contract_type, contract_start_date, contract_end_date, contract_months,
+  auto_report_enabled, auto_report_day, auto_report_hour, auto_report_minute,
+};
+await updateClient(clientId, payload);
 ```
 
-Sem alterações no timer ou no FormSheet.
+Remover do payload (mas manter no estado local do formulário, caso sejam usados visualmente): `cnpj`, `cpf_responsavel`, `endereco`, `responsavel_name`.
+
+Adicionalmente: melhorar o tratamento de erro em `handleEditClient` para exibir `error.message` no toast, evitando que falhas futuras voltem a ficar invisíveis.
+
+## Fora de escopo
+
+- Não criar colunas novas em `clients` (cnpj/endereco/etc.) — esses dados pertencem a outro contexto (perfil do gestor) e não foram solicitados.
+- Não alterar `DataContext.updateClient` nem o schema do banco.
+
+## Arquivos afetados
+
+- `src/pages/ClientDetail.tsx` — sanitização do payload + mensagem de erro mais clara.
