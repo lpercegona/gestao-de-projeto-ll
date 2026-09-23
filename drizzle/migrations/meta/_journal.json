@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790172234306,
+      "tag": "0000_scope_email_templates_and_storage_writes",
+      "breakpoints": true
+    }
+  ]
+}

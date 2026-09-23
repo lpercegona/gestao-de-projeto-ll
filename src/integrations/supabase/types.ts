@@ -1688,6 +1688,10 @@ export type Database = {
         Args: { check_project_id: string; check_user_id: string }
         Returns: boolean
       }
+      can_manage_client_files: {
+        Args: { _client_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_client_email: {
         Args: { check_email: string }
         Returns: {
